@@ -18,38 +18,37 @@ export function NodeCardHeader({
   onToggleCollapsed,
 }: NodeCardHeaderProps) {
   return (
-    <div
-      className={cn(
-        "hoverable flex w-full flex-col items-start gap-2 rounded-t-lg border border-transparent border-b border-border bg-accent px-3 py-2 text-left",
-      )}
-    >
-      {chip}
-      <div className="flex w-full min-w-0 items-center gap-2">
-        <button
-          type="button"
-          className="nodrag flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-0.5 text-accent-foreground hover:bg-accent-foreground/10"
-          title={bodyExpanded ? "Collapse" : "Expand"}
-          aria-label={bodyExpanded ? "Collapse" : "Expand"}
-          aria-expanded={bodyExpanded}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCollapsed();
-          }}
-        >
-          <ExpandChevron expanded={bodyExpanded} />
-        </button>
-        <p className="min-w-0 flex-1 truncate text-left text-sm font-bold text-accent-foreground">
-          {title}
-        </p>
-        <div
-          className={cn(
-            NODE_DRAG_HANDLE,
-            "flex shrink-0 cursor-grab touch-none items-center justify-center rounded-sm p-0.5 text-muted-foreground hover:bg-accent-foreground/10 active:cursor-grabbing",
-          )}
-          title="Drag to move"
-          aria-label="Drag to move"
-        >
-          <GripVertical className="size-4" />
+    <div className="rounded-t-lg border-b border-border bg-accent p-2">
+      <div
+        className={cn(
+          NODE_DRAG_HANDLE,
+          "hoverable flex w-full cursor-grab gap-2 rounded-md border border-transparent px-2 py-2 text-left active:cursor-grabbing",
+        )}
+        title="Drag to move"
+      >
+        <GripVertical
+          className="pointer-events-none size-4 shrink-0 self-center text-muted-foreground"
+          aria-hidden
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          {chip}
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              className="nodrag flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-0.5 text-foreground hover:bg-primary/10"
+              title={bodyExpanded ? "Collapse" : "Expand"}
+              aria-label={bodyExpanded ? "Collapse" : "Expand"}
+              aria-expanded={bodyExpanded}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapsed();
+              }}
+            >
+              <ExpandChevron expanded={bodyExpanded} />
+            </button>
+            <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{title}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
-import { getFileTypeChip } from "@/lib/fileIcons";
+import { VscodeFileIcon } from "@/components/VscodeFileIcon";
+import { getFileTypeChipStyle } from "@/lib/fileTypeChip";
 import { cn } from "@/lib/utils";
 
 type FileTypeChipProps = {
@@ -7,29 +8,18 @@ type FileTypeChipProps = {
 };
 
 export function FileTypeChip({ filePath, className }: FileTypeChipProps) {
-  const chip = getFileTypeChip(filePath);
-  const extension = chip.extension || ".file";
-  const iconClass = chip.codicon.startsWith("codicon-")
-    ? chip.codicon
-    : `codicon-${chip.codicon}`;
+  const chip = getFileTypeChipStyle(filePath);
 
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 text-xs leading-none",
+        "inline-flex w-fit max-w-full shrink-0 self-start items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-none",
+        chip.pillClass,
         className,
       )}
     >
-      <i
-        className={cn(
-          "codicon flex size-3 shrink-0 items-center justify-center leading-none",
-          iconClass,
-          chip.colorClass,
-        )}
-        style={{ fontSize: 12 }}
-        aria-hidden
-      />
-      <span className="truncate font-mono text-xs leading-none text-foreground">{extension}</span>
+      <VscodeFileIcon icon={chip.vscodeIcon} size={14} className="size-3.5" />
+      <span className="whitespace-nowrap font-mono leading-none">{chip.extension}</span>
     </span>
   );
 }

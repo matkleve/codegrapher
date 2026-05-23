@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
+import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
 import {
   clearRecentFolders,
@@ -97,7 +98,11 @@ function FileTreeItem({
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
-      <Codicon name={fileIcon.codicon} className={cn("size-3.5 shrink-0", fileIcon.colorClass)} />
+      {fileIcon.vscodeIcon ? (
+        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} className="size-3.5" />
+      ) : (
+        <Codicon name={fileIcon.codicon!} className={cn("size-3.5 shrink-0", fileIcon.colorClass)} />
+      )}
       <span className="truncate">{name}</span>
     </div>
   );

@@ -106,7 +106,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-border bg-card text-left shadow-sm",
+        "relative overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
       )}
