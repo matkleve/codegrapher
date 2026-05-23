@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { fetchTree } from "../api";
+import { browseFolder, fetchTree } from "../api";
 import type { TreeEntry } from "../types";
 
 const DRAG_MIME = "application/x-codegrapher-path";
@@ -115,21 +115,44 @@ export default function FileExplorer({ onFileClick, disabled }: FileExplorerProp
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
 
-  const handleOpen = async () => {
-    if (!folderPath.trim()) {
-      setError("Enter an absolute folder path");
-      return;
-    }
+  const openFolderAt = async (dirPath: string) => {
     setOpening(true);
     setError(null);
     try {
-      const data = await fetchTree(folderPath.trim());
+      const data = await fetchTree(dirPath);
+      setFolderPath(data.path);
       setRootPath(data.path);
       setRootEntries(data.entries);
     } catch (err) {
       setRootEntries(null);
       setRootPath(null);
       setError(err instanceof Error ? err.message : "Failed to open folder");
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const handleOpen = async () => {
+    if (!folderPath.trim()) {
+      setError("Enter an absolute folder path or use Browse");
+      return;
+    }
+    await openFolderAt(folderPath.trim());
+  };
+
+  const handleBrowse = async () => {
+    setOpening(true);
+    setError(null);
+    try {
+      const result = await browseFolder();
+      if ("cancelled" in result) return;
+      await openFolderAt(result.path);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Folder picker unavailable — install zenity or enter a path manually",
+      );
     } finally {
       setOpening(false);
     }
@@ -148,25 +171,59 @@ export default function FileExplorer({ onFileClick, disabled }: FileExplorerProp
       }}
     >
       <div style={{ padding: 12, borderBottom: "1px solid #333" }}>
-        <input
-          type="text"
-          value={folderPath}
-          onChange={(e) => setFolderPath(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleOpen()}
-          placeholder="/absolute/path/to/project"
-          disabled={disabled || opening}
+        <div
           style={{
-            width: "100%",
-            padding: "8px 10px",
+            display: "flex",
+            gap: 6,
             marginBottom: 8,
-            borderRadius: 4,
-            border: "1px solid #444",
-            background: "#1a1a2e",
-            color: "#eee",
-            fontSize: 13,
-            boxSizing: "border-box",
+            alignItems: "stretch",
           }}
-        />
+        >
+          <button
+            type="button"
+            onClick={handleBrowse}
+            disabled={disabled || opening}
+            title="Browse for folder"
+            aria-label="Browse for folder"
+            style={{
+              width: 36,
+              height: 36,
+              flexShrink: 0,
+              padding: 0,
+              borderRadius: 4,
+              border: "1px solid #555",
+              background: "#1a1a2e",
+              color: "#eee",
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: disabled || opening ? "wait" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            📂
+          </button>
+          <input
+            type="text"
+            value={folderPath}
+            onChange={(e) => setFolderPath(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleOpen()}
+            placeholder="/absolute/path/to/project"
+            disabled={disabled || opening}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "8px 10px",
+              borderRadius: 4,
+              border: "1px solid #444",
+              background: "#1a1a2e",
+              color: "#eee",
+              fontSize: 13,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
         <button
           type="button"
           onClick={handleOpen}

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
+import { pickFolderNative } from "./browseFolder";
 import { parseFileGraph, parseFocus } from "./parser";
 
 const app = express();
@@ -10,6 +11,20 @@ const PORT = 3001;
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "coverage"]);
 
 app.use(cors());
+
+app.post("/api/browse-folder", (_req, res) => {
+  try {
+    const selected = pickFolderNative();
+    if (!selected) {
+      res.status(200).json({ cancelled: true });
+      return;
+    }
+    res.json({ path: selected });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Folder picker failed";
+    res.status(500).json({ error: message });
+  }
+});
 
 app.get("/api/tree", (req, res) => {
   const dirPath = req.query.path;
