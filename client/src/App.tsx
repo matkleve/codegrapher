@@ -83,11 +83,11 @@ function App() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="pointer-events-auto flex h-screen overflow-hidden bg-background text-foreground">
       <FileExplorer onFileClick={handleFileClick} treeDisabled={loading} />
 
       <div
-        className="flex min-w-0 flex-1 flex-col"
+        className="pointer-events-auto flex min-w-0 flex-1 flex-col"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >

@@ -6,7 +6,7 @@ import {
   useState,
   forwardRef,
 } from "react";
-import { Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid3x3, Maximize2 } from "lucide-react";
 import cytoscape from "cytoscape";
 import type { Core, ElementDefinition } from "cytoscape";
 import dagre from "cytoscape-dagre";
@@ -19,6 +19,13 @@ import {
   type GraphThemeColors,
 } from "@/lib/cytoscapeTheme";
 import { graphToElements } from "@/lib/graphElements";
+import {
+  loadShowGrid,
+  saveShowGrid,
+  syncGridToViewport,
+} from "@/lib/graphGrid";
+import { fileDisplayName } from "@/lib/recentFiles";
+import { cn } from "@/lib/utils";
 import type { GraphData } from "../types";
 
 cytoscape.use(dagre);
@@ -88,9 +95,10 @@ function buildCyStyles(theme: GraphThemeColors) {
         "font-family": "ui-monospace, monospace",
         "text-margin-x": pad2,
         "text-margin-y": pad2,
-        width: "label",
-        height: "label",
-        "min-height": readTailwindMinSize("min-h-7", "minHeight"),
+        width: readTailwindMinSize("min-w-40", "minWidth"),
+        height: readTailwindMinSize("min-h-9", "minHeight"),
+        "min-width": readTailwindMinSize("min-w-40", "minWidth"),
+        "min-height": readTailwindMinSize("min-h-9", "minHeight"),
       },
     },
     {
@@ -178,12 +186,19 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
   function GraphCanvas({ graphData, graphResetKey, onFileDrop: _onFileDrop, loading }, ref) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const gridRef = useRef<HTMLDivElement>(null);
     const cyRef = useRef<Core | null>(null);
-    const historyRef = useRef<CySnapshot[]>([]);
+    const showGridRef = useRef(true);
+    const historyBackRef = useRef<CySnapshot[]>([]);
+    const historyForwardRef = useRef<CySnapshot[]>([]);
     const expandedMethodsRef = useRef<Set<string>>(new Set());
     const prevGraphKeyRef = useRef(-1);
+    const graphDataRef = useRef<GraphData | null>(null);
+    const graphResetKeyRef = useRef(0);
+    const pathFromIdRef = useRef<string | null>(null);
     const [expandedMethods, setExpandedMethods] = useState<Set<string>>(new Set());
     const [canGoBack, setCanGoBack] = useState(false);
+    const [canGoForward, setCanGoForward] = useState(false);
     const [pathInfo, setPathInfo] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{
       x: number;
@@ -193,19 +208,31 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     const [pathFromId, setPathFromId] = useState<string | null>(null);
     const [nodeTip, setNodeTip] = useState<NodeTipState | null>(null);
     const [graphError, setGraphError] = useState<string | null>(null);
+    const [showGrid, setShowGrid] = useState(loadShowGrid);
+
+    graphDataRef.current = graphData;
+    showGridRef.current = showGrid;
+    graphResetKeyRef.current = graphResetKey;
+    pathFromIdRef.current = pathFromId;
+
+    const updateHistoryButtons = useCallback(() => {
+      setCanGoBack(historyBackRef.current.length > 0);
+      setCanGoForward(historyForwardRef.current.length > 0);
+    }, []);
 
     useImperativeHandle(ref, () => ({
       pushHistoryBeforeChange: () => {
         const cy = cyRef.current;
         if (!cy || cy.elements().length === 0) return;
-        historyRef.current.push(cy.json());
-        setCanGoBack(historyRef.current.length > 0);
+        historyBackRef.current.push(cy.json());
+        historyForwardRef.current = [];
+        updateHistoryButtons();
       },
       getSnapshot: () => {
         const cy = cyRef.current;
         return cy && cy.elements().length > 0 ? cy.json() : null;
       },
-    }));
+    }), [updateHistoryButtons]);
 
     const clearPathHighlight = useCallback((cy: Core) => {
       cy.elements().removeClass("path-highlight");
@@ -300,11 +327,10 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
 
       if (newElements.length > 0) cy.add(newElements);
 
-      cy.nodes('[type = "method"], [type = "function"]').forEach((n) => {
-        n.ungrabify();
-      });
+      cy.nodes().ungrabify();
 
-      runGraphLayout(cy);
+      cy.resize();
+      requestAnimationFrame(() => runGraphLayout(cy));
     }, []);
 
     useEffect(() => {
@@ -314,19 +340,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
 
     useEffect(() => {
       expandedMethodsRef.current = expandedMethods;
-      const cy = cyRef.current;
-      if (!cy || !graphData) return;
-
-      const replaceAll = graphResetKey !== prevGraphKeyRef.current;
-      if (replaceAll) prevGraphKeyRef.current = graphResetKey;
-
-      try {
-        syncGraph(cy, graphData, replaceAll);
-      } catch (err) {
-        console.error(err);
-        setGraphError(err instanceof Error ? err.message : "Graph render failed");
-      }
-    }, [expandedMethods, graphData, graphResetKey, syncGraph]);
+    }, [expandedMethods]);
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -339,6 +353,8 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         minZoom: 0.2,
         maxZoom: 4,
         wheelSensitivity: 0.2,
+        autoungrabify: true,
+        boxSelectionEnabled: false,
       });
 
       cy.on("cxttap", "node", (evt) => {
@@ -375,9 +391,10 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       cy.on("tap", "node", (evt) => {
         const node = evt.target;
         const type = node.data("type");
+        const fromId = pathFromIdRef.current;
 
-        if (pathFromId) {
-          const path = findShortestPath(cy, pathFromId, node.id());
+        if (fromId) {
+          const path = findShortestPath(cy, fromId, node.id());
           setPathFromId(null);
           if (path) {
             highlightPath(cy, path.nodeIds, path.edgeIds);
@@ -407,11 +424,31 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       cy.on("tap", (evt) => {
         if (evt.target === cy) {
           setContextMenu(null);
-          if (!pathFromId) setPathInfo(null);
+          if (!pathFromIdRef.current) setPathInfo(null);
         }
       });
 
+      const syncGrid = () => {
+        const gridEl = gridRef.current;
+        if (!gridEl || !showGridRef.current) return;
+        syncGridToViewport(cy, gridEl);
+      };
+
+      cy.on("pan zoom resize", syncGrid);
+
       cyRef.current = cy;
+      syncGrid();
+
+      const pending = graphDataRef.current;
+      if (pending) {
+        prevGraphKeyRef.current = graphResetKeyRef.current;
+        try {
+          syncGraph(cy, pending, true);
+        } catch (err) {
+          console.error(err);
+          setGraphError(err instanceof Error ? err.message : "Graph render failed");
+        }
+      }
 
       const wrapper = wrapperRef.current;
       const observer =
@@ -426,54 +463,130 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         cy.destroy();
         cyRef.current = null;
       };
-    }, [findShortestPath, highlightPath, pathFromId]);
+    }, [findShortestPath, highlightPath, syncGraph]);
 
     useEffect(() => {
       const cy = cyRef.current;
-      if (!cy || !graphData) {
-        if (cy && !graphData) cy.elements().remove();
+      if (!cy) return;
+      if (!graphData) {
+        cy.elements().remove();
         return;
       }
-      if (cy.elements().length === 0) {
-        try {
-          syncGraph(cy, graphData, true);
-        } catch (err) {
-          console.error(err);
-          setGraphError(err instanceof Error ? err.message : "Graph render failed");
-        }
-      }
-    }, [graphData, syncGraph]);
 
-    const handleBack = () => {
+      const replaceAll = graphResetKey !== prevGraphKeyRef.current;
+      if (replaceAll) prevGraphKeyRef.current = graphResetKey;
+
+      try {
+        syncGraph(cy, graphData, replaceAll);
+      } catch (err) {
+        console.error(err);
+        setGraphError(err instanceof Error ? err.message : "Graph render failed");
+      }
+    }, [expandedMethods, graphData, graphResetKey, syncGraph]);
+
+    useEffect(() => {
       const cy = cyRef.current;
-      const snapshot = historyRef.current.pop();
-      setCanGoBack(historyRef.current.length > 0);
-      if (!cy || !snapshot) return;
+      const gridEl = gridRef.current;
+      if (!cy || !gridEl || !showGrid) return;
+      syncGridToViewport(cy, gridEl);
+    }, [showGrid]);
+
+    const toggleGrid = () => {
+      setShowGrid((on) => {
+        const next = !on;
+        saveShowGrid(next);
+        return next;
+      });
+    };
+
+    const restoreSnapshot = (cy: Core, snapshot: CySnapshot) => {
       cy.json(snapshot);
       cy.resize();
-      cy.fit(undefined, readFitPadding());
+      if (cy.nodes().length > 0) {
+        cy.fit(undefined, readFitPadding());
+      }
       setPathInfo(null);
       setPathFromId(null);
+      requestAnimationFrame(() => {
+        const gridEl = gridRef.current;
+        if (gridEl && showGridRef.current) syncGridToViewport(cy, gridEl);
+      });
+    };
+
+    const handleLastGraph = () => {
+      const cy = cyRef.current;
+      const snapshot = historyBackRef.current.pop();
+      if (!cy || !snapshot) return;
+      if (cy.elements().length > 0) {
+        historyForwardRef.current.push(cy.json());
+      }
+      restoreSnapshot(cy, snapshot);
+      updateHistoryButtons();
+    };
+
+    const handleNextGraph = () => {
+      const cy = cyRef.current;
+      const snapshot = historyForwardRef.current.pop();
+      if (!cy || !snapshot) return;
+      if (cy.elements().length > 0) {
+        historyBackRef.current.push(cy.json());
+      }
+      restoreSnapshot(cy, snapshot);
+      updateHistoryButtons();
     };
 
     const visibleNodes =
       graphData?.nodes.filter((n) => n.type !== "file" && n.label?.trim()) ?? [];
-    const isEmpty = visibleNodes.length === 0;
+    const hasGraph = visibleNodes.length > 0;
+    const graphTitle = graphData?.focusFile
+      ? fileDisplayName(graphData.focusFile)
+      : "Graph";
+    const emptyMessage = graphData?.focusFile
+      ? "No classes or functions found in this file"
+      : "Click or drag a file to start";
 
     return (
-      <div ref={wrapperRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="z-5 flex items-center gap-2 border-b border-border bg-card px-3 py-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canGoBack}
-            onClick={handleBack}
-          >
-            ← Back
-          </Button>
+      <div
+        ref={wrapperRef}
+        className="pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold text-foreground">{graphTitle}</h2>
+            {graphData?.focusFile && (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {graphData.focusFile}
+              </p>
+            )}
+          </div>
+          <div className="pointer-events-auto flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canGoBack}
+              onClick={handleLastGraph}
+              title="Last graph"
+              aria-label="Last graph"
+            >
+              <ChevronLeft data-icon="inline-start" />
+              Last graph
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canGoForward}
+              onClick={handleNextGraph}
+              title="Next graph"
+              aria-label="Next graph"
+            >
+              Next graph
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </div>
           {loading && (
-            <span className="text-sm text-muted-foreground">Loading…</span>
+            <span className="shrink-0 text-sm text-muted-foreground">Loading…</span>
           )}
         </div>
 
@@ -490,16 +603,27 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         )}
 
         {pathFromId && (
-          <p className="absolute top-14 right-3 z-20 text-xs text-muted-foreground">
+          <p className="pointer-events-none absolute top-14 right-3 z-20 text-xs text-muted-foreground">
             Click target node…
           </p>
         )}
 
-        <div className="relative min-h-0 flex-1">
-          <div ref={containerRef} className="absolute inset-0 bg-background" />
-          {isEmpty && !loading && (
-            <p className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center text-lg text-muted-foreground">
-              ← Click or drag a file to start
+        <div className="pointer-events-auto relative min-h-0 flex-1 bg-background">
+          <div
+            ref={gridRef}
+            aria-hidden
+            className={cn(
+              "graph-canvas-grid pointer-events-none absolute inset-0 z-0",
+              !showGrid && "hidden",
+            )}
+          />
+          <div
+            ref={containerRef}
+            className="pointer-events-auto absolute inset-0 z-10 bg-transparent"
+          />
+          {!hasGraph && !loading && (
+            <p className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-6 text-center text-lg text-muted-foreground">
+              {emptyMessage}
             </p>
           )}
         </div>
@@ -517,7 +641,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
 
         {contextMenu && (
           <div
-            className="fixed z-50 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
+            className="pointer-events-auto fixed z-50 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <Button
@@ -538,7 +662,18 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
           </div>
         )}
 
-        <div className="absolute right-3 bottom-3 z-20">
+        <div className="pointer-events-auto absolute right-3 bottom-3 z-30 flex flex-col gap-2">
+          <Button
+            type="button"
+            variant={showGrid ? "default" : "outline"}
+            size="icon"
+            title={showGrid ? "Hide grid" : "Show grid"}
+            aria-label={showGrid ? "Hide grid" : "Show grid"}
+            aria-pressed={showGrid}
+            onClick={toggleGrid}
+          >
+            <Grid3x3 />
+          </Button>
           <Button
             type="button"
             variant="outline"

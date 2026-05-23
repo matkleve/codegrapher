@@ -17,7 +17,6 @@ function layoutChildrenInParent(
   if (children.length === 0) return;
 
   children.forEach((child) => {
-    child.grabbable(false);
     child.ungrabify();
     child.style({
       width: innerWidth,
@@ -71,12 +70,12 @@ export function runGraphLayout(cy: Core): void {
   layout.on("layoutstop", () => {
     try {
       layoutCompoundChildren(cy);
-      cy.resize();
-      if (cy.nodes().length > 0) {
-        cy.fit(undefined, readFitPadding());
-      }
     } catch (err) {
       console.error("Compound layout failed:", err);
+    }
+    cy.resize();
+    if (cy.nodes().length > 0) {
+      cy.fit(undefined, readFitPadding());
     }
   });
 

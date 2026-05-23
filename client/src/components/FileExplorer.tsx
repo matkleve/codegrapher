@@ -118,7 +118,7 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
           onClick={toggleFolder}
           disabled={disabled}
           className={cn(
-            "h-8 w-full justify-start gap-2 px-2 text-sm font-medium",
+            "pointer-events-auto h-8 w-full justify-start gap-2 px-2 text-sm font-medium",
             indentClass(depth),
             "hover:bg-accent",
           )}
@@ -225,7 +225,7 @@ function RecentFilesSection({ files, open, onToggle, onFileClick }: RecentFilesS
         type="button"
         variant="ghost"
         onClick={onToggle}
-        className="h-8 w-full justify-start gap-2 px-2 text-xs font-medium text-muted-foreground hover:bg-accent"
+        className="pointer-events-auto h-8 w-full justify-start gap-2 px-2 text-xs font-medium text-muted-foreground hover:bg-accent"
         aria-expanded={open}
       >
         <Codicon
@@ -347,11 +347,11 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
   };
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-      <div className="flex flex-col gap-2 p-3">
+    <aside className="pointer-events-auto flex h-full w-80 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
+      <div className="pointer-events-auto relative z-10 flex flex-col gap-2 p-3">
         <div className="flex gap-2">
           <div
-            className="relative shrink-0"
+            className="pointer-events-auto relative shrink-0"
             onMouseEnter={() => setRecentFoldersOpen(true)}
             onMouseLeave={() => setRecentFoldersOpen(false)}
           >
