@@ -153,16 +153,9 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       };
 
       const mergedWithPatch: ClassNodeData = { ...nodeData, ...patch };
-      let nextHeight = opening
-        ? computeClassNodeHeight(mergedWithPatch)
-        : (nodeHeight ?? computeClassNodeHeight(mergedWithPatch));
-      if (!opening && nodeHeight != null) {
-        Object.assign(
-          patch,
-          fitLayoutToHeight(mergedWithPatch, nextHeight, { ignorePinned: false }),
-        );
-        nextHeight = nodeHeight;
-      }
+      const nextHeight = opening
+        ? resolveNodeHeight(mergedWithPatch, nodeHeight ?? undefined)
+        : computeClassNodeHeight(mergedWithPatch);
 
       commitNode(
         { ...patch, height: nextHeight },
@@ -339,25 +332,36 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const title = camelToWords(nodeData.label);
 
   useLayoutEffect(() => {
-    if (bodyExpanded) return;
     const el = cardRef.current;
     if (!el) return;
 
     const prevHeight = el.style.height;
     el.style.height = "auto";
-    const measured = Math.max(
-      CLASS_NODE_MIN_HEIGHT,
-      Math.ceil(el.scrollHeight),
-    );
+    const measured = Math.ceil(el.scrollHeight);
     el.style.height = prevHeight;
 
-    if (nodeHeight != null && Math.abs(measured - nodeHeight) <= 1) return;
-    commitNode({}, { width: nodeWidth, height: measured }, { keepPreference: true });
+    if (!bodyExpanded) {
+      const headerHeight = Math.max(CLASS_NODE_MIN_HEIGHT, measured);
+      if (nodeHeight != null && Math.abs(headerHeight - nodeHeight) <= 1) return;
+      commitNode({}, { width: nodeWidth, height: headerHeight }, { keepPreference: true });
+      return;
+    }
+
+    if (isResizingRef.current) return;
+    if (measured > (nodeHeight ?? 0) + 2) {
+      commitNode({ height: measured }, { width: nodeWidth, height: measured }, {
+        keepPreference: true,
+      });
+    }
   }, [
     bodyExpanded,
     commitNode,
+    nodeData.expandedMethodIds,
+    nodeData.expandedPropertyIds,
     nodeData.filePath,
     nodeData.label,
+    nodeData.methodsSectionCollapsed,
+    nodeData.propertiesSectionCollapsed,
     nodeHeight,
     nodeWidth,
   ]);
@@ -459,7 +463,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       )}
       <NodeResizeControl
         position="bottom-right"
-        minWidth={200}
+        minWidth={400}
         minHeight={CLASS_NODE_MIN_HEIGHT}
         isVisible={selected}
         onResize={onResize}

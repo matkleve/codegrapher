@@ -18,8 +18,7 @@ const FIT_SLACK = 20;
 function estimateExpandedMemberHeight(code: string): number {
   const lines = Math.max(1, code.split("\n").length);
   const rowChrome = 44 + 6;
-  const codeHeight = Math.min(lines * 19, 256);
-  return rowChrome + codeHeight + 8;
+  return rowChrome + lines * 19 + 8;
 }
 
 type LayoutMember = {

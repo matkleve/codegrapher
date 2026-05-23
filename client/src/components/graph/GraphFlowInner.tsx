@@ -19,6 +19,7 @@ import { Container } from "@/components/ui/Container";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { FlowSnapshot } from "@/components/nodes/flowNodeTypes";
 import type {
   GraphCanvasHandle,
@@ -242,8 +243,9 @@ export function GraphFlowInner({
       const vp = getViewport();
       const bounds = nodes.reduce(
         (acc, n) => {
-          const w = 320;
-          const h = 120;
+          const w =
+            typeof n.width === "number" ? n.width : CLASS_NODE_DEFAULT_WIDTH;
+          const h = typeof n.height === "number" ? n.height : 120;
           const x1 = n.position.x;
           const y1 = n.position.y;
           const x2 = n.position.x + w;

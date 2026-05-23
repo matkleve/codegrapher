@@ -1,7 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
-import { Container } from "@/components/ui/Container";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import { cn } from "@/lib/utils";
 
@@ -54,11 +53,10 @@ export function CollapsibleMemberRow({
         </span>
       </button>
       {expanded && code.trim() ? (
-        <Container
+        <div
           className={cn(
-            "nodrag mt-1.5 ml-5 border-0 bg-transparent p-0 text-muted-foreground",
+            "nodrag mt-1.5 ml-5 overflow-visible text-muted-foreground",
           )}
-          maxHeight="max-h-64"
         >
           <div className="flex flex-col gap-0.5">
             {lines.map((line, i) => (
@@ -73,7 +71,7 @@ export function CollapsibleMemberRow({
               />
             ))}
           </div>
-        </Container>
+        </div>
       ) : null}
     </div>
   );

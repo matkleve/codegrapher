@@ -22,6 +22,7 @@ import type {
   ExternalReferenceCard,
   GraphVisibleTarget,
 } from "@/lib/resolveVisibleTarget";
+import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { GraphData } from "@/types";
 
 export type PreviewEdgeConfig = {
@@ -206,7 +207,8 @@ export function GraphInteractionProvider({
         })),
       );
 
-      const w = typeof node.width === "number" ? node.width : 320;
+      const w =
+        typeof node.width === "number" ? node.width : CLASS_NODE_DEFAULT_WIDTH;
       const h = typeof node.height === "number" ? node.height : 120;
       const cx = node.position.x + w / 2;
       const cy = node.position.y + h / 2;

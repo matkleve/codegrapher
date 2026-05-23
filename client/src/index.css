@@ -352,10 +352,20 @@ html.dark {
   height: 14px !important;
   border-radius: 50% !important;
   cursor: nwse-resize !important;
-  background: var(--primary) !important;
+  background: var(--chart-2) !important;
   border: 2px solid var(--background) !important;
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--chart-2) 45%, transparent);
   z-index: 10 !important;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.class-node-root .react-flow__resize-control.handle.class-node-resizer-handle:hover {
+  background: var(--primary) !important;
+  border-color: var(--background) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent);
 }
 
 /* Only bottom-right handle — hide full-box resize lines */
