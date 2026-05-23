@@ -1,7 +1,7 @@
 import { memo, useCallback, type ReactNode } from "react";
 import {
   Handle,
-  NodeResizer,
+  NodeResizeControl,
   Position,
   type NodeProps,
   useReactFlow,
@@ -74,21 +74,29 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     patchNodeData({ collapsed: bodyExpanded });
   }, [bodyExpanded, patchNodeData]);
 
-  const onResize = useCallback(
-    (_event: unknown, params: { width: number; height: number }) => {
+  const applyWidth = useCallback(
+    (nextWidth: number) => {
       setNodes((nodes) =>
         nodes.map((n) => {
           if (n.id !== id) return n;
           return {
             ...n,
-            width: params.width,
-            style: { ...n.style, width: params.width },
+            width: nextWidth,
+            height: undefined,
+            style: { ...n.style, width: nextWidth },
           };
         }),
       );
       requestAnimationFrame(() => updateNodeInternals(id));
     },
     [id, setNodes, updateNodeInternals],
+  );
+
+  const onResize = useCallback(
+    (_event: unknown, params: { width: number }) => {
+      applyWidth(params.width);
+    },
+    [applyWidth],
   );
 
   const title = camelToWords(nodeData.label);
@@ -104,13 +112,12 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       )}
       style={{ width: nodeWidth }}
     >
-      <NodeResizer
+      <NodeResizeControl
+        position="bottom-right"
         minWidth={200}
-        maxWidth={600}
         isVisible={selected}
         onResize={onResize}
-        handleClassName="class-node-resizer-handle"
-        lineClassName="class-node-resizer-line"
+        className="class-node-resizer-handle nodrag"
       />
       <Handle type="target" position={Position.Top} className="!bg-primary" />
       <NodeCardHeader

@@ -208,13 +208,14 @@ html.dark {
 }
 
 .class-node-resizer-handle {
-  width: 10px;
-  height: 10px;
+  width: 12px !important;
+  height: 12px !important;
   border-radius: 2px;
-  background: var(--primary);
-  border: 1px solid var(--background);
+  background: var(--primary) !important;
+  border: 1px solid var(--background) !important;
 }
 
-.class-node-resizer-line {
-  border-color: var(--primary);
+/* Only bottom-right handle — hide full-box resize lines */
+.react-flow__resize-control.line {
+  display: none !important;
 }

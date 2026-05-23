@@ -16,15 +16,20 @@ export function FileTypeChip({ filePath, className }: FileTypeChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs",
+        "inline-flex h-5 max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 text-xs leading-none",
         className,
       )}
     >
       <i
-        className={cn("codicon shrink-0 text-[13px] leading-none", iconClass, chip.colorClass)}
+        className={cn(
+          "codicon flex size-3 shrink-0 items-center justify-center leading-none",
+          iconClass,
+          chip.colorClass,
+        )}
+        style={{ fontSize: 12 }}
         aria-hidden
       />
-      <span className="font-mono text-muted-foreground">{extension}</span>
+      <span className="truncate font-mono text-xs leading-none text-foreground">{extension}</span>
     </span>
   );
 }
