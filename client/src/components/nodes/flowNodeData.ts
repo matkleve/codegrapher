@@ -29,6 +29,13 @@ export type ClassNodeData = {
   height?: number;
   /** User-expanded members kept open across height-driven layout. */
   pinnedMemberIds?: string[];
+  /** Target layout when resizing larger (sections/members reopen toward this). */
+  layoutPreference?: {
+    expandedPropertyIds: string[];
+    expandedMethodIds: string[];
+    propertiesSectionCollapsed: boolean;
+    methodsSectionCollapsed: boolean;
+  };
 };
 
 export type FileNodeData = {

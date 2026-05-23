@@ -1,28 +1,29 @@
 import type { ClassNodeData, MemberItem } from "@/components/nodes/flowNodeData";
 
-/** Layout constants tuned to match ClassNode + CollapsibleMemberRow DOM. */
-const HEADER_HEIGHT = 90;
-export const CLASS_NODE_MIN_HEIGHT = 72;
+/** Header-only node (body hidden); floor for measure + resize. */
+export const CLASS_NODE_MIN_HEIGHT = 88;
 const HEADER_COLLAPSED = CLASS_NODE_MIN_HEIGHT;
+/** Expanded card header (chip + title + chrome). */
+const HEADER_HEIGHT = 96;
 /** Resize below this hides the body and leaves only the header. */
-const BODY_COLLAPSE_HEIGHT = HEADER_HEIGHT + 4;
+const BODY_COLLAPSE_HEIGHT = HEADER_HEIGHT + 8;
 const BODY_PADDING = 24;
 const SECTION_HEADER = 28;
-const MEMBER_COLLAPSED = 40;
+const MEMBER_COLLAPSED = 36;
 const MEMBER_GAP = 8;
-/** Body flex gap-2 on each side of the section separator. */
 const SECTION_GAP = 16;
+/** Avoid collapsing while estimates still fit inside the box. */
+const FIT_SLACK = 20;
 
 function estimateExpandedMemberHeight(code: string): number {
   const lines = Math.max(1, code.split("\n").length);
-  const rowChrome = 48 + 6;
-  const codeHeight = Math.min(lines * 20, 256);
+  const rowChrome = 44 + 6;
+  const codeHeight = Math.min(lines * 19, 256);
   return rowChrome + codeHeight + 8;
 }
 
 type LayoutMember = {
   id: string;
-  code: string;
   collapsedHeight: number;
   expandedHeight: number;
 };
@@ -30,39 +31,76 @@ type LayoutMember = {
 function buildMemberList(items: MemberItem[]): LayoutMember[] {
   return items.map((item) => ({
     id: item.id,
-    code: item.code,
     collapsedHeight: MEMBER_COLLAPSED,
     expandedHeight: estimateExpandedMemberHeight(item.code),
   }));
 }
 
+function memberListHeight(
+  members: LayoutMember[],
+  expandedIds: Set<string>,
+  sectionOpen: boolean,
+): number {
+  if (members.length === 0 || !sectionOpen) return 0;
+  let h = 0;
+  for (let i = 0; i < members.length; i++) {
+    const m = members[i]!;
+    h += expandedIds.has(m.id) ? m.expandedHeight : m.collapsedHeight;
+    if (i > 0) h += MEMBER_GAP;
+  }
+  return h;
+}
+
+export type ClassLayoutPreference = {
+  expandedPropertyIds: string[];
+  expandedMethodIds: string[];
+  propertiesSectionCollapsed: boolean;
+  methodsSectionCollapsed: boolean;
+};
+
+export function getLayoutPreference(data: ClassNodeData): ClassLayoutPreference {
+  if (data.layoutPreference) return data.layoutPreference;
+  return {
+    expandedPropertyIds: [...data.expandedPropertyIds],
+    expandedMethodIds: [...data.expandedMethodIds],
+    propertiesSectionCollapsed: data.propertiesSectionCollapsed ?? false,
+    methodsSectionCollapsed: data.methodsSectionCollapsed ?? false,
+  };
+}
+
+export function layoutPreferenceFromData(data: ClassNodeData): ClassLayoutPreference {
+  return {
+    expandedPropertyIds: [...data.expandedPropertyIds],
+    expandedMethodIds: [...data.expandedMethodIds],
+    propertiesSectionCollapsed: data.propertiesSectionCollapsed ?? false,
+    methodsSectionCollapsed: data.methodsSectionCollapsed ?? false,
+  };
+}
+
 export function computeClassNodeHeight(data: ClassNodeData): number {
   if (data.collapsed) return HEADER_COLLAPSED;
 
-  let total = HEADER_HEIGHT + BODY_PADDING;
   const props = buildMemberList(data.properties);
   const methods = buildMemberList(data.methods);
   const expandedProps = new Set(data.expandedPropertyIds);
   const expandedMethods = new Set(data.expandedMethodIds);
+  const propsOpen = !(data.propertiesSectionCollapsed ?? false);
+  const methodsOpen = !(data.methodsSectionCollapsed ?? false);
 
-  if (props.length > 0 && !data.propertiesSectionCollapsed) {
+  let total = HEADER_HEIGHT + BODY_PADDING;
+
+  if (props.length > 0) {
     total += SECTION_HEADER;
-    for (let i = 0; i < props.length; i++) {
-      const m = props[i]!;
-      total += expandedProps.has(m.id) ? m.expandedHeight : m.collapsedHeight;
-      if (i > 0) total += MEMBER_GAP;
-    }
+    total += memberListHeight(props, expandedProps, propsOpen);
   }
 
-  if (props.length > 0 && methods.length > 0) total += SECTION_GAP;
+  if (props.length > 0 && methods.length > 0) {
+    total += SECTION_GAP;
+  }
 
-  if (methods.length > 0 && !data.methodsSectionCollapsed) {
+  if (methods.length > 0) {
     total += SECTION_HEADER;
-    for (let i = 0; i < methods.length; i++) {
-      const m = methods[i]!;
-      total += expandedMethods.has(m.id) ? m.expandedHeight : m.collapsedHeight;
-      if (i > 0) total += MEMBER_GAP;
-    }
+    total += memberListHeight(methods, expandedMethods, methodsOpen);
   }
 
   return Math.max(CLASS_NODE_MIN_HEIGHT, total);
@@ -76,17 +114,48 @@ export type FitExpandedResult = {
   collapsed: boolean;
 };
 
+export type FitExpandedOptions = {
+  /** When true (resize), pinned members may collapse to fit height. */
+  ignorePinned?: boolean;
+};
+
+type LayoutState = FitExpandedResult;
+
+function stateHeight(data: ClassNodeData, state: LayoutState): number {
+  return computeClassNodeHeight({
+    ...data,
+    collapsed: state.collapsed,
+    expandedPropertyIds: state.expandedPropertyIds,
+    expandedMethodIds: state.expandedMethodIds,
+    propertiesSectionCollapsed: state.propertiesSectionCollapsed,
+    methodsSectionCollapsed: state.methodsSectionCollapsed,
+  });
+}
+
+function snapshotFromData(data: ClassNodeData): LayoutState {
+  return {
+    collapsed: data.collapsed ?? false,
+    expandedPropertyIds: [...data.expandedPropertyIds],
+    expandedMethodIds: [...data.expandedMethodIds],
+    propertiesSectionCollapsed: data.propertiesSectionCollapsed ?? false,
+    methodsSectionCollapsed: data.methodsSectionCollapsed ?? false,
+  };
+}
+
 /**
- * Given a target node height, expand members top-to-bottom until space runs out.
- * Pinned ids stay expanded; shrinking collapses from the bottom.
+ * Shrink bottom-up, then expand toward layoutPreference when height allows.
  */
-export function fitExpandedToHeight(
+export function fitLayoutToHeight(
   data: ClassNodeData,
   targetHeight: number,
+  options?: FitExpandedOptions,
 ): FitExpandedResult {
-  const pinned = new Set(data.pinnedMemberIds ?? []);
-  const expandedPropertyIds: string[] = [];
-  const expandedMethodIds: string[] = [];
+  const pinned = options?.ignorePinned
+    ? new Set<string>()
+    : new Set(data.pinnedMemberIds ?? []);
+  const pref = getLayoutPreference(data);
+  const props = buildMemberList(data.properties);
+  const methods = buildMemberList(data.methods);
 
   if (targetHeight <= BODY_COLLAPSE_HEIGHT) {
     return {
@@ -98,96 +167,116 @@ export function fitExpandedToHeight(
     };
   }
 
-  let used = HEADER_HEIGHT + BODY_PADDING;
-  const props = buildMemberList(data.properties);
-  const methods = buildMemberList(data.methods);
+  const state = snapshotFromData(data);
+  state.collapsed = false;
 
-  let propertiesSectionCollapsed = props.length === 0;
-  let methodsSectionCollapsed = methods.length === 0;
+  const height = () => stateHeight(data, state);
 
-  if (props.length > 0) {
-    if (used + SECTION_HEADER > targetHeight) {
-      propertiesSectionCollapsed = true;
-    } else {
-      propertiesSectionCollapsed = false;
-      used += SECTION_HEADER;
-
-      for (let i = 0; i < props.length; i++) {
-        const member = props[i]!;
-        if (i > 0) used += MEMBER_GAP;
-
-        const mustExpand = pinned.has(member.id);
-        if (mustExpand) {
-          expandedPropertyIds.push(member.id);
-          used += member.expandedHeight;
-          continue;
-        }
-
-        if (used + member.expandedHeight <= targetHeight) {
-          expandedPropertyIds.push(member.id);
-          used += member.expandedHeight;
-        } else if (used + member.collapsedHeight <= targetHeight) {
-          used += member.collapsedHeight;
-        } else {
-          break;
-        }
+  const popUnpinned = (ids: string[]): boolean => {
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const id = ids[i]!;
+      if (!pinned.has(id)) {
+        ids.splice(i, 1);
+        return true;
       }
     }
-  }
-
-  if (props.length > 0 && methods.length > 0 && !propertiesSectionCollapsed) {
-    used += SECTION_GAP;
-  }
-
-  if (methods.length > 0) {
-    if (used + SECTION_HEADER > targetHeight) {
-      methodsSectionCollapsed = true;
-    } else {
-      methodsSectionCollapsed = false;
-      used += SECTION_HEADER;
-
-      for (let i = 0; i < methods.length; i++) {
-        const member = methods[i]!;
-        if (i > 0) used += MEMBER_GAP;
-
-        const mustExpand = pinned.has(member.id);
-        if (mustExpand) {
-          expandedMethodIds.push(member.id);
-          used += member.expandedHeight;
-          continue;
-        }
-
-        if (used + member.expandedHeight <= targetHeight) {
-          expandedMethodIds.push(member.id);
-          used += member.expandedHeight;
-        } else if (used + member.collapsedHeight <= targetHeight) {
-          used += member.collapsedHeight;
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
-  for (const id of pinned) {
-    if (props.some((p) => p.id === id) && !expandedPropertyIds.includes(id)) {
-      expandedPropertyIds.push(id);
-    }
-    if (methods.some((m) => m.id === id) && !expandedMethodIds.includes(id)) {
-      expandedMethodIds.push(id);
-    }
-  }
-
-  return {
-    collapsed: false,
-    expandedPropertyIds,
-    expandedMethodIds,
-    propertiesSectionCollapsed,
-    methodsSectionCollapsed,
+    return false;
   };
+
+  let guard = 0;
+  while (height() > targetHeight + FIT_SLACK && guard++ < 200) {
+    if (popUnpinned(state.expandedMethodIds)) continue;
+
+    if (methods.length > 0 && !state.methodsSectionCollapsed) {
+      state.methodsSectionCollapsed = true;
+      state.expandedMethodIds = state.expandedMethodIds.filter((id) =>
+        pinned.has(id),
+      );
+      continue;
+    }
+
+    if (popUnpinned(state.expandedPropertyIds)) continue;
+
+    if (props.length > 0 && !state.propertiesSectionCollapsed) {
+      state.propertiesSectionCollapsed = true;
+      state.expandedPropertyIds = state.expandedPropertyIds.filter((id) =>
+        pinned.has(id),
+      );
+      continue;
+    }
+
+    if (!state.collapsed) {
+      state.collapsed = true;
+      state.expandedPropertyIds = [];
+      state.expandedMethodIds = [];
+      state.propertiesSectionCollapsed = true;
+      state.methodsSectionCollapsed = true;
+      continue;
+    }
+
+    break;
+  }
+
+  guard = 0;
+  while (height() < targetHeight - FIT_SLACK && guard++ < 200) {
+    if (state.collapsed) {
+      state.collapsed = false;
+      state.propertiesSectionCollapsed = pref.propertiesSectionCollapsed;
+      state.methodsSectionCollapsed = pref.methodsSectionCollapsed;
+      state.expandedPropertyIds = [...pref.expandedPropertyIds];
+      state.expandedMethodIds = [...pref.expandedMethodIds];
+      continue;
+    }
+
+    if (
+      props.length > 0 &&
+      pref.propertiesSectionCollapsed === false &&
+      state.propertiesSectionCollapsed
+    ) {
+      state.propertiesSectionCollapsed = false;
+      continue;
+    }
+
+    const nextProp = pref.expandedPropertyIds.find(
+      (id) => !state.expandedPropertyIds.includes(id),
+    );
+    if (nextProp && !state.propertiesSectionCollapsed) {
+      state.expandedPropertyIds.push(nextProp);
+      continue;
+    }
+
+    if (
+      methods.length > 0 &&
+      pref.methodsSectionCollapsed === false &&
+      state.methodsSectionCollapsed
+    ) {
+      state.methodsSectionCollapsed = false;
+      continue;
+    }
+
+    const nextMethod = pref.expandedMethodIds.find(
+      (id) => !state.expandedMethodIds.includes(id),
+    );
+    if (nextMethod && !state.methodsSectionCollapsed) {
+      state.expandedMethodIds.push(nextMethod);
+      continue;
+    }
+
+    break;
+  }
+
+  return { ...state };
 }
 
-/** Grow to fit content when opening; otherwise use the requested height. */
+/** @deprecated Use fitLayoutToHeight */
+export function fitExpandedToHeight(
+  data: ClassNodeData,
+  targetHeight: number,
+  options?: FitExpandedOptions,
+): FitExpandedResult {
+  return fitLayoutToHeight(data, targetHeight, options);
+}
+
 export function resolveNodeHeight(
   data: ClassNodeData,
   requestedHeight?: number,

@@ -8,6 +8,9 @@ export function normalizeFilePath(path: string): string {
 export function collectGraphFilePaths(data: GraphData | null): Set<string> {
   if (!data) return new Set();
   const paths = new Set<string>();
+  if (data.focusFile?.trim()) {
+    paths.add(normalizeFilePath(data.focusFile));
+  }
   for (const node of data.nodes) {
     if (node.filePath?.trim()) paths.add(normalizeFilePath(node.filePath));
   }

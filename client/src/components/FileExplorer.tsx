@@ -36,7 +36,10 @@ const EXPLORER_X_PAD = "px-2";
 const TREE_ROW =
   "hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
 const TREE_FOLDER_ROW =
-  "hoverable pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm border border-transparent px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
+  "hoverable pointer-events-auto flex h-[22px] min-h-[22px] w-full cursor-pointer items-center justify-start gap-1.5 rounded-sm border border-transparent px-1.5 py-0 text-xs font-medium leading-none disabled:cursor-not-allowed";
+
+const TREE_SECTION_ROW =
+  "explorer-section-header pointer-events-auto flex h-[22px] min-h-[22px] w-full cursor-pointer items-center justify-start gap-1.5 rounded-sm px-1.5 py-0 text-xs font-medium leading-none";
 
 /** Vertical guide + indent for nested files under a folder/section. */
 function ExplorerTreeGuide({ children }: { children: ReactNode }) {
@@ -96,7 +99,8 @@ function FileTreeItem({
       className={cn(
         TREE_ROW,
         "active:cursor-grabbing",
-        inGraph ? "font-medium text-primary" : "text-foreground",
+        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
+        !inGraph && "text-foreground",
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
@@ -150,10 +154,10 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
         >
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-            className="size-3 shrink-0 text-muted-foreground"
+            className="size-3.5 shrink-0 text-muted-foreground"
           />
           <Codicon name={folderIcon.codicon} className={cn("size-3.5 shrink-0", folderIcon.colorClass)} />
-          <span className="truncate">{entry.name}</span>
+          <span className="truncate leading-none">{entry.name}</span>
           {loading && <span className="text-xs text-muted-foreground">…</span>}
         </Button>
         {open && (
@@ -274,15 +278,15 @@ function RecentFilesSection({
         type="button"
         variant="ghost"
         onClick={onToggle}
-        className={cn(TREE_FOLDER_ROW, "text-muted-foreground")}
+        className={TREE_SECTION_ROW}
         aria-expanded={open}
       >
         <Codicon
           name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-          className="size-3 shrink-0"
+          className="size-3.5 shrink-0"
         />
-        <span>Recent</span>
-        <span className="ml-auto text-muted-foreground">{files.length}</span>
+        <span className="truncate leading-none">Recent</span>
+        <span className="ml-auto shrink-0 leading-none">{files.length}</span>
       </Button>
       {open && (
         <ExplorerTreeGuide>
@@ -471,10 +475,12 @@ export default function FileExplorer({
         </div>
         <Button
           type="button"
+          variant={rootPath ? "secondary" : "default"}
           onClick={handleOpen}
           disabled={disabled || opening}
           className="w-full"
         >
+          <FolderOpen data-icon="inline-start" />
           {opening || indexing ? (statusMessage ?? "Opening…") : "Open"}
         </Button>
         {(statusMessage || indexing) && (

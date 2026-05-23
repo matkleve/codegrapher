@@ -16,7 +16,8 @@ import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import {
   CLASS_NODE_MIN_HEIGHT,
   computeClassNodeHeight,
-  fitExpandedToHeight,
+  fitLayoutToHeight,
+  layoutPreferenceFromData,
   resolveNodeHeight,
 } from "@/lib/classNodeLayout";
 import { camelToWords } from "@/lib/camelToWords";
@@ -77,22 +78,35 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const nodeHeight = nodeData.height;
   const cardRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
-  const lastSyncedHeightRef = useRef<number | null>(null);
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
+  const withPreference = useCallback(
+    (patch: Partial<ClassNodeData>): Partial<ClassNodeData> => {
+      if (patch.layoutPreference !== undefined) return patch;
+      const merged = { ...nodeData, ...patch };
+      return { ...patch, layoutPreference: layoutPreferenceFromData(merged) };
+    },
+    [nodeData],
+  );
+
   const commitNode = useCallback(
-    (patch: Partial<ClassNodeData>, size?: { width: number; height?: number }) => {
-      if (size?.height != null) {
-        lastSyncedHeightRef.current = size.height;
-      }
+    (
+      patch: Partial<ClassNodeData>,
+      size?: { width: number; height?: number },
+      opts?: { keepPreference?: boolean },
+    ) => {
+      const nextPatch = opts?.keepPreference ? patch : withPreference(patch);
       setNodes((nodes) =>
         nodes.map((n) => {
           if (n.id !== id || n.type !== "class") return n;
           const prev = n.data as ClassNodeData;
-          const nextData = { ...prev, ...patch };
+          const nextData = { ...prev, ...nextPatch };
           const w = size?.width ?? nextData.width ?? nodeWidth;
-          const h = size?.height ?? nextData.height;
+          let h = size?.height ?? nextData.height;
+          if (nextData.collapsed && typeof h === "number") {
+            h = Math.max(CLASS_NODE_MIN_HEIGHT, h);
+          }
           return {
             ...n,
             width: w,
@@ -104,7 +118,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       );
       requestAnimationFrame(() => updateNodeInternals(id));
     },
-    [id, nodeWidth, setNodes, updateNodeInternals],
+    [id, nodeWidth, setNodes, updateNodeInternals, withPreference],
   );
 
   const toggleMember = useCallback(
@@ -143,7 +157,11 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         ? computeClassNodeHeight(mergedWithPatch)
         : (nodeHeight ?? computeClassNodeHeight(mergedWithPatch));
       if (!opening && nodeHeight != null) {
-        Object.assign(patch, fitExpandedToHeight(mergedWithPatch, nextHeight));
+        Object.assign(
+          patch,
+          fitLayoutToHeight(mergedWithPatch, nextHeight, { ignorePinned: false }),
+        );
+        nextHeight = nodeHeight;
       }
 
       commitNode(
@@ -293,21 +311,22 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const onResize = useCallback(
     (_event: unknown, params: { width: number; height: number }) => {
       isResizingRef.current = true;
-      const fitted = fitExpandedToHeight(
+      const fitted = fitLayoutToHeight(
         { ...nodeData, width: params.width, collapsed: false },
         params.height,
+        { ignorePinned: true },
       );
       const height = fitted.collapsed
         ? CLASS_NODE_MIN_HEIGHT
         : params.height;
-      lastSyncedHeightRef.current = height;
       commitNode(
         {
           width: params.width,
           height,
           ...fitted,
         },
-        { width: params.width, height: height },
+        { width: params.width, height },
+        { keepPreference: true },
       );
     },
     [commitNode, nodeData],
@@ -317,42 +336,35 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     isResizingRef.current = false;
   }, []);
 
+  const title = camelToWords(nodeData.label);
+
   useLayoutEffect(() => {
-    if (isResizingRef.current) return;
+    if (bodyExpanded) return;
     const el = cardRef.current;
     if (!el) return;
 
-    const prevInlineHeight = el.style.height;
+    const prevHeight = el.style.height;
     el.style.height = "auto";
-    const measured = Math.ceil(el.scrollHeight);
-    el.style.height = prevInlineHeight;
+    const measured = Math.max(
+      CLASS_NODE_MIN_HEIGHT,
+      Math.ceil(el.scrollHeight),
+    );
+    el.style.height = prevHeight;
 
-    if (measured < 1) return;
-    if (lastSyncedHeightRef.current === measured) return;
-
-    const current = nodeHeight ?? 0;
-    if (current > 0 && measured >= current - 2 && measured <= current + 2) {
-      lastSyncedHeightRef.current = measured;
-      return;
-    }
-
-    lastSyncedHeightRef.current = measured;
-    commitNode({ height: measured }, { width: nodeWidth, height: measured });
+    if (nodeHeight != null && Math.abs(measured - nodeHeight) <= 1) return;
+    commitNode({}, { width: nodeWidth, height: measured }, { keepPreference: true });
   }, [
     bodyExpanded,
     commitNode,
-    nodeData.collapsed,
-    nodeData.expandedMethodIds,
-    nodeData.expandedPropertyIds,
-    nodeData.methods,
-    nodeData.methodsSectionCollapsed,
-    nodeData.properties,
-    nodeData.propertiesSectionCollapsed,
+    nodeData.filePath,
+    nodeData.label,
     nodeHeight,
     nodeWidth,
   ]);
 
-  const title = camelToWords(nodeData.label);
+  const contentTallerThanNode =
+    nodeHeight != null &&
+    computeClassNodeHeight(nodeData) > nodeHeight + 2;
   const hasProperties = nodeData.properties.length > 0;
   const hasMethods = nodeData.methods.length > 0;
 
@@ -360,11 +372,17 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     <div
       ref={cardRef}
       className={cn(
-        "class-node-root relative flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
+        "class-node-root relative flex flex-col rounded-lg border border-border text-left shadow-sm",
+        bodyExpanded ? "h-full overflow-hidden bg-card" : "shrink-0 overflow-visible bg-accent",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
       )}
-      style={{ width: nodeWidth, height: nodeHeight }}
+      style={{
+        width: nodeWidth,
+        ...(bodyExpanded
+          ? { height: nodeHeight }
+          : { minHeight: CLASS_NODE_MIN_HEIGHT }),
+      }}
     >
       <Handle
         type="target"
@@ -379,7 +397,12 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         onToggleCollapsed={onToggleCollapsed}
       />
       {bodyExpanded && (
-        <div className="nodrag flex shrink-0 flex-col gap-2 overflow-visible p-3">
+        <div
+          className={cn(
+            "nodrag flex min-h-0 flex-col gap-2 p-3",
+            contentTallerThanNode ? "flex-1 overflow-y-auto scrollbar-thin" : "shrink-0",
+          )}
+        >
           {hasProperties && (
             <MemberSection
               label="Properties"

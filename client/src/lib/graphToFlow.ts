@@ -7,7 +7,10 @@ import {
 } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
 import { buildClassProperties, methodsForClassNode } from "@/lib/classBody";
-import { computeClassNodeHeight } from "@/lib/classNodeLayout";
+import {
+  computeClassNodeHeight,
+  layoutPreferenceFromData,
+} from "@/lib/classNodeLayout";
 import { camelToWords } from "@/lib/camelToWords";
 import { fileDisplayName } from "@/lib/recentFiles";
 import type { GraphData, GraphNode } from "@/types";
@@ -21,6 +24,10 @@ export type FlowNodeUiState = {
   widthByFlowId: Map<string, number>;
   heightByFlowId: Map<string, number>;
   pinnedMemberIdsByFlowId: Map<string, string[]>;
+  layoutPreferenceByFlowId: Map<
+    string,
+    NonNullable<ClassNodeData["layoutPreference"]>
+  >;
 };
 
 export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
@@ -32,11 +39,18 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
   const widthByFlowId = new Map<string, number>();
   const heightByFlowId = new Map<string, number>();
   const pinnedMemberIdsByFlowId = new Map<string, string[]>();
+  const layoutPreferenceByFlowId = new Map<
+    string,
+    NonNullable<ClassNodeData["layoutPreference"]>
+  >();
   for (const node of nodes) {
     if (node.type === "class") {
       const d = node.data as ClassNodeData;
       if (d.pinnedMemberIds?.length) {
         pinnedMemberIdsByFlowId.set(node.id, [...d.pinnedMemberIds]);
+      }
+      if (d.layoutPreference) {
+        layoutPreferenceByFlowId.set(node.id, d.layoutPreference);
       }
       for (const id of d.expandedMethodIds) expandedMethodIds.add(id);
       for (const id of d.expandedPropertyIds) expandedPropertyIds.add(id);
@@ -67,6 +81,7 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
     widthByFlowId,
     heightByFlowId,
     pinnedMemberIdsByFlowId,
+    layoutPreferenceByFlowId,
   };
 }
 
@@ -134,6 +149,7 @@ export function graphToFlow(
     widthByFlowId,
     heightByFlowId,
     pinnedMemberIdsByFlowId,
+    layoutPreferenceByFlowId,
   } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
@@ -242,6 +258,8 @@ export function graphToFlow(
         height: heightByFlowId.get(id),
         pinnedMemberIds: pinnedMemberIdsByFlowId.get(id) ?? [],
       };
+      classData.layoutPreference =
+        layoutPreferenceByFlowId.get(id) ?? layoutPreferenceFromData(classData);
 
       const nodeWidth = classData.width ?? CLASS_NODE_DEFAULT_WIDTH;
       const nodeHeight = classData.height ?? computeClassNodeHeight(classData);

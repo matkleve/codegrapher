@@ -88,6 +88,7 @@
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
+  --explorer-file-in-graph: oklch(0.48 0.14 250);
 }
 
 @layer base {
@@ -166,6 +167,7 @@ html.dark {
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
+  --explorer-file-in-graph: oklch(0.72 0.11 235);
 }
 
 .graph-canvas-grid {
@@ -216,6 +218,42 @@ html.dark {
 .hoverable:hover {
   background-color: var(--surface-hover);
   border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Sidebar tree rows: secondary hover */
+.bg-sidebar .hoverable:hover {
+  background-color: var(--secondary);
+  border-color: var(--border);
+  color: var(--secondary-foreground);
+}
+
+.bg-sidebar .explorer-file-in-graph.hoverable:hover {
+  color: var(--explorer-file-in-graph);
+}
+
+/* Recent / section headers: muted at rest, primary only on hover */
+.bg-sidebar button.explorer-section-header {
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--muted-foreground);
+}
+
+.bg-sidebar button.explorer-section-header svg,
+.bg-sidebar button.explorer-section-header [data-icon],
+.bg-sidebar button.explorer-section-header span {
+  color: var(--muted-foreground);
+}
+
+.bg-sidebar button.explorer-section-header:hover {
+  background-color: color-mix(in oklch, var(--primary) 18%, var(--background));
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.bg-sidebar button.explorer-section-header:hover svg,
+.bg-sidebar button.explorer-section-header:hover [data-icon],
+.bg-sidebar button.explorer-section-header:hover span {
   color: var(--primary);
 }
 

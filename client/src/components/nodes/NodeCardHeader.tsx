@@ -18,7 +18,12 @@ export function NodeCardHeader({
   onToggleCollapsed,
 }: NodeCardHeaderProps) {
   return (
-    <div className="rounded-t-lg border-b border-border bg-accent p-2">
+    <div
+      className={cn(
+        "bg-accent p-2",
+        bodyExpanded ? "rounded-t-lg border-b border-border" : "rounded-lg",
+      )}
+    >
       <div
         className={cn(
           NODE_DRAG_HANDLE,

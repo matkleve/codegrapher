@@ -29,7 +29,7 @@ export function CollapsibleMemberRow({
   const lines = code.split("\n");
 
   return (
-    <div className="group/member nodrag relative rounded-md border border-transparent bg-muted p-2 transition-[background-color,border-color] duration-150 hover:border-primary hover:bg-[var(--surface-hover)]">
+    <div className="group/member nodrag relative rounded-md border border-transparent bg-muted p-2 transition-[background-color,border-color] duration-150 hover:border-border hover:bg-secondary">
       <Handle
         type="target"
         position={Position.Left}
@@ -47,9 +47,9 @@ export function CollapsibleMemberRow({
       >
         <ExpandChevron
           expanded={expanded}
-          className="text-foreground transition-colors group-hover/member:text-primary"
+          className="text-muted-foreground transition-colors group-hover/member:text-secondary-foreground"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/member:text-primary">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/member:text-secondary-foreground">
           {label}
         </span>
       </button>
