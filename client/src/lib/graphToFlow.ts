@@ -17,6 +17,8 @@ export type FlowNodeUiState = {
   collapsedByGraphId: Map<string, boolean>;
   propertiesSectionCollapsedByGraphId: Map<string, boolean>;
   methodsSectionCollapsedByGraphId: Map<string, boolean>;
+  widthByFlowId: Map<string, number>;
+  heightByFlowId: Map<string, number>;
 };
 
 export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
@@ -25,6 +27,8 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
   const collapsedByGraphId = new Map<string, boolean>();
   const propertiesSectionCollapsedByGraphId = new Map<string, boolean>();
   const methodsSectionCollapsedByGraphId = new Map<string, boolean>();
+  const widthByFlowId = new Map<string, number>();
+  const heightByFlowId = new Map<string, number>();
   for (const node of nodes) {
     if (node.type === "class") {
       const d = node.data as ClassNodeData;
@@ -37,6 +41,15 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
       if (d.methodsSectionCollapsed) {
         methodsSectionCollapsedByGraphId.set(d.graphNodeId, true);
       }
+      const w =
+        d.width ??
+        (typeof node.width === "number" ? node.width : undefined) ??
+        (typeof node.style?.width === "number" ? node.style.width : undefined);
+      if (typeof w === "number") widthByFlowId.set(node.id, w);
+      const h =
+        d.height ??
+        (typeof node.height === "number" ? node.height : undefined);
+      if (typeof h === "number") heightByFlowId.set(node.id, h);
     }
   }
   return {
@@ -45,10 +58,12 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
     collapsedByGraphId,
     propertiesSectionCollapsedByGraphId,
     methodsSectionCollapsedByGraphId,
+    widthByFlowId,
+    heightByFlowId,
   };
 }
 
-const CLASS_MIN_WIDTH = 280;
+const CLASS_MIN_WIDTH = CLASS_NODE_DEFAULT_WIDTH;
 const FILE_NODE_WIDTH = 160;
 const FILE_NODE_HEIGHT = 56;
 
@@ -131,6 +146,8 @@ export function graphToFlow(
     collapsedByGraphId,
     propertiesSectionCollapsedByGraphId,
     methodsSectionCollapsedByGraphId,
+    widthByFlowId,
+    heightByFlowId,
   } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
@@ -235,14 +252,19 @@ export function graphToFlow(
           propertiesSectionCollapsedByGraphId.get(node.id) ?? false,
         methodsSectionCollapsed: methodsSectionCollapsedByGraphId.get(node.id) ?? false,
         collapsed: collapsedByGraphId.get(node.id) ?? false,
+        width: widthByFlowId.get(id) ?? CLASS_NODE_DEFAULT_WIDTH,
+        height: heightByFlowId.get(id),
       };
+
+      const nodeWidth = classData.width ?? CLASS_NODE_DEFAULT_WIDTH;
 
       return {
         id,
         type: "class",
         position: { x: 0, y: 0 },
-        width: CLASS_NODE_DEFAULT_WIDTH,
-        style: { width: CLASS_NODE_DEFAULT_WIDTH },
+        width: nodeWidth,
+        height: classData.height,
+        style: { width: nodeWidth },
         draggable: true,
         dragHandle: `.${NODE_DRAG_HANDLE}`,
         data: classData,
@@ -282,22 +304,19 @@ export function graphToFlow(
   return { nodes, edges };
 }
 
-export function mergeFlowElements(
+/** Append only nodes/edges that do not already exist — preserves existing node dimensions. */
+export function appendFlowElements(
   existingNodes: Node[],
   existingEdges: Edge[],
   incoming: { nodes: Node[]; edges: Edge[] },
 ): { nodes: Node[]; edges: Edge[] } {
-  const nodeMap = new Map(existingNodes.map((n) => [n.id, n]));
-  for (const n of incoming.nodes) {
-    nodeMap.set(n.id, n);
-  }
-  const edgeMap = new Map(existingEdges.map((e) => [e.id, e]));
-  for (const e of incoming.edges) {
-    edgeMap.set(e.id, e);
-  }
+  const existingNodeIds = new Set(existingNodes.map((n) => n.id));
+  const freshNodes = incoming.nodes.filter((n) => !existingNodeIds.has(n.id));
+  const existingEdgeIds = new Set(existingEdges.map((e) => e.id));
+  const freshEdges = incoming.edges.filter((e) => !existingEdgeIds.has(e.id));
   return {
-    nodes: [...nodeMap.values()],
-    edges: [...edgeMap.values()],
+    nodes: [...existingNodes, ...freshNodes],
+    edges: [...existingEdges, ...freshEdges],
   };
 }
 

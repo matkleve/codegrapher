@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { ctrlPreviewEdgeId, previewLineHandle, previewSourceHandle } from "@/lib/ctrlPreviewHandles";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
@@ -17,6 +17,15 @@ type CodeLineProps = {
   sourceGraphNodeId: string;
   filePath: string;
 };
+
+function makeTokenKey(
+  sourceFlowId: string,
+  memberId: string,
+  lineNumber: number,
+  token: string,
+): string {
+  return `${sourceFlowId}::${memberId}::${lineNumber}::${token}`;
+}
 
 export function CodeLine({
   line,
@@ -37,6 +46,8 @@ export function CodeLine({
     scheduleHideReferenceCards,
     cancelHideReferenceCards,
     setTokenDropdown,
+    activeTokenKey,
+    setActiveTokenKey,
   } = useGraphInteraction();
 
   const edgeKeyRef = useRef<string | null>(null);
@@ -57,6 +68,9 @@ export function CodeLine({
       if (!entry) return;
 
       cancelHideReferenceCards();
+      const tokenKey = makeTokenKey(sourceFlowId, memberId, lineNumber, name);
+      setActiveTokenKey(tokenKey);
+
       const edgeKey = ctrlPreviewEdgeId(sourceFlowId, name);
       edgeKeyRef.current = edgeKey;
 
@@ -72,20 +86,20 @@ export function CodeLine({
 
       if (!resolved) {
         clearPreviewForKey(edgeKey);
+        setActiveTokenKey(null);
         return;
       }
 
       if (resolved.mode === "graph") {
+        setReferenceCards(null);
         setGraphPreview(edgeKey, sourceFlowId, resolved);
         return;
       }
 
       clearPreviewForKey(edgeKey);
-      const rect = el.getBoundingClientRect();
       setReferenceCards({
         token: name,
-        x: rect.left,
-        y: rect.bottom,
+        anchor: toAnchorRect(el.getBoundingClientRect()),
         cards: resolved.cards,
       });
     },
@@ -99,6 +113,7 @@ export function CodeLine({
       lineNumber,
       lookup,
       memberId,
+      setActiveTokenKey,
       setGraphPreview,
       setReferenceCards,
       sourceFlowId,
@@ -122,6 +137,7 @@ export function CodeLine({
       });
       if (edgeKeyRef.current) clearPreviewForKey(edgeKeyRef.current);
       setReferenceCards(null);
+      setActiveTokenKey(null);
     },
     [
       clearPreviewForKey,
@@ -129,6 +145,7 @@ export function CodeLine({
       hasSymbol,
       isCtrlHeld,
       lineNumber,
+      setActiveTokenKey,
       setReferenceCards,
       setTokenDropdown,
       sourceFlowId,
@@ -174,6 +191,13 @@ export function CodeLine({
         const entry = lookup(token.text);
         const semantic = entry ? symbolKindToSemantic(entry.kind) : null;
         const interactive = isCtrlHeld && semantic !== null;
+        const tokenKey = makeTokenKey(
+          sourceFlowId,
+          memberId,
+          lineNumber,
+          token.text,
+        );
+        const isActive = activeTokenKey === tokenKey;
 
         return (
           <span
@@ -181,6 +205,9 @@ export function CodeLine({
             role={interactive ? "button" : undefined}
             tabIndex={interactive ? 0 : undefined}
             className={cn(
+              interactive &&
+                "inline-flex items-center rounded-md border border-transparent bg-transparent px-1.5 py-0.5 align-baseline leading-none",
+              interactive && isActive && "border-border bg-card",
               interactive && semantic && TOKEN_HIGHLIGHT[semantic],
             )}
             onMouseEnter={(e) => onIdentifierEnter(token.text, e.currentTarget)}

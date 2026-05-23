@@ -340,3 +340,14 @@ html.dark {
 .react-flow__node.node-fade-in {
   animation: node-fade-in 400ms ease-out;
 }
+
+@keyframes token-ref-dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.token-ref-connector-path {
+  stroke-dashoffset: 16;
+  animation: token-ref-dash 800ms linear infinite;
+}

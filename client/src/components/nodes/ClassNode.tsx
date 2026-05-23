@@ -67,7 +67,7 @@ function MemberSection({
 function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const nodeData = data as ClassNodeData;
   const bodyExpanded = !(nodeData.collapsed ?? false);
-  const nodeWidth = width ?? CLASS_NODE_DEFAULT_WIDTH;
+  const nodeWidth = nodeData.width ?? width ?? CLASS_NODE_DEFAULT_WIDTH;
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
@@ -149,16 +149,22 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     });
   }, [allMethodsExpanded, nodeData.methods, patchNodeData]);
 
-  const applyWidth = useCallback(
-    (nextWidth: number) => {
+  const applySize = useCallback(
+    (nextWidth: number, nextHeight?: number) => {
       setNodes((nodes) =>
         nodes.map((n) => {
           if (n.id !== id) return n;
+          const data = n.data as ClassNodeData;
           return {
             ...n,
             width: nextWidth,
-            height: undefined,
+            height: nextHeight,
             style: { ...n.style, width: nextWidth },
+            data: {
+              ...data,
+              width: nextWidth,
+              height: nextHeight,
+            },
           };
         }),
       );
@@ -168,10 +174,10 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   );
 
   const onResize = useCallback(
-    (_event: unknown, params: { width: number }) => {
-      applyWidth(params.width);
+    (_event: unknown, params: { width: number; height: number }) => {
+      applySize(params.width, params.height);
     },
-    [applyWidth],
+    [applySize],
   );
 
   const title = camelToWords(nodeData.label);
@@ -179,7 +185,10 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const hasMethods = nodeData.methods.length > 0;
 
   return (
-    <div className="relative" style={{ width: nodeWidth }}>
+    <div
+      className="relative"
+      style={{ width: nodeWidth, height: nodeData.height }}
+    >
       <div
         className={cn(
           "relative overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",

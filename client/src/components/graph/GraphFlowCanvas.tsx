@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
+import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { flowEdgeTypes } from "@/components/graph/flowEdgeTypes";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import {
@@ -74,6 +75,7 @@ export function GraphFlowCanvas({
         zoomOnPinch
         panOnDrag
       />
+      <GraphPinchZoomBoost />
       <TokenReferencesDropdown />
       <TokenReferenceCards />
     </>

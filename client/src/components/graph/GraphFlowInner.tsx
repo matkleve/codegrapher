@@ -36,7 +36,7 @@ import {
 import {
   collectFlowNodeUiState,
   graphToFlow,
-  mergeFlowElements,
+  appendFlowElements,
 } from "@/lib/graphToFlow";
 import {
   loadShowGrid,
@@ -167,16 +167,16 @@ export function GraphFlowInner({
       }
 
       const existingIds = new Set(nodesRef.current.map((n) => n.id));
-      const merged = mergeFlowElements(nodesRef.current, edgesRef.current, {
+      const appended = appendFlowElements(nodesRef.current, edgesRef.current, {
         nodes: freshNodes,
         edges: freshEdges,
       });
-      const mergedNodes = merged.nodes.map((n) =>
+      const mergedNodes = appended.nodes.map((n) =>
         existingIds.has(n.id)
           ? n
           : { ...n, className: cn(n.className, "node-fade-in") },
       );
-      applyLayoutAndFit(mergedNodes, merged.edges, false, true);
+      applyLayoutAndFit(mergedNodes, appended.edges, false, true);
     },
     [applyLayoutAndFit, setEdges, setNodes],
   );
@@ -242,7 +242,7 @@ export function GraphFlowInner({
       const vp = getViewport();
       const bounds = nodes.reduce(
         (acc, n) => {
-          const w = 280;
+          const w = 320;
           const h = 120;
           const x1 = n.position.x;
           const y1 = n.position.y;

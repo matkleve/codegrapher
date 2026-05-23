@@ -25,6 +25,8 @@ export type ClassNodeData = {
   collapsed?: boolean;
   selected?: boolean;
   pathHighlighted?: boolean;
+  width?: number;
+  height?: number;
 };
 
 export type FileNodeData = {

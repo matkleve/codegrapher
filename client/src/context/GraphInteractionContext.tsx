@@ -34,12 +34,31 @@ export type PreviewEdgeConfig = {
   label?: string;
 };
 
+export type AnchorRect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+};
+
 export type ReferenceCardsState = {
   token: string;
-  x: number;
-  y: number;
+  anchor: AnchorRect;
   cards: ExternalReferenceCard[];
 } | null;
+
+export function toAnchorRect(rect: DOMRect): AnchorRect {
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+    width: rect.width,
+    height: rect.height,
+  };
+}
 
 export type TokenDropdownState = {
   token: string;
@@ -59,6 +78,8 @@ type GraphInteractionContextValue = {
     target: GraphVisibleTarget | null,
   ) => void;
   clearPreviewForKey: (edgeKey: string) => void;
+  activeTokenKey: string | null;
+  setActiveTokenKey: (key: string | null) => void;
   referenceCards: ReferenceCardsState;
   setReferenceCards: (state: ReferenceCardsState) => void;
   scheduleHideReferenceCards: () => void;
@@ -94,6 +115,7 @@ export function GraphInteractionProvider({
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
   const [previewEdges, setPreviewEdges] = useState<PreviewEdgeConfig[]>([]);
+  const [activeTokenKey, setActiveTokenKey] = useState<string | null>(null);
   const [referenceCards, setReferenceCards] = useState<ReferenceCardsState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
   const tempEdgeIdsRef = useRef<Set<string>>(new Set());
@@ -103,6 +125,7 @@ export function GraphInteractionProvider({
     tempEdgeIdsRef.current.clear();
     setPreviewEdges([]);
     setReferenceCards(null);
+    setActiveTokenKey(null);
   }, []);
 
   useEffect(() => {
@@ -149,6 +172,7 @@ export function GraphInteractionProvider({
     if (hideCardsTimerRef.current) clearTimeout(hideCardsTimerRef.current);
     hideCardsTimerRef.current = setTimeout(() => {
       setReferenceCards(null);
+      setActiveTokenKey(null);
       hideCardsTimerRef.current = null;
     }, 150);
   }, []);
@@ -182,7 +206,7 @@ export function GraphInteractionProvider({
         })),
       );
 
-      const w = typeof node.width === "number" ? node.width : 280;
+      const w = typeof node.width === "number" ? node.width : 320;
       const h = typeof node.height === "number" ? node.height : 120;
       const cx = node.position.x + w / 2;
       const cy = node.position.y + h / 2;
@@ -198,6 +222,8 @@ export function GraphInteractionProvider({
       previewEdges,
       setGraphPreview,
       clearPreviewForKey,
+      activeTokenKey,
+      setActiveTokenKey,
       referenceCards,
       setReferenceCards,
       scheduleHideReferenceCards,
@@ -213,6 +239,8 @@ export function GraphInteractionProvider({
       previewEdges,
       setGraphPreview,
       clearPreviewForKey,
+      activeTokenKey,
+      setActiveTokenKey,
       referenceCards,
       scheduleHideReferenceCards,
       cancelHideReferenceCards,
