@@ -32,15 +32,19 @@ function notifyRecentFilesChanged(): void {
 }
 
 /** Prepend path, dedupe, cap at 5. Persists JSON to localStorage. */
-export function recordRecentFile(path: string): string[] {
+export function prependRecentFile(path: string, current?: string[]): string[] {
   const trimmed = path.trim();
-  if (!trimmed) return loadRecentFiles();
+  if (!trimmed) return current ?? loadRecentFiles();
 
-  const current = loadRecentFiles();
-  const next = [trimmed, ...current.filter((p) => p !== trimmed)].slice(0, MAX_RECENT_FILES);
+  const base = current ?? loadRecentFiles();
+  const next = [trimmed, ...base.filter((p) => p !== trimmed)].slice(0, MAX_RECENT_FILES);
   saveRecentFiles(next);
   notifyRecentFilesChanged();
   return next;
+}
+
+export function recordRecentFile(path: string): string[] {
+  return prependRecentFile(path);
 }
 
 export function clearRecentFiles(): void {

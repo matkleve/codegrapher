@@ -11,6 +11,7 @@ import cytoscape from "cytoscape";
 import type { Core, ElementDefinition } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { Button } from "@/components/ui/button";
+import { setupViewportDrag } from "@/lib/cytoscapePan";
 import { readFitPadding, runGraphLayout } from "@/lib/compoundLayout";
 import {
   getGraphTheme,
@@ -18,14 +19,17 @@ import {
   readTailwindSpacing,
   type GraphThemeColors,
 } from "@/lib/cytoscapeTheme";
+import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { graphToElements } from "@/lib/graphElements";
 import {
   loadShowGrid,
   saveShowGrid,
   syncGridToViewport,
 } from "@/lib/graphGrid";
-import { fileDisplayName } from "@/lib/recentFiles";
 import { cn } from "@/lib/utils";
+
+const GRAPH_SUBTITLE =
+  "Click a file to start a new graph, or drag a file onto the graph to add it.";
 import type { GraphData } from "../types";
 
 cytoscape.use(dagre);
@@ -183,7 +187,7 @@ interface NodeTipState {
 }
 
 const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
-  function GraphCanvas({ graphData, graphResetKey, onFileDrop: _onFileDrop, loading }, ref) {
+  function GraphCanvas({ graphData, graphResetKey, onFileDrop, loading }, ref) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
@@ -193,9 +197,11 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     const historyForwardRef = useRef<CySnapshot[]>([]);
     const expandedMethodsRef = useRef<Set<string>>(new Set());
     const prevGraphKeyRef = useRef(-1);
+    const lastSyncedFocusRef = useRef<string | null>(null);
     const graphDataRef = useRef<GraphData | null>(null);
     const graphResetKeyRef = useRef(0);
     const pathFromIdRef = useRef<string | null>(null);
+    const viewportDragRef = useRef<ReturnType<typeof setupViewportDrag> | null>(null);
     const [expandedMethods, setExpandedMethods] = useState<Set<string>>(new Set());
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
@@ -328,6 +334,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       if (newElements.length > 0) cy.add(newElements);
 
       cy.nodes().ungrabify();
+      cy.style(buildCyStyles(getGraphTheme()));
 
       cy.resize();
       requestAnimationFrame(() => runGraphLayout(cy));
@@ -353,9 +360,17 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         minZoom: 0.2,
         maxZoom: 4,
         wheelSensitivity: 0.2,
-        autoungrabify: true,
         boxSelectionEnabled: false,
+        userPanningEnabled: false,
       });
+
+      const syncGrid = () => {
+        const gridEl = gridRef.current;
+        if (!gridEl || !showGridRef.current) return;
+        syncGridToViewport(cy, gridEl);
+      };
+
+      viewportDragRef.current = setupViewportDrag(cy, syncGrid);
 
       cy.on("cxttap", "node", (evt) => {
         evt.originalEvent.preventDefault();
@@ -389,6 +404,12 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       cy.on("mouseout", "node", () => setNodeTip(null));
 
       cy.on("tap", "node", (evt) => {
+        const panDrag = viewportDragRef.current;
+        if (panDrag?.isTapSuppressed()) {
+          panDrag.clearTapSuppress();
+          return;
+        }
+
         const node = evt.target;
         const type = node.data("type");
         const fromId = pathFromIdRef.current;
@@ -428,12 +449,6 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         }
       });
 
-      const syncGrid = () => {
-        const gridEl = gridRef.current;
-        if (!gridEl || !showGridRef.current) return;
-        syncGridToViewport(cy, gridEl);
-      };
-
       cy.on("pan zoom resize", syncGrid);
 
       cyRef.current = cy;
@@ -460,6 +475,8 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
 
       return () => {
         observer?.disconnect();
+        viewportDragRef.current?.destroy();
+        viewportDragRef.current = null;
         cy.destroy();
         cyRef.current = null;
       };
@@ -473,8 +490,15 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         return;
       }
 
-      const replaceAll = graphResetKey !== prevGraphKeyRef.current;
-      if (replaceAll) prevGraphKeyRef.current = graphResetKey;
+      const focusFile = graphData.focusFile ?? null;
+      const replaceAll =
+        graphResetKey !== prevGraphKeyRef.current ||
+        focusFile !== lastSyncedFocusRef.current;
+
+      if (replaceAll) {
+        prevGraphKeyRef.current = graphResetKey;
+        lastSyncedFocusRef.current = focusFile;
+      }
 
       try {
         syncGraph(cy, graphData, replaceAll);
@@ -538,9 +562,6 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     const visibleNodes =
       graphData?.nodes.filter((n) => n.type !== "file" && n.label?.trim()) ?? [];
     const hasGraph = visibleNodes.length > 0;
-    const graphTitle = graphData?.focusFile
-      ? fileDisplayName(graphData.focusFile)
-      : "Graph";
     const emptyMessage = graphData?.focusFile
       ? "No classes or functions found in this file"
       : "Click or drag a file to start";
@@ -552,12 +573,8 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       >
         <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold text-foreground">{graphTitle}</h2>
-            {graphData?.focusFile && (
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {graphData.focusFile}
-              </p>
-            )}
+            <h2 className="text-sm font-semibold text-foreground">Graph</h2>
+            <p className="text-xs text-muted-foreground">{GRAPH_SUBTITLE}</p>
           </div>
           <div className="pointer-events-auto flex shrink-0 items-center gap-2">
             <Button
@@ -608,7 +625,20 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
           </p>
         )}
 
-        <div className="pointer-events-auto relative min-h-0 flex-1 bg-background">
+        <div
+          className="relative min-h-0 flex-1 bg-background"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const filePath =
+              e.dataTransfer.getData(DRAG_FILEPATH_KEY) ||
+              e.dataTransfer.getData("text/plain");
+            if (filePath) onFileDrop(filePath);
+          }}
+        >
           <div
             ref={gridRef}
             aria-hidden
@@ -617,10 +647,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
               !showGrid && "hidden",
             )}
           />
-          <div
-            ref={containerRef}
-            className="pointer-events-auto absolute inset-0 z-10 bg-transparent"
-          />
+          <div ref={containerRef} className="absolute inset-0 z-10" />
           {!hasGraph && !loading && (
             <p className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-6 text-center text-lg text-muted-foreground">
               {emptyMessage}

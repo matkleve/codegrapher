@@ -20,7 +20,11 @@ function readCssVar(variable: string, property: "backgroundColor" | "color" = "b
   document.documentElement.appendChild(probe);
   const value = getComputedStyle(probe)[property];
   document.documentElement.removeChild(probe);
-  return value || "transparent";
+  const fallback =
+    property === "color" ? "oklch(0.985 0 0)" : "oklch(0.205 0 0)";
+  return value && value !== "transparent" && value !== "rgba(0, 0, 0, 0)"
+    ? value
+    : fallback;
 }
 
 /** Read computed spacing from a Tailwind utility class (e.g. p-5, gap-2). */
@@ -35,7 +39,7 @@ export function readTailwindSpacing(className: string): number {
     parseFloat(style.rowGap) ||
     0;
   document.documentElement.removeChild(probe);
-  return value;
+  return value > 0 ? value : 8;
 }
 
 export function readTailwindMinSize(
@@ -47,7 +51,8 @@ export function readTailwindMinSize(
   document.documentElement.appendChild(probe);
   const value = parseFloat(getComputedStyle(probe)[property]) || 0;
   document.documentElement.removeChild(probe);
-  return value;
+  if (value > 0) return value;
+  return property === "minWidth" ? 192 : 36;
 }
 
 export function getGraphTheme(): GraphThemeColors {

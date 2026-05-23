@@ -17,7 +17,6 @@ function layoutChildrenInParent(
   if (children.length === 0) return;
 
   children.forEach((child) => {
-    child.ungrabify();
     child.style({
       width: innerWidth,
       "text-halign": "left",
@@ -73,6 +72,7 @@ export function runGraphLayout(cy: Core): void {
     } catch (err) {
       console.error("Compound layout failed:", err);
     }
+    cy.nodes().ungrabify();
     cy.resize();
     if (cy.nodes().length > 0) {
       cy.fit(undefined, readFitPadding());

@@ -18,9 +18,11 @@ import {
   fileDisplayName,
   loadRecentFiles,
   loadRecentSectionOpen,
+  prependRecentFile,
   RECENT_FILES_CHANGED_EVENT,
   saveRecentSectionOpen,
 } from "@/lib/recentFiles";
+import { isFileInGraph } from "@/lib/graphFiles";
 import { cn } from "@/lib/utils";
 import type { TreeEntry } from "@/types";
 
@@ -34,6 +36,8 @@ interface FileExplorerProps {
   onFileClick: (filePath: string) => void;
   /** Disables folder tree only; recent files stay clickable. */
   treeDisabled?: boolean;
+  /** Files currently shown in the graph (highlighted in the tree). */
+  graphFilePaths?: Set<string>;
 }
 
 interface FileTreeItemProps {
@@ -42,9 +46,17 @@ interface FileTreeItemProps {
   depth: number;
   onFileClick: (filePath: string) => void;
   disabled?: boolean;
+  inGraph?: boolean;
 }
 
-function FileTreeItem({ filePath, name, depth, onFileClick, disabled }: FileTreeItemProps) {
+function FileTreeItem({
+  filePath,
+  name,
+  depth,
+  onFileClick,
+  disabled,
+  inGraph,
+}: FileTreeItemProps) {
   const fileIcon = getFileIcon(name);
 
   return (
@@ -69,9 +81,11 @@ function FileTreeItem({ filePath, name, depth, onFileClick, disabled }: FileTree
         }
       }}
       className={cn(
-        "pointer-events-auto relative z-10 flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-mono active:cursor-grabbing",
+        "pointer-events-auto flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-mono active:cursor-grabbing",
         indentClass(depth),
-        "text-foreground hover:bg-accent",
+        inGraph
+          ? "border-l-2 border-primary bg-sidebar-accent font-medium text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
+          : "text-foreground hover:bg-accent",
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
@@ -87,9 +101,10 @@ interface TreeNodeProps {
   depth: number;
   onFileClick: (filePath: string) => void;
   disabled?: boolean;
+  graphFilePaths?: Set<string>;
 }
 
-function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
+function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeNodeProps) {
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState<TreeEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -139,6 +154,7 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
               depth={depth + 1}
               onFileClick={onFileClick}
               disabled={disabled}
+              graphFilePaths={graphFilePaths}
             />
           ))}
       </div>
@@ -152,6 +168,7 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
       depth={depth}
       onFileClick={onFileClick}
       disabled={disabled}
+      inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
     />
   );
 }
@@ -172,8 +189,8 @@ function RecentFoldersDropdown({
   if (!open || folders.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto absolute top-full left-0 z-50 w-72">
-      <div className="mt-1 rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+    <div className="pointer-events-auto absolute top-full left-0 z-[100] w-72">
+      <div className="mt-1 rounded-md border border-border bg-popover text-popover-foreground shadow-lg">
         <p className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">Recent folders</p>
         <ul className="max-h-64 overflow-y-auto py-1">
           {folders.map((path) => (
@@ -214,13 +231,20 @@ interface RecentFilesSectionProps {
   open: boolean;
   onToggle: () => void;
   onFileClick: (filePath: string) => void;
+  graphFilePaths?: Set<string>;
 }
 
-function RecentFilesSection({ files, open, onToggle, onFileClick }: RecentFilesSectionProps) {
+function RecentFilesSection({
+  files,
+  open,
+  onToggle,
+  onFileClick,
+  graphFilePaths,
+}: RecentFilesSectionProps) {
   if (files.length === 0) return null;
 
   return (
-    <section className="pointer-events-auto relative z-10 shrink-0">
+    <section className="pointer-events-auto relative shrink-0">
       <Button
         type="button"
         variant="ghost"
@@ -243,6 +267,7 @@ function RecentFilesSection({ files, open, onToggle, onFileClick }: RecentFilesS
             name={fileDisplayName(path)}
             depth={0}
             onFileClick={onFileClick}
+            inGraph={isFileInGraph(path, graphFilePaths ?? new Set())}
           />
         ))}
       <Separator className="my-1 bg-sidebar-border" />
@@ -250,7 +275,11 @@ function RecentFilesSection({ files, open, onToggle, onFileClick }: RecentFilesS
   );
 }
 
-export default function FileExplorer({ onFileClick, treeDisabled: disabled }: FileExplorerProps) {
+export default function FileExplorer({
+  onFileClick,
+  treeDisabled: disabled,
+  graphFilePaths,
+}: FileExplorerProps) {
   const [folderPath, setFolderPath] = useState(() => loadLastFolder() ?? "");
   const [rootEntries, setRootEntries] = useState<TreeEntry[] | null>(null);
   const [rootPath, setRootPath] = useState<string | null>(null);
@@ -268,6 +297,14 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
       return next;
     });
   };
+
+  const handleFileClick = useCallback(
+    (filePath: string) => {
+      setRecentFiles((prev) => prependRecentFile(filePath, prev));
+      onFileClick(filePath);
+    },
+    [onFileClick],
+  );
 
   const rememberFolder = useCallback((path: string) => {
     setRecentFolders((prev) => prependRecentFolder(path, prev));
@@ -296,9 +333,15 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
   );
 
   useEffect(() => {
+    setRecentFiles(loadRecentFiles());
+
     const refreshRecentFiles = () => setRecentFiles(loadRecentFiles());
     window.addEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
-    return () => window.removeEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
+    window.addEventListener("focus", refreshRecentFiles);
+    return () => {
+      window.removeEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
+      window.removeEventListener("focus", refreshRecentFiles);
+    };
   }, []);
 
   useEffect(() => {
@@ -347,11 +390,11 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
   };
 
   return (
-    <aside className="pointer-events-auto flex h-full w-80 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-      <div className="pointer-events-auto relative z-10 flex flex-col gap-2 p-3">
-        <div className="flex gap-2">
+    <aside className="pointer-events-auto flex h-full w-80 shrink-0 flex-col overflow-visible border-r border-border bg-sidebar text-sidebar-foreground">
+      <div className="pointer-events-auto relative z-30 flex shrink-0 flex-col gap-2 overflow-visible p-3">
+        <div className="flex gap-2 overflow-visible">
           <div
-            className="pointer-events-auto relative shrink-0"
+            className="pointer-events-auto relative z-[100] shrink-0"
             onMouseEnter={() => setRecentFoldersOpen(true)}
             onMouseLeave={() => setRecentFoldersOpen(false)}
           >
@@ -398,13 +441,14 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
 
       <Separator className="bg-sidebar-border" />
 
-      <ScrollArea className="pointer-events-auto min-h-0 flex-1">
+      <ScrollArea className="pointer-events-auto relative z-0 min-h-0 flex-1">
         <div className="pointer-events-auto py-1">
           <RecentFilesSection
             files={recentFiles}
             open={recentSectionOpen}
             onToggle={toggleRecentSection}
-            onFileClick={onFileClick}
+            onFileClick={handleFileClick}
+            graphFilePaths={graphFilePaths}
           />
 
           {rootPath && (
@@ -415,8 +459,9 @@ export default function FileExplorer({ onFileClick, treeDisabled: disabled }: Fi
               key={entry.path}
               entry={entry}
               depth={0}
-              onFileClick={onFileClick}
+              onFileClick={handleFileClick}
               disabled={disabled}
+              graphFilePaths={graphFilePaths}
             />
           ))}
         </div>

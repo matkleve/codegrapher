@@ -1,4 +1,5 @@
 import type { ElementDefinition } from "cytoscape";
+import { toCyEdgeId, toCyElementId } from "@/lib/cytoscapeIds";
 import type { GraphData, GraphEdge } from "@/types";
 
 const CODE_PREVIEW_LINES_COLLAPSED = 3;
@@ -11,7 +12,9 @@ function truncateCode(code: string, maxLines: number): string {
 }
 
 function edgeElementId(edge: GraphEdge): string {
-  return `edge:${edge.source}:${edge.target}:${edge.type}:${edge.label ?? ""}`;
+  return toCyEdgeId(
+    `edge:${edge.source}:${edge.target}:${edge.type}:${edge.label ?? ""}`,
+  );
 }
 
 function hasValidLabel(label: string | undefined): boolean {
@@ -25,6 +28,7 @@ export function graphToElements(
   const visibleNodes = data.nodes.filter(
     (n) => n.type !== "file" && hasValidLabel(n.label),
   );
+  const graphIdToCyId = new Map(visibleNodes.map((n) => [n.id, toCyElementId(n.id)]));
   const nodeIds = new Set(visibleNodes.map((n) => n.id));
 
   const parents = visibleNodes.filter((n) => !n.parent || !nodeIds.has(n.parent));
@@ -34,8 +38,9 @@ export function graphToElements(
   const ordered = [...parents, ...children];
 
   const nodeElements: ElementDefinition[] = ordered.map((node) => {
+    const cyId = graphIdToCyId.get(node.id)!;
     const isMethodLike = node.type === "method" || node.type === "function";
-    const expanded = isMethodLike && expandedMethods.has(node.id);
+    const expanded = isMethodLike && expandedMethods.has(cyId);
     const codePreview = truncateCode(
       node.code ?? "",
       expanded ? 200 : CODE_PREVIEW_LINES_COLLAPSED,
@@ -45,15 +50,21 @@ export function graphToElements(
         ? `${node.label}\n${codePreview}`
         : node.label;
 
+    const parentCyId =
+      node.parent && nodeIds.has(node.parent)
+        ? graphIdToCyId.get(node.parent)
+        : undefined;
+
     return {
       data: {
-        id: node.id,
+        id: cyId,
+        graphNodeId: node.id,
         label: node.label,
         displayLabel,
         type: node.type,
         filePath: node.filePath,
         code: node.code,
-        parent: node.parent && nodeIds.has(node.parent) ? node.parent : undefined,
+        parent: parentCyId,
         expanded: expanded ? "true" : "false",
       },
     };
@@ -64,8 +75,8 @@ export function graphToElements(
     .map((edge) => ({
       data: {
         id: edgeElementId(edge),
-        source: edge.source,
-        target: edge.target,
+        source: graphIdToCyId.get(edge.source)!,
+        target: graphIdToCyId.get(edge.target)!,
         type: edge.type,
         edgeLabel: edge.label ?? "",
       },
