@@ -1,4 +1,4 @@
-import { memo, useCallback, type ReactNode } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
 import {
   Handle,
   NodeResizeControl,
@@ -13,6 +13,12 @@ import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
 import { NodeCardHeader } from "@/components/nodes/NodeCardHeader";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
+import {
+  CLASS_NODE_MIN_HEIGHT,
+  computeClassNodeHeight,
+  fitExpandedToHeight,
+  resolveNodeHeight,
+} from "@/lib/classNodeLayout";
 import { camelToWords } from "@/lib/camelToWords";
 import { cn } from "@/lib/utils";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -68,117 +74,283 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const nodeData = data as ClassNodeData;
   const bodyExpanded = !(nodeData.collapsed ?? false);
   const nodeWidth = nodeData.width ?? width ?? CLASS_NODE_DEFAULT_WIDTH;
+  const nodeHeight = nodeData.height;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
+  const lastSyncedHeightRef = useRef<number | null>(null);
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const patchNodeData = useCallback(
-    (patch: Partial<ClassNodeData>) => {
+  const commitNode = useCallback(
+    (patch: Partial<ClassNodeData>, size?: { width: number; height?: number }) => {
+      if (size?.height != null) {
+        lastSyncedHeightRef.current = size.height;
+      }
       setNodes((nodes) =>
         nodes.map((n) => {
           if (n.id !== id || n.type !== "class") return n;
-          return { ...n, data: { ...(n.data as ClassNodeData), ...patch } };
-        }),
-      );
-      requestAnimationFrame(() => updateNodeInternals(id));
-    },
-    [id, setNodes, updateNodeInternals],
-  );
-
-  const onToggleMethod = useCallback(
-    (methodId: string) => {
-      const expanded = new Set(nodeData.expandedMethodIds);
-      if (expanded.has(methodId)) expanded.delete(methodId);
-      else expanded.add(methodId);
-      patchNodeData({ expandedMethodIds: [...expanded] });
-    },
-    [nodeData.expandedMethodIds, patchNodeData],
-  );
-
-  const onToggleProperty = useCallback(
-    (propertyId: string) => {
-      const expanded = new Set(nodeData.expandedPropertyIds);
-      if (expanded.has(propertyId)) expanded.delete(propertyId);
-      else expanded.add(propertyId);
-      patchNodeData({ expandedPropertyIds: [...expanded] });
-    },
-    [nodeData.expandedPropertyIds, patchNodeData],
-  );
-
-  const onToggleCollapsed = useCallback(() => {
-    patchNodeData({ collapsed: bodyExpanded });
-  }, [bodyExpanded, patchNodeData]);
-
-  const propertiesSectionExpanded = !(nodeData.propertiesSectionCollapsed ?? false);
-  const methodsSectionExpanded = !(nodeData.methodsSectionCollapsed ?? false);
-
-  const onTogglePropertiesSection = useCallback(() => {
-    patchNodeData({ propertiesSectionCollapsed: propertiesSectionExpanded });
-  }, [propertiesSectionExpanded, patchNodeData]);
-
-  const onToggleMethodsSection = useCallback(() => {
-    patchNodeData({ methodsSectionCollapsed: methodsSectionExpanded });
-  }, [methodsSectionExpanded, patchNodeData]);
-
-  const allPropertiesExpanded =
-    nodeData.properties.length > 0 &&
-    nodeData.properties.every((p) => nodeData.expandedPropertyIds.includes(p.id));
-
-  const allMethodsExpanded =
-    nodeData.methods.length > 0 &&
-    nodeData.methods.every((m) => nodeData.expandedMethodIds.includes(m.id));
-
-  const onBulkToggleProperties = useCallback(() => {
-    if (allPropertiesExpanded) {
-      patchNodeData({ expandedPropertyIds: [] });
-      return;
-    }
-    patchNodeData({
-      propertiesSectionCollapsed: false,
-      expandedPropertyIds: nodeData.properties.map((p) => p.id),
-    });
-  }, [allPropertiesExpanded, nodeData.properties, patchNodeData]);
-
-  const onBulkToggleMethods = useCallback(() => {
-    if (allMethodsExpanded) {
-      patchNodeData({ expandedMethodIds: [] });
-      return;
-    }
-    patchNodeData({
-      methodsSectionCollapsed: false,
-      expandedMethodIds: nodeData.methods.map((m) => m.id),
-    });
-  }, [allMethodsExpanded, nodeData.methods, patchNodeData]);
-
-  const applySize = useCallback(
-    (nextWidth: number, nextHeight?: number) => {
-      setNodes((nodes) =>
-        nodes.map((n) => {
-          if (n.id !== id) return n;
-          const data = n.data as ClassNodeData;
+          const prev = n.data as ClassNodeData;
+          const nextData = { ...prev, ...patch };
+          const w = size?.width ?? nextData.width ?? nodeWidth;
+          const h = size?.height ?? nextData.height;
           return {
             ...n,
-            width: nextWidth,
-            height: nextHeight,
-            style: { ...n.style, width: nextWidth },
-            data: {
-              ...data,
-              width: nextWidth,
-              height: nextHeight,
-            },
+            width: w,
+            height: h,
+            style: { ...n.style, width: w, ...(h != null ? { height: h } : {}) },
+            data: { ...nextData, width: w, height: h },
           };
         }),
       );
       requestAnimationFrame(() => updateNodeInternals(id));
     },
-    [id, setNodes, updateNodeInternals],
+    [id, nodeWidth, setNodes, updateNodeInternals],
   );
+
+  const toggleMember = useCallback(
+    (
+      memberId: string,
+      kind: "property" | "method",
+    ) => {
+      const expandedKey =
+        kind === "property" ? "expandedPropertyIds" : "expandedMethodIds";
+      const expanded = new Set(
+        kind === "property"
+          ? nodeData.expandedPropertyIds
+          : nodeData.expandedMethodIds,
+      );
+      const pinned = new Set(nodeData.pinnedMemberIds ?? []);
+      const opening = !expanded.has(memberId);
+
+      if (opening) {
+        expanded.add(memberId);
+        pinned.add(memberId);
+      } else {
+        expanded.delete(memberId);
+        pinned.delete(memberId);
+      }
+
+      const patch: Partial<ClassNodeData> = {
+        pinnedMemberIds: [...pinned],
+        [expandedKey]: [...expanded],
+        ...(kind === "property"
+          ? { propertiesSectionCollapsed: false }
+          : { methodsSectionCollapsed: false }),
+      };
+
+      const mergedWithPatch: ClassNodeData = { ...nodeData, ...patch };
+      let nextHeight = opening
+        ? computeClassNodeHeight(mergedWithPatch)
+        : (nodeHeight ?? computeClassNodeHeight(mergedWithPatch));
+      if (!opening && nodeHeight != null) {
+        Object.assign(patch, fitExpandedToHeight(mergedWithPatch, nextHeight));
+      }
+
+      commitNode(
+        { ...patch, height: nextHeight },
+        { width: nodeWidth, height: nextHeight },
+      );
+    },
+    [commitNode, nodeData, nodeHeight, nodeWidth],
+  );
+
+  const onToggleMethod = useCallback(
+    (methodId: string) => toggleMember(methodId, "method"),
+    [toggleMember],
+  );
+
+  const onToggleProperty = useCallback(
+    (propertyId: string) => toggleMember(propertyId, "property"),
+    [toggleMember],
+  );
+
+  const onToggleCollapsed = useCallback(() => {
+    const collapsed = bodyExpanded;
+    const patch: Partial<ClassNodeData> = { collapsed };
+    const merged = { ...nodeData, ...patch };
+    const nextHeight = computeClassNodeHeight(merged);
+    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
+  }, [bodyExpanded, commitNode, nodeData, nodeWidth]);
+
+  const propertiesSectionExpanded = !(nodeData.propertiesSectionCollapsed ?? false);
+  const methodsSectionExpanded = !(nodeData.methodsSectionCollapsed ?? false);
+
+  const onTogglePropertiesSection = useCallback(() => {
+    const collapsing = propertiesSectionExpanded;
+    const patch: Partial<ClassNodeData> = {
+      propertiesSectionCollapsed: collapsing,
+      ...(collapsing ? { expandedPropertyIds: [] } : {}),
+    };
+    const merged = { ...nodeData, ...patch };
+    const nextHeight = collapsing
+      ? computeClassNodeHeight(merged)
+      : resolveNodeHeight(merged, nodeHeight ?? undefined);
+    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
+  }, [commitNode, nodeData, nodeHeight, nodeWidth, propertiesSectionExpanded]);
+
+  const onToggleMethodsSection = useCallback(() => {
+    const collapsing = methodsSectionExpanded;
+    const patch: Partial<ClassNodeData> = {
+      methodsSectionCollapsed: collapsing,
+      ...(collapsing ? { expandedMethodIds: [] } : {}),
+    };
+    const merged = { ...nodeData, ...patch };
+    const nextHeight = collapsing
+      ? computeClassNodeHeight(merged)
+      : resolveNodeHeight(merged, nodeHeight ?? undefined);
+    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
+  }, [commitNode, methodsSectionExpanded, nodeData, nodeHeight, nodeWidth]);
+
+  const anyPropertiesExpanded = nodeData.expandedPropertyIds.length > 0;
+  const anyMethodsExpanded = nodeData.expandedMethodIds.length > 0;
+
+  const onBulkToggleProperties = useCallback(() => {
+    if (anyPropertiesExpanded) {
+      const pinned = (nodeData.pinnedMemberIds ?? []).filter((pid) =>
+        nodeData.methods.some((m) => m.id === pid),
+      );
+      const merged: ClassNodeData = {
+        ...nodeData,
+        expandedPropertyIds: [],
+        pinnedMemberIds: pinned,
+      };
+      const h = computeClassNodeHeight(merged);
+      commitNode(
+        {
+          expandedPropertyIds: [],
+          pinnedMemberIds: pinned,
+          height: h,
+        },
+        { width: nodeWidth, height: h },
+      );
+      return;
+    }
+    const pinned = new Set([
+      ...(nodeData.pinnedMemberIds ?? []),
+      ...nodeData.properties.map((p) => p.id),
+    ]);
+    const merged: ClassNodeData = {
+      ...nodeData,
+      propertiesSectionCollapsed: false,
+      expandedPropertyIds: nodeData.properties.map((p) => p.id),
+      pinnedMemberIds: [...pinned],
+    };
+    const nextHeight = resolveNodeHeight(merged, nodeHeight ?? undefined);
+    commitNode(
+      {
+        propertiesSectionCollapsed: false,
+        expandedPropertyIds: merged.expandedPropertyIds,
+        pinnedMemberIds: merged.pinnedMemberIds,
+        height: nextHeight,
+      },
+      { width: nodeWidth, height: nextHeight },
+    );
+  }, [anyPropertiesExpanded, commitNode, nodeData, nodeWidth]);
+
+  const onBulkToggleMethods = useCallback(() => {
+    if (anyMethodsExpanded) {
+      const pinned = (nodeData.pinnedMemberIds ?? []).filter((pid) =>
+        nodeData.properties.some((p) => p.id === pid),
+      );
+      const merged: ClassNodeData = {
+        ...nodeData,
+        expandedMethodIds: [],
+        pinnedMemberIds: pinned,
+      };
+      const h = computeClassNodeHeight(merged);
+      commitNode(
+        {
+          expandedMethodIds: [],
+          pinnedMemberIds: pinned,
+          height: h,
+        },
+        { width: nodeWidth, height: h },
+      );
+      return;
+    }
+    const pinned = new Set([
+      ...(nodeData.pinnedMemberIds ?? []),
+      ...nodeData.methods.map((m) => m.id),
+    ]);
+    const merged: ClassNodeData = {
+      ...nodeData,
+      methodsSectionCollapsed: false,
+      expandedMethodIds: nodeData.methods.map((m) => m.id),
+      pinnedMemberIds: [...pinned],
+    };
+    const nextHeight = resolveNodeHeight(merged, nodeHeight ?? undefined);
+    commitNode(
+      {
+        methodsSectionCollapsed: false,
+        expandedMethodIds: merged.expandedMethodIds,
+        pinnedMemberIds: merged.pinnedMemberIds,
+        height: nextHeight,
+      },
+      { width: nodeWidth, height: nextHeight },
+    );
+  }, [anyMethodsExpanded, commitNode, nodeData, nodeWidth]);
 
   const onResize = useCallback(
     (_event: unknown, params: { width: number; height: number }) => {
-      applySize(params.width, params.height);
+      isResizingRef.current = true;
+      const fitted = fitExpandedToHeight(
+        { ...nodeData, width: params.width, collapsed: false },
+        params.height,
+      );
+      const height = fitted.collapsed
+        ? CLASS_NODE_MIN_HEIGHT
+        : params.height;
+      lastSyncedHeightRef.current = height;
+      commitNode(
+        {
+          width: params.width,
+          height,
+          ...fitted,
+        },
+        { width: params.width, height: height },
+      );
     },
-    [applySize],
+    [commitNode, nodeData],
   );
+
+  const onResizeEnd = useCallback(() => {
+    isResizingRef.current = false;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isResizingRef.current) return;
+    const el = cardRef.current;
+    if (!el) return;
+
+    const prevInlineHeight = el.style.height;
+    el.style.height = "auto";
+    const measured = Math.ceil(el.scrollHeight);
+    el.style.height = prevInlineHeight;
+
+    if (measured < 1) return;
+    if (lastSyncedHeightRef.current === measured) return;
+
+    const current = nodeHeight ?? 0;
+    if (current > 0 && measured >= current - 2 && measured <= current + 2) {
+      lastSyncedHeightRef.current = measured;
+      return;
+    }
+
+    lastSyncedHeightRef.current = measured;
+    commitNode({ height: measured }, { width: nodeWidth, height: measured });
+  }, [
+    bodyExpanded,
+    commitNode,
+    nodeData.collapsed,
+    nodeData.expandedMethodIds,
+    nodeData.expandedPropertyIds,
+    nodeData.methods,
+    nodeData.methodsSectionCollapsed,
+    nodeData.properties,
+    nodeData.propertiesSectionCollapsed,
+    nodeHeight,
+    nodeWidth,
+  ]);
 
   const title = camelToWords(nodeData.label);
   const hasProperties = nodeData.properties.length > 0;
@@ -186,16 +358,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
 
   return (
     <div
-      className="relative"
-      style={{ width: nodeWidth, height: nodeData.height }}
+      ref={cardRef}
+      className={cn(
+        "class-node-root relative flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
+        (selected || nodeData.selected) && "ring-2 ring-ring",
+        nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+      )}
+      style={{ width: nodeWidth, height: nodeHeight }}
     >
-      <div
-        className={cn(
-          "relative overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
-          (selected || nodeData.selected) && "ring-2 ring-ring",
-          nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-        )}
-      >
       <Handle
         type="target"
         position={Position.Top}
@@ -209,13 +379,13 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         onToggleCollapsed={onToggleCollapsed}
       />
       {bodyExpanded && (
-        <div className="nodrag flex flex-col gap-2 p-3">
+        <div className="nodrag flex shrink-0 flex-col gap-2 overflow-visible p-3">
           {hasProperties && (
             <MemberSection
               label="Properties"
               expanded={propertiesSectionExpanded}
               onToggle={onTogglePropertiesSection}
-              bulkActionLabel={allPropertiesExpanded ? "Close all" : "Open all"}
+              bulkActionLabel={anyPropertiesExpanded ? "Close all" : "Open all"}
               onBulkAction={onBulkToggleProperties}
             >
               {nodeData.properties.map((p) => (
@@ -241,7 +411,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
               label="Methods"
               expanded={methodsSectionExpanded}
               onToggle={onToggleMethodsSection}
-              bulkActionLabel={allMethodsExpanded ? "Close all" : "Open all"}
+              bulkActionLabel={anyMethodsExpanded ? "Close all" : "Open all"}
               onBulkAction={onBulkToggleMethods}
             >
               {nodeData.methods.map((m) => (
@@ -259,17 +429,18 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
               ))}
             </MemberSection>
           )}
-          {!hasProperties && !hasMethods ? (
-            <p className="text-left text-xs text-muted-foreground">No members</p>
-          ) : null}
+        {!hasProperties && !hasMethods ? (
+          <p className="text-left text-xs text-muted-foreground">No members</p>
+        ) : null}
         </div>
       )}
-      </div>
       <NodeResizeControl
         position="bottom-right"
         minWidth={200}
+        minHeight={CLASS_NODE_MIN_HEIGHT}
         isVisible={selected}
         onResize={onResize}
+        onResizeEnd={onResizeEnd}
         className="class-node-resizer-handle nodrag"
       />
     </div>

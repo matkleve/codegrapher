@@ -498,7 +498,7 @@ export function GraphFlowInner({
           flashKey="grid"
           activeFlashKey={mapControlFlash}
           onFlash={flashMapControl}
-          variant="outline"
+          variant="secondary"
           className={showGrid ? "graph-map-control-btn--active" : undefined}
           title={showGrid ? "Hide grid" : "Show grid"}
           aria-label={showGrid ? "Hide grid" : "Show grid"}
@@ -511,7 +511,7 @@ export function GraphFlowInner({
           flashKey="center"
           activeFlashKey={mapControlFlash}
           onFlash={flashMapControl}
-          variant="outline"
+          variant="secondary"
           title="Center view"
           aria-label="Center view"
           onClick={centerView}
@@ -522,7 +522,7 @@ export function GraphFlowInner({
           flashKey="fit"
           activeFlashKey={mapControlFlash}
           onFlash={flashMapControl}
-          variant="outline"
+          variant="secondary"
           title="Fit to screen"
           aria-label="Fit to screen"
           onClick={() => {

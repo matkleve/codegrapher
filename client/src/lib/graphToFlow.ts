@@ -7,6 +7,7 @@ import {
 } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
 import { buildClassProperties, methodsForClassNode } from "@/lib/classBody";
+import { computeClassNodeHeight } from "@/lib/classNodeLayout";
 import { camelToWords } from "@/lib/camelToWords";
 import { fileDisplayName } from "@/lib/recentFiles";
 import type { GraphData, GraphNode } from "@/types";
@@ -19,6 +20,7 @@ export type FlowNodeUiState = {
   methodsSectionCollapsedByGraphId: Map<string, boolean>;
   widthByFlowId: Map<string, number>;
   heightByFlowId: Map<string, number>;
+  pinnedMemberIdsByFlowId: Map<string, string[]>;
 };
 
 export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
@@ -29,9 +31,13 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
   const methodsSectionCollapsedByGraphId = new Map<string, boolean>();
   const widthByFlowId = new Map<string, number>();
   const heightByFlowId = new Map<string, number>();
+  const pinnedMemberIdsByFlowId = new Map<string, string[]>();
   for (const node of nodes) {
     if (node.type === "class") {
       const d = node.data as ClassNodeData;
+      if (d.pinnedMemberIds?.length) {
+        pinnedMemberIdsByFlowId.set(node.id, [...d.pinnedMemberIds]);
+      }
       for (const id of d.expandedMethodIds) expandedMethodIds.add(id);
       for (const id of d.expandedPropertyIds) expandedPropertyIds.add(id);
       if (d.collapsed) collapsedByGraphId.set(d.graphNodeId, true);
@@ -60,6 +66,7 @@ export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
     methodsSectionCollapsedByGraphId,
     widthByFlowId,
     heightByFlowId,
+    pinnedMemberIdsByFlowId,
   };
 }
 
@@ -72,29 +79,7 @@ function hasValidLabel(label: string | undefined): boolean {
 }
 
 function estimateClassHeight(data: ClassNodeData): number {
-  const header = data.collapsed ? 72 : 88;
-  if (data.collapsed) return Math.max(72, header);
-  let body = 24;
-  if (data.properties.length > 0) {
-    body += 24;
-    if (!data.propertiesSectionCollapsed) {
-      for (const p of data.properties) {
-        const expanded = data.expandedPropertyIds.includes(p.id);
-        body += expanded ? 140 : 40;
-      }
-    }
-  }
-  if (data.properties.length > 0 && data.methods.length > 0) body += 8;
-  if (data.methods.length > 0) {
-    body += 24;
-    if (!data.methodsSectionCollapsed) {
-      for (const m of data.methods) {
-        const expanded = data.expandedMethodIds.includes(m.id);
-        body += expanded ? 140 : 40;
-      }
-    }
-  }
-  return Math.max(120, header + body);
+  return computeClassNodeHeight(data);
 }
 
 export function estimateNodeSize(node: Node): { width: number; height: number } {
@@ -148,6 +133,7 @@ export function graphToFlow(
     methodsSectionCollapsedByGraphId,
     widthByFlowId,
     heightByFlowId,
+    pinnedMemberIdsByFlowId,
   } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
@@ -254,17 +240,20 @@ export function graphToFlow(
         collapsed: collapsedByGraphId.get(node.id) ?? false,
         width: widthByFlowId.get(id) ?? CLASS_NODE_DEFAULT_WIDTH,
         height: heightByFlowId.get(id),
+        pinnedMemberIds: pinnedMemberIdsByFlowId.get(id) ?? [],
       };
 
       const nodeWidth = classData.width ?? CLASS_NODE_DEFAULT_WIDTH;
+      const nodeHeight = classData.height ?? computeClassNodeHeight(classData);
+      classData.height = nodeHeight;
 
       return {
         id,
         type: "class",
         position: { x: 0, y: 0 },
         width: nodeWidth,
-        height: classData.height,
-        style: { width: nodeWidth },
+        height: nodeHeight,
+        style: { width: nodeWidth, height: nodeHeight },
         draggable: true,
         dragHandle: `.${NODE_DRAG_HANDLE}`,
         data: classData,

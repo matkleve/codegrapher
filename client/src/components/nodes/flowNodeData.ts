@@ -27,6 +27,8 @@ export type ClassNodeData = {
   pathHighlighted?: boolean;
   width?: number;
   height?: number;
+  /** User-expanded members kept open across height-driven layout. */
+  pinnedMemberIds?: string[];
 };
 
 export type FileNodeData = {
