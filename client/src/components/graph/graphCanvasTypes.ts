@@ -10,5 +10,6 @@ export interface GraphCanvasProps {
   graphData: GraphData | null;
   graphResetKey: number;
   onFileDrop: (filePath: string) => void;
+  onLoadFile: (filePath: string) => void | Promise<void>;
   loading?: boolean;
 }

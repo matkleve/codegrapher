@@ -20,6 +20,8 @@ export interface GraphData {
   edges: GraphEdge[];
   truncated?: boolean;
   focusFile?: string;
+  symbols?: Record<string, SymbolEntry[]>;
+  symbolCount?: number;
 }
 
 export interface TreeEntry {

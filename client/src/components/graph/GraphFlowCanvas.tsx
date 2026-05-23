@@ -7,13 +7,15 @@ import {
   type Node,
   type OnMove,
 } from "@xyflow/react";
+import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
+import { flowEdgeTypes } from "@/components/graph/flowEdgeTypes";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import {
-  buildPreviewFlowEdge,
-  PREVIEW_EDGE_ID,
+  buildPreviewFlowEdges,
   useGraphInteraction,
 } from "@/context/GraphInteractionContext";
+import { CTRL_PREVIEW_EDGE_PREFIX } from "@/lib/ctrlPreviewHandles";
 
 type GraphFlowCanvasProps = {
   nodes: Node[];
@@ -36,13 +38,13 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { previewEdge } = useGraphInteraction();
+  const { previewEdges } = useGraphInteraction();
 
   const displayEdges = useMemo(() => {
-    const withoutPreview = edges.filter((e) => e.id !== PREVIEW_EDGE_ID);
-    const preview = buildPreviewFlowEdge(previewEdge);
-    return preview ? [...withoutPreview, preview] : withoutPreview;
-  }, [edges, previewEdge]);
+    const base = edges.filter((e) => !e.id.startsWith(CTRL_PREVIEW_EDGE_PREFIX));
+    const previews = buildPreviewFlowEdges(previewEdges);
+    return [...base, ...previews];
+  }, [edges, previewEdges]);
 
   return (
     <>
@@ -53,6 +55,7 @@ export function GraphFlowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={flowNodeTypes}
+        edgeTypes={flowEdgeTypes}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onPaneClick={onPaneClick}
@@ -72,6 +75,7 @@ export function GraphFlowCanvas({
         panOnDrag
       />
       <TokenReferencesDropdown />
+      <TokenReferenceCards />
     </>
   );
 }

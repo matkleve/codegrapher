@@ -1,8 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
-import { resolveFlowTargetFromIndex } from "@/lib/semanticLookup";
+import { ctrlPreviewEdgeId, previewLineHandle, previewSourceHandle } from "@/lib/ctrlPreviewHandles";
+import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { symbolKindToSemantic, TOKEN_HIGHLIGHT } from "@/lib/tokenColors";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
@@ -10,6 +12,7 @@ import { cn } from "@/lib/utils";
 type CodeLineProps = {
   line: string;
   lineNumber: number;
+  memberId: string;
   sourceFlowId: string;
   sourceGraphNodeId: string;
   filePath: string;
@@ -18,49 +21,87 @@ type CodeLineProps = {
 export function CodeLine({
   line,
   lineNumber,
+  memberId,
   sourceFlowId,
   sourceGraphNodeId,
   filePath,
 }: CodeLineProps) {
   const { isCtrlHeld } = useCtrlKey();
   const { symbols, lookup, hasSymbol } = useIndex();
-  const { graphData, setPreviewEdge, setTokenDropdown } = useGraphInteraction();
+  const { getNode } = useReactFlow();
+  const {
+    graphData,
+    setGraphPreview,
+    clearPreviewForKey,
+    setReferenceCards,
+    scheduleHideReferenceCards,
+    cancelHideReferenceCards,
+    setTokenDropdown,
+  } = useGraphInteraction();
 
-  const clearPreview = useCallback(() => {
-    setPreviewEdge(null);
-  }, [setPreviewEdge]);
+  const edgeKeyRef = useRef<string | null>(null);
+
+  const clearHover = useCallback(() => {
+    if (edgeKeyRef.current) {
+      clearPreviewForKey(edgeKeyRef.current);
+      edgeKeyRef.current = null;
+    }
+    scheduleHideReferenceCards();
+  }, [clearPreviewForKey, scheduleHideReferenceCards]);
 
   const onIdentifierEnter = useCallback(
-    (name: string) => {
+    (name: string, el: HTMLElement) => {
       if (!isCtrlHeld || !hasSymbol(name)) return;
 
       const entry = lookup(name);
       if (!entry) return;
 
-      const target = resolveFlowTargetFromIndex(
+      cancelHideReferenceCards();
+      const edgeKey = ctrlPreviewEdgeId(sourceFlowId, name);
+      edgeKeyRef.current = edgeKey;
+
+      const resolved = resolveVisibleTarget(
         name,
-        sourceGraphNodeId,
         symbols,
         graphData,
+        getNode,
+        sourceFlowId,
+        memberId,
+        lineNumber,
       );
-      if (target) {
-        setPreviewEdge({
-          sourceFlowId,
-          targetFlowId: target.flowNodeId,
-          kind: target.kind,
-        });
-      } else {
-        setPreviewEdge(null);
+
+      if (!resolved) {
+        clearPreviewForKey(edgeKey);
+        return;
       }
+
+      if (resolved.mode === "graph") {
+        setGraphPreview(edgeKey, sourceFlowId, resolved);
+        return;
+      }
+
+      clearPreviewForKey(edgeKey);
+      const rect = el.getBoundingClientRect();
+      setReferenceCards({
+        token: name,
+        x: rect.left,
+        y: rect.bottom,
+        cards: resolved.cards,
+      });
     },
     [
+      cancelHideReferenceCards,
+      clearPreviewForKey,
+      getNode,
       graphData,
       hasSymbol,
       isCtrlHeld,
+      lineNumber,
       lookup,
-      setPreviewEdge,
+      memberId,
+      setGraphPreview,
+      setReferenceCards,
       sourceFlowId,
-      sourceGraphNodeId,
       symbols,
     ],
   );
@@ -79,14 +120,16 @@ export function CodeLine({
         filePath,
         line: lineNumber,
       });
-      setPreviewEdge(null);
+      if (edgeKeyRef.current) clearPreviewForKey(edgeKeyRef.current);
+      setReferenceCards(null);
     },
     [
+      clearPreviewForKey,
       filePath,
       hasSymbol,
       isCtrlHeld,
       lineNumber,
-      setPreviewEdge,
+      setReferenceCards,
       setTokenDropdown,
       sourceFlowId,
       sourceGraphNodeId,
@@ -94,9 +137,23 @@ export function CodeLine({
   );
 
   const tokens = tokenizeLine(line);
+  const sourceHandleId = previewSourceHandle(memberId, lineNumber);
+  const lineTargetId = previewLineHandle(memberId, lineNumber);
 
   return (
-    <div className="whitespace-pre-wrap font-mono text-xs leading-relaxed">
+    <div className="relative whitespace-pre-wrap font-mono text-xs leading-relaxed">
+      <Handle
+        type="source"
+        position={Position.Right}
+        id={sourceHandleId}
+        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id={lineTargetId}
+        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+      />
       {tokens.map((token, i) => {
         if (token.kind !== "identifier") {
           return (
@@ -126,8 +183,8 @@ export function CodeLine({
             className={cn(
               interactive && semantic && TOKEN_HIGHLIGHT[semantic],
             )}
-            onMouseEnter={() => onIdentifierEnter(token.text)}
-            onMouseLeave={clearPreview}
+            onMouseEnter={(e) => onIdentifierEnter(token.text, e.currentTarget)}
+            onMouseLeave={clearHover}
             onClick={(e) => {
               if (!interactive) return;
               e.stopPropagation();

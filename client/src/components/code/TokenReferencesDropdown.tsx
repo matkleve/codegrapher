@@ -1,14 +1,12 @@
 import { useEffect, useMemo } from "react";
+import { Code2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { useIndex } from "@/context/IndexContext";
 import { openFileInEditor } from "@/api";
-import { countIndexOccurrencesInFile } from "@/lib/semanticLookup";
 import { TOKEN_PILL } from "@/lib/tokenColors";
-import { fileDisplayName } from "@/lib/recentFiles";
 import { cn } from "@/lib/utils";
 
 export function TokenReferencesDropdown() {
@@ -19,7 +17,6 @@ export function TokenReferencesDropdown() {
     focusFlowNode,
     onLoadFile,
   } = useGraphInteraction();
-  const { symbols } = useIndex();
 
   useEffect(() => {
     if (!tokenDropdown) return;
@@ -57,8 +54,6 @@ export function TokenReferencesDropdown() {
   if (!tokenDropdown) return null;
 
   const { token, x, y, filePath, line } = tokenDropdown;
-  const externalCount = countIndexOccurrencesInFile(token, filePath, symbols);
-  const fileName = fileDisplayName(filePath);
 
   return createPortal(
     <div
@@ -108,13 +103,13 @@ export function TokenReferencesDropdown() {
                     TOKEN_PILL[ref.kind],
                   )}
                   onClick={() => {
-                    void openFileInEditor(ref.filePath, ref.line);
+                    void onLoadFile(ref.filePath);
                     setTokenDropdown(null);
                   }}
                 >
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
                   <span className="min-w-0 truncate">
-                    {fileDisplayName(ref.filePath)}{" "}
+                    {ref.classLabel}{" "}
                     <span className="text-muted-foreground">(line {ref.line})</span>
                   </span>
                 </button>
@@ -122,37 +117,33 @@ export function TokenReferencesDropdown() {
             ))}
           </ul>
         ) : null}
-        {graphRefs.length === 0 && indexRefs.length === 0 ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-muted-foreground">
-              Found {externalCount || references.length || 0} time(s) in {fileName}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-xs"
-              onClick={() => {
-                onLoadFile(filePath);
-                setTokenDropdown(null);
-              }}
-            >
-              + Load file into graph
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-xs"
-              onClick={() => {
-                void openFileInEditor(filePath, line);
-                setTokenDropdown(null);
-              }}
-            >
-              Edit in source
-            </Button>
-          </div>
-        ) : null}
+        <div className="mt-2 flex flex-col gap-2 border-t border-border pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs"
+            onClick={() => {
+              void onLoadFile(filePath);
+              setTokenDropdown(null);
+            }}
+          >
+            + Load file into graph
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs"
+            onClick={() => {
+              void openFileInEditor(filePath, line);
+              setTokenDropdown(null);
+            }}
+          >
+            <Code2 className="size-3.5 shrink-0" aria-hidden />
+            Open in VS Code
+          </Button>
+        </div>
       </Container>
     </div>,
     document.body,

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -11,20 +12,33 @@ import type { Edge, Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useIndex } from "@/context/IndexContext";
+import { ctrlPreviewMarkerEnd } from "@/components/graph/CtrlPreviewEdge";
 import {
   findSemanticReferences,
   type TokenReference,
 } from "@/lib/semanticLookup";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
+import type {
+  ExternalReferenceCard,
+  GraphVisibleTarget,
+} from "@/lib/resolveVisibleTarget";
 import type { GraphData } from "@/types";
 
-export const PREVIEW_EDGE_ID = "__ctrl_preview_edge__";
-
-export type PreviewEdgeState = {
+export type PreviewEdgeConfig = {
+  id: string;
   sourceFlowId: string;
+  sourceHandle: string;
   targetFlowId: string;
+  targetHandle: string;
   kind: SemanticTokenKind;
+  label?: string;
+};
+
+export type ReferenceCardsState = {
+  token: string;
+  x: number;
+  y: number;
+  cards: ExternalReferenceCard[];
 } | null;
 
 export type TokenDropdownState = {
@@ -38,13 +52,22 @@ export type TokenDropdownState = {
 } | null;
 
 type GraphInteractionContextValue = {
-  previewEdge: PreviewEdgeState;
-  setPreviewEdge: (edge: PreviewEdgeState) => void;
+  previewEdges: PreviewEdgeConfig[];
+  setGraphPreview: (
+    edgeKey: string,
+    sourceFlowId: string,
+    target: GraphVisibleTarget | null,
+  ) => void;
+  clearPreviewForKey: (edgeKey: string) => void;
+  referenceCards: ReferenceCardsState;
+  setReferenceCards: (state: ReferenceCardsState) => void;
+  scheduleHideReferenceCards: () => void;
+  cancelHideReferenceCards: () => void;
   tokenDropdown: TokenDropdownState;
   setTokenDropdown: (state: TokenDropdownState) => void;
   findReferences: (token: string) => TokenReference[];
   focusFlowNode: (flowNodeId: string) => void;
-  onLoadFile: (filePath: string) => void;
+  onLoadFile: (filePath: string) => void | Promise<void>;
   graphData: GraphData | null;
 };
 
@@ -57,7 +80,7 @@ type GraphInteractionProviderProps = {
   graphData: GraphData | null;
   nodes: Node[];
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
-  onLoadFile: (filePath: string) => void;
+  onLoadFile: (filePath: string) => void | Promise<void>;
 };
 
 export function GraphInteractionProvider({
@@ -70,15 +93,72 @@ export function GraphInteractionProvider({
   const { isCtrlHeld } = useCtrlKey();
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
-  const [previewEdge, setPreviewEdge] = useState<PreviewEdgeState>(null);
+  const [previewEdges, setPreviewEdges] = useState<PreviewEdgeConfig[]>([]);
+  const [referenceCards, setReferenceCards] = useState<ReferenceCardsState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
+  const tempEdgeIdsRef = useRef<Set<string>>(new Set());
+  const hideCardsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAllPreviews = useCallback(() => {
+    tempEdgeIdsRef.current.clear();
+    setPreviewEdges([]);
+    setReferenceCards(null);
+  }, []);
 
   useEffect(() => {
     if (!isCtrlHeld) {
-      setPreviewEdge(null);
+      clearAllPreviews();
       setTokenDropdown(null);
+      if (hideCardsTimerRef.current) {
+        clearTimeout(hideCardsTimerRef.current);
+        hideCardsTimerRef.current = null;
+      }
     }
-  }, [isCtrlHeld]);
+  }, [clearAllPreviews, isCtrlHeld]);
+
+  const clearPreviewForKey = useCallback((edgeKey: string) => {
+    tempEdgeIdsRef.current.delete(edgeKey);
+    setPreviewEdges((prev) => prev.filter((e) => e.id !== edgeKey));
+  }, []);
+
+  const setGraphPreview = useCallback(
+    (edgeKey: string, sourceFlowId: string, target: GraphVisibleTarget | null) => {
+      setReferenceCards(null);
+      if (!target) {
+        clearPreviewForKey(edgeKey);
+        return;
+      }
+
+      const config: PreviewEdgeConfig = {
+        id: edgeKey,
+        sourceFlowId,
+        sourceHandle: target.sourceHandle,
+        targetFlowId: target.flowNodeId,
+        targetHandle: target.targetHandle,
+        kind: target.kind,
+        label: target.label,
+      };
+
+      tempEdgeIdsRef.current.add(edgeKey);
+      setPreviewEdges((prev) => [...prev.filter((e) => e.id !== edgeKey), config]);
+    },
+    [clearPreviewForKey],
+  );
+
+  const scheduleHideReferenceCards = useCallback(() => {
+    if (hideCardsTimerRef.current) clearTimeout(hideCardsTimerRef.current);
+    hideCardsTimerRef.current = setTimeout(() => {
+      setReferenceCards(null);
+      hideCardsTimerRef.current = null;
+    }, 150);
+  }, []);
+
+  const cancelHideReferenceCards = useCallback(() => {
+    if (hideCardsTimerRef.current) {
+      clearTimeout(hideCardsTimerRef.current);
+      hideCardsTimerRef.current = null;
+    }
+  }, []);
 
   const findReferences = useCallback(
     (token: string) => findSemanticReferences(token, symbols, graphData),
@@ -108,15 +188,20 @@ export function GraphInteractionProvider({
       const cy = node.position.y + h / 2;
       void setCenter(cx, cy, { zoom: 1.15, duration: 350 });
       setTokenDropdown(null);
-      setPreviewEdge(null);
+      clearAllPreviews();
     },
-    [getNode, nodes, setCenter, setNodes],
+    [clearAllPreviews, getNode, nodes, setCenter, setNodes],
   );
 
   const value = useMemo(
     () => ({
-      previewEdge,
-      setPreviewEdge,
+      previewEdges,
+      setGraphPreview,
+      clearPreviewForKey,
+      referenceCards,
+      setReferenceCards,
+      scheduleHideReferenceCards,
+      cancelHideReferenceCards,
       tokenDropdown,
       setTokenDropdown,
       findReferences,
@@ -125,7 +210,12 @@ export function GraphInteractionProvider({
       graphData,
     }),
     [
-      previewEdge,
+      previewEdges,
+      setGraphPreview,
+      clearPreviewForKey,
+      referenceCards,
+      scheduleHideReferenceCards,
+      cancelHideReferenceCards,
       tokenDropdown,
       findReferences,
       focusFlowNode,
@@ -149,23 +239,17 @@ export function useGraphInteraction(): GraphInteractionContextValue {
   return ctx;
 }
 
-export function useGraphInteractionOptional(): GraphInteractionContextValue | null {
-  return useContext(GraphInteractionContext);
-}
-
-export function buildPreviewFlowEdge(preview: PreviewEdgeState): Edge | null {
-  if (!preview) return null;
-  return {
-    id: PREVIEW_EDGE_ID,
-    source: preview.sourceFlowId,
-    target: preview.targetFlowId,
-    animated: true,
+export function buildPreviewFlowEdges(configs: PreviewEdgeConfig[]): Edge[] {
+  return configs.map((config) => ({
+    id: config.id,
+    type: "ctrlPreview",
+    source: config.sourceFlowId,
+    target: config.targetFlowId,
+    sourceHandle: config.sourceHandle,
+    targetHandle: config.targetHandle,
     selectable: false,
     focusable: false,
-    style: {
-      stroke: TOKEN_EDGE_STROKE[preview.kind],
-      strokeWidth: 2,
-      strokeDasharray: "6 4",
-    },
-  };
+    data: { kind: config.kind, label: config.label },
+    markerEnd: ctrlPreviewMarkerEnd(config.kind),
+  }));
 }

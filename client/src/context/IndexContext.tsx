@@ -18,6 +18,7 @@ type IndexContextValue = {
   lookup: (name: string) => SymbolEntry | undefined;
   lookupAll: (name: string) => SymbolEntry[];
   hasSymbol: (name: string) => boolean;
+  mergeSymbols: (incoming: Record<string, SymbolEntry[]>) => void;
 };
 
 const IndexContext = createContext<IndexContextValue | null>(null);
@@ -60,6 +61,29 @@ export function IndexProvider({ children }: { children: ReactNode }) {
     [symbols],
   );
 
+  const mergeSymbols = useCallback((incoming: Record<string, SymbolEntry[]>) => {
+    setSymbols((prev) => {
+      const next = new Map(prev);
+      for (const [name, entries] of Object.entries(incoming)) {
+        const list = next.get(name) ?? [];
+        for (const entry of entries) {
+          const dup = list.some(
+            (e) =>
+              e.filePath === entry.filePath &&
+              e.kind === entry.kind &&
+              e.line === entry.line,
+          );
+          if (!dup) list.push(entry);
+        }
+        next.set(name, list);
+      }
+      let count = 0;
+      for (const list of next.values()) count += list.length;
+      setSymbolCount(count);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       folderPath,
@@ -70,6 +94,7 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       lookup,
       lookupAll,
       hasSymbol,
+      mergeSymbols,
     }),
     [
       folderPath,
@@ -80,6 +105,7 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       lookup,
       lookupAll,
       hasSymbol,
+      mergeSymbols,
     ],
   );
 

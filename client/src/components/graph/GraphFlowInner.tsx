@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
+import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { FlowSnapshot } from "@/components/nodes/flowNodeTypes";
 import type {
@@ -56,6 +57,7 @@ export function GraphFlowInner({
   graphData,
   graphResetKey,
   onFileDrop,
+  onLoadFile,
   loading,
   canvasRef,
 }: GraphFlowInnerProps) {
@@ -79,6 +81,28 @@ export function GraphFlowInner({
   } | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(loadShowGrid);
+  const [mapControlFlash, setMapControlFlash] = useState<string | null>(null);
+  const mapControlFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flashMapControl = useCallback((key: string) => {
+    if (mapControlFlashTimerRef.current) {
+      clearTimeout(mapControlFlashTimerRef.current);
+    }
+    setMapControlFlash(key);
+    mapControlFlashTimerRef.current = setTimeout(() => {
+      setMapControlFlash(null);
+      mapControlFlashTimerRef.current = null;
+    }, 450);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (mapControlFlashTimerRef.current) {
+        clearTimeout(mapControlFlashTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const { fitView, setViewport, getViewport, setCenter } = useReactFlow();
 
@@ -142,11 +166,17 @@ export function GraphFlowInner({
         return;
       }
 
+      const existingIds = new Set(nodesRef.current.map((n) => n.id));
       const merged = mergeFlowElements(nodesRef.current, edgesRef.current, {
         nodes: freshNodes,
         edges: freshEdges,
       });
-      applyLayoutAndFit(merged.nodes, merged.edges, false, true);
+      const mergedNodes = merged.nodes.map((n) =>
+        existingIds.has(n.id)
+          ? n
+          : { ...n, className: cn(n.className, "node-fade-in") },
+      );
+      applyLayoutAndFit(mergedNodes, merged.edges, false, true);
     },
     [applyLayoutAndFit, setEdges, setNodes],
   );
@@ -414,7 +444,7 @@ export function GraphFlowInner({
           graphData={graphData}
           nodes={nodes}
           setNodes={setNodes}
-          onLoadFile={onFileDrop}
+          onLoadFile={onLoadFile}
         >
           <GraphFlowCanvas
             nodes={nodes}
@@ -464,31 +494,35 @@ export function GraphFlowInner({
         data-graph-control
         className="pointer-events-auto absolute right-3 bottom-3 z-30 flex flex-col gap-2"
       >
-        <Button
-          type="button"
-          variant={showGrid ? "default" : "outline"}
-          size="icon"
+        <GraphMapControlButton
+          flashKey="grid"
+          activeFlashKey={mapControlFlash}
+          onFlash={flashMapControl}
+          variant="outline"
+          className={showGrid ? "graph-map-control-btn--active" : undefined}
           title={showGrid ? "Hide grid" : "Show grid"}
           aria-label={showGrid ? "Hide grid" : "Show grid"}
           aria-pressed={showGrid}
           onClick={toggleGrid}
         >
           <Grid3x3 />
-        </Button>
-        <Button
-          type="button"
+        </GraphMapControlButton>
+        <GraphMapControlButton
+          flashKey="center"
+          activeFlashKey={mapControlFlash}
+          onFlash={flashMapControl}
           variant="outline"
-          size="icon"
           title="Center view"
           aria-label="Center view"
           onClick={centerView}
         >
           <Crosshair />
-        </Button>
-        <Button
-          type="button"
+        </GraphMapControlButton>
+        <GraphMapControlButton
+          flashKey="fit"
+          activeFlashKey={mapControlFlash}
+          onFlash={flashMapControl}
           variant="outline"
-          size="icon"
           title="Fit to screen"
           aria-label="Fit to screen"
           onClick={() => {
@@ -499,7 +533,7 @@ export function GraphFlowInner({
           }}
         >
           <Maximize2 />
-        </Button>
+        </GraphMapControlButton>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
+import { Handle, Position } from "@xyflow/react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
 import { Container } from "@/components/ui/Container";
+import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -27,7 +29,13 @@ export function CollapsibleMemberRow({
   const lines = code.split("\n");
 
   return (
-    <div className="hoverable nodrag rounded-md border border-transparent bg-muted p-2">
+    <div className="hoverable nodrag relative rounded-md border border-transparent bg-muted p-2">
+      <Handle
+        type="target"
+        position={Position.Left}
+        id={previewMemberHandle(memberId)}
+        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+      />
       <button
         type="button"
         className="flex w-full cursor-pointer items-center gap-2 text-left"
@@ -53,6 +61,7 @@ export function CollapsibleMemberRow({
                 key={`${memberId}-${i}`}
                 line={line}
                 lineNumber={i + 1}
+                memberId={memberId}
                 sourceFlowId={flowNodeId}
                 sourceGraphNodeId={graphNodeId}
                 filePath={filePath}

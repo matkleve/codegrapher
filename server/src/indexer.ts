@@ -342,6 +342,67 @@ export function buildProjectIndex(folderPath: string): ProjectIndex {
   return { folderPath: folderRoot, symbolCount, symbols };
 }
 
+export function mergeIndexMaps(
+  target: Map<string, SymbolEntry[]>,
+  source: Map<string, SymbolEntry[]>,
+): number {
+  let added = 0;
+  for (const [name, entries] of source) {
+    const list = target.get(name) ?? [];
+    for (const entry of entries) {
+      const dup = list.some(
+        (e) =>
+          e.filePath === entry.filePath &&
+          e.kind === entry.kind &&
+          e.line === entry.line,
+      );
+      if (!dup) {
+        list.push(entry);
+        added++;
+      }
+    }
+    target.set(name, list);
+  }
+  return added;
+}
+
+export function indexFilePaths(filePaths: string[]): Map<string, SymbolEntry[]> {
+  const symbols = new Map<string, SymbolEntry[]>();
+  const project = new Project({ skipAddingFilesFromTsConfig: true });
+  const unique = [
+    ...new Set(
+      filePaths.map((fp) => path.normalize(path.resolve(fp))).filter((fp) => {
+        return fs.existsSync(fp) && fs.statSync(fp).isFile() && isTsFile(fp);
+      }),
+    ),
+  ];
+
+  project.getTypeChecker();
+
+  for (const filePath of unique) {
+    const sf = project.getSourceFile(filePath) ?? project.addSourceFileAtPath(filePath);
+    indexSourceFile(sf, symbols, project, path.dirname(filePath));
+  }
+
+  return symbols;
+}
+
+export function serializeSymbolsMap(
+  symbols: Map<string, SymbolEntry[]>,
+): Record<string, SymbolEntry[]> {
+  const out: Record<string, SymbolEntry[]> = {};
+  for (const [name, entries] of symbols) {
+    out[name] = entries;
+  }
+  return out;
+}
+
+export function countSymbols(symbols: Map<string, SymbolEntry[]>): number {
+  let n = 0;
+  for (const list of symbols.values()) n += list.length;
+  return n;
+}
+
 export function serializeIndex(index: ProjectIndex): {
   folderPath: string;
   symbolCount: number;

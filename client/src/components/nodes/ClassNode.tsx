@@ -1,10 +1,13 @@
 import { memo, useCallback, type ReactNode } from "react";
 import {
+  Handle,
   NodeResizeControl,
+  Position,
   type NodeProps,
   useReactFlow,
   useUpdateNodeInternals,
 } from "@xyflow/react";
+import { PREVIEW_TARGET_TOP } from "@/lib/ctrlPreviewHandles";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
@@ -179,11 +182,17 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     <div className="relative" style={{ width: nodeWidth }}>
       <div
         className={cn(
-          "overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
+          "relative overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
           (selected || nodeData.selected) && "ring-2 ring-ring",
           nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
         )}
       >
+      <Handle
+        type="target"
+        position={Position.Top}
+        id={PREVIEW_TARGET_TOP}
+        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+      />
       <NodeCardHeader
         title={title}
         chip={<FileTypeChip filePath={nodeData.filePath} />}

@@ -7,7 +7,13 @@ import * as path from "path";
 
 const execFileAsync = promisify(execFile);
 import { pickFolderNative } from "./browseFolder";
-import { buildProjectIndex, serializeIndex } from "./indexer";
+import {
+  buildProjectIndex,
+  countSymbols,
+  indexFilePaths,
+  serializeIndex,
+  serializeSymbolsMap,
+} from "./indexer";
 import { parseFileGraph, parseFocus } from "./parser";
 
 const app = express();
@@ -146,7 +152,14 @@ app.get("/api/focus", (req, res) => {
 
   try {
     const result = parseFocus(path.resolve(filePath), depth);
-    res.json(result);
+    const filePaths = [...new Set(result.nodes.map((n) => n.filePath))];
+    const newSymbols = indexFilePaths(filePaths);
+
+    res.json({
+      ...result,
+      symbols: serializeSymbolsMap(newSymbols),
+      symbolCount: countSymbols(newSymbols),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Focus parse failed";
     res.status(500).json({ error: message });
