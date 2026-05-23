@@ -207,12 +207,14 @@ html.dark {
   border-left-color: color-mix(in oklch, var(--sidebar-border) 85%, transparent);
 }
 
-.class-node-resizer-handle {
-  width: 12px !important;
-  height: 12px !important;
-  border-radius: 2px;
+.react-flow__resize-control.handle.class-node-resizer-handle {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  cursor: nwse-resize !important;
   background: var(--primary) !important;
-  border: 1px solid var(--background) !important;
+  border: 2px solid var(--background) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 40%, transparent);
 }
 
 /* Only bottom-right handle — hide full-box resize lines */

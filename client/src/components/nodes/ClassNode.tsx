@@ -18,27 +18,44 @@ function MemberSection({
   label,
   expanded,
   onToggle,
+  bulkActionLabel,
+  onBulkAction,
   children,
 }: {
   label: string;
   expanded: boolean;
   onToggle: () => void;
+  bulkActionLabel: string;
+  onBulkAction: () => void;
   children: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <button
-        type="button"
-        className="nodrag flex w-full cursor-pointer items-center gap-1.5 text-left"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-      >
-        <ExpandChevron expanded={expanded} className="text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="nodrag flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          <ExpandChevron expanded={expanded} className="text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        </button>
+        <button
+          type="button"
+          className="nodrag shrink-0 cursor-pointer rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBulkAction();
+          }}
+        >
+          {bulkActionLabel}
+        </button>
+      </div>
       {expanded ? <div className="flex flex-col gap-2">{children}</div> : null}
     </section>
   );
@@ -99,6 +116,36 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     patchNodeData({ methodsSectionCollapsed: methodsSectionExpanded });
   }, [methodsSectionExpanded, patchNodeData]);
 
+  const allPropertiesExpanded =
+    nodeData.properties.length > 0 &&
+    nodeData.properties.every((p) => nodeData.expandedPropertyIds.includes(p.id));
+
+  const allMethodsExpanded =
+    nodeData.methods.length > 0 &&
+    nodeData.methods.every((m) => nodeData.expandedMethodIds.includes(m.id));
+
+  const onBulkToggleProperties = useCallback(() => {
+    if (allPropertiesExpanded) {
+      patchNodeData({ expandedPropertyIds: [] });
+      return;
+    }
+    patchNodeData({
+      propertiesSectionCollapsed: false,
+      expandedPropertyIds: nodeData.properties.map((p) => p.id),
+    });
+  }, [allPropertiesExpanded, nodeData.properties, patchNodeData]);
+
+  const onBulkToggleMethods = useCallback(() => {
+    if (allMethodsExpanded) {
+      patchNodeData({ expandedMethodIds: [] });
+      return;
+    }
+    patchNodeData({
+      methodsSectionCollapsed: false,
+      expandedMethodIds: nodeData.methods.map((m) => m.id),
+    });
+  }, [allMethodsExpanded, nodeData.methods, patchNodeData]);
+
   const applyWidth = useCallback(
     (nextWidth: number) => {
       setNodes((nodes) =>
@@ -129,21 +176,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const hasMethods = nodeData.methods.length > 0;
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
-        (selected || nodeData.selected) && "ring-2 ring-ring",
-        nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-      )}
-      style={{ width: nodeWidth }}
-    >
-      <NodeResizeControl
-        position="bottom-right"
-        minWidth={200}
-        isVisible={selected}
-        onResize={onResize}
-        className="class-node-resizer-handle nodrag"
-      />
+    <div className="relative" style={{ width: nodeWidth }}>
+      <div
+        className={cn(
+          "overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm",
+          (selected || nodeData.selected) && "ring-2 ring-ring",
+          nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+        )}
+      >
       <NodeCardHeader
         title={title}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
@@ -157,6 +197,8 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
               label="Properties"
               expanded={propertiesSectionExpanded}
               onToggle={onTogglePropertiesSection}
+              bulkActionLabel={allPropertiesExpanded ? "Close all" : "Open all"}
+              onBulkAction={onBulkToggleProperties}
             >
               {nodeData.properties.map((p) => (
                 <CollapsibleMemberRow
@@ -181,6 +223,8 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
               label="Methods"
               expanded={methodsSectionExpanded}
               onToggle={onToggleMethodsSection}
+              bulkActionLabel={allMethodsExpanded ? "Close all" : "Open all"}
+              onBulkAction={onBulkToggleMethods}
             >
               {nodeData.methods.map((m) => (
                 <CollapsibleMemberRow
@@ -202,6 +246,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
           ) : null}
         </div>
       )}
+      </div>
+      <NodeResizeControl
+        position="bottom-right"
+        minWidth={200}
+        isVisible={selected}
+        onResize={onResize}
+        className="class-node-resizer-handle nodrag"
+      />
     </div>
   );
 }
