@@ -5,12 +5,21 @@ import {
   useRef,
   useState,
   forwardRef,
-  type CSSProperties,
 } from "react";
+import { Maximize2 } from "lucide-react";
 import cytoscape from "cytoscape";
-import type { Core, ElementDefinition } from "cytoscape";
+import type { Core, ElementDefinition, Stylesheet } from "cytoscape";
 import dagre from "cytoscape-dagre";
-import type { GraphData, GraphEdge, GraphNode } from "../types";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { getGraphTheme, type GraphThemeColors } from "@/lib/cytoscapeTheme";
+import { cn } from "@/lib/utils";
+import type { GraphData, GraphEdge } from "../types";
 import { DRAG_MIME } from "./FileExplorer";
 
 cytoscape.use(dagre);
@@ -30,6 +39,120 @@ function truncateCode(code: string, maxLines = CODE_PREVIEW_LINES): string {
 
 function edgeElementId(edge: GraphEdge): string {
   return `edge:${edge.source}:${edge.target}:${edge.type}:${edge.label ?? ""}`;
+}
+
+function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
+  return [
+    {
+      selector: "node",
+      style: {
+        shape: "round-rectangle",
+        "text-valign": "center",
+        "text-halign": "center",
+        color: theme.foreground,
+        "font-size": "11px",
+        "font-family": "ui-monospace, monospace",
+        "text-wrap": "wrap",
+        "text-max-width": "140px",
+        "background-color": theme.card,
+        "border-color": theme.border,
+        "border-width": 1,
+        padding: "8px",
+      },
+    },
+    {
+      selector: ':parent[type = "class"], :parent[type = "module"]',
+      style: {
+        "background-color": theme.card,
+        "background-opacity": 0.98,
+        "border-color": theme.primary,
+        "border-width": 2,
+        label: "data(label)",
+        "text-valign": "top",
+        "text-halign": "center",
+        "font-size": "13px",
+        "font-weight": "bold",
+        color: theme.primary,
+        padding: "16px",
+        "min-width": "120px",
+        "min-height": "60px",
+      },
+    },
+    {
+      selector: 'node[type = "method"], node[type = "function"]',
+      style: {
+        "background-color": theme.muted,
+        "border-color": theme.border,
+        "border-width": 1,
+        label: "data(displayLabel)",
+        color: theme.foreground,
+        width: 140,
+        height: "label",
+        "min-height": 28,
+      },
+    },
+    {
+      selector: 'node[expanded = "true"]',
+      style: {
+        width: 200,
+        "min-height": 80,
+        "font-size": "10px",
+        "text-halign": "left",
+        "text-margin-x": 6,
+        color: theme.mutedForeground,
+      },
+    },
+    {
+      selector: "node.selected",
+      style: {
+        "border-color": theme.ring,
+        "border-width": 3,
+        "overlay-color": theme.ring,
+        "overlay-opacity": 0.2,
+        "overlay-padding": 6,
+      },
+    },
+    {
+      selector: "node.path-highlight",
+      style: {
+        "border-color": theme.ring,
+        "border-width": 4,
+        "overlay-color": theme.ring,
+        "overlay-opacity": 0.35,
+      },
+    },
+    {
+      selector: "edge",
+      style: {
+        width: 2,
+        "line-color": theme.mutedForeground,
+        "target-arrow-color": theme.mutedForeground,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        label: "data(edgeLabel)",
+        "font-size": "10px",
+        color: theme.foreground,
+        "text-background-color": theme.card,
+        "text-background-opacity": 0.9,
+        "text-background-padding": "2px",
+      },
+    },
+    {
+      selector: 'edge[type = "imports"]',
+      style: {
+        "line-color": theme.primary,
+        "target-arrow-color": theme.primary,
+      },
+    },
+    {
+      selector: "edge.path-highlight",
+      style: {
+        width: 4,
+        "line-color": theme.ring,
+        "target-arrow-color": theme.ring,
+      },
+    },
+  ];
 }
 
 function graphToElements(
@@ -106,15 +229,13 @@ interface GraphCanvasProps {
   loading?: boolean;
 }
 
-const controlButtonStyle: CSSProperties = {
-  padding: "6px 12px",
-  border: "1px solid #555",
-  borderRadius: 4,
-  background: "rgba(22, 33, 62, 0.92)",
-  color: "#eee",
-  cursor: "pointer",
-  fontSize: 13,
-};
+interface NodeTipState {
+  label: string;
+  type: string;
+  filePath: string;
+  x: number;
+  y: number;
+}
 
 const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
   function GraphCanvas({ graphData, graphResetKey, onFileDrop, loading }, ref) {
@@ -123,6 +244,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     const cyRef = useRef<Core | null>(null);
     const historyRef = useRef<CySnapshot[]>([]);
     const expandedMethodsRef = useRef<Set<string>>(new Set());
+    const prevGraphKeyRef = useRef(-1);
     const [expandedMethods, setExpandedMethods] = useState<Set<string>>(new Set());
     const [canGoBack, setCanGoBack] = useState(false);
     const [pathInfo, setPathInfo] = useState<string | null>(null);
@@ -132,6 +254,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       nodeId: string;
     } | null>(null);
     const [pathFromId, setPathFromId] = useState<string | null>(null);
+    const [nodeTip, setNodeTip] = useState<NodeTipState | null>(null);
 
     useImperativeHandle(ref, () => ({
       pushHistoryBeforeChange: () => {
@@ -211,19 +334,41 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
 
     const applyGraphData = useCallback(
       (cy: Core, data: GraphData | null) => {
-        cy.elements().remove();
+        if (graphKey !== prevGraphKeyRef.current) {
+          cy.elements().remove();
+          prevGraphKeyRef.current = graphKey;
+        }
+
+        cy.nodes().removeClass("selected");
         setPathInfo(null);
         setPathFromId(null);
         clearPathHighlight(cy);
 
         if (!data || data.nodes.length === 0) return;
 
+        const existingNodeIds = new Set(cy.nodes().map((n) => n.id()));
+        const existingEdgeIds = new Set(cy.edges().map((e) => e.id()));
         const elements = graphToElements(data, expandedMethodsRef.current);
-        cy.add(elements);
+        const newElements: ElementDefinition[] = [];
+
+        for (const el of elements) {
+          if (el.data.id?.startsWith("edge:")) {
+            if (!existingEdgeIds.has(el.data.id)) newElements.push(el);
+          } else if (!existingNodeIds.has(el.data.id!)) {
+            newElements.push(el);
+          } else if (!el.data.id!.startsWith("edge:")) {
+            const node = cy.getElementById(el.data.id!);
+            node.data(el.data);
+          }
+        }
+
+        if (newElements.length > 0) cy.add(newElements);
         runLayout(cy);
       },
-      [clearPathHighlight],
+      [clearPathHighlight, graphResetKey],
     );
+
+    const graphKey = graphResetKey;
 
     useEffect(() => {
       expandedMethodsRef.current = new Set();
@@ -234,111 +379,43 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       expandedMethodsRef.current = expandedMethods;
       const cy = cyRef.current;
       if (!cy || !graphData) return;
+
+      if (graphKey !== prevGraphKeyRef.current) {
+        cy.elements().remove();
+        prevGraphKeyRef.current = graphKey;
+        const elements = graphToElements(graphData, expandedMethodsRef.current);
+        cy.add(elements);
+        runLayout(cy);
+        return;
+      }
+
       applyGraphData(cy, graphData);
-    }, [expandedMethods, graphData, applyGraphData]);
+    }, [expandedMethods, graphData, graphKey, applyGraphData]);
 
     useEffect(() => {
       if (!containerRef.current) return;
 
+      const theme = getGraphTheme();
       const cy = cytoscape({
         container: containerRef.current,
-        style: [
-          {
-            selector: "node",
-            style: {
-              shape: "round-rectangle",
-              "text-valign": "center",
-              "text-halign": "center",
-              color: "#fff",
-              "font-size": "11px",
-              "font-family": "ui-monospace, monospace",
-              "text-wrap": "wrap",
-              "text-max-width": "140px",
-              padding: "8px",
-            },
-          },
-          {
-            selector: ':parent[type = "class"], :parent[type = "module"]',
-            style: {
-              "background-color": "#2c3e50",
-              "background-opacity": 0.95,
-              "border-color": "#E8A838",
-              "border-width": 2,
-              label: "data(label)",
-              "text-valign": "top",
-              "text-halign": "center",
-              "font-size": "13px",
-              "font-weight": "bold",
-              color: "#f5d78e",
-              padding: "16px",
-              "min-width": "120px",
-              "min-height": "60px",
-            },
-          },
-          {
-            selector: 'node[type = "method"], node[type = "function"]',
-            style: {
-              "background-color": "#3d2a52",
-              "border-color": "#9B59B6",
-              "border-width": 1,
-              label: "data(displayLabel)",
-              width: 140,
-              height: "label",
-              "min-height": 28,
-            },
-          },
-          {
-            selector: 'node[expanded = "true"]',
-            style: {
-              width: 200,
-              "min-height": 80,
-              "font-size": "10px",
-              "text-halign": "left",
-              "text-margin-x": 6,
-            },
-          },
-          {
-            selector: "node.path-highlight",
-            style: {
-              "border-color": "#ffcc00",
-              "border-width": 4,
-              "background-color": "#4a4020",
-            },
-          },
-          {
-            selector: "edge",
-            style: {
-              width: 2,
-              "line-color": "#888",
-              "target-arrow-color": "#888",
-              "target-arrow-shape": "triangle",
-              "curve-style": "bezier",
-              label: "data(edgeLabel)",
-              "font-size": "10px",
-              color: "#ccc",
-              "text-background-color": "#1a1a2e",
-              "text-background-opacity": 0.85,
-              "text-background-padding": "2px",
-            },
-          },
-          {
-            selector: 'edge[type = "imports"]',
-            style: {
-              "line-color": "#4A90D9",
-              "target-arrow-color": "#4A90D9",
-            },
-          },
-          {
-            selector: "edge.path-highlight",
-            style: {
-              width: 4,
-              "line-color": "#ffcc00",
-              "target-arrow-color": "#ffcc00",
-            },
-          },
-        ],
+        style: buildCyStyles(theme),
         layout: { name: "grid" },
       });
+
+      const updateNodeTip = (evt: cytoscape.EventObject) => {
+        const node = evt.target;
+        const rect = containerRef.current!.getBoundingClientRect();
+        const pos = node.renderedPosition();
+        const pan = cy.pan();
+        const zoom = cy.zoom();
+        setNodeTip({
+          label: node.data("label"),
+          type: node.data("type"),
+          filePath: node.data("filePath"),
+          x: rect.left + pos.x * zoom + pan.x,
+          y: rect.top + pos.y * zoom + pan.y,
+        });
+      };
 
       cy.on("cxttap", "node", (evt) => {
         evt.originalEvent.preventDefault();
@@ -353,6 +430,9 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
           nodeId: node.id(),
         });
       });
+
+      cy.on("mouseover", "node", updateNodeTip);
+      cy.on("mouseout", "node", () => setNodeTip(null));
 
       cy.on("tap", "node", (evt) => {
         const node = evt.target;
@@ -380,10 +460,11 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
             expandedMethodsRef.current = next;
             return next;
           });
-          if (graphData) {
-            applyGraphData(cy, graphData);
-          }
+          return;
         }
+
+        cy.nodes().removeClass("selected");
+        node.addClass("selected");
       });
 
       cy.on("tap", (evt) => {
@@ -408,7 +489,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         cy.destroy();
         cyRef.current = null;
       };
-    }, [applyGraphData, findShortestPath, graphData, highlightPath, pathFromId]);
+    }, [findShortestPath, highlightPath, pathFromId]);
 
     const handleBack = () => {
       const cy = cyRef.current;
@@ -428,137 +509,65 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       if (filePath) onFileDrop(filePath);
     };
 
-    const isEmpty = !graphData || graphData.nodes.filter((n) => n.type !== "file").length === 0;
+    const isEmpty =
+      !graphData || graphData.nodes.filter((n) => n.type !== "file").length === 0;
 
     return (
       <div
         ref={wrapperRef}
-        style={{
-          flex: 1,
-          position: "relative",
-          minWidth: 0,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
         }}
         onDrop={handleDrop}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 12px",
-            borderBottom: "1px solid #333",
-            background: "#12121f",
-            zIndex: 5,
-          }}
-        >
-          <button
+        <div className="z-5 flex items-center gap-2 border-b border-border bg-card px-3 py-2">
+          <Button
             type="button"
-            style={{
-              ...controlButtonStyle,
-              opacity: canGoBack ? 1 : 0.4,
-              cursor: canGoBack ? "pointer" : "not-allowed",
-            }}
+            variant="outline"
+            size="sm"
             disabled={!canGoBack}
             onClick={handleBack}
           >
             ← Back
-          </button>
-          {loading && <span style={{ fontSize: 13, color: "#9ab" }}>Loading…</span>}
+          </Button>
+          {loading && (
+            <span className="text-sm text-muted-foreground">Loading…</span>
+          )}
         </div>
 
         {pathInfo && (
-          <div
-            style={{
-              position: "absolute",
-              top: 52,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 20,
-              background: "rgba(30, 40, 70, 0.95)",
-              border: "1px solid #ffcc00",
-              borderRadius: 6,
-              padding: "8px 14px",
-              fontSize: 13,
-              color: "#ffeb99",
-              pointerEvents: "none",
-            }}
-          >
+          <div className="pointer-events-none absolute top-14 left-1/2 z-20 -translate-x-1/2 rounded-md border border-ring bg-popover px-3.5 py-2 text-sm text-popover-foreground shadow-md">
             {pathInfo}
           </div>
         )}
 
         {pathFromId && (
-          <div
-            style={{
-              position: "absolute",
-              top: 52,
-              right: 12,
-              zIndex: 20,
-              fontSize: 12,
-              color: "#9cf",
-            }}
-          >
+          <p className="absolute top-14 right-3 z-20 text-xs text-muted-foreground">
             Click target node…
-          </div>
+          </p>
         )}
 
-        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-          <div
-            ref={containerRef}
-            style={{ position: "absolute", inset: 0, background: "#1a1a2e" }}
-          />
+        <div className="relative min-h-0 flex-1">
+          <div ref={containerRef} className="absolute inset-0 bg-background" />
           {isEmpty && !loading && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#666",
-                fontSize: 18,
-                pointerEvents: "none",
-              }}
-            >
+            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg text-muted-foreground">
               ← Click or drag a file to start
-            </div>
+            </p>
           )}
         </div>
 
         {contextMenu && (
           <div
-            style={{
-              position: "fixed",
-              left: contextMenu.x,
-              top: contextMenu.y,
-              zIndex: 100,
-              background: "#1e2a44",
-              border: "1px solid #555",
-              borderRadius: 4,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-              minWidth: 160,
-            }}
+            className="fixed z-100 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
           >
-            <button
+            <Button
               type="button"
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "8px 12px",
-                border: "none",
-                background: "transparent",
-                color: "#eee",
-                textAlign: "left",
-                cursor: "pointer",
-                fontSize: 13,
-              }}
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
               onClick={() => {
                 setPathFromId(contextMenu.nodeId);
                 setContextMenu(null);
@@ -568,32 +577,46 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
               }}
             >
               Find path to…
-            </button>
+            </Button>
           </div>
         )}
 
-        <div
-          style={{
-            position: "absolute",
-            bottom: 12,
-            right: 12,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            zIndex: 10,
-          }}
-        >
-          <button
+        {nodeTip && (
+          <Tooltip open>
+            <TooltipTrigger
+              render={
+                <span
+                  className="pointer-events-none fixed size-px"
+                  style={{ left: nodeTip.x, top: nodeTip.y }}
+                />
+              }
+            />
+            <TooltipContent
+              side="top"
+              className="max-w-xs font-mono text-xs"
+              style={{ position: "fixed", left: nodeTip.x, top: nodeTip.y - 8 }}
+            >
+              <p className="font-sans font-medium">{nodeTip.label}</p>
+              <p className="text-muted-foreground">{nodeTip.type}</p>
+              <p className="truncate text-muted-foreground">{nodeTip.filePath}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <div className="absolute right-3 bottom-3 z-10 flex flex-col gap-1">
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             title="Fit to screen"
-            style={controlButtonStyle}
+            aria-label="Fit to screen"
             onClick={() => {
               const cy = cyRef.current;
               if (cy && cy.elements().length > 0) cy.fit(undefined, FIT_PADDING);
             }}
           >
-            ⊡
-          </button>
+            <Maximize2 />
+          </Button>
         </div>
       </div>
     );

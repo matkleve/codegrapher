@@ -1,6 +1,13 @@
 import { useCallback, useState } from "react";
-import { browseFolder, fetchTree } from "../api";
-import type { TreeEntry } from "../types";
+import { FolderOpen } from "lucide-react";
+import { browseFolder, fetchTree } from "@/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
+import { cn } from "@/lib/utils";
+import type { TreeEntry } from "@/types";
 
 const DRAG_MIME = "application/x-codegrapher-path";
 
@@ -38,32 +45,28 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
   const paddingLeft = 8 + depth * 14;
 
   if (entry.type === "directory") {
+    const folderIcon = getFolderIcon(open);
     return (
       <div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={toggleFolder}
           disabled={disabled}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            width: "100%",
-            padding: "4px 8px",
-            paddingLeft,
-            border: "none",
-            background: "transparent",
-            color: "#ccc",
-            cursor: disabled ? "wait" : "pointer",
-            fontSize: 13,
-            textAlign: "left",
-          }}
+          className={cn(
+            "h-8 w-full justify-start gap-2 px-2 font-medium",
+            "hover:bg-accent",
+          )}
+          style={{ paddingLeft }}
         >
-          <span style={{ width: 12 }}>{open ? "▼" : "▶"}</span>
-          <span>📁</span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{entry.name}</span>
-          {loading && <span style={{ fontSize: 11, color: "#888" }}>…</span>}
-        </button>
+          <Codicon
+            name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
+            className="size-3 shrink-0 text-muted-foreground"
+          />
+          <Codicon name={folderIcon.codicon} className={cn("size-4 shrink-0", folderIcon.colorClass)} />
+          <span className="truncate text-sm">{entry.name}</span>
+          {loading && <span className="text-xs text-muted-foreground">…</span>}
+        </Button>
         {open &&
           children?.map((child) => (
             <TreeNode
@@ -78,6 +81,8 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
     );
   }
 
+  const fileIcon = getFileIcon(entry.name);
+
   return (
     <div
       role="button"
@@ -89,21 +94,16 @@ function TreeNode({ entry, depth, onFileClick, disabled }: TreeNodeProps) {
       }}
       onClick={() => !disabled && onFileClick(entry.path)}
       onKeyDown={(e) => e.key === "Enter" && !disabled && onFileClick(entry.path)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 8px",
-        paddingLeft,
-        fontSize: 13,
-        color: "#9cf",
-        cursor: disabled ? "wait" : "grab",
-        userSelect: "none",
-      }}
+      className={cn(
+        "flex h-8 cursor-grab items-center gap-2 rounded-md px-2 text-sm font-mono",
+        "text-foreground hover:bg-accent",
+        disabled && "cursor-wait opacity-50",
+      )}
+      style={{ paddingLeft }}
     >
-      <span style={{ width: 12 }} />
-      <span>📄</span>
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{entry.name}</span>
+      <span className="size-3 shrink-0" />
+      <Codicon name={fileIcon.codicon} className={cn("size-4 shrink-0", fileIcon.colorClass)} />
+      <span className="truncate">{entry.name}</span>
     </div>
   );
 }
@@ -134,7 +134,7 @@ export default function FileExplorer({ onFileClick, disabled }: FileExplorerProp
 
   const handleOpen = async () => {
     if (!folderPath.trim()) {
-      setError("Enter an absolute folder path or use Browse");
+      setError("Enter an absolute folder path or browse");
       return;
     }
     await openFolderAt(folderPath.trim());
@@ -159,116 +159,60 @@ export default function FileExplorer({ onFileClick, disabled }: FileExplorerProp
   };
 
   return (
-    <div
-      style={{
-        width: 300,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderRight: "1px solid #333",
-        background: "#12121f",
-        height: "100%",
-      }}
-    >
-      <div style={{ padding: 12, borderBottom: "1px solid #333" }}>
-        <div
-          style={{
-            display: "flex",
-            gap: 6,
-            marginBottom: 8,
-            alignItems: "stretch",
-          }}
-        >
-          <button
+    <aside className="flex h-full w-[300px] shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
+      <div className="flex flex-col gap-2 p-3">
+        <div className="flex gap-2">
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={handleBrowse}
             disabled={disabled || opening}
             title="Browse for folder"
             aria-label="Browse for folder"
-            style={{
-              width: 36,
-              height: 36,
-              flexShrink: 0,
-              padding: 0,
-              borderRadius: 4,
-              border: "1px solid #555",
-              background: "#1a1a2e",
-              color: "#eee",
-              fontSize: 18,
-              lineHeight: 1,
-              cursor: disabled || opening ? "wait" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className="size-9 shrink-0"
           >
-            📂
-          </button>
-          <input
-            type="text"
+            <FolderOpen data-icon="inline-start" />
+          </Button>
+          <Input
             value={folderPath}
             onChange={(e) => setFolderPath(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleOpen()}
             placeholder="/absolute/path/to/project"
             disabled={disabled || opening}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              padding: "8px 10px",
-              borderRadius: 4,
-              border: "1px solid #444",
-              background: "#1a1a2e",
-              color: "#eee",
-              fontSize: 13,
-              boxSizing: "border-box",
-            }}
+            className="min-w-0 flex-1 font-mono text-xs"
           />
         </div>
-        <button
+        <Button
           type="button"
           onClick={handleOpen}
           disabled={disabled || opening}
-          style={{
-            width: "100%",
-            padding: "8px",
-            borderRadius: 4,
-            border: "none",
-            background: "#4A90D9",
-            color: "#fff",
-            fontWeight: 600,
-            cursor: disabled || opening ? "wait" : "pointer",
-          }}
+          className="w-full"
         >
           {opening ? "Opening…" : "Open"}
-        </button>
-        {error && (
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#f88" }}>{error}</p>
-        )}
+        </Button>
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "4px 0" }}>
-        {rootPath && (
-          <div
-            style={{
-              fontSize: 11,
-              color: "#666",
-              padding: "4px 12px 8px",
-              wordBreak: "break-all",
-            }}
-          >
-            {rootPath}
-          </div>
-        )}
-        {rootEntries?.map((entry) => (
-          <TreeNode
-            key={entry.path}
-            entry={entry}
-            depth={0}
-            onFileClick={onFileClick}
-            disabled={disabled}
-          />
-        ))}
-      </div>
-    </div>
+
+      <Separator className="bg-sidebar-border" />
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="py-1">
+          {rootPath && (
+            <p className="break-all px-3 py-2 text-xs text-muted-foreground">{rootPath}</p>
+          )}
+          {rootEntries?.map((entry) => (
+            <TreeNode
+              key={entry.path}
+              entry={entry}
+              depth={0}
+              onFileClick={onFileClick}
+              disabled={disabled}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+    </aside>
   );
 }
 
