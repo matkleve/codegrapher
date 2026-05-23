@@ -2,16 +2,17 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   forwardRef,
 } from "react";
-import { ChevronLeft, ChevronRight, Grid3x3, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide-react";
 import cytoscape from "cytoscape";
 import type { Core, ElementDefinition } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { Button } from "@/components/ui/button";
-import { setupViewportDrag } from "@/lib/cytoscapePan";
+import { createGraphPaneHandlers } from "@/lib/cytoscapePan";
 import { readFitPadding, runGraphLayout } from "@/lib/compoundLayout";
 import {
   getGraphTheme,
@@ -189,10 +190,19 @@ interface NodeTipState {
 const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
   function GraphCanvas({ graphData, graphResetKey, onFileDrop, loading }, ref) {
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const graphPaneRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
     const cyRef = useRef<Core | null>(null);
     const showGridRef = useRef(true);
+    const panSessionRef = useRef<{
+      pointerId: number;
+      startClientX: number;
+      startClientY: number;
+      startPanX: number;
+      startPanY: number;
+      dragging: boolean;
+    } | null>(null);
     const historyBackRef = useRef<CySnapshot[]>([]);
     const historyForwardRef = useRef<CySnapshot[]>([]);
     const expandedMethodsRef = useRef<Set<string>>(new Set());
@@ -201,7 +211,6 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     const graphDataRef = useRef<GraphData | null>(null);
     const graphResetKeyRef = useRef(0);
     const pathFromIdRef = useRef<string | null>(null);
-    const viewportDragRef = useRef<ReturnType<typeof setupViewportDrag> | null>(null);
     const [expandedMethods, setExpandedMethods] = useState<Set<string>>(new Set());
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
@@ -220,6 +229,18 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     showGridRef.current = showGrid;
     graphResetKeyRef.current = graphResetKey;
     pathFromIdRef.current = pathFromId;
+
+    const syncGridFromCy = useCallback(() => {
+      const cy = cyRef.current;
+      const gridEl = gridRef.current;
+      if (!cy || !gridEl || !showGridRef.current) return;
+      syncGridToViewport(cy, gridEl);
+    }, []);
+
+    const graphPaneHandlers = useMemo(
+      () => createGraphPaneHandlers(graphPaneRef, cyRef, panSessionRef, syncGridFromCy),
+      [syncGridFromCy],
+    );
 
     const updateHistoryButtons = useCallback(() => {
       setCanGoBack(historyBackRef.current.length > 0);
@@ -350,137 +371,151 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     }, [expandedMethods]);
 
     useEffect(() => {
-      if (!containerRef.current) return;
+      const container = containerRef.current;
+      const pane = graphPaneRef.current;
+      if (!container || !pane) return;
 
-      const theme = getGraphTheme();
-      const cy = cytoscape({
-        container: containerRef.current,
-        style: buildCyStyles(theme),
-        layout: { name: "grid" },
-        minZoom: 0.2,
-        maxZoom: 4,
-        wheelSensitivity: 0.2,
-        boxSelectionEnabled: false,
-        userPanningEnabled: false,
-      });
+      let resizeObserver: ResizeObserver | null = null;
+      let wrapperObserver: ResizeObserver | null = null;
 
-      const syncGrid = () => {
-        const gridEl = gridRef.current;
-        if (!gridEl || !showGridRef.current) return;
-        syncGridToViewport(cy, gridEl);
+      const bindCy = (instance: Core) => {
+        const syncGrid = () => syncGridFromCy();
+
+        instance.on("cxttap", "node", (evt) => {
+          evt.originalEvent.preventDefault();
+          const node = evt.target;
+          const rendered = node.renderedPosition();
+          const pan = instance.pan();
+          const zoom = instance.zoom();
+          const rect = container.getBoundingClientRect();
+          setContextMenu({
+            x: rect.left + rendered.x * zoom + pan.x,
+            y: rect.top + rendered.y * zoom + pan.y,
+            nodeId: node.id(),
+          });
+        });
+
+        instance.on("mouseover", "node", (evt) => {
+          const node = evt.target;
+          const rect = container.getBoundingClientRect();
+          const pos = node.renderedPosition();
+          const pan = instance.pan();
+          const zoom = instance.zoom();
+          setNodeTip({
+            label: node.data("label"),
+            type: node.data("type"),
+            filePath: node.data("filePath"),
+            x: rect.left + pos.x * zoom + pan.x,
+            y: rect.top + pos.y * zoom + pan.y,
+          });
+        });
+
+        instance.on("mouseout", "node", () => setNodeTip(null));
+
+        instance.on("tap", "node", (evt) => {
+          if (panSessionRef.current?.dragging) return;
+
+          const node = evt.target;
+          const type = node.data("type");
+          const fromId = pathFromIdRef.current;
+
+          if (fromId) {
+            const path = findShortestPath(instance, fromId, node.id());
+            setPathFromId(null);
+            if (path) {
+              highlightPath(instance, path.nodeIds, path.edgeIds);
+              const labels = path.nodeIds.map((id) =>
+                instance.getElementById(id).data("label"),
+              );
+              setPathInfo(`Path: ${labels.join(" → ")}`);
+            } else {
+              setPathInfo("No path found between nodes");
+            }
+            return;
+          }
+
+          if (type === "method" || type === "function") {
+            const id = node.id();
+            setExpandedMethods((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+            return;
+          }
+
+          instance.nodes().removeClass("selected");
+          node.addClass("selected");
+        });
+
+        instance.on("tap", (evt) => {
+          if (evt.target === instance) {
+            setContextMenu(null);
+            if (!pathFromIdRef.current) setPathInfo(null);
+          }
+        });
+
+        instance.on("pan zoom resize", syncGrid);
+
+        cyRef.current = instance;
+        instance.resize();
+        syncGrid();
+
+        const pending = graphDataRef.current;
+        if (pending) {
+          prevGraphKeyRef.current = graphResetKeyRef.current;
+          try {
+            syncGraph(instance, pending, true);
+          } catch (err) {
+            console.error(err);
+            setGraphError(err instanceof Error ? err.message : "Graph render failed");
+          }
+        }
+
+        const wrapper = wrapperRef.current;
+        if (wrapper) {
+          wrapperObserver = new ResizeObserver(() => instance.resize());
+          wrapperObserver.observe(wrapper);
+        }
       };
 
-      viewportDragRef.current = setupViewportDrag(cy, syncGrid);
+      const createCy = () => {
+        if (cyRef.current) return cyRef.current;
+        if (container.offsetWidth < 2 || container.offsetHeight < 2) return null;
 
-      cy.on("cxttap", "node", (evt) => {
-        evt.originalEvent.preventDefault();
-        const node = evt.target;
-        const rendered = node.renderedPosition();
-        const pan = cy.pan();
-        const zoom = cy.zoom();
-        const rect = containerRef.current!.getBoundingClientRect();
-        setContextMenu({
-          x: rect.left + rendered.x * zoom + pan.x,
-          y: rect.top + rendered.y * zoom + pan.y,
-          nodeId: node.id(),
+        const theme = getGraphTheme();
+        const instance = cytoscape({
+          container,
+          style: buildCyStyles(theme),
+          layout: { name: "grid" },
+          minZoom: 0.2,
+          maxZoom: 4,
+          wheelSensitivity: 0.2,
+          boxSelectionEnabled: false,
+          userPanningEnabled: true,
+          userZoomingEnabled: true,
         });
-      });
+        bindCy(instance);
+        return instance;
+      };
 
-      cy.on("mouseover", "node", (evt) => {
-        const node = evt.target;
-        const rect = containerRef.current!.getBoundingClientRect();
-        const pos = node.renderedPosition();
-        const pan = cy.pan();
-        const zoom = cy.zoom();
-        setNodeTip({
-          label: node.data("label"),
-          type: node.data("type"),
-          filePath: node.data("filePath"),
-          x: rect.left + pos.x * zoom + pan.x,
-          y: rect.top + pos.y * zoom + pan.y,
+      if (!createCy()) {
+        resizeObserver = new ResizeObserver(() => {
+          if (createCy()) resizeObserver?.disconnect();
         });
-      });
-
-      cy.on("mouseout", "node", () => setNodeTip(null));
-
-      cy.on("tap", "node", (evt) => {
-        const panDrag = viewportDragRef.current;
-        if (panDrag?.isTapSuppressed()) {
-          panDrag.clearTapSuppress();
-          return;
-        }
-
-        const node = evt.target;
-        const type = node.data("type");
-        const fromId = pathFromIdRef.current;
-
-        if (fromId) {
-          const path = findShortestPath(cy, fromId, node.id());
-          setPathFromId(null);
-          if (path) {
-            highlightPath(cy, path.nodeIds, path.edgeIds);
-            const labels = path.nodeIds.map((id) => cy.getElementById(id).data("label"));
-            setPathInfo(`Path: ${labels.join(" → ")}`);
-          } else {
-            setPathInfo("No path found between nodes");
-          }
-          return;
-        }
-
-        if (type === "method" || type === "function") {
-          const id = node.id();
-          setExpandedMethods((prev) => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-          });
-          return;
-        }
-
-        cy.nodes().removeClass("selected");
-        node.addClass("selected");
-      });
-
-      cy.on("tap", (evt) => {
-        if (evt.target === cy) {
-          setContextMenu(null);
-          if (!pathFromIdRef.current) setPathInfo(null);
-        }
-      });
-
-      cy.on("pan zoom resize", syncGrid);
-
-      cyRef.current = cy;
-      syncGrid();
-
-      const pending = graphDataRef.current;
-      if (pending) {
-        prevGraphKeyRef.current = graphResetKeyRef.current;
-        try {
-          syncGraph(cy, pending, true);
-        } catch (err) {
-          console.error(err);
-          setGraphError(err instanceof Error ? err.message : "Graph render failed");
-        }
+        resizeObserver.observe(pane);
       }
 
-      const wrapper = wrapperRef.current;
-      const observer =
-        wrapper &&
-        new ResizeObserver(() => {
-          cy.resize();
-        });
-      if (wrapper && observer) observer.observe(wrapper);
-
       return () => {
-        observer?.disconnect();
-        viewportDragRef.current?.destroy();
-        viewportDragRef.current = null;
-        cy.destroy();
-        cyRef.current = null;
+        resizeObserver?.disconnect();
+        wrapperObserver?.disconnect();
+        if (cyRef.current) {
+          cyRef.current.destroy();
+          cyRef.current = null;
+        }
       };
-    }, [findShortestPath, highlightPath, syncGraph]);
+    }, [findShortestPath, highlightPath, syncGraph, syncGridFromCy]);
 
     useEffect(() => {
       const cy = cyRef.current;
@@ -522,6 +557,18 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         return next;
       });
     };
+
+    const centerView = useCallback(() => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      if (cy.elements().length > 0) {
+        cy.center();
+      } else {
+        cy.pan({ x: 0, y: 0 });
+        cy.zoom(1);
+      }
+      syncGridFromCy();
+    }, [syncGridFromCy]);
 
     const restoreSnapshot = (cy: Core, snapshot: CySnapshot) => {
       cy.json(snapshot);
@@ -626,7 +673,13 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         )}
 
         <div
-          className="relative min-h-0 flex-1 bg-background"
+          ref={graphPaneRef}
+          className="graph-pane relative min-h-0 flex-1 bg-background"
+          onPointerDown={graphPaneHandlers.onPointerDown}
+          onPointerMove={graphPaneHandlers.onPointerMove}
+          onPointerUp={graphPaneHandlers.onPointerUp}
+          onPointerCancel={graphPaneHandlers.onPointerCancel}
+          onWheel={graphPaneHandlers.onWheel}
           onDragOver={(e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
@@ -647,7 +700,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
               !showGrid && "hidden",
             )}
           />
-          <div ref={containerRef} className="absolute inset-0 z-10" />
+          <div ref={containerRef} className="graph-cy-container" />
           {!hasGraph && !loading && (
             <p className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-6 text-center text-lg text-muted-foreground">
               {emptyMessage}
@@ -689,7 +742,10 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
           </div>
         )}
 
-        <div className="pointer-events-auto absolute right-3 bottom-3 z-30 flex flex-col gap-2">
+        <div
+          data-graph-control
+          className="pointer-events-auto absolute right-3 bottom-3 z-30 flex flex-col gap-2"
+        >
           <Button
             type="button"
             variant={showGrid ? "default" : "outline"}
@@ -705,11 +761,24 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
             type="button"
             variant="outline"
             size="icon"
+            title="Center view"
+            aria-label="Center view"
+            onClick={centerView}
+          >
+            <Crosshair />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
             title="Fit to screen"
             aria-label="Fit to screen"
             onClick={() => {
               const cy = cyRef.current;
-              if (cy && cy.elements().length > 0) cy.fit(undefined, readFitPadding());
+              if (cy && cy.elements().length > 0) {
+                cy.fit(undefined, readFitPadding());
+                syncGridFromCy();
+              }
             }}
           >
             <Maximize2 />

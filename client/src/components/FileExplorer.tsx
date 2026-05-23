@@ -28,6 +28,12 @@ import type { TreeEntry } from "@/types";
 
 const INDENT_CLASSES = ["pl-2", "pl-4", "pl-6", "pl-8", "pl-10", "pl-12"] as const;
 
+/** VS Code–like explorer row density */
+const TREE_ROW =
+  "pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
+const TREE_FOLDER_ROW =
+  "pointer-events-auto h-[22px] w-full justify-start gap-1.5 rounded-sm px-1.5 text-xs font-medium leading-none";
+
 function indentClass(depth: number): string {
   return INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)];
 }
@@ -81,16 +87,16 @@ function FileTreeItem({
         }
       }}
       className={cn(
-        "pointer-events-auto flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-mono active:cursor-grabbing",
+        TREE_ROW,
+        "active:cursor-grabbing",
         indentClass(depth),
-        inGraph
-          ? "border-l-2 border-primary bg-sidebar-accent font-medium text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
-          : "text-foreground hover:bg-accent",
+        inGraph ? "font-medium text-primary" : "text-foreground",
+        "hover:bg-accent",
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
       <span className="size-3 shrink-0" />
-      <Codicon name={fileIcon.codicon} className={cn("size-4 shrink-0", fileIcon.colorClass)} />
+      <Codicon name={fileIcon.codicon} className={cn("size-3.5 shrink-0", fileIcon.colorClass)} />
       <span className="truncate">{name}</span>
     </div>
   );
@@ -126,37 +132,36 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
   if (entry.type === "directory") {
     const folderIcon = getFolderIcon(open);
     return (
-      <div>
+      <div className="flex flex-col gap-0.5">
         <Button
           type="button"
           variant="ghost"
           onClick={toggleFolder}
           disabled={disabled}
-          className={cn(
-            "pointer-events-auto h-8 w-full justify-start gap-2 px-2 text-sm font-medium",
-            indentClass(depth),
-            "hover:bg-accent",
-          )}
+          className={cn(TREE_FOLDER_ROW, indentClass(depth), "hover:bg-accent")}
         >
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
             className="size-3 shrink-0 text-muted-foreground"
           />
-          <Codicon name={folderIcon.codicon} className={cn("size-4 shrink-0", folderIcon.colorClass)} />
+          <Codicon name={folderIcon.codicon} className={cn("size-3.5 shrink-0", folderIcon.colorClass)} />
           <span className="truncate">{entry.name}</span>
           {loading && <span className="text-xs text-muted-foreground">…</span>}
         </Button>
-        {open &&
-          children?.map((child) => (
-            <TreeNode
-              key={child.path}
-              entry={child}
-              depth={depth + 1}
-              onFileClick={onFileClick}
-              disabled={disabled}
-              graphFilePaths={graphFilePaths}
-            />
-          ))}
+        {open && (
+          <div className="flex flex-col gap-0.5">
+            {children?.map((child) => (
+              <TreeNode
+                key={child.path}
+                entry={child}
+                depth={depth + 1}
+                onFileClick={onFileClick}
+                disabled={disabled}
+                graphFilePaths={graphFilePaths}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -249,7 +254,7 @@ function RecentFilesSection({
         type="button"
         variant="ghost"
         onClick={onToggle}
-        className="pointer-events-auto h-8 w-full justify-start gap-2 px-2 text-xs font-medium text-muted-foreground hover:bg-accent"
+        className={cn(TREE_FOLDER_ROW, "text-muted-foreground hover:bg-accent")}
         aria-expanded={open}
       >
         <Codicon
@@ -259,17 +264,20 @@ function RecentFilesSection({
         <span>Recent</span>
         <span className="ml-auto text-muted-foreground">{files.length}</span>
       </Button>
-      {open &&
-        files.map((path) => (
-          <FileTreeItem
-            key={path}
-            filePath={path}
-            name={fileDisplayName(path)}
-            depth={0}
-            onFileClick={onFileClick}
-            inGraph={isFileInGraph(path, graphFilePaths ?? new Set())}
-          />
-        ))}
+      {open && (
+        <div className="flex flex-col gap-0.5">
+          {files.map((path) => (
+            <FileTreeItem
+              key={path}
+              filePath={path}
+              name={fileDisplayName(path)}
+              depth={0}
+              onFileClick={onFileClick}
+              inGraph={isFileInGraph(path, graphFilePaths ?? new Set())}
+            />
+          ))}
+        </div>
+      )}
       <Separator className="my-1 bg-sidebar-border" />
     </section>
   );
@@ -442,7 +450,7 @@ export default function FileExplorer({
       <Separator className="bg-sidebar-border" />
 
       <ScrollArea className="pointer-events-auto relative z-0 min-h-0 flex-1">
-        <div className="pointer-events-auto py-1">
+        <div className="pointer-events-auto flex flex-col gap-0.5 py-1">
           <RecentFilesSection
             files={recentFiles}
             open={recentSectionOpen}
@@ -454,16 +462,18 @@ export default function FileExplorer({
           {rootPath && (
             <p className="break-all px-3 py-2 text-xs text-muted-foreground">{rootPath}</p>
           )}
-          {rootEntries?.map((entry) => (
-            <TreeNode
-              key={entry.path}
-              entry={entry}
-              depth={0}
-              onFileClick={handleFileClick}
-              disabled={disabled}
-              graphFilePaths={graphFilePaths}
-            />
-          ))}
+          <div className="flex flex-col gap-0.5">
+            {rootEntries?.map((entry) => (
+              <TreeNode
+                key={entry.path}
+                entry={entry}
+                depth={0}
+                onFileClick={handleFileClick}
+                disabled={disabled}
+                graphFilePaths={graphFilePaths}
+              />
+            ))}
+          </div>
         </div>
       </ScrollArea>
     </aside>
