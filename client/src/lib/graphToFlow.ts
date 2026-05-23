@@ -1,7 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import { flowEdgeId, toFlowId } from "@/lib/graphIds";
-import { GRAPH_NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
+import {
+  CLASS_NODE_DEFAULT_WIDTH,
+  NODE_DRAG_HANDLE,
+} from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
 import { buildClassProperties, methodsForClassNode } from "@/lib/classBody";
 import { camelToWords } from "@/lib/camelToWords";
@@ -60,7 +63,13 @@ export function estimateNodeSize(node: Node): { width: number; height: number } 
     return { width: FILE_NODE_WIDTH, height: FILE_NODE_HEIGHT };
   }
   const data = node.data as ClassNodeData;
-  return { width: CLASS_MIN_WIDTH, height: estimateClassHeight(data) };
+  const width =
+    typeof node.width === "number"
+      ? node.width
+      : typeof node.style?.width === "number"
+        ? node.style.width
+        : CLASS_MIN_WIDTH;
+  return { width, height: estimateClassHeight(data) };
 }
 
 function resolveFlowEndpoint(
@@ -144,7 +153,7 @@ export function graphToFlow(
           type: "file",
           position: { x: 0, y: 0 },
           draggable: true,
-          dragHandle: `.${GRAPH_NODE_DRAG_HANDLE}`,
+          dragHandle: `.${NODE_DRAG_HANDLE}`,
           data: fileData,
         };
       }
@@ -199,8 +208,10 @@ export function graphToFlow(
         id,
         type: "class",
         position: { x: 0, y: 0 },
+        width: CLASS_NODE_DEFAULT_WIDTH,
+        style: { width: CLASS_NODE_DEFAULT_WIDTH },
         draggable: true,
-        dragHandle: `.${GRAPH_NODE_DRAG_HANDLE}`,
+        dragHandle: `.${NODE_DRAG_HANDLE}`,
         data: classData,
       };
     });

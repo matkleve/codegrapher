@@ -1,6 +1,7 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, type ReactNode } from "react";
 import {
   Handle,
+  NodeResizer,
   Position,
   type NodeProps,
   useReactFlow,
@@ -9,6 +10,7 @@ import {
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
 import { NodeCardHeader } from "@/components/nodes/NodeCardHeader";
+import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import { camelToWords } from "@/lib/camelToWords";
 import { cn } from "@/lib/utils";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -18,19 +20,20 @@ function MemberSection({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <section className="px-1">
-      <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{label}</p>
-      {children}
+    <section className="flex flex-col gap-2">
+      <p className="text-left text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex flex-col gap-2">{children}</div>
     </section>
   );
 }
 
-function ClassNodeComponent({ id, data, selected }: NodeProps) {
+function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const nodeData = data as ClassNodeData;
-  const collapsed = nodeData.collapsed ?? false;
+  const bodyExpanded = !(nodeData.collapsed ?? false);
+  const nodeWidth = width ?? CLASS_NODE_DEFAULT_WIDTH;
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
@@ -68,8 +71,25 @@ function ClassNodeComponent({ id, data, selected }: NodeProps) {
   );
 
   const onToggleCollapsed = useCallback(() => {
-    patchNodeData({ collapsed: !collapsed });
-  }, [collapsed, patchNodeData]);
+    patchNodeData({ collapsed: bodyExpanded });
+  }, [bodyExpanded, patchNodeData]);
+
+  const onResize = useCallback(
+    (_event: unknown, params: { width: number; height: number }) => {
+      setNodes((nodes) =>
+        nodes.map((n) => {
+          if (n.id !== id) return n;
+          return {
+            ...n,
+            width: params.width,
+            style: { ...n.style, width: params.width },
+          };
+        }),
+      );
+      requestAnimationFrame(() => updateNodeInternals(id));
+    },
+    [id, setNodes, updateNodeInternals],
+  );
 
   const title = camelToWords(nodeData.label);
   const hasProperties = nodeData.properties.length > 0;
@@ -78,21 +98,29 @@ function ClassNodeComponent({ id, data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "min-w-[280px] rounded-lg border border-border bg-card shadow-sm",
+        "relative rounded-lg border border-border bg-card text-left shadow-sm",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
       )}
+      style={{ width: nodeWidth }}
     >
+      <NodeResizer
+        minWidth={200}
+        maxWidth={600}
+        isVisible={selected}
+        onResize={onResize}
+        handleClassName="class-node-resizer-handle"
+        lineClassName="class-node-resizer-line"
+      />
       <Handle type="target" position={Position.Top} className="!bg-primary" />
       <NodeCardHeader
         title={title}
-        fileName={nodeData.fileName}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
-        collapsed={collapsed}
+        bodyExpanded={bodyExpanded}
         onToggleCollapsed={onToggleCollapsed}
       />
-      {!collapsed && (
-        <div className="nodrag flex flex-col py-1">
+      {bodyExpanded && (
+        <div className="nodrag flex flex-col gap-2 px-3 py-2">
           {hasProperties && (
             <MemberSection label="Properties">
               {nodeData.properties.map((p) => (
@@ -108,9 +136,9 @@ function ClassNodeComponent({ id, data, selected }: NodeProps) {
             </MemberSection>
           )}
           {hasProperties && hasMethods ? (
-            <div className="mx-3 my-1 border-t border-border" role="separator" />
+            <div className="border-t border-border" role="separator" />
           ) : null}
-          {hasMethods ? (
+          {hasMethods && (
             <MemberSection label="Methods">
               {nodeData.methods.map((m) => (
                 <CollapsibleMemberRow
@@ -123,9 +151,9 @@ function ClassNodeComponent({ id, data, selected }: NodeProps) {
                 />
               ))}
             </MemberSection>
-          ) : null}
+          )}
           {!hasProperties && !hasMethods ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No members</p>
+            <p className="text-left text-xs text-muted-foreground">No members</p>
           ) : null}
         </div>
       )}

@@ -202,3 +202,19 @@ html.dark {
   background-color: color-mix(in oklch, var(--primary) 10%, transparent);
   border-color: var(--primary);
 }
+
+.explorer-tree-guide {
+  border-left-color: color-mix(in oklch, var(--sidebar-border) 85%, transparent);
+}
+
+.class-node-resizer-handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--primary);
+  border: 1px solid var(--background);
+}
+
+.class-node-resizer-line {
+  border-color: var(--primary);
+}

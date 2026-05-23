@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FolderOpen, Trash2 } from "lucide-react";
 import { browseFolder, fetchTree } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -27,16 +27,21 @@ import { isFileInGraph } from "@/lib/graphFiles";
 import { cn } from "@/lib/utils";
 import type { TreeEntry } from "@/types";
 
-const INDENT_CLASSES = ["pl-2", "pl-4", "pl-6", "pl-8", "pl-10", "pl-12"] as const;
+const EXPLORER_X_PAD = "px-2";
 
 /** VS Code–like explorer row density */
 const TREE_ROW =
   "hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
 const TREE_FOLDER_ROW =
-  "hoverable pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm border-transparent px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
+  "hoverable pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm border border-transparent px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
 
-function indentClass(depth: number): string {
-  return INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)];
+/** Vertical guide + indent for nested files under a folder/section. */
+function ExplorerTreeGuide({ children }: { children: ReactNode }) {
+  return (
+    <div className="explorer-tree-guide ml-3 border-l border-sidebar-border pl-2">
+      <div className="flex flex-col gap-0.5">{children}</div>
+    </div>
+  );
 }
 
 interface FileExplorerProps {
@@ -50,7 +55,6 @@ interface FileExplorerProps {
 interface FileTreeItemProps {
   filePath: string;
   name: string;
-  depth: number;
   onFileClick: (filePath: string) => void;
   disabled?: boolean;
   inGraph?: boolean;
@@ -59,7 +63,6 @@ interface FileTreeItemProps {
 function FileTreeItem({
   filePath,
   name,
-  depth,
   onFileClick,
   disabled,
   inGraph,
@@ -90,12 +93,10 @@ function FileTreeItem({
       className={cn(
         TREE_ROW,
         "active:cursor-grabbing",
-        indentClass(depth),
         inGraph ? "font-medium text-primary" : "text-foreground",
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
-      <span className="size-3 shrink-0" />
       <Codicon name={fileIcon.codicon} className={cn("size-3.5 shrink-0", fileIcon.colorClass)} />
       <span className="truncate">{name}</span>
     </div>
@@ -138,7 +139,7 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
           variant="ghost"
           onClick={toggleFolder}
           disabled={disabled}
-          className={cn(TREE_FOLDER_ROW, indentClass(depth))}
+          className={TREE_FOLDER_ROW}
         >
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
@@ -149,7 +150,7 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
           {loading && <span className="text-xs text-muted-foreground">…</span>}
         </Button>
         {open && (
-          <div className="flex flex-col gap-0.5">
+          <ExplorerTreeGuide>
             {children?.map((child) => (
               <TreeNode
                 key={child.path}
@@ -160,9 +161,23 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
                 graphFilePaths={graphFilePaths}
               />
             ))}
-          </div>
+          </ExplorerTreeGuide>
         )}
       </div>
+    );
+  }
+
+  if (depth === 0) {
+    return (
+      <ExplorerTreeGuide>
+        <FileTreeItem
+          filePath={entry.path}
+          name={entry.name}
+          onFileClick={onFileClick}
+          disabled={disabled}
+          inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
+        />
+      </ExplorerTreeGuide>
     );
   }
 
@@ -170,7 +185,6 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
     <FileTreeItem
       filePath={entry.path}
       name={entry.name}
-      depth={depth}
       onFileClick={onFileClick}
       disabled={disabled}
       inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
@@ -264,18 +278,17 @@ function RecentFilesSection({
         <span className="ml-auto text-muted-foreground">{files.length}</span>
       </Button>
       {open && (
-        <div className="flex flex-col gap-0.5">
+        <ExplorerTreeGuide>
           {files.map((path) => (
             <FileTreeItem
               key={path}
               filePath={path}
               name={fileDisplayName(path)}
-              depth={0}
               onFileClick={onFileClick}
               inGraph={isFileInGraph(path, graphFilePaths ?? new Set())}
             />
           ))}
-        </div>
+        </ExplorerTreeGuide>
       )}
       <Separator className="my-1 bg-sidebar-border" />
     </section>
@@ -456,7 +469,7 @@ export default function FileExplorer({
       <Separator className="bg-sidebar-border" />
 
       <ScrollArea className="pointer-events-auto relative z-0 min-h-0 flex-1">
-        <div className="pointer-events-auto flex flex-col gap-0.5 py-1">
+        <div className={cn("pointer-events-auto flex flex-col gap-0.5 py-1", EXPLORER_X_PAD)}>
           <RecentFilesSection
             files={recentFiles}
             open={recentSectionOpen}
@@ -466,7 +479,7 @@ export default function FileExplorer({
           />
 
           {rootPath && (
-            <p className="break-all px-3 py-2 text-xs text-muted-foreground">{rootPath}</p>
+            <p className="break-all px-1 py-2 text-xs text-muted-foreground">{rootPath}</p>
           )}
           <div className="flex flex-col gap-0.5">
             {rootEntries?.map((entry) => (
