@@ -171,14 +171,6 @@ html.dark {
   pointer-events: auto;
 }
 
-.graph-flow-container .react-flow__pane {
-  cursor: grab;
-}
-
-.graph-flow-container .react-flow__pane:active {
-  cursor: grabbing;
-}
-
 .react-flow__edge.path-highlight .react-flow__edge-path {
   stroke: var(--ring) !important;
   stroke-width: 3px !important;
@@ -186,10 +178,15 @@ html.dark {
 
 .graph-pane {
   pointer-events: auto;
-  cursor: grab;
   touch-action: none;
 }
 
-.graph-pane:active {
+/* Grab cursor only over the flow canvas, not the whole pane (drop zone). */
+.graph-pane .graph-flow-container,
+.graph-pane .graph-flow-container .react-flow__pane {
+  cursor: grab;
+}
+
+.graph-pane .graph-flow-container .react-flow__pane:active {
   cursor: grabbing;
 }

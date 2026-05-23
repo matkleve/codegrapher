@@ -7,12 +7,16 @@ export type MethodItem = {
 };
 
 export type ClassNodeData = {
+  /** Class / function / module name */
   label: string;
+  /** Basename shown in header, e.g. query.ts */
+  fileName: string;
   filePath: string;
   graphNodeId: string;
   nodeKind: "class" | "module" | "function";
   methods: MethodItem[];
   expandedMethodIds: string[];
+  collapsed?: boolean;
   selected?: boolean;
   pathHighlighted?: boolean;
 };

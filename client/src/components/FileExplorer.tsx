@@ -32,7 +32,7 @@ const INDENT_CLASSES = ["pl-2", "pl-4", "pl-6", "pl-8", "pl-10", "pl-12"] as con
 const TREE_ROW =
   "pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
 const TREE_FOLDER_ROW =
-  "pointer-events-auto h-[22px] w-full justify-start gap-1.5 rounded-sm px-1.5 text-xs font-medium leading-none";
+  "pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
 
 function indentClass(depth: number): string {
   return INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)];
@@ -202,7 +202,7 @@ function RecentFoldersDropdown({
             <li key={path}>
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left hover:bg-accent"
+                className="w-full cursor-pointer px-3 py-2 text-left hover:bg-accent"
                 onClick={() => onSelect(path)}
               >
                 <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
@@ -402,7 +402,10 @@ export default function FileExplorer({
       <div className="pointer-events-auto relative z-30 flex shrink-0 flex-col gap-2 overflow-visible p-3">
         <div className="flex gap-2 overflow-visible">
           <div
-            className="pointer-events-auto relative z-[100] shrink-0"
+            className={cn(
+              "pointer-events-auto relative z-[100] shrink-0",
+              recentFolders.length > 0 && "cursor-pointer",
+            )}
             onMouseEnter={() => setRecentFoldersOpen(true)}
             onMouseLeave={() => setRecentFoldersOpen(false)}
           >

@@ -24,6 +24,7 @@ import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { FIT_VIEW_PADDING, layoutFlowElements } from "@/lib/flowLayout";
 import {
+  collectFlowNodeUiState,
   graphToFlow,
   mergeFlowElements,
 } from "@/lib/graphToFlow";
@@ -48,17 +49,6 @@ interface GraphCanvasProps {
   graphResetKey: number;
   onFileDrop: (filePath: string) => void;
   loading?: boolean;
-}
-
-function collectExpandedMethodIds(nodes: Node[]): Set<string> {
-  const ids = new Set<string>();
-  for (const node of nodes) {
-    if (node.type !== "class") continue;
-    for (const id of (node.data as ClassNodeData).expandedMethodIds) {
-      ids.add(id);
-    }
-  }
-  return ids;
 }
 
 function cloneSnapshot(
@@ -212,12 +202,22 @@ function GraphFlowInner({
     setCanGoForward(historyForwardRef.current.length > 0);
   }, []);
 
+  const dropLockRef = useRef(false);
+
   const applyLayoutAndFit = useCallback(
-    (nextNodes: Node[], nextEdges: Edge[], fit = true) => {
+    (nextNodes: Node[], nextEdges: Edge[], fit = true, preservePositions = false) => {
+      const prevPos = preservePositions
+        ? new Map(nodesRef.current.map((n) => [n.id, n.position]))
+        : null;
       const laidOut = layoutFlowElements(nextNodes, nextEdges);
-      setNodes(laidOut);
+      const positioned = prevPos
+        ? laidOut.map((n) =>
+            prevPos.has(n.id) ? { ...n, position: prevPos.get(n.id)! } : n,
+          )
+        : laidOut;
+      setNodes(positioned);
       setEdges(nextEdges);
-      if (fit && laidOut.length > 0) {
+      if (fit && positioned.length > 0) {
         requestAnimationFrame(() => {
           fitView({ padding: FIT_VIEW_PADDING, duration: 200 });
           syncGrid();
@@ -235,8 +235,8 @@ function GraphFlowInner({
   const syncFromGraphData = useCallback(
     (data: GraphData, replaceAll: boolean) => {
       setGraphError(null);
-      const expanded = collectExpandedMethodIds(nodesRef.current);
-      const { nodes: freshNodes, edges: freshEdges } = graphToFlow(data, expanded);
+      const ui = collectFlowNodeUiState(nodesRef.current);
+      const { nodes: freshNodes, edges: freshEdges } = graphToFlow(data, ui);
 
       if (freshNodes.length === 0) {
         setNodes([]);
@@ -253,7 +253,7 @@ function GraphFlowInner({
         nodes: freshNodes,
         edges: freshEdges,
       });
-      applyLayoutAndFit(merged.nodes, merged.edges, false);
+      applyLayoutAndFit(merged.nodes, merged.edges, false, true);
     },
     [applyLayoutAndFit, setEdges, setNodes],
   );
@@ -493,12 +493,20 @@ function GraphFlowInner({
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
         }}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
+          e.stopPropagation();
+          if (dropLockRef.current || loading) return;
           const filePath =
             e.dataTransfer.getData(DRAG_FILEPATH_KEY) ||
             e.dataTransfer.getData("text/plain");
-          if (filePath) onFileDrop(filePath);
+          if (!filePath.trim()) return;
+          dropLockRef.current = true;
+          try {
+            await Promise.resolve(onFileDrop(filePath));
+          } finally {
+            dropLockRef.current = false;
+          }
         }}
       >
         <div
@@ -524,7 +532,8 @@ function GraphFlowInner({
           minZoom={0.2}
           maxZoom={4}
           proOptions={{ hideAttribution: true }}
-          nodesDraggable={false}
+          nodesDraggable
+          nodeDragThreshold={4}
           nodesConnectable={false}
           elementsSelectable
           panOnScroll={false}

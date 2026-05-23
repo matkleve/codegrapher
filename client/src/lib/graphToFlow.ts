@@ -1,19 +1,40 @@
 import type { Edge, Node } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import { flowEdgeId, toFlowId } from "@/lib/graphIds";
+import { GRAPH_NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
+import { fileDisplayName } from "@/lib/recentFiles";
 import type { GraphData, GraphNode } from "@/types";
+
+export type FlowNodeUiState = {
+  expandedMethodIds: Set<string>;
+  collapsedByGraphId: Map<string, boolean>;
+};
+
+export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
+  const expandedMethodIds = new Set<string>();
+  const collapsedByGraphId = new Map<string, boolean>();
+  for (const node of nodes) {
+    if (node.type === "class") {
+      const d = node.data as ClassNodeData;
+      for (const id of d.expandedMethodIds) expandedMethodIds.add(id);
+      if (d.collapsed) collapsedByGraphId.set(d.graphNodeId, true);
+    }
+  }
+  return { expandedMethodIds, collapsedByGraphId };
+}
 
 const CLASS_MIN_WIDTH = 280;
 const FILE_NODE_WIDTH = 160;
-const FILE_NODE_HEIGHT = 36;
+const FILE_NODE_HEIGHT = 56;
 
 function hasValidLabel(label: string | undefined): boolean {
   return Boolean(label?.trim());
 }
 
 function estimateClassHeight(data: ClassNodeData): number {
-  const header = 52;
+  const header = data.collapsed ? 72 : 88;
+  if (data.collapsed) return Math.max(72, header);
   let body = 8;
   for (const m of data.methods) {
     const expanded = data.expandedMethodIds.includes(m.id);
@@ -57,8 +78,9 @@ function resolveFlowEndpoint(
 
 export function graphToFlow(
   data: GraphData,
-  expandedMethodIds: Set<string>,
+  ui: FlowNodeUiState,
 ): { nodes: Node[]; edges: Edge[] } {
+  const { expandedMethodIds, collapsedByGraphId } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
 
@@ -109,6 +131,8 @@ export function graphToFlow(
           id,
           type: "file",
           position: { x: 0, y: 0 },
+          draggable: true,
+          dragHandle: `.${GRAPH_NODE_DRAG_HANDLE}`,
           data: fileData,
         };
       }
@@ -131,6 +155,7 @@ export function graphToFlow(
 
       const classData: ClassNodeData = {
         label: node.label,
+        fileName: fileDisplayName(node.filePath),
         filePath: node.filePath,
         graphNodeId: node.id,
         nodeKind: node.type === "module" ? "module" : node.type === "function" ? "function" : "class",
@@ -138,12 +163,15 @@ export function graphToFlow(
         expandedMethodIds: methods
           .filter((m) => expandedMethodIds.has(m.id))
           .map((m) => m.id),
+        collapsed: collapsedByGraphId.get(node.id) ?? false,
       };
 
       return {
         id,
         type: "class",
         position: { x: 0, y: 0 },
+        draggable: true,
+        dragHandle: `.${GRAPH_NODE_DRAG_HANDLE}`,
         data: classData,
       };
     });

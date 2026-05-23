@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchFileGraph, fetchFocus } from "@/api";
+import { fetchFileGraph } from "@/api";
 import FileExplorer from "@/components/FileExplorer";
 import GraphCanvas, { type GraphCanvasHandle } from "@/components/GraphCanvas";
 import { mergeGraphData } from "@/graphMerge";
@@ -40,15 +40,16 @@ function App() {
   );
 
   const handleFileDrop = useCallback(async (filePath: string) => {
-    if (!filePath.trim()) return;
+    const normalized = filePath.trim();
+    if (!normalized) return;
     setLoading(true);
     setError(null);
-    recordRecentFile(filePath);
+    recordRecentFile(normalized);
     try {
-      const incoming = await fetchFocus(filePath, 1);
+      const incoming = await fetchFileGraph(normalized);
       graphRef.current?.pushHistoryBeforeChange();
       setGraphData((prev) => mergeGraphData(prev, incoming));
-      saveLastFile(filePath);
+      saveLastFile(normalized);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to merge file");
     } finally {
