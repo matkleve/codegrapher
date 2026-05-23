@@ -8,7 +8,7 @@ document.documentElement.classList.add("dark");
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delay={200}>
       <App />
     </TooltipProvider>
   </StrictMode>,

@@ -8,40 +8,38 @@ import {
 } from "react";
 import { Maximize2 } from "lucide-react";
 import cytoscape from "cytoscape";
-import type { Core, ElementDefinition, Stylesheet } from "cytoscape";
+import type { Core, ElementDefinition } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { readFitPadding, runGraphLayout } from "@/lib/compoundLayout";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { getGraphTheme, type GraphThemeColors } from "@/lib/cytoscapeTheme";
-import { cn } from "@/lib/utils";
-import type { GraphData, GraphEdge } from "../types";
-import { DRAG_MIME } from "./FileExplorer";
+  getGraphTheme,
+  readTailwindMinSize,
+  readTailwindSpacing,
+  type GraphThemeColors,
+} from "@/lib/cytoscapeTheme";
+import { graphToElements } from "@/lib/graphElements";
+import type { GraphData } from "../types";
 
 cytoscape.use(dagre);
 
-type CySnapshot = ReturnType<Core["json"]>;
+type CySnapshot = Parameters<Core["json"]>[0];
 
-const FIT_PADDING = 40;
-const CODE_PREVIEW_LINES = 6;
-
-function truncateCode(code: string, maxLines = CODE_PREVIEW_LINES): string {
-  return code
-    .split("\n")
-    .slice(0, maxLines)
-    .join("\n")
-    .slice(0, 400);
+function readFontSize(className: string): string {
+  const probe = document.createElement("div");
+  probe.className = className;
+  document.documentElement.appendChild(probe);
+  const size = getComputedStyle(probe).fontSize;
+  document.documentElement.removeChild(probe);
+  return size;
 }
 
-function edgeElementId(edge: GraphEdge): string {
-  return `edge:${edge.source}:${edge.target}:${edge.type}:${edge.label ?? ""}`;
-}
+function buildCyStyles(theme: GraphThemeColors) {
+  const textXs = readFontSize("text-xs");
+  const textSm = readFontSize("text-sm");
+  const pad2 = readTailwindSpacing("p-2");
+  const pad5 = readTailwindSpacing("p-5");
 
-function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
   return [
     {
       selector: "node",
@@ -50,14 +48,12 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
         "text-valign": "center",
         "text-halign": "center",
         color: theme.foreground,
-        "font-size": "11px",
+        "font-size": textXs,
         "font-family": "ui-monospace, monospace",
         "text-wrap": "wrap",
-        "text-max-width": "140px",
         "background-color": theme.card,
         "border-color": theme.border,
         "border-width": 1,
-        padding: "8px",
       },
     },
     {
@@ -69,13 +65,13 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
         "border-width": 2,
         label: "data(label)",
         "text-valign": "top",
-        "text-halign": "center",
-        "font-size": "13px",
+        "text-halign": "left",
+        "font-size": textSm,
         "font-weight": "bold",
         color: theme.primary,
-        padding: "16px",
-        "min-width": "120px",
-        "min-height": "60px",
+        padding: pad5,
+        "min-width": readTailwindMinSize("min-w-48", "minWidth"),
+        "min-height": readTailwindMinSize("min-h-16", "minHeight"),
       },
     },
     {
@@ -86,19 +82,22 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
         "border-width": 1,
         label: "data(displayLabel)",
         color: theme.foreground,
-        width: 140,
+        "text-valign": "top",
+        "text-halign": "left",
+        "font-size": textXs,
+        "font-family": "ui-monospace, monospace",
+        "text-margin-x": pad2,
+        "text-margin-y": pad2,
+        width: "label",
         height: "label",
-        "min-height": 28,
+        "min-height": readTailwindMinSize("min-h-7", "minHeight"),
       },
     },
     {
       selector: 'node[expanded = "true"]',
       style: {
-        width: 200,
-        "min-height": 80,
-        "font-size": "10px",
         "text-halign": "left",
-        "text-margin-x": 6,
+        "text-valign": "top",
         color: theme.mutedForeground,
       },
     },
@@ -109,7 +108,7 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
         "border-width": 3,
         "overlay-color": theme.ring,
         "overlay-opacity": 0.2,
-        "overlay-padding": 6,
+        "overlay-padding": readTailwindSpacing("p-1.5"),
       },
     },
     {
@@ -130,11 +129,11 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
         "target-arrow-shape": "triangle",
         "curve-style": "bezier",
         label: "data(edgeLabel)",
-        "font-size": "10px",
+        "font-size": textXs,
         color: theme.foreground,
         "text-background-color": theme.card,
         "text-background-opacity": 0.9,
-        "text-background-padding": "2px",
+        "text-background-padding": readTailwindSpacing("p-1"),
       },
     },
     {
@@ -153,68 +152,6 @@ function buildCyStyles(theme: GraphThemeColors): Stylesheet[] {
       },
     },
   ];
-}
-
-function graphToElements(
-  data: GraphData,
-  expandedMethods: Set<string>,
-): ElementDefinition[] {
-  const visibleNodes = data.nodes.filter((n) => n.type !== "file");
-  const nodeIds = new Set(visibleNodes.map((n) => n.id));
-
-  const parents = visibleNodes.filter((n) => !n.parent || !nodeIds.has(n.parent));
-  const children = visibleNodes.filter((n) => n.parent && nodeIds.has(n.parent));
-  const ordered = [...parents, ...children];
-
-  const nodeElements: ElementDefinition[] = ordered.map((node) => {
-    const isMethodLike = node.type === "method" || node.type === "function";
-    const expanded = isMethodLike && expandedMethods.has(node.id);
-    const displayLabel = expanded
-      ? `${node.label}\n${truncateCode(node.code)}`
-      : node.label;
-
-    return {
-      data: {
-        id: node.id,
-        label: node.label,
-        displayLabel,
-        type: node.type,
-        filePath: node.filePath,
-        code: node.code,
-        parent: node.parent && nodeIds.has(node.parent) ? node.parent : undefined,
-        expanded: expanded ? "true" : "false",
-      },
-    };
-  });
-
-  const edgeElements: ElementDefinition[] = data.edges
-    .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
-    .map((edge) => ({
-      data: {
-        id: edgeElementId(edge),
-        source: edge.source,
-        target: edge.target,
-        type: edge.type,
-        edgeLabel: edge.label ?? "",
-      },
-    }));
-
-  return [...nodeElements, ...edgeElements];
-}
-
-function runLayout(cy: Core) {
-  const layout = cy.layout({
-    name: "dagre",
-    rankDir: "TB",
-    nodeSep: 60,
-    rankSep: 80,
-    animate: false,
-  });
-  layout.on("layoutstop", () => {
-    cy.resize();
-    cy.fit(undefined, FIT_PADDING);
-  });
-  layout.run();
 }
 
 export interface GraphCanvasHandle {
@@ -238,7 +175,7 @@ interface NodeTipState {
 }
 
 const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
-  function GraphCanvas({ graphData, graphResetKey, onFileDrop, loading }, ref) {
+  function GraphCanvas({ graphData, graphResetKey, onFileDrop: _onFileDrop, loading }, ref) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const cyRef = useRef<Core | null>(null);
@@ -255,6 +192,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
     } | null>(null);
     const [pathFromId, setPathFromId] = useState<string | null>(null);
     const [nodeTip, setNodeTip] = useState<NodeTipState | null>(null);
+    const [graphError, setGraphError] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       pushHistoryBeforeChange: () => {
@@ -332,43 +270,42 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       return { nodeIds, edgeIds };
     }, []);
 
-    const applyGraphData = useCallback(
-      (cy: Core, data: GraphData | null) => {
-        if (graphKey !== prevGraphKeyRef.current) {
-          cy.elements().remove();
-          prevGraphKeyRef.current = graphKey;
+    const syncGraph = useCallback((cy: Core, data: GraphData, replaceAll: boolean) => {
+      setGraphError(null);
+
+      if (replaceAll) {
+        cy.elements().remove();
+      }
+
+      const elements = graphToElements(data, expandedMethodsRef.current);
+      if (elements.length === 0) {
+        cy.resize();
+        return;
+      }
+
+      const existingNodeIds = new Set(cy.nodes().map((n) => n.id()));
+      const existingEdgeIds = new Set(cy.edges().map((e) => e.id()));
+      const newElements: ElementDefinition[] = [];
+
+      for (const el of elements) {
+        const id = el.data.id as string;
+        if (id.startsWith("edge:")) {
+          if (!existingEdgeIds.has(id)) newElements.push(el);
+        } else if (existingNodeIds.has(id)) {
+          cy.getElementById(id).data(el.data);
+        } else {
+          newElements.push(el);
         }
+      }
 
-        cy.nodes().removeClass("selected");
-        setPathInfo(null);
-        setPathFromId(null);
-        clearPathHighlight(cy);
+      if (newElements.length > 0) cy.add(newElements);
 
-        if (!data || data.nodes.length === 0) return;
+      cy.nodes('[type = "method"], [type = "function"]').forEach((n) => {
+        n.ungrabify();
+      });
 
-        const existingNodeIds = new Set(cy.nodes().map((n) => n.id()));
-        const existingEdgeIds = new Set(cy.edges().map((e) => e.id()));
-        const elements = graphToElements(data, expandedMethodsRef.current);
-        const newElements: ElementDefinition[] = [];
-
-        for (const el of elements) {
-          if (el.data.id?.startsWith("edge:")) {
-            if (!existingEdgeIds.has(el.data.id)) newElements.push(el);
-          } else if (!existingNodeIds.has(el.data.id!)) {
-            newElements.push(el);
-          } else if (!el.data.id!.startsWith("edge:")) {
-            const node = cy.getElementById(el.data.id!);
-            node.data(el.data);
-          }
-        }
-
-        if (newElements.length > 0) cy.add(newElements);
-        runLayout(cy);
-      },
-      [clearPathHighlight, graphResetKey],
-    );
-
-    const graphKey = graphResetKey;
+      runGraphLayout(cy);
+    }, []);
 
     useEffect(() => {
       expandedMethodsRef.current = new Set();
@@ -380,17 +317,16 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       const cy = cyRef.current;
       if (!cy || !graphData) return;
 
-      if (graphKey !== prevGraphKeyRef.current) {
-        cy.elements().remove();
-        prevGraphKeyRef.current = graphKey;
-        const elements = graphToElements(graphData, expandedMethodsRef.current);
-        cy.add(elements);
-        runLayout(cy);
-        return;
-      }
+      const replaceAll = graphResetKey !== prevGraphKeyRef.current;
+      if (replaceAll) prevGraphKeyRef.current = graphResetKey;
 
-      applyGraphData(cy, graphData);
-    }, [expandedMethods, graphData, graphKey, applyGraphData]);
+      try {
+        syncGraph(cy, graphData, replaceAll);
+      } catch (err) {
+        console.error(err);
+        setGraphError(err instanceof Error ? err.message : "Graph render failed");
+      }
+    }, [expandedMethods, graphData, graphResetKey, syncGraph]);
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -400,22 +336,10 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         container: containerRef.current,
         style: buildCyStyles(theme),
         layout: { name: "grid" },
+        minZoom: 0.2,
+        maxZoom: 4,
+        wheelSensitivity: 0.2,
       });
-
-      const updateNodeTip = (evt: cytoscape.EventObject) => {
-        const node = evt.target;
-        const rect = containerRef.current!.getBoundingClientRect();
-        const pos = node.renderedPosition();
-        const pan = cy.pan();
-        const zoom = cy.zoom();
-        setNodeTip({
-          label: node.data("label"),
-          type: node.data("type"),
-          filePath: node.data("filePath"),
-          x: rect.left + pos.x * zoom + pan.x,
-          y: rect.top + pos.y * zoom + pan.y,
-        });
-      };
 
       cy.on("cxttap", "node", (evt) => {
         evt.originalEvent.preventDefault();
@@ -431,7 +355,21 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         });
       });
 
-      cy.on("mouseover", "node", updateNodeTip);
+      cy.on("mouseover", "node", (evt) => {
+        const node = evt.target;
+        const rect = containerRef.current!.getBoundingClientRect();
+        const pos = node.renderedPosition();
+        const pan = cy.pan();
+        const zoom = cy.zoom();
+        setNodeTip({
+          label: node.data("label"),
+          type: node.data("type"),
+          filePath: node.data("filePath"),
+          x: rect.left + pos.x * zoom + pan.x,
+          y: rect.top + pos.y * zoom + pan.y,
+        });
+      });
+
       cy.on("mouseout", "node", () => setNodeTip(null));
 
       cy.on("tap", "node", (evt) => {
@@ -457,7 +395,6 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
             const next = new Set(prev);
             if (next.has(id)) next.delete(id);
             else next.add(id);
-            expandedMethodsRef.current = next;
             return next;
           });
           return;
@@ -491,6 +428,22 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       };
     }, [findShortestPath, highlightPath, pathFromId]);
 
+    useEffect(() => {
+      const cy = cyRef.current;
+      if (!cy || !graphData) {
+        if (cy && !graphData) cy.elements().remove();
+        return;
+      }
+      if (cy.elements().length === 0) {
+        try {
+          syncGraph(cy, graphData, true);
+        } catch (err) {
+          console.error(err);
+          setGraphError(err instanceof Error ? err.message : "Graph render failed");
+        }
+      }
+    }, [graphData, syncGraph]);
+
     const handleBack = () => {
       const cy = cyRef.current;
       const snapshot = historyRef.current.pop();
@@ -498,30 +451,17 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
       if (!cy || !snapshot) return;
       cy.json(snapshot);
       cy.resize();
-      cy.fit(undefined, FIT_PADDING);
+      cy.fit(undefined, readFitPadding());
       setPathInfo(null);
       setPathFromId(null);
     };
 
-    const handleDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      const filePath = e.dataTransfer.getData(DRAG_MIME);
-      if (filePath) onFileDrop(filePath);
-    };
-
-    const isEmpty =
-      !graphData || graphData.nodes.filter((n) => n.type !== "file").length === 0;
+    const visibleNodes =
+      graphData?.nodes.filter((n) => n.type !== "file" && n.label?.trim()) ?? [];
+    const isEmpty = visibleNodes.length === 0;
 
     return (
-      <div
-        ref={wrapperRef}
-        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
-        }}
-        onDrop={handleDrop}
-      >
+      <div ref={wrapperRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="z-5 flex items-center gap-2 border-b border-border bg-card px-3 py-2">
           <Button
             type="button"
@@ -536,6 +476,12 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
             <span className="text-sm text-muted-foreground">Loading…</span>
           )}
         </div>
+
+        {graphError && (
+          <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {graphError}
+          </div>
+        )}
 
         {pathInfo && (
           <div className="pointer-events-none absolute top-14 left-1/2 z-20 -translate-x-1/2 rounded-md border border-ring bg-popover px-3.5 py-2 text-sm text-popover-foreground shadow-md">
@@ -552,15 +498,26 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
         <div className="relative min-h-0 flex-1">
           <div ref={containerRef} className="absolute inset-0 bg-background" />
           {isEmpty && !loading && (
-            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg text-muted-foreground">
+            <p className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center text-lg text-muted-foreground">
               ← Click or drag a file to start
             </p>
           )}
         </div>
 
+        {nodeTip && (
+          <div
+            className="pointer-events-none fixed z-50 max-w-xs -translate-x-1/2 -translate-y-full rounded-md bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md"
+            style={{ left: nodeTip.x, top: nodeTip.y - 8 }}
+          >
+            <p className="font-medium">{nodeTip.label}</p>
+            <p className="text-muted-foreground">{nodeTip.type}</p>
+            <p className="truncate font-mono text-muted-foreground">{nodeTip.filePath}</p>
+          </div>
+        )}
+
         {contextMenu && (
           <div
-            className="fixed z-100 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
+            className="fixed z-50 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <Button
@@ -581,29 +538,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
           </div>
         )}
 
-        {nodeTip && (
-          <Tooltip open>
-            <TooltipTrigger
-              render={
-                <span
-                  className="pointer-events-none fixed size-px"
-                  style={{ left: nodeTip.x, top: nodeTip.y }}
-                />
-              }
-            />
-            <TooltipContent
-              side="top"
-              className="max-w-xs font-mono text-xs"
-              style={{ position: "fixed", left: nodeTip.x, top: nodeTip.y - 8 }}
-            >
-              <p className="font-sans font-medium">{nodeTip.label}</p>
-              <p className="text-muted-foreground">{nodeTip.type}</p>
-              <p className="truncate text-muted-foreground">{nodeTip.filePath}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        <div className="absolute right-3 bottom-3 z-10 flex flex-col gap-1">
+        <div className="absolute right-3 bottom-3 z-20">
           <Button
             type="button"
             variant="outline"
@@ -612,7 +547,7 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(
             aria-label="Fit to screen"
             onClick={() => {
               const cy = cyRef.current;
-              if (cy && cy.elements().length > 0) cy.fit(undefined, FIT_PADDING);
+              if (cy && cy.elements().length > 0) cy.fit(undefined, readFitPadding());
             }}
           >
             <Maximize2 />
