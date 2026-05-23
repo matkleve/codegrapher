@@ -3,16 +3,29 @@ import { cn } from "@/lib/utils";
 
 export type FlowAnchorSide = "left" | "right";
 
+type FlowAnchorSize = "chip" | "card" | "node";
+
+/** Semicircle: width = radius, height = diameter (2× radius). */
+const SEMICIRCLE: Record<FlowAnchorSize, { width: number; height: number }> = {
+  chip: { width: 5, height: 10 },
+  card: { width: 6, height: 12 },
+  node: { width: 5, height: 10 },
+};
+
 type FlowAnchorProps = {
   side: FlowAnchorSide;
-  /** Matches React Flow handle id for preview target resolution. */
   targetId?: string;
   colorClass?: string;
   visible?: boolean;
   highlighted?: boolean;
-  size?: "chip" | "node";
+  size?: FlowAnchorSize;
   className?: string;
 };
+
+function semicircleRadius(side: FlowAnchorSide, width: number): string {
+  const r = `${width}px`;
+  return side === "left" ? `${r} 0 0 ${r}` : `0 ${r} ${r} 0`;
+}
 
 export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
   function FlowAnchor(
@@ -27,12 +40,18 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
     },
     ref,
   ) {
-    const h = size === "chip" ? "h-3" : "h-5";
-    const position =
-      side === "left"
-        ? "absolute left-[-6px] top-1/2 -translate-y-1/2"
-        : "absolute right-[-6px] top-1/2 -translate-y-1/2";
-    const shape = side === "left" ? "rounded-r-full" : "rounded-l-full";
+    const { width, height } = SEMICIRCLE[size];
+
+    const opacity =
+      !visible
+        ? "opacity-0"
+        : size === "chip"
+          ? highlighted
+            ? "opacity-100"
+            : "opacity-0"
+          : highlighted
+            ? "opacity-100"
+            : "opacity-30";
 
     return (
       <span
@@ -40,13 +59,16 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
         aria-hidden
         data-flow-anchor={side}
         {...(targetId ? { "data-flow-anchor-target": targetId } : {})}
+        style={{
+          width,
+          height,
+          borderRadius: semicircleRadius(side, width),
+          ...(side === "left" ? { left: -width } : { right: -width }),
+        }}
         className={cn(
-          "pointer-events-none block w-1.5 shrink-0 transition-opacity duration-100",
-          h,
-          shape,
-          position,
+          "pointer-events-none absolute top-1/2 block shrink-0 -translate-y-1/2 transition-opacity duration-100",
           colorClass,
-          visible ? (highlighted ? "opacity-100" : "opacity-30") : "opacity-0",
+          opacity,
           className,
         )}
       />

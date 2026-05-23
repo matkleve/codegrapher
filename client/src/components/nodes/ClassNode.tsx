@@ -47,7 +47,7 @@ function MemberSection({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="nodrag flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
+          className="hoverable control-row-compact nodrag flex min-w-0 flex-1 cursor-pointer items-center border border-transparent text-left"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
@@ -59,7 +59,7 @@ function MemberSection({
         </button>
         <button
           type="button"
-          className="nodrag shrink-0 cursor-pointer rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+          className="hoverable control-row-compact nodrag shrink-0 cursor-pointer border border-transparent text-muted-foreground"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
@@ -487,7 +487,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       )}
       <NodeResizeControl
         position="bottom-right"
-        minWidth={280}
+        minWidth={400}
         minHeight={CLASS_NODE_MIN_HEIGHT}
         isVisible={selected}
         onResize={onResize}

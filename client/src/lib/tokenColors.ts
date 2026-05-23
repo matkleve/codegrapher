@@ -32,10 +32,11 @@ export const TOKEN_BORDER: Record<SemanticTokenKind, string> = {
   type: "border-green-400",
 };
 
+/** Active chip background (Ctrl held). */
 export const TOKEN_BG: Record<SemanticTokenKind, string> = {
-  function: "bg-blue-400/10",
-  class: "bg-yellow-400/10",
-  type: "bg-green-400/10",
+  function: "bg-blue-400/15",
+  class: "bg-yellow-400/15",
+  type: "bg-green-400/15",
 };
 
 export const TOKEN_ANCHOR: Record<SemanticTokenKind, string> = {

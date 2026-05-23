@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
 
 const MAX_CARDS = 5;
 
+/** Same hover / density as explorer file rows. */
+const LOAD_ROW =
+  "explorer-file-row hoverable control-row-compact pointer-events-auto flex w-full min-w-48 cursor-pointer items-center justify-between gap-2 overflow-visible border border-transparent font-mono text-foreground";
+
 export function TokenReferenceCards() {
   const {
     referenceCards,
@@ -32,7 +36,7 @@ export function TokenReferenceCards() {
   return createPortal(
     <div
       data-token-reference-cards
-      className="pointer-events-auto fixed z-50 flex flex-col gap-2"
+      className="pointer-events-auto fixed z-50 flex flex-col gap-0.5 rounded-md border border-border bg-card p-1 shadow-sm"
       style={{ left: anchor.left, top: anchor.bottom + 4 }}
       onMouseEnter={cancelHideReferenceCards}
       onMouseLeave={scheduleHideReferenceCards}
@@ -48,10 +52,7 @@ export function TokenReferenceCards() {
             }}
             role="button"
             tabIndex={0}
-            className={cn(
-              "relative flex min-w-48 cursor-pointer items-center justify-between gap-3 overflow-visible rounded-lg border border-border bg-card px-3 py-2 text-left shadow-sm",
-              "hover:bg-accent",
-            )}
+            className={cn(LOAD_ROW, "group/load relative")}
             onClick={() => {
               void onLoadFile(card.filePath);
               setReferenceCards(null);
@@ -70,15 +71,15 @@ export function TokenReferenceCards() {
               colorClass="bg-orange-400"
               visible
               highlighted
-              size="node"
+              size="card"
             />
-            <div className="flex min-w-0 items-center gap-2">
-              <Plus className="size-3 shrink-0 text-primary" aria-hidden />
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-medium text-foreground">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Plus className="size-3 shrink-0" aria-hidden />
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-sm font-medium">
                   Load {card.symbolName}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="truncate text-xs text-muted-foreground group-hover/load:text-muted-foreground">
                   {card.occurrenceCount} occurrence(s) in{" "}
                   {fileDisplayName(card.filePath)}
                 </span>
@@ -86,7 +87,7 @@ export function TokenReferenceCards() {
             </div>
             <button
               type="button"
-              className="shrink-0 rounded-sm p-1 text-muted-foreground hover:text-primary"
+              className="hoverable flex size-[var(--control-height-compact)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-transparent text-muted-foreground"
               aria-label="Open in code editor"
               onClick={(e) => {
                 e.stopPropagation();
@@ -102,13 +103,13 @@ export function TokenReferenceCards() {
               colorClass="bg-orange-400"
               visible
               highlighted
-              size="node"
+              size="card"
             />
           </div>
         );
       })}
       {remaining > 0 ? (
-        <p className="px-1 text-xs text-muted-foreground">
+        <p className="px-2 py-0.5 text-xs text-muted-foreground">
           {remaining} more references…
         </p>
       ) : null}

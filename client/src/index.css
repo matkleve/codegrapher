@@ -47,10 +47,32 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-md);
 }
 
 :root {
   --radius: 0.625rem;
+  /* Typography (rem) */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  /* Icons (rem) */
+  --icon-size-xs: 0.75rem;
+  --icon-size-sm: 0.875rem;
+  --icon-size-md: 1rem;
+  /* Control heights (rem) — compact = explorer rows (22px) */
+  --control-height-compact: 1.375rem;
+  --control-height-sm: 1.75rem;
+  --control-height-md: 2rem;
+  --control-height-lg: 2.25rem;
+  /* Horizontal padding (rem) */
+  --control-padding-x-compact: 0.375rem;
+  --control-padding-x-sm: 0.5rem;
+  --control-padding-x-md: 0.625rem;
+  --control-gap-compact: 0.375rem;
+  --control-gap-md: 0.375rem;
   --background: oklch(0.99 0.005 250);
   --foreground: oklch(0.18 0.03 260);
   --card: oklch(1 0 0);
@@ -207,6 +229,24 @@ html.dark {
   cursor: grabbing;
 }
 
+/* Compact explorer / menu rows (file-row density) */
+.control-row-compact {
+  height: var(--control-height-compact);
+  min-height: var(--control-height-compact);
+  padding-inline: var(--control-padding-x-compact);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  gap: var(--control-gap-compact);
+}
+
+.control-row-compact svg:not([class*="size-"]),
+.control-row-compact [data-icon] {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+/* Unified interactive hover (explorer file row) */
 .hoverable {
   transition:
     background-color 150ms ease,
@@ -216,23 +256,18 @@ html.dark {
 }
 
 .hoverable:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* Sidebar tree rows: secondary hover */
-.bg-sidebar .hoverable:hover {
   background-color: var(--secondary);
   border-color: var(--border);
-  color: var(--secondary-foreground);
-}
-
-.bg-sidebar .explorer-file-row.hoverable:hover {
   color: var(--primary);
 }
 
-/* Recent / section headers: muted at rest, primary only on hover */
+.hoverable:hover svg,
+.hoverable:hover [data-icon] {
+  color: var(--primary);
+  stroke: var(--primary);
+}
+
+/* Section headers: muted at rest, same hover as file rows */
 .bg-sidebar button.explorer-section-header {
   border-color: transparent;
   background-color: transparent;
@@ -243,12 +278,6 @@ html.dark {
 .bg-sidebar button.explorer-section-header [data-icon],
 .bg-sidebar button.explorer-section-header span {
   color: var(--muted-foreground);
-}
-
-.bg-sidebar button.explorer-section-header:hover {
-  background-color: color-mix(in oklch, var(--primary) 18%, var(--background));
-  border-color: var(--primary);
-  color: var(--primary);
 }
 
 .bg-sidebar button.explorer-section-header:hover svg,
@@ -278,10 +307,10 @@ html.dark {
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) {
-  border-color: var(--primary);
-  background-color: var(--surface-hover);
+  border-color: var(--border);
+  background-color: var(--secondary);
   color: var(--primary);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent);
+  box-shadow: none;
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) svg {
@@ -290,15 +319,15 @@ html.dark {
 }
 
 [data-graph-control] .graph-map-control-btn--active:hover {
-  border-color: var(--primary);
-  background-color: color-mix(in oklch, var(--primary) 24%, var(--background));
-  color: var(--foreground);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 40%, transparent);
+  border-color: var(--border);
+  background-color: var(--secondary);
+  color: var(--primary);
+  box-shadow: none;
 }
 
 [data-graph-control] .graph-map-control-btn--active:hover svg {
-  color: var(--foreground);
-  stroke: var(--foreground);
+  color: var(--primary);
+  stroke: var(--primary);
 }
 
 @keyframes graph-map-control-flash {

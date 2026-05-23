@@ -40,7 +40,7 @@ export function NodeCardHeader({
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className="nodrag flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-0.5 text-foreground hover:bg-primary/10"
+              className="hoverable nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-transparent text-foreground"
               title={bodyExpanded ? "Collapse" : "Expand"}
               aria-label={bodyExpanded ? "Collapse" : "Expand"}
               aria-expanded={bodyExpanded}
@@ -52,7 +52,9 @@ export function NodeCardHeader({
             >
               <ExpandChevron expanded={bodyExpanded} />
             </button>
-            <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{title}</p>
+            <p className="min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-bold text-foreground">
+              {title}
+            </p>
           </div>
         </div>
       </div>

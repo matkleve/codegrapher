@@ -38,7 +38,7 @@ export function CollapsibleMemberRow({
       : "bg-border";
 
   return (
-    <div className="group/member nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2 transition-[background-color,border-color] duration-150 hover:border-border hover:bg-secondary">
+    <div className="group/member hoverable nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2">
       <Handle
         type="target"
         position={Position.Left}
@@ -69,11 +69,8 @@ export function CollapsibleMemberRow({
           onToggle(memberId);
         }}
       >
-        <ExpandChevron
-          expanded={expanded}
-          className="text-muted-foreground transition-colors group-hover/member:text-secondary-foreground"
-        />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/member:text-secondary-foreground">
+        <ExpandChevron expanded={expanded} className="text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-medium text-foreground">
           {label}
         </span>
       </button>

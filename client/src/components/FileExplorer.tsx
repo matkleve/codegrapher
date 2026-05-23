@@ -34,12 +34,12 @@ const EXPLORER_X_PAD = "px-2";
 
 /** VS Code–like explorer row density */
 const TREE_ROW =
-  "explorer-file-row hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
+  "explorer-file-row hoverable control-row-compact pointer-events-auto flex cursor-pointer items-center font-mono";
 const TREE_FOLDER_ROW =
-  "hoverable pointer-events-auto flex h-[22px] min-h-[22px] w-full cursor-pointer items-center justify-start gap-1.5 rounded-sm border border-transparent px-1.5 py-0 text-xs font-medium leading-none disabled:cursor-not-allowed";
+  "control-row-compact pointer-events-auto flex w-full cursor-pointer items-center justify-start border border-transparent py-0 font-medium disabled:cursor-not-allowed";
 
 const TREE_SECTION_ROW =
-  "explorer-section-header pointer-events-auto flex h-[22px] min-h-[22px] w-full cursor-pointer items-center justify-start gap-1.5 rounded-sm px-1.5 py-0 text-xs font-medium leading-none";
+  "explorer-section-header hoverable control-row-compact pointer-events-auto flex w-full cursor-pointer items-center justify-start border border-transparent py-0 font-medium";
 
 /** Vertical guide + indent for nested files under a folder/section. */
 function ExplorerTreeGuide({ children }: { children: ReactNode }) {
@@ -105,9 +105,9 @@ function FileTreeItem({
       )}
     >
       {fileIcon.vscodeIcon ? (
-        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} className="size-3.5" />
+        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
       ) : (
-        <Codicon name={fileIcon.codicon!} className={cn("size-3.5 shrink-0", fileIcon.colorClass)} />
+        <Codicon name={fileIcon.codicon!} className={cn("shrink-0", fileIcon.colorClass)} />
       )}
       <span className="truncate">{name}</span>
     </div>
@@ -154,9 +154,9 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
         >
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-            className="size-3.5 shrink-0 text-muted-foreground"
+            className="shrink-0 text-muted-foreground"
           />
-          <Codicon name={folderIcon.codicon} className={cn("size-3.5 shrink-0", folderIcon.colorClass)} />
+          <Codicon name={folderIcon.codicon} className={cn("shrink-0", folderIcon.colorClass)} />
           <span className="truncate leading-none">{entry.name}</span>
           {loading && <span className="text-xs text-muted-foreground">…</span>}
         </Button>
@@ -229,7 +229,7 @@ function RecentFoldersDropdown({
             <li key={path}>
               <button
                 type="button"
-                className="hoverable w-full cursor-pointer rounded-sm border border-transparent px-2 py-2 text-left"
+                className="hoverable control-row-compact w-full cursor-pointer border border-transparent py-2 text-left text-[length:var(--font-size-sm)]"
                 onClick={() => onSelect(path)}
               >
                 <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
@@ -241,13 +241,13 @@ function RecentFoldersDropdown({
         <Separator className="my-2" />
         <button
           type="button"
-          className="hoverable flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm border border-transparent px-2 py-2 text-xs text-muted-foreground"
+          className="hoverable control-row-compact flex w-full cursor-pointer items-center justify-center border border-transparent py-2 text-muted-foreground"
           onClick={(e) => {
             e.stopPropagation();
             onClear();
           }}
         >
-          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          <Trash2 className="shrink-0" aria-hidden />
           Clear history
         </button>
       </Container>
@@ -281,10 +281,7 @@ function RecentFilesSection({
         className={TREE_SECTION_ROW}
         aria-expanded={open}
       >
-        <Codicon
-          name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-          className="size-3.5 shrink-0"
-        />
+        <Codicon name={open ? "codicon-chevron-down" : "codicon-chevron-right"} className="shrink-0" />
         <span className="truncate leading-none">Recent</span>
         <span className="ml-auto shrink-0 leading-none">{files.length}</span>
       </Button>
@@ -453,7 +450,7 @@ export default function FileExplorer({
               aria-label="Browse for folder"
               aria-haspopup="listbox"
               aria-expanded={recentFoldersOpen && recentFolders.length > 0}
-              className="size-9 shrink-0"
+              className="size-[var(--control-height-lg)] shrink-0"
             >
               <FolderOpen data-icon="inline-start" />
             </Button>
@@ -470,7 +467,7 @@ export default function FileExplorer({
             onKeyDown={(e) => e.key === "Enter" && handleOpen()}
             placeholder="/absolute/path/to/project"
             disabled={disabled || opening}
-            className="min-w-0 flex-1 font-mono text-xs"
+            className="min-w-0 flex-1 font-mono text-[length:var(--font-size-xs)]"
           />
         </div>
         <Button

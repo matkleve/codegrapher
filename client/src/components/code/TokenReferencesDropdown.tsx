@@ -70,7 +70,7 @@ export function TokenReferencesDropdown() {
                 <button
                   type="button"
                   className={cn(
-                    "hoverable flex w-full items-center gap-2 rounded-sm border border-transparent px-2 py-1.5 text-left text-xs",
+                    "hoverable control-row-compact flex w-full items-center border border-transparent py-1.5 text-left",
                     TOKEN_PILL[ref.kind],
                   )}
                   onClick={() => focusFlowNode(ref.flowNodeId!)}
@@ -99,7 +99,7 @@ export function TokenReferencesDropdown() {
                 <button
                   type="button"
                   className={cn(
-                    "hoverable flex w-full items-center gap-2 rounded-sm border border-transparent px-2 py-1.5 text-left text-xs",
+                    "hoverable control-row-compact flex w-full items-center border border-transparent py-1.5 text-left",
                     TOKEN_PILL[ref.kind],
                   )}
                   onClick={() => {
@@ -122,7 +122,7 @@ export function TokenReferencesDropdown() {
             type="button"
             variant="outline"
             size="sm"
-            className="w-full justify-start gap-2 text-xs"
+            className="w-full justify-start gap-2 text-[length:var(--font-size-xs)]"
             onClick={() => {
               void onLoadFile(filePath);
               setTokenDropdown(null);
@@ -134,7 +134,7 @@ export function TokenReferencesDropdown() {
             type="button"
             variant="outline"
             size="sm"
-            className="w-full justify-start gap-2 text-xs"
+            className="w-full justify-start gap-2 text-[length:var(--font-size-xs)]"
             onClick={() => {
               void openFileInEditor(filePath, line);
               setTokenDropdown(null);
