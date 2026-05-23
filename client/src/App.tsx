@@ -5,7 +5,7 @@ import GraphCanvas, { type GraphCanvasHandle } from "@/components/GraphCanvas";
 import { mergeGraphData } from "@/graphMerge";
 import { loadLastFile, saveLastFile, shouldRestoreFile } from "@/lib/lastSession";
 import { collectGraphFilePaths } from "@/lib/graphFiles";
-import { recordRecentFile } from "@/lib/recentFiles";
+import { getActiveFolderRoot, recordRecentFile } from "@/lib/recentFiles";
 import type { GraphData } from "@/types";
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
   const loadFileGraph = useCallback(async (filePath: string, replace = true) => {
     setLoading(true);
     setError(null);
-    recordRecentFile(filePath);
+    recordRecentFile(filePath, getActiveFolderRoot());
     try {
       const data = await fetchFileGraph(filePath);
       graphRef.current?.pushHistoryBeforeChange();
@@ -44,7 +44,7 @@ function App() {
     if (!normalized) return;
     setLoading(true);
     setError(null);
-    recordRecentFile(normalized);
+    recordRecentFile(normalized, getActiveFolderRoot());
     try {
       const incoming = await fetchFileGraph(normalized);
       graphRef.current?.pushHistoryBeforeChange();

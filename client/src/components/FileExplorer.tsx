@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, Trash2 } from "lucide-react";
 import { browseFolder, fetchTree } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   prependRecentFile,
   RECENT_FILES_CHANGED_EVENT,
   saveRecentSectionOpen,
+  setActiveFolderRoot,
 } from "@/lib/recentFiles";
 import { isFileInGraph } from "@/lib/graphFiles";
 import { cn } from "@/lib/utils";
@@ -30,9 +31,9 @@ const INDENT_CLASSES = ["pl-2", "pl-4", "pl-6", "pl-8", "pl-10", "pl-12"] as con
 
 /** VS Code–like explorer row density */
 const TREE_ROW =
-  "pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
+  "hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
 const TREE_FOLDER_ROW =
-  "pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
+  "hoverable pointer-events-auto h-[22px] w-full cursor-pointer justify-start gap-1.5 rounded-sm border-transparent px-1.5 text-xs font-medium leading-none disabled:cursor-not-allowed";
 
 function indentClass(depth: number): string {
   return INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)];
@@ -91,7 +92,6 @@ function FileTreeItem({
         "active:cursor-grabbing",
         indentClass(depth),
         inGraph ? "font-medium text-primary" : "text-foreground",
-        "hover:bg-accent",
         disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
     >
@@ -138,7 +138,7 @@ function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeN
           variant="ghost"
           onClick={toggleFolder}
           disabled={disabled}
-          className={cn(TREE_FOLDER_ROW, indentClass(depth), "hover:bg-accent")}
+          className={cn(TREE_FOLDER_ROW, indentClass(depth))}
         >
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
@@ -194,15 +194,17 @@ function RecentFoldersDropdown({
   if (!open || folders.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto absolute top-full left-0 z-[100] w-72">
-      <div className="mt-1 rounded-md border border-border bg-popover text-popover-foreground shadow-lg">
-        <p className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">Recent folders</p>
-        <ul className="max-h-64 overflow-y-auto py-1">
+    <div className="pointer-events-auto absolute top-full left-0 z-[100] w-72 cursor-default p-1">
+      <div className="cursor-default rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg">
+        <p className="cursor-default px-1 pb-2 text-xs font-medium text-muted-foreground">
+          Recent folders
+        </p>
+        <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           {folders.map((path) => (
             <li key={path}>
               <button
                 type="button"
-                className="w-full cursor-pointer px-3 py-2 text-left hover:bg-accent"
+                className="hoverable w-full cursor-pointer rounded-sm border border-transparent px-2 py-2 text-left"
                 onClick={() => onSelect(path)}
               >
                 <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
@@ -211,21 +213,18 @@ function RecentFoldersDropdown({
             </li>
           ))}
         </ul>
-        <Separator />
-        <div className="p-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full text-xs text-muted-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClear();
-            }}
-          >
-            Clear history
-          </Button>
-        </div>
+        <Separator className="my-2" />
+        <button
+          type="button"
+          className="hoverable flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm border border-transparent px-2 py-2 text-xs text-muted-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClear();
+          }}
+        >
+          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+          Clear history
+        </button>
       </div>
     </div>
   );
@@ -254,7 +253,7 @@ function RecentFilesSection({
         type="button"
         variant="ghost"
         onClick={onToggle}
-        className={cn(TREE_FOLDER_ROW, "text-muted-foreground hover:bg-accent")}
+        className={cn(TREE_FOLDER_ROW, "text-muted-foreground")}
         aria-expanded={open}
       >
         <Codicon
@@ -294,7 +293,7 @@ export default function FileExplorer({
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [recentFolders, setRecentFolders] = useState<string[]>(() => loadRecentFolders());
-  const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles());
+  const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const [recentFoldersOpen, setRecentFoldersOpen] = useState(false);
   const [recentSectionOpen, setRecentSectionOpen] = useState(loadRecentSectionOpen);
 
@@ -328,10 +327,14 @@ export default function FileExplorer({
         setFolderPath(data.path);
         setRootPath(data.path);
         setRootEntries(data.entries);
+        setActiveFolderRoot(data.path);
+        setRecentFiles(loadRecentFiles(data.path));
         rememberFolder(data.path);
       } catch (err) {
         setRootEntries(null);
         setRootPath(null);
+        setActiveFolderRoot(null);
+        setRecentFiles([]);
         setError(err instanceof Error ? err.message : "Failed to open folder");
       } finally {
         setOpening(false);
@@ -341,16 +344,19 @@ export default function FileExplorer({
   );
 
   useEffect(() => {
-    setRecentFiles(loadRecentFiles());
-
-    const refreshRecentFiles = () => setRecentFiles(loadRecentFiles());
+    const refreshRecentFiles = () => {
+      if (!rootPath) {
+        setRecentFiles([]);
+        return;
+      }
+      setRecentFiles(loadRecentFiles(rootPath));
+    };
+    refreshRecentFiles();
     window.addEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
-    window.addEventListener("focus", refreshRecentFiles);
     return () => {
       window.removeEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
-      window.removeEventListener("focus", refreshRecentFiles);
     };
-  }, []);
+  }, [rootPath]);
 
   useEffect(() => {
     if (!shouldRestoreFolder()) return;
@@ -402,10 +408,7 @@ export default function FileExplorer({
       <div className="pointer-events-auto relative z-30 flex shrink-0 flex-col gap-2 overflow-visible p-3">
         <div className="flex gap-2 overflow-visible">
           <div
-            className={cn(
-              "pointer-events-auto relative z-[100] shrink-0",
-              recentFolders.length > 0 && "cursor-pointer",
-            )}
+            className="pointer-events-auto relative z-[100] shrink-0"
             onMouseEnter={() => setRecentFoldersOpen(true)}
             onMouseLeave={() => setRecentFoldersOpen(false)}
           >

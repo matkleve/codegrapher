@@ -1,10 +1,12 @@
 import type { Edge, Node } from "@xyflow/react";
 
-export type MethodItem = {
+export type MemberItem = {
   id: string;
   label: string;
   code: string;
 };
+
+export type MethodItem = MemberItem;
 
 export type ClassNodeData = {
   /** Class / function / module name */
@@ -14,7 +16,9 @@ export type ClassNodeData = {
   filePath: string;
   graphNodeId: string;
   nodeKind: "class" | "module" | "function";
+  properties: MemberItem[];
   methods: MethodItem[];
+  expandedPropertyIds: string[];
   expandedMethodIds: string[];
   collapsed?: boolean;
   selected?: boolean;

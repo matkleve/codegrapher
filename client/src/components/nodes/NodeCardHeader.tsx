@@ -1,18 +1,21 @@
+import type { ReactNode } from "react";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GRAPH_NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { cn } from "@/lib/utils";
 
 type NodeCardHeaderProps = {
-  fileName: string;
-  subtitle?: string;
+  title: string;
+  fileName?: string;
+  chip?: ReactNode;
   collapsed: boolean;
   onToggleCollapsed: () => void;
 };
 
 export function NodeCardHeader({
+  title,
   fileName,
-  subtitle,
+  chip,
   collapsed,
   onToggleCollapsed,
 }: NodeCardHeaderProps) {
@@ -30,30 +33,31 @@ export function NodeCardHeader({
           <GripHorizontal className="size-4" />
         </div>
       </div>
-      <div className="flex items-center gap-2 px-2 pb-2">
-        <div className="nodrag min-w-0 flex-1 px-1">
-          <p className="truncate font-mono text-sm font-semibold text-accent-foreground">
-            {fileName}
-          </p>
-          {subtitle ? (
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-          ) : null}
+      <div className="nodrag flex flex-col gap-1.5 px-2 pb-2">
+        {chip ? <div className="flex justify-start">{chip}</div> : null}
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-accent-foreground">{title}</p>
+            {fileName ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">{fileName}</p>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-accent-foreground hover:bg-accent-foreground/10"
+            title={collapsed ? "Expand" : "Collapse"}
+            aria-label={collapsed ? "Expand" : "Collapse"}
+            aria-expanded={!collapsed}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapsed();
+            }}
+          >
+            {collapsed ? <ChevronRight /> : <ChevronDown />}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="nodrag shrink-0 text-accent-foreground hover:bg-accent-foreground/10"
-          title={collapsed ? "Expand" : "Collapse"}
-          aria-label={collapsed ? "Expand" : "Collapse"}
-          aria-expanded={!collapsed}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCollapsed();
-          }}
-        >
-          {collapsed ? <ChevronRight /> : <ChevronDown />}
-        </Button>
       </div>
     </div>
   );

@@ -3,25 +3,30 @@ import { MarkerType } from "@xyflow/react";
 import { flowEdgeId, toFlowId } from "@/lib/graphIds";
 import { GRAPH_NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
+import { buildClassProperties, methodsForClassNode } from "@/lib/classBody";
+import { camelToWords } from "@/lib/camelToWords";
 import { fileDisplayName } from "@/lib/recentFiles";
 import type { GraphData, GraphNode } from "@/types";
 
 export type FlowNodeUiState = {
   expandedMethodIds: Set<string>;
+  expandedPropertyIds: Set<string>;
   collapsedByGraphId: Map<string, boolean>;
 };
 
 export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
   const expandedMethodIds = new Set<string>();
+  const expandedPropertyIds = new Set<string>();
   const collapsedByGraphId = new Map<string, boolean>();
   for (const node of nodes) {
     if (node.type === "class") {
       const d = node.data as ClassNodeData;
       for (const id of d.expandedMethodIds) expandedMethodIds.add(id);
+      for (const id of d.expandedPropertyIds) expandedPropertyIds.add(id);
       if (d.collapsed) collapsedByGraphId.set(d.graphNodeId, true);
     }
   }
-  return { expandedMethodIds, collapsedByGraphId };
+  return { expandedMethodIds, expandedPropertyIds, collapsedByGraphId };
 }
 
 const CLASS_MIN_WIDTH = 280;
@@ -36,6 +41,13 @@ function estimateClassHeight(data: ClassNodeData): number {
   const header = data.collapsed ? 72 : 88;
   if (data.collapsed) return Math.max(72, header);
   let body = 8;
+  if (data.properties.length > 0) body += 24;
+  for (const p of data.properties) {
+    const expanded = data.expandedPropertyIds.includes(p.id);
+    body += expanded ? 140 : 72;
+  }
+  if (data.properties.length > 0 && data.methods.length > 0) body += 8;
+  if (data.methods.length > 0) body += 20;
   for (const m of data.methods) {
     const expanded = data.expandedMethodIds.includes(m.id);
     body += expanded ? 140 : 72;
@@ -80,7 +92,7 @@ export function graphToFlow(
   data: GraphData,
   ui: FlowNodeUiState,
 ): { nodes: Node[]; edges: Edge[] } {
-  const { expandedMethodIds, collapsedByGraphId } = ui;
+  const { expandedMethodIds, expandedPropertyIds, collapsedByGraphId } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
 
@@ -138,7 +150,7 @@ export function graphToFlow(
       }
 
       const childMethods = methodsByParent.get(node.id) ?? [];
-      const methods =
+      const rawMethods =
         node.type === "function"
           ? [
               {
@@ -153,13 +165,30 @@ export function graphToFlow(
               code: m.code ?? "",
             }));
 
+      const methods = methodsForClassNode(rawMethods).map((m) => ({
+        ...m,
+        label: camelToWords(m.label),
+      }));
+
+      const properties =
+        node.type === "class" || node.type === "module"
+          ? buildClassProperties(node.id, node.code ?? "", rawMethods).map((p) => ({
+              ...p,
+              label: camelToWords(p.label),
+            }))
+          : [];
+
       const classData: ClassNodeData = {
         label: node.label,
         fileName: fileDisplayName(node.filePath),
         filePath: node.filePath,
         graphNodeId: node.id,
         nodeKind: node.type === "module" ? "module" : node.type === "function" ? "function" : "class",
+        properties,
         methods,
+        expandedPropertyIds: properties
+          .filter((p) => expandedPropertyIds.has(p.id))
+          .map((p) => p.id),
         expandedMethodIds: methods
           .filter((m) => expandedMethodIds.has(m.id))
           .map((m) => m.id),
