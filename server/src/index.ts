@@ -2,12 +2,76 @@ import express from "express";
 import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
-import { parseFocus } from "./parser";
+import { parseFileGraph, parseFocus } from "./parser";
 
 const app = express();
 const PORT = 3001;
 
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "coverage"]);
+
 app.use(cors());
+
+app.get("/api/tree", (req, res) => {
+  const dirPath = req.query.path;
+  if (typeof dirPath !== "string" || !dirPath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
+    return;
+  }
+
+  const absolutePath = path.resolve(dirPath);
+  if (!fs.existsSync(absolutePath)) {
+    res.status(404).json({ error: "Path does not exist" });
+    return;
+  }
+
+  if (!fs.statSync(absolutePath).isDirectory()) {
+    res.status(400).json({ error: "Path must be a directory" });
+    return;
+  }
+
+  try {
+    const entries = fs
+      .readdirSync(absolutePath, { withFileTypes: true })
+      .filter((entry) => {
+        if (entry.name.startsWith(".")) return false;
+        if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) return false;
+        if (entry.isFile() && !/\.tsx?$/.test(entry.name)) return false;
+        return entry.isDirectory() || entry.isFile();
+      })
+      .map((entry) => ({
+        name: entry.name,
+        path: path.normalize(path.join(absolutePath, entry.name)),
+        type: entry.isDirectory() ? ("directory" as const) : ("file" as const),
+      }))
+      .sort((a, b) => {
+        if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+    res.json({ path: absolutePath, entries });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to read directory";
+    res.status(500).json({ error: message });
+  }
+});
+
+app.get("/api/file-graph", (req, res) => {
+  res.setTimeout(30_000);
+
+  const filePath = req.query.path;
+  if (typeof filePath !== "string" || !filePath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
+    return;
+  }
+
+  try {
+    const result = parseFileGraph(path.resolve(filePath));
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Parse failed";
+    res.status(500).json({ error: message });
+  }
+});
 
 app.get("/api/focus", (req, res) => {
   res.setTimeout(30_000);
@@ -22,21 +86,15 @@ app.get("/api/focus", (req, res) => {
   const depth =
     typeof depthRaw === "string" && depthRaw.trim() !== ""
       ? Number.parseInt(depthRaw, 10)
-      : 2;
+      : 1;
 
   if (!Number.isFinite(depth) || depth < 1 || depth > 3) {
     res.status(400).json({ error: "depth must be 1, 2, or 3" });
     return;
   }
 
-  const absolutePath = path.resolve(filePath);
-  if (!fs.existsSync(absolutePath)) {
-    res.status(404).json({ error: "File does not exist" });
-    return;
-  }
-
   try {
-    const result = parseFocus(absolutePath, depth);
+    const result = parseFocus(path.resolve(filePath), depth);
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Focus parse failed";

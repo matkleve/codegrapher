@@ -1,6 +1,6 @@
 # codegrapher
 
-Ego-centric graph visualizer for TypeScript codebases. Start from a single file and expand the graph by clicking nodes — each click loads that file’s import neighborhood (configurable depth) and merges it into the view.
+Ego-centric TypeScript graph explorer with a file tree, compound class containers, and incremental graph building.
 
 ## Prerequisites
 
@@ -8,8 +8,6 @@ Ego-centric graph visualizer for TypeScript codebases. Start from a single file 
 - npm
 
 ## Setup
-
-From the project root:
 
 ```bash
 npm install
@@ -25,38 +23,33 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-1. Enter an **absolute path** to a `.ts` or `.tsx` file (e.g. `/home/you/project/src/app/app.component.ts`).
-2. Set **Depth** (1–3): how many import hops to follow from the focus file.
-3. Click **Load**.
-4. Click any node to expand that file’s neighborhood into the graph (merged, not replaced).
+### Left panel — File explorer
 
-**Visual cues**
+1. Enter an absolute **folder** path and click **Open**.
+2. Expand folders in the tree.
+3. **Click** a `.ts` / `.tsx` file → clears the graph and loads that file’s classes (compound containers with methods).
+4. **Drag** a file onto the graph → merges that file’s import neighborhood (`/api/focus`, depth 1).
 
-- **Solid white border** — fully loaded node
-- **Dashed border, `+` label** — known import target not yet expanded (click to load)
+### Right panel — Graph canvas
+
+- **← Back** — undo the last graph change (Cytoscape JSON history stack).
+- **Click a method** — expand/collapse its source inline in the node.
+- **Right-click a node → Find path to…** — click a second node to highlight the shortest path.
+- Empty canvas shows: `← Click or drag a file to start`.
+
+## API (port 3001)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/tree?path=<dir>` | List child folders/files |
+| `GET /api/file-graph?path=<file>` | Parse one file (classes + methods) |
+| `GET /api/focus?path=<file>&depth=1-3` | Parse file + import neighborhood (merge on drag) |
+| `GET /api/file?path=<file>` | Raw file text |
 
 ## Scripts
 
-| Location | Command | Description |
-|----------|---------|-------------|
-| Root | `npm run dev` | Run server + client concurrently |
-| `server/` | `npm run dev` | API with hot reload |
-| `server/` | `npm run build` | Compile TypeScript |
-| `client/` | `npm run dev` | Vite dev server |
-| `client/` | `npm run build` | Production build |
-
-## API
-
-- `GET /api/focus?path=<absolute-file>&depth=1|2|3` — parse focus file + import neighborhood (max 50 nodes)
-- `GET /api/file?path=<absolute-file>` — raw file contents
-
-No authentication; intended for local use only.
-
-## Node colors
-
-| Type | Color |
-|------|-------|
-| file | blue `#4A90D9` |
-| class | gold `#E8A838` |
-| function | green `#5CB85C` |
-| method | purple `#9B59B6` |
+| Location | Command |
+|----------|---------|
+| Root | `npm run dev` |
+| `server/` | `npm run dev` / `npm run build` |
+| `client/` | `npm run dev` / `npm run build` |

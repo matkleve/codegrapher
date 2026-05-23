@@ -1,34 +1,16 @@
-import type { GraphData, GraphEdge, GraphNode } from "./components/Graph";
+import type { GraphData, GraphEdge, GraphNode } from "./types";
 
 function edgeKey(edge: GraphEdge): string {
-  return `${edge.source}|${edge.target}|${edge.type}`;
+  return `${edge.source}|${edge.target}|${edge.type}|${edge.label ?? ""}`;
 }
 
-function isLoadedNode(node: GraphNode): boolean {
-  return node.loaded !== false;
-}
-
-export function mergeGraphData(
-  existing: GraphData | null,
-  incoming: GraphData,
-): GraphData {
+export function mergeGraphData(existing: GraphData | null, incoming: GraphData): GraphData {
   const nodeMap = new Map<string, GraphNode>();
-
   for (const node of existing?.nodes ?? []) {
     nodeMap.set(node.id, node);
   }
-
   for (const node of incoming.nodes) {
-    const prev = nodeMap.get(node.id);
-    if (!prev) {
-      nodeMap.set(node.id, node);
-      continue;
-    }
-    if (isLoadedNode(node)) {
-      nodeMap.set(node.id, { ...node, loaded: true });
-    } else if (!isLoadedNode(prev)) {
-      nodeMap.set(node.id, node);
-    }
+    nodeMap.set(node.id, node);
   }
 
   const edgeMap = new Map<string, GraphEdge>();
@@ -43,8 +25,4 @@ export function mergeGraphData(
     nodes: [...nodeMap.values()],
     edges: [...edgeMap.values()],
   };
-}
-
-export function collectLoadedNodeIds(data: GraphData): Set<string> {
-  return new Set(data.nodes.filter(isLoadedNode).map((n) => n.id));
 }

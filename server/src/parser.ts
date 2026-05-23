@@ -6,17 +6,19 @@ export const MAX_FOCUS_NODES = 50;
 
 export interface GraphNode {
   id: string;
-  type: "file" | "class" | "function" | "method";
+  type: "file" | "class" | "function" | "method" | "module";
   label: string;
   filePath: string;
   code: string;
   loaded?: boolean;
+  parent?: string;
 }
 
 export interface GraphEdge {
   source: string;
   target: string;
   type: "contains" | "imports" | "calls";
+  label?: string;
 }
 
 export interface FocusResult {
@@ -98,7 +100,7 @@ function createAccumulator(): ParseAccumulator {
 }
 
 function addEdge(acc: ParseAccumulator, edge: GraphEdge) {
-  const key = `${edge.source}|${edge.target}|${edge.type}`;
+  const key = `${edge.source}|${edge.target}|${edge.type}|${edge.label ?? ""}`;
   if (acc.edgeKeys.has(key)) return;
   acc.edgeKeys.add(key);
   acc.edges.push(edge);
@@ -116,23 +118,77 @@ function addNode(acc: ParseAccumulator, node: GraphNode, maxNodes: number): bool
   return true;
 }
 
-function addStubFileNode(acc: ParseAccumulator, filePath: string, maxNodes: number): string | null {
-  const fileId = `file:${filePath}`;
-  if (acc.nodeIds.has(fileId)) return fileId;
+function getClassIdsForFile(acc: ParseAccumulator, filePath: string): string[] {
+  const prefix = `class:${filePath}:`;
+  return acc.nodes
+    .filter((n) => n.type === "class" && n.id.startsWith(prefix))
+    .map((n) => n.id);
+}
 
-  const ok = addNode(
-    acc,
-    {
-      id: fileId,
-      type: "file",
-      label: `+ ${path.basename(filePath)}`,
-      filePath,
-      code: "",
-      loaded: false,
-    },
-    maxNodes,
-  );
-  return ok ? fileId : null;
+function resolveTargetClassId(
+  acc: ParseAccumulator,
+  resolvedFile: string,
+  symbolName: string,
+): string | null {
+  const exact = `class:${resolvedFile}:${symbolName}`;
+  if (acc.nodeIds.has(exact)) return exact;
+  const classes = getClassIdsForFile(acc, resolvedFile);
+  return classes[0] ?? null;
+}
+
+function addClassImportEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+): void {
+  const sourceClasses = getClassIdsForFile(acc, filePath);
+  if (sourceClasses.length === 0) return;
+  const defaultSource = sourceClasses[0];
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    if (acc.limitReached) break;
+
+    const moduleSpecifier = importDecl.getModuleSpecifierValue();
+    if (!moduleSpecifier.startsWith(".")) continue;
+
+    const resolved = resolveImportPath(filePath, moduleSpecifier);
+    if (!resolved) continue;
+
+    const namedImports = importDecl.getNamedImports();
+    if (namedImports.length > 0) {
+      for (const named of namedImports) {
+        const name = named.getName();
+        const target = resolveTargetClassId(acc, resolved, name);
+        if (target) {
+          addEdge(acc, {
+            source: defaultSource,
+            target,
+            type: "imports",
+            label: name,
+          });
+        }
+      }
+      continue;
+    }
+
+    const defaultImport = importDecl.getDefaultImport();
+    const namespaceImport = importDecl.getNamespaceImport();
+    const label =
+      defaultImport?.getText() ??
+      namespaceImport?.getText() ??
+      path.basename(resolved).replace(/\.tsx?$/, "");
+
+    const targets = getClassIdsForFile(acc, resolved);
+    const target = targets[0];
+    if (target) {
+      addEdge(acc, {
+        source: defaultSource,
+        target,
+        type: "imports",
+        label,
+      });
+    }
+  }
 }
 
 function parseFileInto(
@@ -140,24 +196,28 @@ function parseFileInto(
   filePath: string,
   sourceFile: SourceFile,
   maxNodes: number,
+  options: { compoundClasses: boolean; includeFileNode: boolean },
 ): void {
+  const { compoundClasses, includeFileNode } = options;
   const fileId = `file:${filePath}`;
 
-  if (
-    !addNode(
-      acc,
-      {
-        id: fileId,
-        type: "file",
-        label: path.basename(filePath),
-        filePath,
-        code: sourceFile.getFullText(),
-        loaded: true,
-      },
-      maxNodes,
-    )
-  ) {
-    return;
+  if (includeFileNode) {
+    if (
+      !addNode(
+        acc,
+        {
+          id: fileId,
+          type: "file",
+          label: path.basename(filePath),
+          filePath,
+          code: sourceFile.getFullText(),
+          loaded: true,
+        },
+        maxNodes,
+      )
+    ) {
+      return;
+    }
   }
 
   for (const classDecl of sourceFile.getClasses()) {
@@ -182,13 +242,17 @@ function parseFileInto(
     ) {
       break;
     }
-    addEdge(acc, { source: fileId, target: classId, type: "contains" });
+
+    if (!compoundClasses && includeFileNode) {
+      addEdge(acc, { source: fileId, target: classId, type: "contains" });
+    }
 
     for (const method of classDecl.getMethods()) {
       if (acc.limitReached) break;
 
       const methodName = method.getName();
       const methodId = `method:${filePath}:${className}.${methodName}`;
+      const methodCode = method.getFullText();
 
       if (
         !addNode(
@@ -198,51 +262,39 @@ function parseFileInto(
             type: "method",
             label: methodName,
             filePath,
-            code: method.getFullText(),
+            code: methodCode,
             loaded: true,
+            parent: compoundClasses ? classId : undefined,
           },
           maxNodes,
         )
       ) {
         break;
       }
-      addEdge(acc, { source: classId, target: methodId, type: "contains" });
+
+      if (!compoundClasses) {
+        addEdge(acc, { source: classId, target: methodId, type: "contains" });
+      }
     }
   }
 
   if (acc.limitReached) return;
+
+  const moduleFunctions: { name: string; code: string; id: string }[] = [];
 
   for (const func of sourceFile.getFunctions()) {
     if (acc.limitReached) break;
-
     const name = func.getName();
     if (!name) continue;
-
-    const funcId = `function:${filePath}:${name}`;
-    if (
-      !addNode(
-        acc,
-        {
-          id: funcId,
-          type: "function",
-          label: name,
-          filePath,
-          code: func.getFullText(),
-          loaded: true,
-        },
-        maxNodes,
-      )
-    ) {
-      break;
-    }
-    addEdge(acc, { source: fileId, target: funcId, type: "contains" });
+    moduleFunctions.push({
+      name,
+      code: func.getFullText(),
+      id: `function:${filePath}:${name}`,
+    });
   }
-
-  if (acc.limitReached) return;
 
   for (const varDecl of sourceFile.getVariableDeclarations()) {
     if (acc.limitReached) break;
-
     const initializer = varDecl.getInitializer();
     if (
       !initializer ||
@@ -250,60 +302,96 @@ function parseFileInto(
     ) {
       continue;
     }
-
     const name = varDecl.getName();
-    const funcId = `function:${filePath}:${name}`;
+    moduleFunctions.push({
+      name,
+      code: varDecl.getFullText(),
+      id: `function:${filePath}:${name}`,
+    });
+  }
+
+  if (moduleFunctions.length === 0) return;
+
+  const moduleId = `module:${filePath}`;
+  const moduleLabel = `${path.basename(filePath)} (module)`;
+
+  if (
+    !addNode(
+      acc,
+      {
+        id: moduleId,
+        type: "module",
+        label: moduleLabel,
+        filePath,
+        code: "",
+        loaded: true,
+      },
+      maxNodes,
+    )
+  ) {
+    return;
+  }
+
+  if (!compoundClasses && includeFileNode) {
+    addEdge(acc, { source: fileId, target: moduleId, type: "contains" });
+  }
+
+  for (const fn of moduleFunctions) {
+    if (acc.limitReached) break;
     if (
       !addNode(
         acc,
         {
-          id: funcId,
+          id: fn.id,
           type: "function",
-          label: name,
+          label: fn.name,
           filePath,
-          code: varDecl.getFullText(),
+          code: fn.code,
           loaded: true,
+          parent: compoundClasses ? moduleId : undefined,
         },
         maxNodes,
       )
     ) {
       break;
     }
-    addEdge(acc, { source: fileId, target: funcId, type: "contains" });
+    if (!compoundClasses) {
+      addEdge(acc, { source: moduleId, target: fn.id, type: "contains" });
+    }
   }
 }
 
-function addImportEdges(
-  acc: ParseAccumulator,
+export function parseFileGraph(
   filePath: string,
-  sourceFile: SourceFile,
-  parsedFiles: Set<string>,
-  maxNodes: number,
-): void {
-  const fileId = `file:${filePath}`;
-  if (!acc.nodeIds.has(fileId)) return;
+  maxNodes: number = MAX_FOCUS_NODES,
+): FocusResult {
+  const focusFile = path.normalize(path.resolve(filePath));
 
-  for (const importDecl of sourceFile.getImportDeclarations()) {
-    if (acc.limitReached) break;
-
-    const moduleSpecifier = importDecl.getModuleSpecifierValue();
-    if (!moduleSpecifier.startsWith(".")) continue;
-
-    const resolved = resolveImportPath(filePath, moduleSpecifier);
-    if (!resolved) continue;
-
-    let targetId: string | null = `file:${resolved}`;
-
-    if (!parsedFiles.has(resolved)) {
-      targetId = addStubFileNode(acc, resolved, maxNodes);
-    } else if (!acc.nodeIds.has(targetId)) {
-      targetId = addStubFileNode(acc, resolved, maxNodes);
-    }
-
-    if (targetId) {
-      addEdge(acc, { source: fileId, target: targetId, type: "imports" });
-    }
+  if (!fs.existsSync(focusFile)) {
+    throw new Error("File does not exist");
   }
+  if (!fs.statSync(focusFile).isFile()) {
+    throw new Error("Path must be a file");
+  }
+  if (!isTsFile(focusFile)) {
+    throw new Error("File must be a .ts or .tsx file");
+  }
+
+  const acc = createAccumulator();
+  const project = new Project({ skipAddingFilesFromTsConfig: true });
+  const sourceFile = project.addSourceFileAtPath(focusFile);
+
+  parseFileInto(acc, focusFile, sourceFile, maxNodes, {
+    compoundClasses: true,
+    includeFileNode: false,
+  });
+
+  return {
+    nodes: acc.nodes,
+    edges: acc.edges,
+    truncated: acc.truncated || undefined,
+    focusFile,
+  };
 }
 
 export function parseFocus(
@@ -323,7 +411,7 @@ export function parseFocus(
     throw new Error("File must be a .ts or .tsx file");
   }
 
-  const clampedDepth = Math.max(0, Math.min(10, Math.floor(depth)));
+  const clampedDepth = Math.max(1, Math.min(3, Math.floor(depth)));
   const filesToParse = collectFilesWithinDepth(focusFile, clampedDepth);
 
   const acc = createAccumulator();
@@ -335,22 +423,23 @@ export function parseFocus(
     return a.localeCompare(b);
   });
 
-  const parsedFiles = new Set<string>();
-
   for (const fp of sortedFiles) {
     if (acc.limitReached) break;
     if (!isTsFile(fp)) continue;
 
     const sourceFile = project.addSourceFileAtPath(fp);
-    parseFileInto(acc, fp, sourceFile, maxNodes);
-    parsedFiles.add(fp);
+    parseFileInto(acc, fp, sourceFile, maxNodes, {
+      compoundClasses: true,
+      includeFileNode: false,
+    });
   }
 
-  for (const fp of parsedFiles) {
+  for (const fp of sortedFiles) {
     if (acc.limitReached) break;
+    if (!isTsFile(fp)) continue;
     const sourceFile = project.getSourceFile(fp);
     if (!sourceFile) continue;
-    addImportEdges(acc, fp, sourceFile, parsedFiles, maxNodes);
+    addClassImportEdges(acc, fp, sourceFile);
   }
 
   return {
