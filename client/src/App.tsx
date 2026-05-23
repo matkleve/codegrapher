@@ -1,109 +1,95 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import Graph, { type GraphData, type GraphNode } from "./components/Graph";
 import CodePanel from "./components/CodePanel";
+import { collectLoadedNodeIds, mergeGraphData } from "./graphMerge";
 
-const LARGE_PROJECT_ERROR =
-  "Project too large — try a subdirectory like /src/app/features";
-const CLIENT_TIMEOUT_MS = 15_000;
-const POLL_INTERVAL_MS = 500;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-interface ParseStatusResponse {
-  phase: string;
-  message: string;
-  nodeCount: number;
-  busy: boolean;
-  result?: GraphData;
-  error?: string;
+async function fetchFocus(filePath: string, depth: number): Promise<GraphData> {
+  const res = await fetch(
+    `/api/focus?path=${encodeURIComponent(filePath)}&depth=${depth}`,
+  );
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body.error ?? "Failed to load focus");
+  }
+  return body as GraphData;
 }
 
 function App() {
-  const [repoPath, setRepoPath] = useState("");
+  const [startFile, setStartFile] = useState("");
+  const [depth, setDepth] = useState(2);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [loadedNodeIds, setLoadedNodeIds] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
-  const loadGeneration = useRef(0);
+  const [graphKey, setGraphKey] = useState(0);
 
-  const waitForParse = async (generation: number): Promise<GraphData> => {
-    const deadline = Date.now() + CLIENT_TIMEOUT_MS;
-
-    while (true) {
-      if (generation !== loadGeneration.current) {
-        throw new Error("Load cancelled");
+  const applyFocusResult = useCallback((incoming: GraphData, replace: boolean) => {
+    setGraphData((prev) => {
+      const merged = replace ? incoming : mergeGraphData(prev, incoming);
+      setLoadedNodeIds(collectLoadedNodeIds(merged));
+      if (replace) {
+        setGraphKey((k) => k + 1);
       }
-
-      if (Date.now() > deadline) {
-        throw new Error(LARGE_PROJECT_ERROR);
-      }
-
-      const statusRes = await fetch("/api/status");
-      const status = (await statusRes.json()) as ParseStatusResponse;
-
-      if (status.message) {
-        setStatusText(status.message);
-      }
-
-      if (status.phase === "done" && status.result) {
-        const count = status.result.nodes?.length ?? status.nodeCount;
-        setStatusText(`Building graph (${count} nodes)...`);
-        await sleep(0);
-        return status.result;
-      }
-
-      if (status.phase === "error") {
-        throw new Error(status.error ?? "Parse failed");
-      }
-
-      await sleep(POLL_INTERVAL_MS);
-    }
-  };
+      return merged;
+    });
+  }, []);
 
   const handleLoad = async () => {
-    if (!repoPath.trim()) {
-      setError("Enter an absolute path to a project directory");
+    if (!startFile.trim()) {
+      setError("Enter an absolute path to a starting .ts or .tsx file");
       return;
     }
 
-    const generation = ++loadGeneration.current;
     setLoading(true);
     setError(null);
-    setStatusText("Parsing files...");
+    setStatusText("Loading focus neighborhood...");
     setSelectedNode(null);
 
     try {
-      const res = await fetch(
-        `/api/parse?path=${encodeURIComponent(repoPath.trim())}`,
-      );
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error ?? "Failed to start parse");
-      }
-
-      const data = await waitForParse(generation);
-
-      if (generation !== loadGeneration.current) return;
-
-      setStatusText("Rendering...");
-      setGraphData(data);
+      const data = await fetchFocus(startFile.trim(), depth);
+      setStatusText(`Rendering ${data.nodes.length} nodes...`);
+      applyFocusResult(data, true);
       setStatusText("");
     } catch (err) {
-      if (generation !== loadGeneration.current) return;
       setGraphData(null);
+      setLoadedNodeIds(new Set());
       setError(err instanceof Error ? err.message : "Failed to load");
       setStatusText("");
     } finally {
-      if (generation === loadGeneration.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
-  const handleNodeSelect = useCallback((node: GraphNode) => {
-    setSelectedNode(node);
-  }, []);
+  const expandFromNode = useCallback(
+    async (node: GraphNode) => {
+      setLoading(true);
+      setError(null);
+      setStatusText(`Expanding ${node.filePath}...`);
+
+      try {
+        const data = await fetchFocus(node.filePath, depth);
+        setStatusText(`Merging ${data.nodes.length} nodes...`);
+        applyFocusResult(data, false);
+        setStatusText("");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to expand");
+        setStatusText("");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [depth, applyFocusResult],
+  );
+
+  const handleNodeSelect = useCallback(
+    (node: GraphNode) => {
+      setSelectedNode(node);
+      void expandFromNode(node);
+    },
+    [expandFromNode],
+  );
 
   return (
     <div
@@ -127,17 +113,18 @@ function App() {
             display: "flex",
             gap: 8,
             alignItems: "center",
+            flexWrap: "wrap",
           }}
         >
           <input
             type="text"
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
+            value={startFile}
+            onChange={(e) => setStartFile(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !loading && handleLoad()}
-            placeholder="/absolute/path/to/project"
+            placeholder="/path/to/app.component.ts"
             disabled={loading}
             style={{
-              flex: 1,
+              flex: "1 1 280px",
               padding: "8px 12px",
               borderRadius: 4,
               border: "1px solid #444",
@@ -146,6 +133,27 @@ function App() {
               fontSize: 14,
             }}
           />
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 13,
+              color: "#aaa",
+            }}
+          >
+            Depth
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={1}
+              value={depth}
+              onChange={(e) => setDepth(Number(e.target.value))}
+              disabled={loading}
+            />
+            <span style={{ minWidth: 16, color: "#eee" }}>{depth}</span>
+          </label>
           <button
             type="button"
             onClick={handleLoad}
@@ -163,14 +171,8 @@ function App() {
             Load
           </button>
         </div>
-        <p
-          style={{
-            margin: "6px 0 0",
-            fontSize: 12,
-            color: "#888",
-          }}
-        >
-          Tip: For large projects, point to a subfolder like /src/app/features
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#888" }}>
+          Enter a starting file — click nodes to expand imports into the graph
         </p>
       </header>
 
@@ -211,10 +213,18 @@ function App() {
             display: "flex",
           }}
         >
-          <Graph data={graphData} onNodeSelect={handleNodeSelect} />
+          <Graph
+            data={graphData}
+            loadedNodeIds={loadedNodeIds}
+            graphKey={graphKey}
+            onNodeSelect={handleNodeSelect}
+          />
         </main>
-        {selectedNode && (
-          <CodePanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+        {selectedNode && selectedNode.loaded !== false && selectedNode.code && (
+          <CodePanel
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+          />
         )}
       </div>
     </div>

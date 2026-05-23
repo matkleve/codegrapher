@@ -1,6 +1,8 @@
-import { Project, Node } from "ts-morph";
+import { Project, Node, type SourceFile } from "ts-morph";
 import * as fs from "fs";
 import * as path from "path";
+
+export const MAX_FOCUS_NODES = 50;
 
 export interface GraphNode {
   id: string;
@@ -8,6 +10,7 @@ export interface GraphNode {
   label: string;
   filePath: string;
   code: string;
+  loaded?: boolean;
 }
 
 export interface GraphEdge {
@@ -16,44 +19,18 @@ export interface GraphEdge {
   type: "contains" | "imports" | "calls";
 }
 
-export interface ParseResult {
+export interface FocusResult {
   nodes: GraphNode[];
   edges: GraphEdge[];
   truncated?: boolean;
+  focusFile: string;
 }
 
-export interface ParseProgressUpdate {
-  phase: "scanning" | "parsing" | "building";
-  message: string;
-  nodeCount: number;
+function isTsFile(filePath: string): boolean {
+  return /\.tsx?$/.test(filePath);
 }
 
-export interface ParseOptions {
-  maxNodes?: number;
-  onProgress?: (update: ParseProgressUpdate) => void;
-  shouldContinue?: () => boolean;
-}
-
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next"]);
-
-function getAllTsFiles(dir: string): string[] {
-  const results: string[] = [];
-  if (!fs.existsSync(dir)) return results;
-
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) {
-        results.push(...getAllTsFiles(fullPath));
-      }
-    } else if (/\.tsx?$/.test(entry.name)) {
-      results.push(path.normalize(fullPath));
-    }
-  }
-  return results;
-}
-
-function resolveImportPath(fromFile: string, moduleSpecifier: string): string | null {
+export function resolveImportPath(fromFile: string, moduleSpecifier: string): string | null {
   const base = path.resolve(path.dirname(fromFile), moduleSpecifier);
   if (fs.existsSync(base) && fs.statSync(base).isFile()) {
     return path.normalize(base);
@@ -67,194 +44,319 @@ function resolveImportPath(fromFile: string, moduleSpecifier: string): string | 
   return null;
 }
 
-export function parseDirectory(rootPath: string, options: ParseOptions = {}): ParseResult {
-  const { maxNodes, onProgress, shouldContinue = () => true } = options;
-  const normalizedRoot = path.normalize(rootPath);
+function getRelativeImports(sourceFile: SourceFile, fromFile: string): string[] {
+  const imports: string[] = [];
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    const moduleSpecifier = importDecl.getModuleSpecifierValue();
+    if (!moduleSpecifier.startsWith(".")) continue;
+    const resolved = resolveImportPath(fromFile, moduleSpecifier);
+    if (resolved) imports.push(resolved);
+  }
+  return imports;
+}
 
-  onProgress?.({
-    phase: "scanning",
-    message: "Parsing files...",
-    nodeCount: 0,
-  });
-
-  const filePaths = getAllTsFiles(normalizedRoot);
-  const filePathSet = new Set(filePaths);
-  const filesTotal = filePaths.length;
-
-  const nodes: GraphNode[] = [];
-  const edges: GraphEdge[] = [];
-  const nodeIds = new Set<string>();
-  let limitReached = false;
-  let truncated = false;
-
+function collectFilesWithinDepth(focusFile: string, depth: number): Set<string> {
+  const focus = path.normalize(path.resolve(focusFile));
+  const files = new Set<string>([focus]);
+  const queue: { file: string; hop: number }[] = [{ file: focus, hop: 0 }];
   const project = new Project({ skipAddingFilesFromTsConfig: true });
 
-  const reportProgress = (filesProcessed: number) => {
-    onProgress?.({
-      phase: "parsing",
-      message: "Parsing files...",
-      nodeCount: nodes.length,
-    });
-    if (filesProcessed === filesTotal && filesTotal > 0) {
-      onProgress?.({
-        phase: "building",
-        message: `Building graph (${nodes.length} nodes)...`,
-        nodeCount: nodes.length,
-      });
+  while (queue.length > 0) {
+    const { file, hop } = queue.shift()!;
+    if (hop >= depth) continue;
+
+    const sourceFile = project.addSourceFileAtPath(file);
+    for (const imported of getRelativeImports(sourceFile, file)) {
+      if (!files.has(imported)) {
+        files.add(imported);
+        queue.push({ file: imported, hop: hop + 1 });
+      }
     }
+  }
+
+  return files;
+}
+
+interface ParseAccumulator {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  nodeIds: Set<string>;
+  edgeKeys: Set<string>;
+  limitReached: boolean;
+  truncated: boolean;
+}
+
+function createAccumulator(): ParseAccumulator {
+  return {
+    nodes: [],
+    edges: [],
+    nodeIds: new Set(),
+    edgeKeys: new Set(),
+    limitReached: false,
+    truncated: false,
   };
+}
 
-  const addNode = (node: GraphNode): boolean => {
-    if (nodeIds.has(node.id)) return true;
-    if (maxNodes !== undefined && nodes.length >= maxNodes) {
-      limitReached = true;
-      truncated = true;
-      return false;
-    }
-    nodeIds.add(node.id);
-    nodes.push(node);
-    return true;
-  };
+function addEdge(acc: ParseAccumulator, edge: GraphEdge) {
+  const key = `${edge.source}|${edge.target}|${edge.type}`;
+  if (acc.edgeKeys.has(key)) return;
+  acc.edgeKeys.add(key);
+  acc.edges.push(edge);
+}
 
-  const addEdge = (edge: GraphEdge) => {
-    edges.push(edge);
-  };
+function addNode(acc: ParseAccumulator, node: GraphNode, maxNodes: number): boolean {
+  if (acc.nodeIds.has(node.id)) return true;
+  if (acc.nodes.length >= maxNodes) {
+    acc.limitReached = true;
+    acc.truncated = true;
+    return false;
+  }
+  acc.nodeIds.add(node.id);
+  acc.nodes.push(node);
+  return true;
+}
 
-  for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
-    if (!shouldContinue() || limitReached) break;
+function addStubFileNode(acc: ParseAccumulator, filePath: string, maxNodes: number): string | null {
+  const fileId = `file:${filePath}`;
+  if (acc.nodeIds.has(fileId)) return fileId;
 
-    const filePath = filePaths[fileIndex];
-    const sourceFile = project.addSourceFileAtPath(filePath);
-    const fileId = `file:${filePath}`;
-
-    if (!addNode({
+  const ok = addNode(
+    acc,
+    {
       id: fileId,
       type: "file",
-      label: path.basename(filePath),
+      label: `+ ${path.basename(filePath)}`,
       filePath,
-      code: sourceFile.getFullText(),
-    })) {
-      break;
-    }
+      code: "",
+      loaded: false,
+    },
+    maxNodes,
+  );
+  return ok ? fileId : null;
+}
 
-    for (const classDecl of sourceFile.getClasses()) {
-      if (!shouldContinue() || limitReached) break;
+function parseFileInto(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+  maxNodes: number,
+): void {
+  const fileId = `file:${filePath}`;
 
-      const className = classDecl.getName() ?? "AnonymousClass";
-      const classId = `class:${filePath}:${className}`;
+  if (
+    !addNode(
+      acc,
+      {
+        id: fileId,
+        type: "file",
+        label: path.basename(filePath),
+        filePath,
+        code: sourceFile.getFullText(),
+        loaded: true,
+      },
+      maxNodes,
+    )
+  ) {
+    return;
+  }
 
-      if (
-        !addNode({
+  for (const classDecl of sourceFile.getClasses()) {
+    if (acc.limitReached) break;
+
+    const className = classDecl.getName() ?? "AnonymousClass";
+    const classId = `class:${filePath}:${className}`;
+
+    if (
+      !addNode(
+        acc,
+        {
           id: classId,
           type: "class",
           label: className,
           filePath,
           code: classDecl.getFullText(),
-        })
-      ) {
-        break;
-      }
-      addEdge({ source: fileId, target: classId, type: "contains" });
+          loaded: true,
+        },
+        maxNodes,
+      )
+    ) {
+      break;
+    }
+    addEdge(acc, { source: fileId, target: classId, type: "contains" });
 
-      for (const method of classDecl.getMethods()) {
-        if (!shouldContinue() || limitReached) break;
+    for (const method of classDecl.getMethods()) {
+      if (acc.limitReached) break;
 
-        const methodName = method.getName();
-        const methodId = `method:${filePath}:${className}.${methodName}`;
+      const methodName = method.getName();
+      const methodId = `method:${filePath}:${className}.${methodName}`;
 
-        if (
-          !addNode({
+      if (
+        !addNode(
+          acc,
+          {
             id: methodId,
             type: "method",
             label: methodName,
             filePath,
             code: method.getFullText(),
-          })
-        ) {
-          break;
-        }
-        addEdge({ source: classId, target: methodId, type: "contains" });
+            loaded: true,
+          },
+          maxNodes,
+        )
+      ) {
+        break;
       }
+      addEdge(acc, { source: classId, target: methodId, type: "contains" });
     }
+  }
 
-    if (limitReached) break;
+  if (acc.limitReached) return;
 
-    for (const func of sourceFile.getFunctions()) {
-      if (!shouldContinue() || limitReached) break;
+  for (const func of sourceFile.getFunctions()) {
+    if (acc.limitReached) break;
 
-      const name = func.getName();
-      if (!name) continue;
+    const name = func.getName();
+    if (!name) continue;
 
-      const funcId = `function:${filePath}:${name}`;
-      if (
-        !addNode({
+    const funcId = `function:${filePath}:${name}`;
+    if (
+      !addNode(
+        acc,
+        {
           id: funcId,
           type: "function",
           label: name,
           filePath,
           code: func.getFullText(),
-        })
-      ) {
-        break;
-      }
-      addEdge({ source: fileId, target: funcId, type: "contains" });
+          loaded: true,
+        },
+        maxNodes,
+      )
+    ) {
+      break;
+    }
+    addEdge(acc, { source: fileId, target: funcId, type: "contains" });
+  }
+
+  if (acc.limitReached) return;
+
+  for (const varDecl of sourceFile.getVariableDeclarations()) {
+    if (acc.limitReached) break;
+
+    const initializer = varDecl.getInitializer();
+    if (
+      !initializer ||
+      (!Node.isArrowFunction(initializer) && !Node.isFunctionExpression(initializer))
+    ) {
+      continue;
     }
 
-    if (limitReached) break;
-
-    for (const varDecl of sourceFile.getVariableDeclarations()) {
-      if (!shouldContinue() || limitReached) break;
-
-      const initializer = varDecl.getInitializer();
-      if (
-        !initializer ||
-        (!Node.isArrowFunction(initializer) && !Node.isFunctionExpression(initializer))
-      ) {
-        continue;
-      }
-
-      const name = varDecl.getName();
-      const funcId = `function:${filePath}:${name}`;
-      if (
-        !addNode({
+    const name = varDecl.getName();
+    const funcId = `function:${filePath}:${name}`;
+    if (
+      !addNode(
+        acc,
+        {
           id: funcId,
           type: "function",
           label: name,
           filePath,
           code: varDecl.getFullText(),
-        })
-      ) {
-        break;
-      }
-      addEdge({ source: fileId, target: funcId, type: "contains" });
+          loaded: true,
+        },
+        maxNodes,
+      )
+    ) {
+      break;
+    }
+    addEdge(acc, { source: fileId, target: funcId, type: "contains" });
+  }
+}
+
+function addImportEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+  parsedFiles: Set<string>,
+  maxNodes: number,
+): void {
+  const fileId = `file:${filePath}`;
+  if (!acc.nodeIds.has(fileId)) return;
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    if (acc.limitReached) break;
+
+    const moduleSpecifier = importDecl.getModuleSpecifierValue();
+    if (!moduleSpecifier.startsWith(".")) continue;
+
+    const resolved = resolveImportPath(filePath, moduleSpecifier);
+    if (!resolved) continue;
+
+    let targetId: string | null = `file:${resolved}`;
+
+    if (!parsedFiles.has(resolved)) {
+      targetId = addStubFileNode(acc, resolved, maxNodes);
+    } else if (!acc.nodeIds.has(targetId)) {
+      targetId = addStubFileNode(acc, resolved, maxNodes);
     }
 
-    if (limitReached) break;
-
-    for (const importDecl of sourceFile.getImportDeclarations()) {
-      if (!shouldContinue() || limitReached) break;
-
-      const moduleSpecifier = importDecl.getModuleSpecifierValue();
-      if (!moduleSpecifier.startsWith(".")) continue;
-
-      const resolved = resolveImportPath(filePath, moduleSpecifier);
-      if (resolved && filePathSet.has(resolved)) {
-        addEdge({
-          source: fileId,
-          target: `file:${resolved}`,
-          type: "imports",
-        });
-      }
+    if (targetId) {
+      addEdge(acc, { source: fileId, target: targetId, type: "imports" });
     }
+  }
+}
 
-    reportProgress(fileIndex + 1);
+export function parseFocus(
+  filePath: string,
+  depth: number,
+  maxNodes: number = MAX_FOCUS_NODES,
+): FocusResult {
+  const focusFile = path.normalize(path.resolve(filePath));
+
+  if (!fs.existsSync(focusFile)) {
+    throw new Error("File does not exist");
+  }
+  if (!fs.statSync(focusFile).isFile()) {
+    throw new Error("Path must be a file");
+  }
+  if (!isTsFile(focusFile)) {
+    throw new Error("File must be a .ts or .tsx file");
   }
 
-  onProgress?.({
-    phase: "building",
-    message: `Building graph (${nodes.length} nodes)...`,
-    nodeCount: nodes.length,
+  const clampedDepth = Math.max(0, Math.min(10, Math.floor(depth)));
+  const filesToParse = collectFilesWithinDepth(focusFile, clampedDepth);
+
+  const acc = createAccumulator();
+  const project = new Project({ skipAddingFilesFromTsConfig: true });
+
+  const sortedFiles = [...filesToParse].sort((a, b) => {
+    if (a === focusFile) return -1;
+    if (b === focusFile) return 1;
+    return a.localeCompare(b);
   });
 
-  return { nodes, edges, truncated: truncated || undefined };
+  const parsedFiles = new Set<string>();
+
+  for (const fp of sortedFiles) {
+    if (acc.limitReached) break;
+    if (!isTsFile(fp)) continue;
+
+    const sourceFile = project.addSourceFileAtPath(fp);
+    parseFileInto(acc, fp, sourceFile, maxNodes);
+    parsedFiles.add(fp);
+  }
+
+  for (const fp of parsedFiles) {
+    if (acc.limitReached) break;
+    const sourceFile = project.getSourceFile(fp);
+    if (!sourceFile) continue;
+    addImportEdges(acc, fp, sourceFile, parsedFiles, maxNodes);
+  }
+
+  return {
+    nodes: acc.nodes,
+    edges: acc.edges,
+    truncated: acc.truncated || undefined,
+    focusFile,
+  };
 }

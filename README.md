@@ -1,6 +1,6 @@
 # codegrapher
 
-Interactive graph visualizer for TypeScript codebases. Parses `.ts` / `.tsx` files with [ts-morph](https://ts-morph.com/) on the server and renders files, classes, functions, methods, and import relationships with [Cytoscape.js](https://js.cytoscape.org/) in the browser.
+Ego-centric graph visualizer for TypeScript codebases. Start from a single file and expand the graph by clicking nodes — each click loads that file’s import neighborhood (configurable depth) and merges it into the view.
 
 ## Prerequisites
 
@@ -17,11 +17,7 @@ cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
-Or install each package separately if you prefer.
-
 ## Development
-
-Start both the API server (port **3001**) and the Vite client (port **5173**):
 
 ```bash
 npm run dev
@@ -29,26 +25,29 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-1. Enter an **absolute path** to a TypeScript project (e.g. `/home/you/my-app`).
-2. Click **Load**.
-3. Click nodes in the graph to inspect code in the right sidebar.
+1. Enter an **absolute path** to a `.ts` or `.tsx` file (e.g. `/home/you/project/src/app/app.component.ts`).
+2. Set **Depth** (1–3): how many import hops to follow from the focus file.
+3. Click **Load**.
+4. Click any node to expand that file’s neighborhood into the graph (merged, not replaced).
 
-The Vite dev server proxies `/api/*` to the Express backend.
+**Visual cues**
+
+- **Solid white border** — fully loaded node
+- **Dashed border, `+` label** — known import target not yet expanded (click to load)
 
 ## Scripts
 
 | Location | Command | Description |
 |----------|---------|-------------|
 | Root | `npm run dev` | Run server + client concurrently |
-| `server/` | `npm run dev` | API with hot reload (`ts-node-dev`) |
-| `server/` | `npm run build` | Compile TypeScript to `dist/` |
+| `server/` | `npm run dev` | API with hot reload |
+| `server/` | `npm run build` | Compile TypeScript |
 | `client/` | `npm run dev` | Vite dev server |
 | `client/` | `npm run build` | Production build |
 
 ## API
 
-- `GET /api/parse?path=<absolute-directory>` — start async parse (max 500 nodes, 30s server timeout)
-- `GET /api/status` — poll parse progress; when `phase` is `done`, includes `{ nodes, edges }`
+- `GET /api/focus?path=<absolute-file>&depth=1|2|3` — parse focus file + import neighborhood (max 50 nodes)
 - `GET /api/file?path=<absolute-file>` — raw file contents
 
 No authentication; intended for local use only.

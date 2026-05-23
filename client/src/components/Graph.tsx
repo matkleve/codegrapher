@@ -11,6 +11,7 @@ export interface GraphNode {
   label: string;
   filePath: string;
   code: string;
+  loaded?: boolean;
 }
 
 export interface GraphEdge {
@@ -22,6 +23,7 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  truncated?: boolean;
 }
 
 const NODE_COLORS: Record<GraphNode["type"], string> = {
@@ -33,8 +35,18 @@ const NODE_COLORS: Record<GraphNode["type"], string> = {
 
 const FIT_PADDING = 40;
 
+function edgeId(edge: GraphEdge): string {
+  return `edge:${edge.source}:${edge.target}:${edge.type}`;
+}
+
+function isLoaded(node: GraphNode, loadedNodeIds: Set<string>): boolean {
+  return node.loaded !== false && loadedNodeIds.has(node.id);
+}
+
 interface GraphProps {
   data: GraphData | null;
+  loadedNodeIds: Set<string>;
+  graphKey: number;
   onNodeSelect: (node: GraphNode) => void;
 }
 
@@ -53,10 +65,16 @@ const controlButtonStyle: CSSProperties = {
   justifyContent: "center",
 };
 
-export default function Graph({ data, onNodeSelect }: GraphProps) {
+export default function Graph({
+  data,
+  loadedNodeIds,
+  graphKey,
+  onNodeSelect,
+}: GraphProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
+  const prevGraphKeyRef = useRef(-1);
 
   const fitGraph = () => {
     const cy = cyRef.current;
@@ -95,6 +113,26 @@ export default function Graph({ data, onNodeSelect }: GraphProps) {
             "text-max-width": "80px",
             width: 56,
             height: 56,
+            "background-opacity": 0.95,
+          },
+        },
+        {
+          selector: "node[loaded = 'true']",
+          style: {
+            "border-width": 3,
+            "border-color": "#ffffff",
+            "border-style": "solid",
+          },
+        },
+        {
+          selector: "node[loaded = 'false']",
+          style: {
+            "border-width": 2,
+            "border-color": "#cccccc",
+            "border-style": "dashed",
+            "background-color": "#2a2a3e",
+            "background-opacity": 0.6,
+            color: "#ddd",
           },
         },
         {
@@ -127,6 +165,7 @@ export default function Graph({ data, onNodeSelect }: GraphProps) {
         label: nodeData.label,
         filePath: nodeData.filePath,
         code: nodeData.code,
+        loaded: nodeData.loaded === "true" || nodeData.loaded === true,
       });
     });
 
@@ -142,9 +181,6 @@ export default function Graph({ data, onNodeSelect }: GraphProps) {
 
     const observer = new ResizeObserver(() => {
       cy.resize();
-      if (cy.elements().length > 0) {
-        cy.fit(undefined, FIT_PADDING);
-      }
     });
     observer.observe(wrapper);
 
@@ -157,34 +193,70 @@ export default function Graph({ data, onNodeSelect }: GraphProps) {
 
   useEffect(() => {
     const cy = cyRef.current;
-    if (!cy) return;
+    if (!cy || !data) return;
 
-    cy.elements().remove();
+    if (graphKey !== prevGraphKeyRef.current) {
+      cy.elements().remove();
+      prevGraphKeyRef.current = graphKey;
+    }
 
-    if (!data || data.nodes.length === 0) return;
+    const existingNodeIds = new Set(cy.nodes().map((n) => n.id()));
+    const existingEdgeIds = new Set(cy.edges().map((e) => e.id()));
 
-    const elements: ElementDefinition[] = [
-      ...data.nodes.map((node) => ({
-        data: {
-          id: node.id,
+    const newElements: ElementDefinition[] = [];
+
+    for (const node of data.nodes) {
+      const loaded = isLoaded(node, loadedNodeIds);
+      const loadedStr = loaded ? "true" : "false";
+
+      if (existingNodeIds.has(node.id)) {
+        cy.getElementById(node.id).data({
           label: node.label,
           type: node.type,
           filePath: node.filePath,
           code: node.code,
-        },
-        style: { "background-color": NODE_COLORS[node.type] },
-      })),
-      ...data.edges.map((edge, i) => ({
-        data: {
-          id: `edge-${i}`,
-          source: edge.source,
-          target: edge.target,
-          type: edge.type,
-        },
-      })),
-    ];
+          loaded: loadedStr,
+        });
+        cy.getElementById(node.id).style({
+          "background-color": loaded
+            ? NODE_COLORS[node.type]
+            : "#2a2a3e",
+        });
+      } else {
+        newElements.push({
+          data: {
+            id: node.id,
+            label: node.label,
+            type: node.type,
+            filePath: node.filePath,
+            code: node.code,
+            loaded: loadedStr,
+          },
+          style: {
+            "background-color": loaded ? NODE_COLORS[node.type] : "#2a2a3e",
+          },
+        });
+      }
+    }
 
-    cy.add(elements);
+    for (const edge of data.edges) {
+      const id = edgeId(edge);
+      if (!existingEdgeIds.has(id)) {
+        newElements.push({
+          data: {
+            id,
+            source: edge.source,
+            target: edge.target,
+            type: edge.type,
+          },
+        });
+      }
+    }
+
+    if (newElements.length > 0) {
+      cy.add(newElements);
+    }
+
     const layout = cy.layout({
       name: "dagre",
       rankDir: "TB",
@@ -196,7 +268,7 @@ export default function Graph({ data, onNodeSelect }: GraphProps) {
       cy.fit(undefined, FIT_PADDING);
     });
     layout.run();
-  }, [data]);
+  }, [data, loadedNodeIds, graphKey]);
 
   return (
     <div

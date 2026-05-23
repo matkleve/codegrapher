@@ -2,50 +2,46 @@ import express from "express";
 import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
-import { getParseStatus, startParse } from "./parseJob";
+import { parseFocus } from "./parser";
 
 const app = express();
 const PORT = 3001;
 
 app.use(cors());
 
-function validateDirectory(dirPath: unknown): string | { error: string; status: number } {
-  if (typeof dirPath !== "string" || !dirPath.trim()) {
-    return { error: "Missing or invalid path query parameter", status: 400 };
-  }
-
-  const absolutePath = path.resolve(dirPath);
-  if (!fs.existsSync(absolutePath)) {
-    return { error: "Path does not exist", status: 404 };
-  }
-
-  if (!fs.statSync(absolutePath).isDirectory()) {
-    return { error: "Path must be a directory", status: 400 };
-  }
-
-  return absolutePath;
-}
-
-app.get("/api/status", (_req, res) => {
-  res.json(getParseStatus());
-});
-
-app.get("/api/parse", (req, res) => {
+app.get("/api/focus", (req, res) => {
   res.setTimeout(30_000);
 
-  const validated = validateDirectory(req.query.path);
-  if (typeof validated !== "string") {
-    res.status(validated.status).json({ error: validated.error });
+  const filePath = req.query.path;
+  if (typeof filePath !== "string" || !filePath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
     return;
   }
 
-  const started = startParse(validated);
-  if (!started.ok) {
-    res.status(409).json({ error: started.error });
+  const depthRaw = req.query.depth;
+  const depth =
+    typeof depthRaw === "string" && depthRaw.trim() !== ""
+      ? Number.parseInt(depthRaw, 10)
+      : 2;
+
+  if (!Number.isFinite(depth) || depth < 1 || depth > 3) {
+    res.status(400).json({ error: "depth must be 1, 2, or 3" });
     return;
   }
 
-  res.json({ started: true });
+  const absolutePath = path.resolve(filePath);
+  if (!fs.existsSync(absolutePath)) {
+    res.status(404).json({ error: "File does not exist" });
+    return;
+  }
+
+  try {
+    const result = parseFocus(absolutePath, depth);
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Focus parse failed";
+    res.status(500).json({ error: message });
+  }
 });
 
 app.get("/api/file", (req, res) => {
