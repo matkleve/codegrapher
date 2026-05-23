@@ -1,11 +1,7 @@
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
+import { CodeLine } from "@/components/code/CodeLine";
+import { Container } from "@/components/ui/Container";
 import { cn } from "@/lib/utils";
-
-const CODE_PREVIEW_LINES = 3;
-
-function previewCode(code: string, maxLines: number): string {
-  return code.split("\n").slice(0, maxLines).join("\n");
-}
 
 type CollapsibleMemberRowProps = {
   memberId: string;
@@ -13,6 +9,9 @@ type CollapsibleMemberRowProps = {
   code: string;
   expanded: boolean;
   onToggle: (memberId: string) => void;
+  flowNodeId: string;
+  graphNodeId: string;
+  filePath: string;
 };
 
 export function CollapsibleMemberRow({
@@ -21,14 +20,18 @@ export function CollapsibleMemberRow({
   code,
   expanded,
   onToggle,
+  flowNodeId,
+  graphNodeId,
+  filePath,
 }: CollapsibleMemberRowProps) {
-  const preview = previewCode(code, expanded ? 200 : CODE_PREVIEW_LINES);
+  const lines = code.split("\n");
 
   return (
-    <div className="hoverable nodrag rounded-md border border-transparent bg-muted px-3 py-1.5">
+    <div className="hoverable nodrag rounded-md border border-transparent bg-muted p-2">
       <button
         type="button"
         className="flex w-full cursor-pointer items-center gap-2 text-left"
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onToggle(memberId);
@@ -39,15 +42,24 @@ export function CollapsibleMemberRow({
           {label}
         </span>
       </button>
-      {code.trim() ? (
-        <pre
-          className={cn(
-            "mt-1.5 overflow-hidden whitespace-pre-wrap pl-5 text-left font-mono text-xs text-muted-foreground",
-            !expanded && "line-clamp-3",
-          )}
+      {expanded && code.trim() ? (
+        <Container
+          className={cn("nodrag mt-1.5 ml-5 border-0 bg-transparent p-0")}
+          maxHeight="max-h-64"
         >
-          {preview}
-        </pre>
+          <div className="flex flex-col gap-0.5">
+            {lines.map((line, i) => (
+              <CodeLine
+                key={`${memberId}-${i}`}
+                line={line}
+                lineNumber={i + 1}
+                sourceFlowId={flowNodeId}
+                sourceGraphNodeId={graphNodeId}
+                filePath={filePath}
+              />
+            ))}
+          </div>
+        </Container>
       ) : null}
     </div>
   );

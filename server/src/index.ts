@@ -1,7 +1,11 @@
 import express from "express";
 import cors from "cors";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
+
+const execFileAsync = promisify(execFile);
 import { pickFolderNative } from "./browseFolder";
 import { parseFileGraph, parseFocus } from "./parser";
 
@@ -113,6 +117,41 @@ app.get("/api/focus", (req, res) => {
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Focus parse failed";
+    res.status(500).json({ error: message });
+  }
+});
+
+app.get("/api/open", async (req, res) => {
+  const filePath = req.query.path;
+  const lineRaw = req.query.line;
+
+  if (typeof filePath !== "string" || !filePath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
+    return;
+  }
+
+  const line =
+    typeof lineRaw === "string" && lineRaw.trim() !== ""
+      ? Number.parseInt(lineRaw, 10)
+      : 1;
+
+  if (!Number.isFinite(line) || line < 1) {
+    res.status(400).json({ error: "line must be a positive integer" });
+    return;
+  }
+
+  const absolutePath = path.resolve(filePath);
+  if (!fs.existsSync(absolutePath)) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  try {
+    await execFileAsync("code", ["--goto", `${absolutePath}:${line}`]);
+    res.json({ success: true });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to open file in VS Code";
     res.status(500).json({ error: message });
   }
 });

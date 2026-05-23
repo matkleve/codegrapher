@@ -3,6 +3,7 @@ import { FolderOpen, Trash2 } from "lucide-react";
 import { browseFolder, fetchTree } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Container } from "@/components/ui/Container";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
@@ -214,8 +215,8 @@ function RecentFoldersDropdown({
 
   return (
     <div className="pointer-events-auto absolute top-full left-0 z-[100] w-72 cursor-default p-1">
-      <div className="cursor-default rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg">
-        <p className="cursor-default px-1 pb-2 text-xs font-medium text-muted-foreground">
+      <Container className="cursor-default shadow-lg">
+        <p className="cursor-default px-0 pb-2 text-xs font-medium text-muted-foreground">
           Recent folders
         </p>
         <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
@@ -244,7 +245,7 @@ function RecentFoldersDropdown({
           <Trash2 className="size-3.5 shrink-0" aria-hidden />
           Clear history
         </button>
-      </div>
+      </Container>
     </div>
   );
 }

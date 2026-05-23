@@ -20,6 +20,8 @@ export type ClassNodeData = {
   methods: MethodItem[];
   expandedPropertyIds: string[];
   expandedMethodIds: string[];
+  propertiesSectionCollapsed?: boolean;
+  methodsSectionCollapsed?: boolean;
   collapsed?: boolean;
   selected?: boolean;
   pathHighlighted?: boolean;

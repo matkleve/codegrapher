@@ -8,6 +8,7 @@ import {
   useUpdateNodeInternals,
 } from "@xyflow/react";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
+import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
 import { NodeCardHeader } from "@/components/nodes/NodeCardHeader";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
@@ -17,15 +18,30 @@ import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 
 function MemberSection({
   label,
+  expanded,
+  onToggle,
   children,
 }: {
   label: string;
+  expanded: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <p className="text-left text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex flex-col gap-2">{children}</div>
+      <button
+        type="button"
+        className="nodrag flex w-full cursor-pointer items-center gap-1.5 text-left"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+      >
+        <ExpandChevron expanded={expanded} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      </button>
+      {expanded ? <div className="flex flex-col gap-2">{children}</div> : null}
     </section>
   );
 }
@@ -73,6 +89,17 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const onToggleCollapsed = useCallback(() => {
     patchNodeData({ collapsed: bodyExpanded });
   }, [bodyExpanded, patchNodeData]);
+
+  const propertiesSectionExpanded = !(nodeData.propertiesSectionCollapsed ?? false);
+  const methodsSectionExpanded = !(nodeData.methodsSectionCollapsed ?? false);
+
+  const onTogglePropertiesSection = useCallback(() => {
+    patchNodeData({ propertiesSectionCollapsed: propertiesSectionExpanded });
+  }, [propertiesSectionExpanded, patchNodeData]);
+
+  const onToggleMethodsSection = useCallback(() => {
+    patchNodeData({ methodsSectionCollapsed: methodsSectionExpanded });
+  }, [methodsSectionExpanded, patchNodeData]);
 
   const applyWidth = useCallback(
     (nextWidth: number) => {
@@ -127,9 +154,13 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         onToggleCollapsed={onToggleCollapsed}
       />
       {bodyExpanded && (
-        <div className="nodrag flex flex-col gap-2 px-3 py-2">
+        <div className="nodrag flex flex-col gap-2 p-3">
           {hasProperties && (
-            <MemberSection label="Properties">
+            <MemberSection
+              label="Properties"
+              expanded={propertiesSectionExpanded}
+              onToggle={onTogglePropertiesSection}
+            >
               {nodeData.properties.map((p) => (
                 <CollapsibleMemberRow
                   key={p.id}
@@ -138,6 +169,9 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   code={p.code}
                   expanded={nodeData.expandedPropertyIds.includes(p.id)}
                   onToggle={onToggleProperty}
+                  flowNodeId={id}
+                  graphNodeId={nodeData.graphNodeId}
+                  filePath={nodeData.filePath}
                 />
               ))}
             </MemberSection>
@@ -146,7 +180,11 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
             <div className="border-t border-border" role="separator" />
           ) : null}
           {hasMethods && (
-            <MemberSection label="Methods">
+            <MemberSection
+              label="Methods"
+              expanded={methodsSectionExpanded}
+              onToggle={onToggleMethodsSection}
+            >
               {nodeData.methods.map((m) => (
                 <CollapsibleMemberRow
                   key={m.id}
@@ -155,6 +193,9 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   code={m.code}
                   expanded={nodeData.expandedMethodIds.includes(m.id)}
                   onToggle={onToggleMethod}
+                  flowNodeId={id}
+                  graphNodeId={nodeData.graphNodeId}
+                  filePath={nodeData.filePath}
                 />
               ))}
             </MemberSection>

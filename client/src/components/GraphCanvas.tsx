@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -19,8 +20,16 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
+import { Container } from "@/components/ui/Container";
 import { flowNodeTypes, type FlowSnapshot } from "@/components/nodes/flowNodeTypes";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import {
+  buildPreviewFlowEdge,
+  GraphInteractionProvider,
+  PREVIEW_EDGE_ID,
+  useGraphInteraction,
+} from "@/context/GraphInteractionContext";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { FIT_VIEW_PADDING, layoutFlowElements } from "@/lib/flowLayout";
 import {
@@ -153,6 +162,65 @@ function clearPathHighlight(nodes: Node[], edges: Edge[]): { nodes: Node[]; edge
       animated: e.data?.edgeType === "imports",
     })),
   };
+}
+
+type GraphFlowCanvasProps = {
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: ReturnType<typeof useNodesState<Node>>[2];
+  onEdgesChange: ReturnType<typeof useEdgesState<Edge>>[2];
+  onNodeClick: (event: React.MouseEvent, node: Node) => void;
+  onNodeContextMenu: (event: React.MouseEvent, node: Node) => void;
+  onPaneClick: () => void;
+  onMove: OnMove;
+};
+
+function GraphFlowCanvas({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onNodeClick,
+  onNodeContextMenu,
+  onPaneClick,
+  onMove,
+}: GraphFlowCanvasProps) {
+  const { previewEdge } = useGraphInteraction();
+
+  const displayEdges = useMemo(() => {
+    const withoutPreview = edges.filter((e) => e.id !== PREVIEW_EDGE_ID);
+    const preview = buildPreviewFlowEdge(previewEdge);
+    return preview ? [...withoutPreview, preview] : withoutPreview;
+  }, [edges, previewEdge]);
+
+  return (
+    <>
+      <ReactFlow
+        className="graph-flow-container"
+        nodes={nodes}
+        edges={displayEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={flowNodeTypes}
+        onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={onPaneClick}
+        onMove={onMove}
+        onMoveEnd={onMove}
+        minZoom={0.2}
+        maxZoom={4}
+        proOptions={{ hideAttribution: true }}
+        nodesDraggable
+        nodeDragThreshold={4}
+        nodesConnectable={false}
+        elementsSelectable
+        panOnScroll={false}
+        zoomOnScroll
+        panOnDrag
+      />
+      <TokenReferencesDropdown />
+    </>
+  );
 }
 
 interface GraphFlowInnerProps extends GraphCanvasProps {
@@ -517,29 +585,23 @@ function GraphFlowInner({
             !showGrid && "hidden",
           )}
         />
-        <ReactFlow
-          className="graph-flow-container"
+        <GraphInteractionProvider
+          graphData={graphData}
           nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={flowNodeTypes}
-          onNodeClick={onNodeClick}
-          onNodeContextMenu={onNodeContextMenu}
-          onPaneClick={onPaneClick}
-          onMove={onMove}
-          onMoveEnd={onMove}
-          minZoom={0.2}
-          maxZoom={4}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable
-          nodeDragThreshold={4}
-          nodesConnectable={false}
-          elementsSelectable
-          panOnScroll={false}
-          zoomOnScroll
-          panOnDrag
-        />
+          setNodes={setNodes}
+          onLoadFile={onFileDrop}
+        >
+          <GraphFlowCanvas
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onNodeContextMenu={onNodeContextMenu}
+            onPaneClick={onPaneClick}
+            onMove={onMove}
+          />
+        </GraphInteractionProvider>
         {!hasGraph && !loading && (
           <p className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-6 text-center text-lg text-muted-foreground">
             {emptyMessage}
@@ -549,9 +611,10 @@ function GraphFlowInner({
 
       {contextMenu && (
         <div
-          className="pointer-events-auto fixed z-50 min-w-40 rounded-md border border-border bg-popover p-1 shadow-md"
+          className="pointer-events-auto fixed z-50 min-w-40 shadow-lg"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
+          <Container className="p-1">
           <Button
             type="button"
             variant="ghost"
@@ -568,6 +631,7 @@ function GraphFlowInner({
           >
             Find path to…
           </Button>
+          </Container>
         </div>
       )}
 

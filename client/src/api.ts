@@ -22,6 +22,18 @@ export async function fetchFileGraph(filePath: string): Promise<GraphData> {
   return body as GraphData;
 }
 
+export async function openFileInEditor(
+  filePath: string,
+  line = 1,
+): Promise<{ success: boolean }> {
+  const res = await fetch(
+    `/api/open?path=${encodeURIComponent(filePath)}&line=${encodeURIComponent(String(line))}`,
+  );
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Failed to open file in editor");
+  return body as { success: boolean };
+}
+
 export async function fetchFocus(filePath: string, depth = 1): Promise<GraphData> {
   const res = await fetch(
     `/api/focus?path=${encodeURIComponent(filePath)}&depth=${depth}`,

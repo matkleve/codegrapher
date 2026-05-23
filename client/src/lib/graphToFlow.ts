@@ -15,21 +15,37 @@ export type FlowNodeUiState = {
   expandedMethodIds: Set<string>;
   expandedPropertyIds: Set<string>;
   collapsedByGraphId: Map<string, boolean>;
+  propertiesSectionCollapsedByGraphId: Map<string, boolean>;
+  methodsSectionCollapsedByGraphId: Map<string, boolean>;
 };
 
 export function collectFlowNodeUiState(nodes: Node[]): FlowNodeUiState {
   const expandedMethodIds = new Set<string>();
   const expandedPropertyIds = new Set<string>();
   const collapsedByGraphId = new Map<string, boolean>();
+  const propertiesSectionCollapsedByGraphId = new Map<string, boolean>();
+  const methodsSectionCollapsedByGraphId = new Map<string, boolean>();
   for (const node of nodes) {
     if (node.type === "class") {
       const d = node.data as ClassNodeData;
       for (const id of d.expandedMethodIds) expandedMethodIds.add(id);
       for (const id of d.expandedPropertyIds) expandedPropertyIds.add(id);
       if (d.collapsed) collapsedByGraphId.set(d.graphNodeId, true);
+      if (d.propertiesSectionCollapsed) {
+        propertiesSectionCollapsedByGraphId.set(d.graphNodeId, true);
+      }
+      if (d.methodsSectionCollapsed) {
+        methodsSectionCollapsedByGraphId.set(d.graphNodeId, true);
+      }
     }
   }
-  return { expandedMethodIds, expandedPropertyIds, collapsedByGraphId };
+  return {
+    expandedMethodIds,
+    expandedPropertyIds,
+    collapsedByGraphId,
+    propertiesSectionCollapsedByGraphId,
+    methodsSectionCollapsedByGraphId,
+  };
 }
 
 const CLASS_MIN_WIDTH = 280;
@@ -43,17 +59,25 @@ function hasValidLabel(label: string | undefined): boolean {
 function estimateClassHeight(data: ClassNodeData): number {
   const header = data.collapsed ? 72 : 88;
   if (data.collapsed) return Math.max(72, header);
-  let body = 8;
-  if (data.properties.length > 0) body += 24;
-  for (const p of data.properties) {
-    const expanded = data.expandedPropertyIds.includes(p.id);
-    body += expanded ? 140 : 72;
+  let body = 24;
+  if (data.properties.length > 0) {
+    body += 24;
+    if (!data.propertiesSectionCollapsed) {
+      for (const p of data.properties) {
+        const expanded = data.expandedPropertyIds.includes(p.id);
+        body += expanded ? 140 : 40;
+      }
+    }
   }
   if (data.properties.length > 0 && data.methods.length > 0) body += 8;
-  if (data.methods.length > 0) body += 20;
-  for (const m of data.methods) {
-    const expanded = data.expandedMethodIds.includes(m.id);
-    body += expanded ? 140 : 72;
+  if (data.methods.length > 0) {
+    body += 24;
+    if (!data.methodsSectionCollapsed) {
+      for (const m of data.methods) {
+        const expanded = data.expandedMethodIds.includes(m.id);
+        body += expanded ? 140 : 40;
+      }
+    }
   }
   return Math.max(120, header + body);
 }
@@ -101,7 +125,13 @@ export function graphToFlow(
   data: GraphData,
   ui: FlowNodeUiState,
 ): { nodes: Node[]; edges: Edge[] } {
-  const { expandedMethodIds, expandedPropertyIds, collapsedByGraphId } = ui;
+  const {
+    expandedMethodIds,
+    expandedPropertyIds,
+    collapsedByGraphId,
+    propertiesSectionCollapsedByGraphId,
+    methodsSectionCollapsedByGraphId,
+  } = ui;
   const byId = new Map(data.nodes.map((n) => [n.id, n]));
   const visible = data.nodes.filter((n) => hasValidLabel(n.label));
 
@@ -201,6 +231,9 @@ export function graphToFlow(
         expandedMethodIds: methods
           .filter((m) => expandedMethodIds.has(m.id))
           .map((m) => m.id),
+        propertiesSectionCollapsed:
+          propertiesSectionCollapsedByGraphId.get(node.id) ?? false,
+        methodsSectionCollapsed: methodsSectionCollapsedByGraphId.get(node.id) ?? false,
         collapsed: collapsedByGraphId.get(node.id) ?? false,
       };
 
