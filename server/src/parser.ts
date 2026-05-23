@@ -19,6 +19,19 @@ export interface GraphEdge {
 export interface ParseResult {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  truncated?: boolean;
+}
+
+export interface ParseProgressUpdate {
+  phase: "scanning" | "parsing" | "building";
+  message: string;
+  nodeCount: number;
+}
+
+export interface ParseOptions {
+  maxNodes?: number;
+  onProgress?: (update: ParseProgressUpdate) => void;
+  shouldContinue?: () => boolean;
 }
 
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next"]);
@@ -54,83 +67,144 @@ function resolveImportPath(fromFile: string, moduleSpecifier: string): string | 
   return null;
 }
 
-export function parseDirectory(rootPath: string): ParseResult {
+export function parseDirectory(rootPath: string, options: ParseOptions = {}): ParseResult {
+  const { maxNodes, onProgress, shouldContinue = () => true } = options;
   const normalizedRoot = path.normalize(rootPath);
+
+  onProgress?.({
+    phase: "scanning",
+    message: "Parsing files...",
+    nodeCount: 0,
+  });
+
   const filePaths = getAllTsFiles(normalizedRoot);
   const filePathSet = new Set(filePaths);
+  const filesTotal = filePaths.length;
 
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const nodeIds = new Set<string>();
+  let limitReached = false;
+  let truncated = false;
 
   const project = new Project({ skipAddingFilesFromTsConfig: true });
 
-  const addNode = (node: GraphNode) => {
-    if (nodeIds.has(node.id)) return;
+  const reportProgress = (filesProcessed: number) => {
+    onProgress?.({
+      phase: "parsing",
+      message: "Parsing files...",
+      nodeCount: nodes.length,
+    });
+    if (filesProcessed === filesTotal && filesTotal > 0) {
+      onProgress?.({
+        phase: "building",
+        message: `Building graph (${nodes.length} nodes)...`,
+        nodeCount: nodes.length,
+      });
+    }
+  };
+
+  const addNode = (node: GraphNode): boolean => {
+    if (nodeIds.has(node.id)) return true;
+    if (maxNodes !== undefined && nodes.length >= maxNodes) {
+      limitReached = true;
+      truncated = true;
+      return false;
+    }
     nodeIds.add(node.id);
     nodes.push(node);
+    return true;
   };
 
   const addEdge = (edge: GraphEdge) => {
     edges.push(edge);
   };
 
-  for (const filePath of filePaths) {
+  for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
+    if (!shouldContinue() || limitReached) break;
+
+    const filePath = filePaths[fileIndex];
     const sourceFile = project.addSourceFileAtPath(filePath);
     const fileId = `file:${filePath}`;
 
-    addNode({
+    if (!addNode({
       id: fileId,
       type: "file",
       label: path.basename(filePath),
       filePath,
       code: sourceFile.getFullText(),
-    });
+    })) {
+      break;
+    }
 
     for (const classDecl of sourceFile.getClasses()) {
+      if (!shouldContinue() || limitReached) break;
+
       const className = classDecl.getName() ?? "AnonymousClass";
       const classId = `class:${filePath}:${className}`;
 
-      addNode({
-        id: classId,
-        type: "class",
-        label: className,
-        filePath,
-        code: classDecl.getFullText(),
-      });
+      if (
+        !addNode({
+          id: classId,
+          type: "class",
+          label: className,
+          filePath,
+          code: classDecl.getFullText(),
+        })
+      ) {
+        break;
+      }
       addEdge({ source: fileId, target: classId, type: "contains" });
 
       for (const method of classDecl.getMethods()) {
+        if (!shouldContinue() || limitReached) break;
+
         const methodName = method.getName();
         const methodId = `method:${filePath}:${className}.${methodName}`;
 
-        addNode({
-          id: methodId,
-          type: "method",
-          label: methodName,
-          filePath,
-          code: method.getFullText(),
-        });
+        if (
+          !addNode({
+            id: methodId,
+            type: "method",
+            label: methodName,
+            filePath,
+            code: method.getFullText(),
+          })
+        ) {
+          break;
+        }
         addEdge({ source: classId, target: methodId, type: "contains" });
       }
     }
 
+    if (limitReached) break;
+
     for (const func of sourceFile.getFunctions()) {
+      if (!shouldContinue() || limitReached) break;
+
       const name = func.getName();
       if (!name) continue;
 
       const funcId = `function:${filePath}:${name}`;
-      addNode({
-        id: funcId,
-        type: "function",
-        label: name,
-        filePath,
-        code: func.getFullText(),
-      });
+      if (
+        !addNode({
+          id: funcId,
+          type: "function",
+          label: name,
+          filePath,
+          code: func.getFullText(),
+        })
+      ) {
+        break;
+      }
       addEdge({ source: fileId, target: funcId, type: "contains" });
     }
 
+    if (limitReached) break;
+
     for (const varDecl of sourceFile.getVariableDeclarations()) {
+      if (!shouldContinue() || limitReached) break;
+
       const initializer = varDecl.getInitializer();
       if (
         !initializer ||
@@ -141,17 +215,25 @@ export function parseDirectory(rootPath: string): ParseResult {
 
       const name = varDecl.getName();
       const funcId = `function:${filePath}:${name}`;
-      addNode({
-        id: funcId,
-        type: "function",
-        label: name,
-        filePath,
-        code: varDecl.getFullText(),
-      });
+      if (
+        !addNode({
+          id: funcId,
+          type: "function",
+          label: name,
+          filePath,
+          code: varDecl.getFullText(),
+        })
+      ) {
+        break;
+      }
       addEdge({ source: fileId, target: funcId, type: "contains" });
     }
 
+    if (limitReached) break;
+
     for (const importDecl of sourceFile.getImportDeclarations()) {
+      if (!shouldContinue() || limitReached) break;
+
       const moduleSpecifier = importDecl.getModuleSpecifierValue();
       if (!moduleSpecifier.startsWith(".")) continue;
 
@@ -164,7 +246,15 @@ export function parseDirectory(rootPath: string): ParseResult {
         });
       }
     }
+
+    reportProgress(fileIndex + 1);
   }
 
-  return { nodes, edges };
+  onProgress?.({
+    phase: "building",
+    message: `Building graph (${nodes.length} nodes)...`,
+    nodeCount: nodes.length,
+  });
+
+  return { nodes, edges, truncated: truncated || undefined };
 }

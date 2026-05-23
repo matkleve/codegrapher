@@ -47,7 +47,8 @@ The Vite dev server proxies `/api/*` to the Express backend.
 
 ## API
 
-- `GET /api/parse?path=<absolute-directory>` — parse project, returns `{ nodes, edges }`
+- `GET /api/parse?path=<absolute-directory>` — start async parse (max 500 nodes, 30s server timeout)
+- `GET /api/status` — poll parse progress; when `phase` is `done`, includes `{ nodes, edges }`
 - `GET /api/file?path=<absolute-file>` — raw file contents
 
 No authentication; intended for local use only.

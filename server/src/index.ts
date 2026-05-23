@@ -2,38 +2,50 @@ import express from "express";
 import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
-import { parseDirectory } from "./parser";
+import { getParseStatus, startParse } from "./parseJob";
 
 const app = express();
 const PORT = 3001;
 
 app.use(cors());
 
-app.get("/api/parse", (req, res) => {
-  const dirPath = req.query.path;
+function validateDirectory(dirPath: unknown): string | { error: string; status: number } {
   if (typeof dirPath !== "string" || !dirPath.trim()) {
-    res.status(400).json({ error: "Missing or invalid path query parameter" });
-    return;
+    return { error: "Missing or invalid path query parameter", status: 400 };
   }
 
   const absolutePath = path.resolve(dirPath);
   if (!fs.existsSync(absolutePath)) {
-    res.status(404).json({ error: "Path does not exist" });
-    return;
+    return { error: "Path does not exist", status: 404 };
   }
 
   if (!fs.statSync(absolutePath).isDirectory()) {
-    res.status(400).json({ error: "Path must be a directory" });
+    return { error: "Path must be a directory", status: 400 };
+  }
+
+  return absolutePath;
+}
+
+app.get("/api/status", (_req, res) => {
+  res.json(getParseStatus());
+});
+
+app.get("/api/parse", (req, res) => {
+  res.setTimeout(30_000);
+
+  const validated = validateDirectory(req.query.path);
+  if (typeof validated !== "string") {
+    res.status(validated.status).json({ error: validated.error });
     return;
   }
 
-  try {
-    const result = parseDirectory(absolutePath);
-    res.json(result);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Parse failed";
-    res.status(500).json({ error: message });
+  const started = startParse(validated);
+  if (!started.ok) {
+    res.status(409).json({ error: started.error });
+    return;
   }
+
+  res.json({ started: true });
 });
 
 app.get("/api/file", (req, res) => {
