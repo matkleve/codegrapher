@@ -18,6 +18,12 @@ import {
   type TokenReference,
 } from "@/lib/semanticLookup";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
+
+export type PreviewEdgeState = {
+  sourceRightAnchor: HTMLElement;
+  targetHandle: string;
+  kind: SemanticTokenKind;
+} | null;
 import type {
   ExternalReferenceCard,
   GraphVisibleTarget,
@@ -73,10 +79,13 @@ export type TokenDropdownState = {
 
 type GraphInteractionContextValue = {
   previewEdges: PreviewEdgeConfig[];
+  previewEdge: PreviewEdgeState;
+  activeTargetHandle: string | null;
   setGraphPreview: (
     edgeKey: string,
     sourceFlowId: string,
     target: GraphVisibleTarget | null,
+    sourceRightAnchor: HTMLElement | null,
   ) => void;
   clearPreviewForKey: (edgeKey: string) => void;
   activeTokenKey: string | null;
@@ -116,6 +125,7 @@ export function GraphInteractionProvider({
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
   const [previewEdges, setPreviewEdges] = useState<PreviewEdgeConfig[]>([]);
+  const [previewEdge, setPreviewEdge] = useState<PreviewEdgeState>(null);
   const [activeTokenKey, setActiveTokenKey] = useState<string | null>(null);
   const [referenceCards, setReferenceCards] = useState<ReferenceCardsState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
@@ -125,6 +135,7 @@ export function GraphInteractionProvider({
   const clearAllPreviews = useCallback(() => {
     tempEdgeIdsRef.current.clear();
     setPreviewEdges([]);
+    setPreviewEdge(null);
     setReferenceCards(null);
     setActiveTokenKey(null);
   }, []);
@@ -143,12 +154,18 @@ export function GraphInteractionProvider({
   const clearPreviewForKey = useCallback((edgeKey: string) => {
     tempEdgeIdsRef.current.delete(edgeKey);
     setPreviewEdges((prev) => prev.filter((e) => e.id !== edgeKey));
+    setPreviewEdge(null);
   }, []);
 
   const setGraphPreview = useCallback(
-    (edgeKey: string, sourceFlowId: string, target: GraphVisibleTarget | null) => {
+    (
+      edgeKey: string,
+      sourceFlowId: string,
+      target: GraphVisibleTarget | null,
+      sourceRightAnchor: HTMLElement | null,
+    ) => {
       setReferenceCards(null);
-      if (!target) {
+      if (!target || !sourceRightAnchor) {
         clearPreviewForKey(edgeKey);
         return;
       }
@@ -165,9 +182,16 @@ export function GraphInteractionProvider({
 
       tempEdgeIdsRef.current.add(edgeKey);
       setPreviewEdges((prev) => [...prev.filter((e) => e.id !== edgeKey), config]);
+      setPreviewEdge({
+        sourceRightAnchor,
+        targetHandle: target.targetHandle,
+        kind: target.kind,
+      });
     },
     [clearPreviewForKey],
   );
+
+  const activeTargetHandle = previewEdge?.targetHandle ?? null;
 
   const scheduleHideReferenceCards = useCallback(() => {
     if (hideCardsTimerRef.current) clearTimeout(hideCardsTimerRef.current);
@@ -222,6 +246,8 @@ export function GraphInteractionProvider({
   const value = useMemo(
     () => ({
       previewEdges,
+      previewEdge,
+      activeTargetHandle,
       setGraphPreview,
       clearPreviewForKey,
       activeTokenKey,
@@ -239,6 +265,8 @@ export function GraphInteractionProvider({
     }),
     [
       previewEdges,
+      previewEdge,
+      activeTargetHandle,
       setGraphPreview,
       clearPreviewForKey,
       activeTokenKey,

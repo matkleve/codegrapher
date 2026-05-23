@@ -228,8 +228,8 @@ html.dark {
   color: var(--secondary-foreground);
 }
 
-.bg-sidebar .explorer-file-in-graph.hoverable:hover {
-  color: var(--explorer-file-in-graph);
+.bg-sidebar .explorer-file-row.hoverable:hover {
+  color: var(--primary);
 }
 
 /* Recent / section headers: muted at rest, primary only on hover */
@@ -388,15 +388,18 @@ html.dark {
   background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
 }
 
-@keyframes dash {
+@keyframes flowDash {
+  from {
+    stroke-dashoffset: 24;
+  }
   to {
     stroke-dashoffset: 0;
   }
 }
 
-.react-flow__edge-path.ctrl-preview-edge-path {
+.preview-edge-path {
   stroke-dashoffset: 24;
-  animation: dash 800ms linear infinite;
+  animation: flowDash 600ms linear infinite;
 }
 
 @keyframes node-fade-in {

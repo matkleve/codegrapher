@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import {
   ReactFlow,
   useEdgesState,
@@ -10,13 +9,9 @@ import {
 import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
+import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
 import { flowEdgeTypes } from "@/components/graph/flowEdgeTypes";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
-import {
-  buildPreviewFlowEdges,
-  useGraphInteraction,
-} from "@/context/GraphInteractionContext";
-import { CTRL_PREVIEW_EDGE_PREFIX } from "@/lib/ctrlPreviewHandles";
 
 type GraphFlowCanvasProps = {
   nodes: Node[];
@@ -39,20 +34,12 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { previewEdges } = useGraphInteraction();
-
-  const displayEdges = useMemo(() => {
-    const base = edges.filter((e) => !e.id.startsWith(CTRL_PREVIEW_EDGE_PREFIX));
-    const previews = buildPreviewFlowEdges(previewEdges);
-    return [...base, ...previews];
-  }, [edges, previewEdges]);
-
   return (
     <>
       <ReactFlow
         className="graph-flow-container"
         nodes={nodes}
-        edges={displayEdges}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={flowNodeTypes}
@@ -74,7 +61,9 @@ export function GraphFlowCanvas({
         zoomOnScroll
         zoomOnPinch
         panOnDrag
-      />
+      >
+        <PreviewEdgeOverlay />
+      </ReactFlow>
       <GraphPinchZoomBoost />
       <TokenReferencesDropdown />
       <TokenReferenceCards />

@@ -1,11 +1,13 @@
 import { useCallback, useRef } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
-import { ctrlPreviewEdgeId, previewLineHandle, previewSourceHandle } from "@/lib/ctrlPreviewHandles";
+import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
-import { symbolKindToSemantic, TOKEN_HIGHLIGHT } from "@/lib/tokenColors";
+import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +50,12 @@ export function CodeLine({
     setTokenDropdown,
     activeTokenKey,
     setActiveTokenKey,
+    activeTargetHandle,
+    previewEdge,
   } = useGraphInteraction();
 
   const edgeKeyRef = useRef<string | null>(null);
+  const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
 
   const clearHover = useCallback(() => {
     if (edgeKeyRef.current) {
@@ -61,11 +66,15 @@ export function CodeLine({
   }, [clearPreviewForKey, scheduleHideReferenceCards]);
 
   const onIdentifierEnter = useCallback(
-    (name: string, el: HTMLElement) => {
+    (name: string, chipKey: string) => {
       if (!isCtrlHeld || !hasSymbol(name)) return;
 
       const entry = lookup(name);
       if (!entry) return;
+
+      const chip = chipRefs.current.get(chipKey);
+      const rightAnchor = chip?.getRightAnchor();
+      if (!rightAnchor) return;
 
       cancelHideReferenceCards();
       const tokenKey = makeTokenKey(sourceFlowId, memberId, lineNumber, name);
@@ -92,16 +101,19 @@ export function CodeLine({
 
       if (resolved.mode === "graph") {
         setReferenceCards(null);
-        setGraphPreview(edgeKey, sourceFlowId, resolved);
+        setGraphPreview(edgeKey, sourceFlowId, resolved, rightAnchor);
         return;
       }
 
       clearPreviewForKey(edgeKey);
-      setReferenceCards({
-        token: name,
-        anchor: toAnchorRect(el.getBoundingClientRect()),
-        cards: resolved.cards,
-      });
+      const chipEl = rightAnchor.parentElement;
+      if (chipEl) {
+        setReferenceCards({
+          token: name,
+          anchor: toAnchorRect(chipEl.getBoundingClientRect()),
+          cards: resolved.cards,
+        });
+      }
     },
     [
       cancelHideReferenceCards,
@@ -154,22 +166,28 @@ export function CodeLine({
   );
 
   const tokens = tokenizeLine(line);
-  const sourceHandleId = previewSourceHandle(memberId, lineNumber);
   const lineTargetId = previewLineHandle(memberId, lineNumber);
+  const lineTargetActive = activeTargetHandle === lineTargetId;
 
   return (
-    <div className="relative whitespace-pre-wrap font-mono text-xs leading-relaxed">
-      <Handle
-        type="source"
-        position={Position.Right}
-        id={sourceHandleId}
-        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
-      />
+    <div className="relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed">
       <Handle
         type="target"
         position={Position.Left}
         id={lineTargetId}
-        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+        className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
+      />
+      <FlowAnchor
+        side="left"
+        targetId={lineTargetId}
+        size="node"
+        visible
+        highlighted={lineTargetActive}
+        colorClass={
+          lineTargetActive && previewEdge
+            ? TOKEN_ANCHOR[previewEdge.kind]
+            : "bg-border"
+        }
       />
       {tokens.map((token, i) => {
         if (token.kind !== "identifier") {
@@ -190,7 +208,12 @@ export function CodeLine({
 
         const entry = lookup(token.text);
         const semantic = entry ? symbolKindToSemantic(entry.kind) : null;
-        const interactive = isCtrlHeld && semantic !== null;
+        if (!semantic) {
+          return <span key={`${lineNumber}-${i}`}>{token.text}</span>;
+        }
+
+        const interactive = isCtrlHeld;
+        const chipKey = `${lineNumber}-${i}`;
         const tokenKey = makeTokenKey(
           sourceFlowId,
           memberId,
@@ -200,17 +223,19 @@ export function CodeLine({
         const isActive = activeTokenKey === tokenKey;
 
         return (
-          <span
+          <TokenChip
             key={`${lineNumber}-${i}`}
+            ref={(handle) => {
+              if (handle) chipRefs.current.set(chipKey, handle);
+              else chipRefs.current.delete(chipKey);
+            }}
+            text={token.text}
+            semantic={semantic}
+            active={isActive}
+            interactive={interactive}
             role={interactive ? "button" : undefined}
             tabIndex={interactive ? 0 : undefined}
-            className={cn(
-              interactive &&
-                "inline-flex items-center rounded-md border border-transparent bg-transparent px-1.5 py-0.5 align-baseline leading-none",
-              interactive && isActive && "border-border bg-card",
-              interactive && semantic && TOKEN_HIGHLIGHT[semantic],
-            )}
-            onMouseEnter={(e) => onIdentifierEnter(token.text, e.currentTarget)}
+            onMouseEnter={() => onIdentifierEnter(token.text, chipKey)}
             onMouseLeave={clearHover}
             onClick={(e) => {
               if (!interactive) return;
@@ -222,9 +247,7 @@ export function CodeLine({
                 onIdentifierClick(token.text, e.currentTarget);
               }
             }}
-          >
-            {token.text}
-          </span>
+          />
         );
       })}
     </div>

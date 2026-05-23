@@ -18,21 +18,45 @@ export function symbolKindToSemantic(kind: SymbolKind): SemanticTokenKind {
   }
 }
 
-export const TOKEN_HIGHLIGHT: Record<SemanticTokenKind, string> = {
-  class: "cursor-pointer underline text-primary",
-  function: "cursor-pointer underline text-sky-300",
-  type: "cursor-pointer underline text-emerald-400",
+/** Resting text color per token type. */
+export const TOKEN_TEXT: Record<SemanticTokenKind, string> = {
+  function: "text-blue-400",
+  class: "text-yellow-400",
+  type: "text-green-400",
 };
 
-export const TOKEN_PILL: Record<SemanticTokenKind, string> = {
-  class: "border-primary/45 bg-primary/12 text-primary",
-  function: "border-sky-400/40 bg-sky-400/10 text-sky-300",
-  type: "border-emerald-400/40 bg-emerald-400/10 text-emerald-400",
+/** Active chip border + anchor fill. */
+export const TOKEN_BORDER: Record<SemanticTokenKind, string> = {
+  function: "border-blue-400",
+  class: "border-yellow-400",
+  type: "border-green-400",
 };
 
-/** Preview edge strokes — aligned with theme token hues. */
+export const TOKEN_BG: Record<SemanticTokenKind, string> = {
+  function: "bg-blue-400/10",
+  class: "bg-yellow-400/10",
+  type: "bg-green-400/10",
+};
+
+export const TOKEN_ANCHOR: Record<SemanticTokenKind, string> = {
+  function: "bg-blue-400",
+  class: "bg-yellow-400",
+  type: "bg-green-400",
+};
+
+/** Preview edge strokes — aligned with token hues. */
 export const TOKEN_EDGE_STROKE: Record<SemanticTokenKind, string> = {
-  class: "var(--token-class)",
-  function: "var(--token-function)",
-  type: "var(--token-type)",
+  function: "#60a5fa",
+  class: "#facc15",
+  type: "#4ade80",
+};
+
+/** @deprecated Use TOKEN_TEXT */
+export const TOKEN_HIGHLIGHT: Record<SemanticTokenKind, string> = TOKEN_TEXT;
+
+/** @deprecated Use TOKEN_BORDER + TOKEN_BG */
+export const TOKEN_PILL: Record<SemanticTokenKind, string> = {
+  class: "border-yellow-400 bg-yellow-400/10 text-yellow-400",
+  function: "border-blue-400 bg-blue-400/10 text-blue-400",
+  type: "border-green-400 bg-green-400/10 text-green-400",
 };

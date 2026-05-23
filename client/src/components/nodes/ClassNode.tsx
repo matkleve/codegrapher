@@ -7,7 +7,10 @@ import {
   useReactFlow,
   useUpdateNodeInternals,
 } from "@xyflow/react";
+import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { PREVIEW_TARGET_TOP } from "@/lib/ctrlPreviewHandles";
+import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
@@ -80,6 +83,12 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const isResizingRef = useRef(false);
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
+  const { activeTargetHandle, previewEdge } = useGraphInteraction();
+  const classTargetActive = activeTargetHandle === PREVIEW_TARGET_TOP;
+  const classAnchorColor =
+    classTargetActive && previewEdge
+      ? TOKEN_ANCHOR[previewEdge.kind]
+      : "bg-border";
 
   const withPreference = useCallback(
     (patch: Partial<ClassNodeData>): Partial<ClassNodeData> => {
@@ -376,8 +385,8 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     <div
       ref={cardRef}
       className={cn(
-        "class-node-root relative flex flex-col rounded-lg border border-border text-left shadow-sm",
-        bodyExpanded ? "h-full overflow-hidden bg-card" : "shrink-0 overflow-visible bg-accent",
+        "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border text-left shadow-sm",
+        bodyExpanded ? "h-full bg-card" : "shrink-0 bg-accent",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
       )}
@@ -392,7 +401,22 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         type="target"
         position={Position.Top}
         id={PREVIEW_TARGET_TOP}
-        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+        className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
+      />
+      <FlowAnchor
+        side="left"
+        targetId={PREVIEW_TARGET_TOP}
+        size="node"
+        visible
+        highlighted={classTargetActive}
+        colorClass={classAnchorColor}
+      />
+      <FlowAnchor
+        side="right"
+        size="node"
+        visible
+        highlighted={classTargetActive}
+        colorClass={classAnchorColor}
       />
       <NodeCardHeader
         title={title}
@@ -403,7 +427,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       {bodyExpanded && (
         <div
           className={cn(
-            "nodrag flex min-h-0 flex-col gap-2 p-3",
+            "nodrag flex min-h-0 flex-col gap-2 overflow-hidden p-3",
             contentTallerThanNode ? "flex-1 overflow-y-auto scrollbar-thin" : "shrink-0",
           )}
         >
@@ -463,7 +487,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       )}
       <NodeResizeControl
         position="bottom-right"
-        minWidth={400}
+        minWidth={280}
         minHeight={CLASS_NODE_MIN_HEIGHT}
         isVisible={selected}
         onResize={onResize}

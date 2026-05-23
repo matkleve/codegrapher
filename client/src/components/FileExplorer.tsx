@@ -34,7 +34,7 @@ const EXPLORER_X_PAD = "px-2";
 
 /** VS Code–like explorer row density */
 const TREE_ROW =
-  "hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
+  "explorer-file-row hoverable pointer-events-auto flex h-[22px] cursor-pointer items-center gap-1.5 rounded-sm px-1.5 text-xs font-mono leading-none";
 const TREE_FOLDER_ROW =
   "hoverable pointer-events-auto flex h-[22px] min-h-[22px] w-full cursor-pointer items-center justify-start gap-1.5 rounded-sm border border-transparent px-1.5 py-0 text-xs font-medium leading-none disabled:cursor-not-allowed";
 

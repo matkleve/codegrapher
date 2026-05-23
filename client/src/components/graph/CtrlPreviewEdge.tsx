@@ -44,11 +44,10 @@ export function CtrlPreviewEdge({
         markerEnd={markerEnd}
         style={{
           stroke,
-          strokeWidth: 2,
-          strokeDasharray: "6 3",
-          strokeDashoffset: 24,
-          animation: "dash 800ms linear infinite",
+          strokeWidth: 1.5,
+          strokeDasharray: "5 3",
         }}
+        className="preview-edge-path"
         interactionWidth={0}
       />
       {edgeData?.label ? (

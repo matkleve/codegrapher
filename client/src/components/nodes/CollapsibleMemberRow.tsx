@@ -1,7 +1,10 @@
 import { Handle, Position } from "@xyflow/react";
+import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
+import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -26,14 +29,36 @@ export function CollapsibleMemberRow({
   filePath,
 }: CollapsibleMemberRowProps) {
   const lines = code.split("\n");
+  const memberHandleId = previewMemberHandle(memberId);
+  const { activeTargetHandle, previewEdge } = useGraphInteraction();
+  const targetActive = activeTargetHandle === memberHandleId;
+  const anchorColor =
+    targetActive && previewEdge
+      ? TOKEN_ANCHOR[previewEdge.kind]
+      : "bg-border";
 
   return (
-    <div className="group/member nodrag relative rounded-md border border-transparent bg-muted p-2 transition-[background-color,border-color] duration-150 hover:border-border hover:bg-secondary">
+    <div className="group/member nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2 transition-[background-color,border-color] duration-150 hover:border-border hover:bg-secondary">
       <Handle
         type="target"
         position={Position.Left}
-        id={previewMemberHandle(memberId)}
-        className="!h-1 !w-1 !border-0 !bg-transparent !opacity-0"
+        id={memberHandleId}
+        className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
+      />
+      <FlowAnchor
+        side="left"
+        targetId={memberHandleId}
+        size="node"
+        visible
+        highlighted={targetActive}
+        colorClass={anchorColor}
+      />
+      <FlowAnchor
+        side="right"
+        size="node"
+        visible
+        highlighted={targetActive}
+        colorClass={anchorColor}
       />
       <button
         type="button"
