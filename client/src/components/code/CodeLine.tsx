@@ -1,13 +1,9 @@
 import { useCallback } from "react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import {
-  classifyIdentifier,
-  findTokenReferences,
-  isResolvableKind,
-  resolveTokenFlowTarget,
-} from "@/lib/symbolIndex";
-import { TOKEN_HIGHLIGHT } from "@/lib/tokenColors";
+import { useIndex } from "@/context/IndexContext";
+import { resolveFlowTargetFromIndex } from "@/lib/semanticLookup";
+import { symbolKindToSemantic, TOKEN_HIGHLIGHT } from "@/lib/tokenColors";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
 
@@ -27,12 +23,8 @@ export function CodeLine({
   filePath,
 }: CodeLineProps) {
   const { isCtrlHeld } = useCtrlKey();
-  const {
-    symbolIndex,
-    graphData,
-    setPreviewEdge,
-    setTokenDropdown,
-  } = useGraphInteraction();
+  const { symbols, lookup, hasSymbol } = useIndex();
+  const { graphData, setPreviewEdge, setTokenDropdown } = useGraphInteraction();
 
   const clearPreview = useCallback(() => {
     setPreviewEdge(null);
@@ -40,40 +32,44 @@ export function CodeLine({
 
   const onIdentifierEnter = useCallback(
     (name: string) => {
-      if (!isCtrlHeld) return;
-      const kind = classifyIdentifier(name, symbolIndex);
-      if (!isResolvableKind(kind)) return;
+      if (!isCtrlHeld || !hasSymbol(name)) return;
 
-      const target = resolveTokenFlowTarget(
+      const entry = lookup(name);
+      if (!entry) return;
+
+      const target = resolveFlowTargetFromIndex(
         name,
-        kind,
         sourceGraphNodeId,
-        symbolIndex,
+        symbols,
         graphData,
       );
       if (target) {
-        setPreviewEdge({ sourceFlowId, targetFlowId: target, kind });
+        setPreviewEdge({
+          sourceFlowId,
+          targetFlowId: target.flowNodeId,
+          kind: target.kind,
+        });
       } else {
         setPreviewEdge(null);
       }
     },
     [
       graphData,
+      hasSymbol,
       isCtrlHeld,
+      lookup,
       setPreviewEdge,
       sourceFlowId,
       sourceGraphNodeId,
-      symbolIndex,
+      symbols,
     ],
   );
 
   const onIdentifierClick = useCallback(
     (name: string, el: HTMLElement) => {
-      if (!isCtrlHeld) return;
-      const rect = el.getBoundingClientRect();
-      const refs = findTokenReferences(name, graphData, symbolIndex);
-      const inGraph = refs.some((r) => r.inGraph);
+      if (!isCtrlHeld || !hasSymbol(name)) return;
 
+      const rect = el.getBoundingClientRect();
       setTokenDropdown({
         token: name,
         x: rect.left,
@@ -82,19 +78,18 @@ export function CodeLine({
         sourceGraphNodeId,
         filePath,
         line: lineNumber,
-        inGraph,
       });
       setPreviewEdge(null);
     },
     [
-      graphData,
+      filePath,
+      hasSymbol,
       isCtrlHeld,
       lineNumber,
       setPreviewEdge,
       setTokenDropdown,
       sourceFlowId,
       sourceGraphNodeId,
-      symbolIndex,
     ],
   );
 
@@ -119,8 +114,9 @@ export function CodeLine({
           );
         }
 
-        const semantic = classifyIdentifier(token.text, symbolIndex);
-        const interactive = isCtrlHeld && semantic !== "plain";
+        const entry = lookup(token.text);
+        const semantic = entry ? symbolKindToSemantic(entry.kind) : null;
+        const interactive = isCtrlHeld && semantic !== null;
 
         return (
           <span
@@ -128,20 +124,17 @@ export function CodeLine({
             role={interactive ? "button" : undefined}
             tabIndex={interactive ? 0 : undefined}
             className={cn(
-              interactive && isResolvableKind(semantic) && TOKEN_HIGHLIGHT[semantic],
-              interactive &&
-                semantic === "unknown" &&
-                "cursor-pointer underline decoration-dotted text-muted-foreground",
+              interactive && semantic && TOKEN_HIGHLIGHT[semantic],
             )}
             onMouseEnter={() => onIdentifierEnter(token.text)}
             onMouseLeave={clearPreview}
             onClick={(e) => {
-              if (!isCtrlHeld) return;
+              if (!interactive) return;
               e.stopPropagation();
               onIdentifierClick(token.text, e.currentTarget);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && isCtrlHeld) {
+              if (e.key === "Enter" && interactive) {
                 onIdentifierClick(token.text, e.currentTarget);
               }
             }}

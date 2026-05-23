@@ -4,8 +4,9 @@ import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useIndex } from "@/context/IndexContext";
 import { openFileInEditor } from "@/api";
-import { countExternalOccurrences } from "@/lib/symbolIndex";
+import { countIndexOccurrencesInFile } from "@/lib/semanticLookup";
 import { TOKEN_PILL } from "@/lib/tokenColors";
 import { fileDisplayName } from "@/lib/recentFiles";
 import { cn } from "@/lib/utils";
@@ -17,8 +18,8 @@ export function TokenReferencesDropdown() {
     findReferences,
     focusFlowNode,
     onLoadFile,
-    graphData,
   } = useGraphInteraction();
+  const { symbols } = useIndex();
 
   useEffect(() => {
     if (!tokenDropdown) return;
@@ -44,14 +45,19 @@ export function TokenReferencesDropdown() {
   );
 
   const graphRefs = useMemo(
-    () => references.filter((r) => r.inGraph),
+    () => references.filter((r) => r.inGraph && r.flowNodeId),
+    [references],
+  );
+
+  const indexRefs = useMemo(
+    () => references.filter((r) => !r.inGraph),
     [references],
   );
 
   if (!tokenDropdown) return null;
 
   const { token, x, y, filePath, line } = tokenDropdown;
-  const externalCount = countExternalOccurrences(token, filePath, graphData);
+  const externalCount = countIndexOccurrencesInFile(token, filePath, symbols);
   const fileName = fileDisplayName(filePath);
 
   return createPortal(
@@ -65,14 +71,14 @@ export function TokenReferencesDropdown() {
         {graphRefs.length > 0 ? (
           <ul className="flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {graphRefs.map((ref, idx) => (
-              <li key={`${ref.graphNodeId}-${ref.line}-${idx}`}>
+              <li key={`graph-${ref.filePath}-${ref.line}-${idx}`}>
                 <button
                   type="button"
                   className={cn(
                     "hoverable flex w-full items-center gap-2 rounded-sm border border-transparent px-2 py-1.5 text-left text-xs",
                     TOKEN_PILL[ref.kind],
                   )}
-                  onClick={() => focusFlowNode(ref.flowNodeId)}
+                  onClick={() => focusFlowNode(ref.flowNodeId!)}
                 >
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
                   <span className="min-w-0 truncate">
@@ -85,7 +91,38 @@ export function TokenReferencesDropdown() {
               </li>
             ))}
           </ul>
-        ) : (
+        ) : null}
+        {indexRefs.length > 0 ? (
+          <ul
+            className={cn(
+              "flex max-h-56 flex-col gap-0.5 overflow-y-auto",
+              graphRefs.length > 0 && "mt-2 border-t border-border pt-2",
+            )}
+          >
+            {indexRefs.map((ref, idx) => (
+              <li key={`idx-${ref.filePath}-${ref.line}-${idx}`}>
+                <button
+                  type="button"
+                  className={cn(
+                    "hoverable flex w-full items-center gap-2 rounded-sm border border-transparent px-2 py-1.5 text-left text-xs",
+                    TOKEN_PILL[ref.kind],
+                  )}
+                  onClick={() => {
+                    void openFileInEditor(ref.filePath, ref.line);
+                    setTokenDropdown(null);
+                  }}
+                >
+                  <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                  <span className="min-w-0 truncate">
+                    {fileDisplayName(ref.filePath)}{" "}
+                    <span className="text-muted-foreground">(line {ref.line})</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {graphRefs.length === 0 && indexRefs.length === 0 ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-muted-foreground">
               Found {externalCount || references.length || 0} time(s) in {fileName}
@@ -115,7 +152,7 @@ export function TokenReferencesDropdown() {
               Edit in source
             </Button>
           </div>
-        )}
+        ) : null}
       </Container>
     </div>,
     document.body,

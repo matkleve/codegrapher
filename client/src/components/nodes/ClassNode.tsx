@@ -1,8 +1,6 @@
 import { memo, useCallback, type ReactNode } from "react";
 import {
-  Handle,
   NodeResizeControl,
-  Position,
   type NodeProps,
   useReactFlow,
   useUpdateNodeInternals,
@@ -146,7 +144,6 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         onResize={onResize}
         className="class-node-resizer-handle nodrag"
       />
-      <Handle type="target" position={Position.Top} className="!bg-primary" />
       <NodeCardHeader
         title={title}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
@@ -205,7 +202,6 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
           ) : null}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-primary" />
     </div>
   );
 }

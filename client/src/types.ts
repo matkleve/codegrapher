@@ -32,3 +32,22 @@ export interface TreeResponse {
   path: string;
   entries: TreeEntry[];
 }
+
+export type SymbolKind =
+  | "class"
+  | "function"
+  | "method"
+  | "interface"
+  | "type";
+
+export type SymbolEntry = {
+  filePath: string;
+  kind: SymbolKind;
+  line: number;
+};
+
+export type ProjectIndexResponse = {
+  folderPath: string;
+  symbolCount: number;
+  symbols: Record<string, SymbolEntry[]>;
+};

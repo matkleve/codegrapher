@@ -214,8 +214,10 @@ function GraphFlowCanvas({
         nodeDragThreshold={4}
         nodesConnectable={false}
         elementsSelectable
-        panOnScroll={false}
+        panOnScroll
+        panOnScrollMode="free"
         zoomOnScroll
+        zoomOnPinch
         panOnDrag
       />
       <TokenReferencesDropdown />

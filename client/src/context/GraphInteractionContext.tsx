@@ -10,13 +10,12 @@ import {
 import type { Edge, Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
+import { useIndex } from "@/context/IndexContext";
 import {
-  buildSymbolIndex,
-  findTokenReferences,
-  type SymbolIndex,
+  findSemanticReferences,
   type TokenReference,
-} from "@/lib/symbolIndex";
-import type { ResolvableTokenKind } from "@/lib/tokenColors";
+} from "@/lib/semanticLookup";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import type { GraphData } from "@/types";
 
@@ -25,7 +24,7 @@ export const PREVIEW_EDGE_ID = "__ctrl_preview_edge__";
 export type PreviewEdgeState = {
   sourceFlowId: string;
   targetFlowId: string;
-  kind: ResolvableTokenKind;
+  kind: SemanticTokenKind;
 } | null;
 
 export type TokenDropdownState = {
@@ -36,11 +35,9 @@ export type TokenDropdownState = {
   sourceGraphNodeId: string;
   filePath: string;
   line: number;
-  inGraph: boolean;
 } | null;
 
 type GraphInteractionContextValue = {
-  symbolIndex: SymbolIndex;
   previewEdge: PreviewEdgeState;
   setPreviewEdge: (edge: PreviewEdgeState) => void;
   tokenDropdown: TokenDropdownState;
@@ -71,11 +68,10 @@ export function GraphInteractionProvider({
   onLoadFile,
 }: GraphInteractionProviderProps) {
   const { isCtrlHeld } = useCtrlKey();
+  const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
   const [previewEdge, setPreviewEdge] = useState<PreviewEdgeState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
-
-  const symbolIndex = useMemo(() => buildSymbolIndex(graphData), [graphData]);
 
   useEffect(() => {
     if (!isCtrlHeld) {
@@ -85,8 +81,8 @@ export function GraphInteractionProvider({
   }, [isCtrlHeld]);
 
   const findReferences = useCallback(
-    (token: string) => findTokenReferences(token, graphData, symbolIndex),
-    [graphData, symbolIndex],
+    (token: string) => findSemanticReferences(token, symbols, graphData),
+    [graphData, symbols],
   );
 
   const focusFlowNode = useCallback(
@@ -119,7 +115,6 @@ export function GraphInteractionProvider({
 
   const value = useMemo(
     () => ({
-      symbolIndex,
       previewEdge,
       setPreviewEdge,
       tokenDropdown,
@@ -130,7 +125,6 @@ export function GraphInteractionProvider({
       graphData,
     }),
     [
-      symbolIndex,
       previewEdge,
       tokenDropdown,
       findReferences,

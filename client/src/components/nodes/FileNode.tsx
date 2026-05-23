@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { GripHorizontal } from "lucide-react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { type NodeProps } from "@xyflow/react";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { cn } from "@/lib/utils";
 import type { FileNodeData } from "@/components/nodes/flowNodeData";
@@ -28,9 +28,7 @@ function FileNodeComponent({ data, selected }: NodeProps) {
         )}
         title={nodeData.filePath}
       >
-        <Handle type="target" position={Position.Top} className="!bg-primary-foreground" />
         <span className="truncate text-xs font-medium">{nodeData.label}</span>
-        <Handle type="source" position={Position.Bottom} className="!bg-primary-foreground" />
       </div>
     </div>
   );

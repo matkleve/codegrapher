@@ -3,6 +3,7 @@ import { fetchFileGraph } from "@/api";
 import FileExplorer from "@/components/FileExplorer";
 import GraphCanvas, { type GraphCanvasHandle } from "@/components/GraphCanvas";
 import { CtrlKeyProvider } from "@/context/CtrlKeyContext";
+import { IndexProvider } from "@/context/IndexContext";
 import { mergeGraphData } from "@/graphMerge";
 import { loadLastFile, saveLastFile, shouldRestoreFile } from "@/lib/lastSession";
 import { collectGraphFilePaths } from "@/lib/graphFiles";
@@ -68,6 +69,7 @@ function App() {
   const graphFilePaths = useMemo(() => collectGraphFilePaths(graphData), [graphData]);
 
   return (
+    <IndexProvider>
     <CtrlKeyProvider>
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <FileExplorer
@@ -92,6 +94,7 @@ function App() {
       </div>
     </div>
     </CtrlKeyProvider>
+    </IndexProvider>
   );
 }
 

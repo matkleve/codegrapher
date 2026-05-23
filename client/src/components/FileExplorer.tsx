@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FolderOpen, Trash2 } from "lucide-react";
 import { browseFolder, fetchTree } from "@/api";
+import { useIndex } from "@/context/IndexContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Container } from "@/components/ui/Container";
@@ -311,6 +312,8 @@ export default function FileExplorer({
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const { loadIndex, indexing } = useIndex();
   const [recentFolders, setRecentFolders] = useState<string[]>(() => loadRecentFolders());
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const [recentFoldersOpen, setRecentFoldersOpen] = useState(false);
@@ -341,7 +344,10 @@ export default function FileExplorer({
     async (dirPath: string) => {
       setOpening(true);
       setError(null);
+      setStatusMessage("Indexing project...");
       try {
+        await loadIndex(dirPath);
+        setStatusMessage(null);
         const data = await fetchTree(dirPath);
         setFolderPath(data.path);
         setRootPath(data.path);
@@ -354,12 +360,14 @@ export default function FileExplorer({
         setRootPath(null);
         setActiveFolderRoot(null);
         setRecentFiles([]);
+        setStatusMessage(null);
         setError(err instanceof Error ? err.message : "Failed to open folder");
       } finally {
         setOpening(false);
+        setStatusMessage(null);
       }
     },
-    [rememberFolder],
+    [loadIndex, rememberFolder],
   );
 
   useEffect(() => {
@@ -467,8 +475,11 @@ export default function FileExplorer({
           disabled={disabled || opening}
           className="w-full"
         >
-          {opening ? "Opening…" : "Open"}
+          {opening || indexing ? (statusMessage ?? "Opening…") : "Open"}
         </Button>
+        {(statusMessage || indexing) && (
+          <p className="text-xs text-muted-foreground">{statusMessage ?? "Indexing project…"}</p>
+        )}
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
 

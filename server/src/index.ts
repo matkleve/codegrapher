@@ -7,6 +7,7 @@ import * as path from "path";
 
 const execFileAsync = promisify(execFile);
 import { pickFolderNative } from "./browseFolder";
+import { buildProjectIndex, serializeIndex } from "./indexer";
 import { parseFileGraph, parseFocus } from "./parser";
 
 const app = express();
@@ -14,7 +15,38 @@ const PORT = 3001;
 
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "coverage"]);
 
+const indexCache = new Map<
+  string,
+  ReturnType<typeof serializeIndex>
+>();
+
 app.use(cors());
+
+app.get("/api/index", (req, res) => {
+  const dirPath = req.query.path;
+  if (typeof dirPath !== "string" || !dirPath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
+    return;
+  }
+
+  const folderRoot = path.normalize(path.resolve(dirPath));
+
+  try {
+    const cached = indexCache.get(folderRoot);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const index = buildProjectIndex(folderRoot);
+    const payload = serializeIndex(index);
+    indexCache.set(folderRoot, payload);
+    res.json(payload);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Index build failed";
+    res.status(500).json({ error: message });
+  }
+});
 
 app.post("/api/browse-folder", (_req, res) => {
   try {

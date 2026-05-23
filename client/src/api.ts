@@ -1,4 +1,11 @@
-import type { GraphData, TreeResponse } from "./types";
+import type { GraphData, ProjectIndexResponse, TreeResponse } from "./types";
+
+export async function fetchProjectIndex(folderPath: string): Promise<ProjectIndexResponse> {
+  const res = await fetch(`/api/index?path=${encodeURIComponent(folderPath)}`);
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Failed to index project");
+  return body as ProjectIndexResponse;
+}
 
 export async function browseFolder(): Promise<{ path: string } | { cancelled: true }> {
   const res = await fetch("/api/browse-folder", { method: "POST" });
