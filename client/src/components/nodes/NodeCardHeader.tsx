@@ -82,7 +82,7 @@ export function NodeCardHeader({
 
   const onTitleEnter = useCallback(() => {
     if (!indexed) return;
-    scheduleHoverFire(defTokenKey, fireDefPreview);
+    scheduleHoverFire(defTokenKey, fireDefPreview, clearDefHover);
     scheduleInfoOpen(defTokenKey, openDefInfo);
   }, [defTokenKey, fireDefPreview, indexed, openDefInfo, scheduleHoverFire, scheduleInfoOpen]);
 

@@ -134,10 +134,11 @@ export function CodeLine({
 
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
 
-      scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl));
+      scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
       scheduleInfoOpen(tokenKey, () => openInfo(name, chipEl));
     },
     [
+      clearHover,
       firePreview,
       hasSymbol,
       lineNumber,

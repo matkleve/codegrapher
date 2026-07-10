@@ -125,4 +125,4 @@ the canvas.
 ## Reference prototype
 
 Visual/motion reference: [docs/prototypes/connectors-proto.html](prototypes/connectors-proto.html)
-(standalone HTML mockup used to validate the interaction language before porting).
+(standalone HTML mockup). Production styles live in `client/src/styles/connectors.css`.

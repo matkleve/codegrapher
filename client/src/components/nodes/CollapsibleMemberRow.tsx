@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
-import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
@@ -107,7 +106,7 @@ export function CollapsibleMemberRow({
 
   const onDefEnter = useCallback(() => {
     if (!indexed) return;
-    scheduleHoverFire(defTokenKey, fireDefPreview);
+    scheduleHoverFire(defTokenKey, fireDefPreview, clearDefHover);
     scheduleInfoOpen(defTokenKey, openDefInfo);
   }, [defTokenKey, fireDefPreview, indexed, openDefInfo, scheduleHoverFire, scheduleInfoOpen]);
 
@@ -171,8 +170,8 @@ export function CollapsibleMemberRow({
         type="button"
         className={cn(
           "member-row-header group/member",
-          INTERACTIVE_SURFACE,
-          "control-row-compact flex w-full cursor-pointer items-center gap-2 rounded-none border-x-0 border-t-0 text-left",
+          "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-2 text-left",
+          expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {

@@ -91,9 +91,11 @@ type GraphInteractionContextValue = {
   activeTokenKey: string | null;
   setActiveTokenKey: (key: string | null) => void;
   isWarm: boolean;
-  scheduleHoverFire: (tokenKey: string, onFire: () => void) => void;
+  scheduleHoverFire: (tokenKey: string, onFire: () => void, onClear: () => void) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleInfoOpen: (tokenKey: string, onOpen: () => void) => void;
+  scheduleHoverLeaveGrace: () => void;
+  cancelHoverLeaveGrace: () => void;
   cancelHoverTimers: () => void;
   tokenInfo: TokenInfoState;
   showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
@@ -148,6 +150,12 @@ export function GraphInteractionProvider({
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
+  const pendingFireRef = useRef<{ tokenKey: string; onFire: () => void } | null>(
+    null,
+  );
+  const hoverClearRef = useRef<{ tokenKey: string; onClear: () => void } | null>(
+    null,
+  );
 
   const clearPreviewEdges = useCallback(() => {
     setPreviewEdgesState([]);
@@ -182,7 +190,7 @@ export function GraphInteractionProvider({
   }, []);
 
   const scheduleHoverFire = useCallback(
-    (tokenKey: string, onFire: () => void) => {
+    (tokenKey: string, onFire: () => void, onClear: () => void) => {
       const timers = hoverTimersRef.current;
       clearTimeout(timers.clear ?? undefined);
       clearTimeout(timers.fire ?? undefined);
@@ -190,6 +198,9 @@ export function GraphInteractionProvider({
       timers.clear = null;
       timers.fire = null;
       timers.info = null;
+
+      pendingFireRef.current = { tokenKey, onFire };
+      hoverClearRef.current = { tokenKey, onClear };
 
       const delay = fireDelayMs(isWarm || activeTokenKey != null, isCtrlHeld);
       if (delay === 0) {
@@ -220,6 +231,7 @@ export function GraphInteractionProvider({
       timers.clear = setTimeout(() => {
         if (hoveredTokenKeyRef.current === tokenKey) {
           hoveredTokenKeyRef.current = null;
+          pendingFireRef.current = null;
           setIsWarm(false);
           onClear();
         }
@@ -229,6 +241,33 @@ export function GraphInteractionProvider({
     },
     [tokenInfo?.pinned],
   );
+
+  const cancelHoverLeaveGrace = useCallback(() => {
+    clearTimeout(hoverTimersRef.current.clear ?? undefined);
+    hoverTimersRef.current.clear = null;
+  }, []);
+
+  const scheduleHoverLeaveGrace = useCallback(() => {
+    const clear = hoverClearRef.current;
+    if (!clear) return;
+    scheduleHoverClear(clear.tokenKey, clear.onClear);
+  }, [scheduleHoverClear]);
+
+  useEffect(() => {
+    if (!isCtrlHeld) return;
+    const pending = pendingFireRef.current;
+    if (!pending) return;
+
+    const timers = hoverTimersRef.current;
+    clearTimeout(timers.fire ?? undefined);
+    clearTimeout(timers.info ?? undefined);
+    timers.fire = null;
+    timers.info = null;
+
+    hoveredTokenKeyRef.current = pending.tokenKey;
+    setIsWarm(true);
+    pending.onFire();
+  }, [isCtrlHeld]);
 
   const scheduleInfoOpen = useCallback(
     (tokenKey: string, onOpen: () => void) => {
@@ -349,6 +388,8 @@ export function GraphInteractionProvider({
       scheduleHoverFire,
       scheduleHoverClear,
       scheduleInfoOpen,
+      scheduleHoverLeaveGrace,
+      cancelHoverLeaveGrace,
       cancelHoverTimers,
       tokenInfo,
       showTokenInfo,
@@ -383,6 +424,8 @@ export function GraphInteractionProvider({
       scheduleHoverFire,
       scheduleHoverClear,
       scheduleInfoOpen,
+      scheduleHoverLeaveGrace,
+      cancelHoverLeaveGrace,
       cancelHoverTimers,
       tokenInfo,
       showTokenInfo,

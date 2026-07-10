@@ -53,7 +53,8 @@ export function PreviewEdgeOverlay() {
     previewEdges,
     jumpTooltip,
     setJumpTooltip,
-    cancelHoverTimers,
+    cancelHoverLeaveGrace,
+    scheduleHoverLeaveGrace,
     showTokenInfo,
   } = useGraphInteraction();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -85,7 +86,7 @@ export function PreviewEdgeOverlay() {
     spec: PreviewEdgeSpec,
     end: "from" | "to",
   ) => {
-    cancelHoverTimers();
+    cancelHoverLeaveGrace();
     const targetRef = end === "to" ? spec.to : spec.from;
     const token =
       targetRef.type === "element"
@@ -110,6 +111,7 @@ export function PreviewEdgeOverlay() {
 
   const onHitLeave = () => {
     setJumpTooltip(null);
+    scheduleHoverLeaveGrace();
   };
 
   const onHitClick = (

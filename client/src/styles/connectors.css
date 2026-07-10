@@ -1,0 +1,323 @@
+/**
+ * Connection language — ported 1:1 from docs/prototypes/connectors-proto.html
+ *
+ * Class mapping:
+ *   .tok / .member-head .name  →  .token-chip / .token-def-label
+ *   .tok.on                   →  .token-chip-on
+ *   .tok.lit                  →  .token-chip-lit
+ *   .proto.ctrl               →  .graph-ctrl-preview
+ *   .proto.trace              →  .graph-trace-active
+ *   .wire-path                →  .preview-edge-path
+ *   .wire-glow                →  .preview-edge-glow
+ *   .wire-hit                 →  .preview-edge-hit
+ *   .node.lit                 →  .class-node-root.trace-node-lit
+ *   .member.lit               →  .trace-member-lit
+ *   .member.owner-lit         →  .trace-member-owner-lit
+ *   .lit-line                 →  .trace-lit-line
+ */
+
+@keyframes preview-edge-bloom {
+  from {
+    opacity: 0;
+    stroke-width: 0;
+  }
+  to {
+    opacity: 1;
+    stroke-width: 1.1;
+  }
+}
+
+@keyframes preview-edge-bloom-glow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.16;
+  }
+}
+
+@keyframes graph-edge-breathe {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes token-info-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes proto-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@keyframes proto-glint {
+  0% {
+    background-position: 128% 0;
+  }
+  55% {
+    background-position: -28% 0;
+  }
+  100% {
+    background-position: -28% 0;
+  }
+}
+
+/* ── Interactive token chip — `.tok` in connectors-proto.html ── */
+.token-chip,
+.token-def-label {
+  position: relative;
+  display: inline;
+  margin: 0 -2px;
+  padding: 1px 4px;
+  border-radius: 5px;
+  font-weight: 560;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition:
+    background-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease),
+    color 0.28s var(--ease),
+    filter 0.22s var(--ease);
+}
+
+.token-def-label {
+  font-weight: 620;
+}
+
+.token-chip[data-token-kind="class"] .token-chip-text {
+  color: var(--token-edge-class);
+}
+
+.token-chip[data-token-kind="function"] .token-chip-text {
+  color: var(--token-edge-function);
+}
+
+.token-chip[data-token-kind="type"] .token-chip-text {
+  color: var(--token-edge-type);
+}
+
+.token-def-label[data-token-kind="class"] {
+  color: var(--token-edge-class);
+}
+
+.token-def-label[data-token-kind="function"] {
+  color: var(--token-edge-function);
+}
+
+.token-def-label[data-token-kind="type"] {
+  color: var(--token-edge-type);
+}
+
+.token-chip.token-chip-on,
+.token-def-label.token-chip-on {
+  background: color-mix(in oklch, currentColor 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 52%, transparent);
+  filter: brightness(1.16) saturate(1.12);
+}
+
+/* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
+.graph-ctrl-preview .code-kw,
+.graph-ctrl-preview .code-pn,
+.graph-ctrl-preview .code-comment,
+.graph-ctrl-preview .code-string,
+.graph-ctrl-preview .code-number,
+.graph-ctrl-preview .member-body-wrap,
+.graph-ctrl-preview .member-section-label,
+.graph-ctrl-preview .member-section-bulk,
+.graph-ctrl-preview .node-card-caret,
+.graph-ctrl-preview .member-row-caret,
+.graph-ctrl-preview .file-type-chip {
+  color: var(--faint) !important;
+}
+
+.graph-ctrl-preview .react-flow__node.class-node-root {
+  border-color: var(--border);
+}
+
+.graph-ctrl-preview .react-flow__node.class-node-root::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand) 34%, transparent);
+  opacity: 0.5;
+  animation: graph-edge-breathe 4.6s ease-in-out infinite alternate;
+}
+
+.graph-ctrl-preview .token-chip.token-interactive,
+.graph-ctrl-preview .token-def-label.token-interactive {
+  background: transparent;
+  box-shadow: none;
+}
+
+.graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
+.graph-ctrl-preview .token-def-label.token-interactive {
+  background-image: linear-gradient(
+    100deg,
+    currentColor 0%,
+    currentColor 43%,
+    color-mix(in oklch, currentColor 48%, #fff) 50%,
+    currentColor 57%,
+    currentColor 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: proto-glint 1.9s var(--ease) infinite;
+  animation-delay: var(--shimmer-delay, 0s);
+  filter: brightness(1.06);
+}
+
+/* ── Trace mode: dim per-element, lit shines through ── */
+.graph-trace-active .code-kw,
+.graph-trace-active .code-pn,
+.graph-trace-active .code-comment,
+.graph-trace-active .code-string,
+.graph-trace-active .code-number,
+.graph-trace-active .member-body-wrap {
+  color: var(--faint);
+}
+
+.graph-trace-active .file-type-chip,
+.graph-trace-active .member-section-label,
+.graph-trace-active .member-section-bulk,
+.graph-trace-active .node-card-title,
+.graph-trace-active .node-card-caret,
+.graph-trace-active .member-row-caret {
+  color: var(--faint) !important;
+}
+
+.graph-trace-active .token-chip:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label:not(.token-chip-lit) {
+  color: var(--faint);
+  box-shadow: inset 0 0 0 1px transparent;
+  background: transparent;
+}
+
+.graph-trace-active .react-flow__node.class-node-root {
+  border-color: var(--border);
+}
+
+.graph-trace-active .class-node-root.trace-node-lit {
+  border-color: color-mix(in oklch, var(--brand) 18%, var(--border));
+  box-shadow:
+    var(--shadow, 0 12px 40px -12px rgb(0 0 0 / 0.25)),
+    0 0 0 1px color-mix(in oklch, var(--brand) 18%, transparent);
+}
+
+.graph-trace-active .class-node-root.trace-node-lit .node-card-title {
+  color: var(--foreground) !important;
+}
+
+.graph-trace-active .trace-member-lit {
+  background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted));
+}
+
+.graph-trace-active .trace-member-owner-lit {
+  border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-kw,
+.graph-trace-active .code-line.trace-lit-line .code-pn,
+.graph-trace-active .code-line.trace-lit-line .code-comment {
+  color: var(--muted);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-string {
+  color: var(--code-string);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-number {
+  color: var(--code-number);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
+  color: var(--token-edge-class);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
+  color: var(--token-edge-function);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
+  color: var(--token-edge-type);
+}
+
+/* ── Preview wires — `.wire-path` / `.wire-glow` / `.wire-hit` ── */
+.preview-edge-path {
+  stroke-width: 1.1;
+  stroke-dasharray: 10 4;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  animation:
+    proto-flow 700ms linear infinite,
+    preview-edge-bloom 340ms var(--ease) both;
+}
+
+.preview-edge-glow {
+  stroke-linecap: round;
+  stroke-width: 3.5;
+  filter: blur(2px);
+  animation: preview-edge-bloom-glow 400ms var(--ease) both;
+}
+
+.preview-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: alias;
+}
+
+/* ── Connector sockets — `.tok::before/::after` → FlowAnchor ── */
+.flow-anchor-off {
+  opacity: 0;
+  transform: translateY(-50%) scale(0);
+  transition:
+    transform 260ms var(--spring),
+    opacity 200ms var(--ease);
+}
+
+.flow-anchor-on {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  transition:
+    transform 260ms var(--spring),
+    opacity 200ms var(--ease);
+  box-shadow: 0 0 7px currentColor;
+}
+
+.token-info-popover {
+  animation: token-info-pop 140ms ease-out;
+}
+
+.jump-tip {
+  animation: token-info-pop 120ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-edge-path,
+  .preview-edge-glow,
+  .graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
+  .graph-ctrl-preview .token-def-label.token-interactive,
+  .graph-ctrl-preview .react-flow__node.class-node-root::after {
+    animation: none !important;
+  }
+
+  .flow-anchor-off,
+  .flow-anchor-on {
+    transition-duration: 0.01ms !important;
+  }
+}

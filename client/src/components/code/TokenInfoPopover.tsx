@@ -9,7 +9,8 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export function TokenInfoPopover() {
-  const { tokenInfo, cancelHoverTimers } = useGraphInteraction();
+  const { tokenInfo, cancelHoverLeaveGrace, scheduleHoverLeaveGrace } =
+    useGraphInteraction();
   if (!tokenInfo) return null;
 
   const { token, kind, anchor, pinned, connectionCount, definedIn } = tokenInfo;
@@ -29,7 +30,8 @@ export function TokenInfoPopover() {
       data-token-info-popover
       className="token-info-popover pointer-events-auto fixed z-50 w-[232px] rounded-[11px] border border-border bg-card p-3 text-xs text-foreground shadow-md"
       style={{ left: Math.max(8, left), top: Math.max(8, top) }}
-      onMouseEnter={cancelHoverTimers}
+      onMouseEnter={cancelHoverLeaveGrace}
+      onMouseLeave={scheduleHoverLeaveGrace}
     >
       <p className="font-mono text-[11px] text-muted-foreground">
         {kind === "function" ? "call" : "reference"}
