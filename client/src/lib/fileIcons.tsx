@@ -10,7 +10,7 @@ export interface FileIconInfo {
 export function getFolderIcon(open: boolean): FileIconInfo {
   return {
     codicon: open ? "codicon-folder-opened" : "codicon-folder",
-    colorClass: "text-primary",
+    colorClass: "text-muted-foreground",
   };
 }
 

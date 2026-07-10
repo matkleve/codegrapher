@@ -31,6 +31,8 @@ import { computeTraceLit } from "@/lib/computeTraceLit";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import { useClearPinnedOnClickAway } from "@/hooks/useClearPinnedOnClickAway";
 import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -131,6 +133,7 @@ export function GraphInteractionProvider({
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
+  const pinnedTokenKeyRef = useRef<string | null>(null);
   const pendingFireRef = useRef<{ tokenKey: string; onFire: () => void } | null>(
     null,
   );
@@ -146,6 +149,8 @@ export function GraphInteractionProvider({
   }, []);
 
   const beginTrace = useCallback((tokenKey: string, edges: PreviewEdgeSpec[]) => {
+    const pinned = pinnedTokenKeyRef.current;
+    if (pinned != null && pinned !== tokenKey) return;
     setHoveredTokenKey(tokenKey);
     setPreviewEdges(edges);
     setIsWarm(true);
@@ -159,17 +164,23 @@ export function GraphInteractionProvider({
   }, []);
 
   const clearTokenInfo = useCallback(() => {
+    pinnedTokenKeyRef.current = null;
     setTokenInfo(null);
     setPinnedTokenKey(null);
     endTrace();
     resetHoverIntent();
   }, [endTrace, resetHoverIntent]);
 
-  const pinTrace = useCallback((tokenKey: string) => {
-    setPinnedTokenKey(tokenKey);
-    setHoveredTokenKey(tokenKey);
-    setIsWarm(true);
-  }, []);
+  const pinTrace = useCallback(
+    (tokenKey: string) => {
+      resetHoverIntent();
+      pinnedTokenKeyRef.current = tokenKey;
+      setPinnedTokenKey(tokenKey);
+      setHoveredTokenKey(tokenKey);
+      setIsWarm(true);
+    },
+    [resetHoverIntent],
+  );
 
   const showTokenInfo = useCallback(
     (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => {
@@ -180,6 +191,9 @@ export function GraphInteractionProvider({
 
   const scheduleHoverFire = useCallback(
     (tokenKey: string, onFire: () => void, onClear: () => void) => {
+      const pinned = pinnedTokenKeyRef.current;
+      if (pinned != null && pinned !== tokenKey) return;
+
       const timers = hoverTimersRef.current;
       clearTimeout(timers.clear ?? undefined);
       clearTimeout(timers.fire ?? undefined);
@@ -190,6 +204,8 @@ export function GraphInteractionProvider({
       hoverClearRef.current = { tokenKey, onClear };
 
       const runFire = () => {
+        const activePin = pinnedTokenKeyRef.current;
+        if (activePin != null && activePin !== tokenKey) return;
         hoveredTokenKeyRef.current = tokenKey;
         setHoveredTokenKey(tokenKey);
         setIsWarm(true);
@@ -247,6 +263,8 @@ export function GraphInteractionProvider({
     if (!timers.fire) return;
     const pending = pendingFireRef.current;
     if (!pending) return;
+    const pinned = pinnedTokenKeyRef.current;
+    if (pinned != null && pinned !== pending.tokenKey) return;
 
     clearTimeout(timers.fire);
     timers.fire = null;
@@ -301,12 +319,26 @@ export function GraphInteractionProvider({
     [getNode, nodes, setCenter, setNodes],
   );
 
+  useClearPinnedOnClickAway(pinnedTokenKey != null, clearTokenInfo);
+
   const traceTokenKey = pinnedTokenKey ?? hoveredTokenKey;
   const isTraceActive = traceTokenKey != null;
 
+  const revealRevision = useMemo(() => {
+    const parts: string[] = [];
+    for (const node of nodes) {
+      if (node.type !== "class") continue;
+      const data = node.data as ClassNodeData;
+      parts.push(
+        `${node.id}:${data.collapsed ? "c" : "o"}:${data.expandedMethodIds.join(",")}:${data.expandedPropertyIds.join(",")}`,
+      );
+    }
+    return parts.join("|");
+  }, [nodes]);
+
   const traceLit = useMemo(
-    () => computeTraceLit(traceTokenKey, previewEdges),
-    [traceTokenKey, previewEdges],
+    () => computeTraceLit(traceTokenKey, previewEdges, getNode),
+    [getNode, previewEdges, revealRevision, traceTokenKey],
   );
 
   const isTraceLit = useCallback(

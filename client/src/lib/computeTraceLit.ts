@@ -3,6 +3,7 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import { linksForElement } from "@/lib/linksForElement";
+import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import {
@@ -232,6 +233,7 @@ function spreadFunctionBodiesFromLit(
 export function computeTraceLit(
   activeTokenKey: string | null,
   previewEdges: PreviewEdgeSpec[],
+  getNode?: (id: string) => Node | undefined,
 ): TraceLitState {
   if (!activeTokenKey) return EMPTY;
 
@@ -254,8 +256,21 @@ export function computeTraceLit(
   }
 
   for (const edge of previewEdges) {
-    const from = resolveEndpoint(edge.from, edge.kind);
-    const to = resolveEndpoint(edge.to, edge.kind);
+    const { from: fromRef, to: toRef } = getNode
+      ? refinePreviewEdge(edge, getNode)
+      : { from: edge.from, to: edge.to };
+
+    if (fromRef.type === "element" && fromRef.el.isConnected) {
+      absorbToken(fromRef.el, state, true);
+    }
+    if (toRef.type === "element" && toRef.el.isConnected) {
+      absorbToken(toRef.el, state, true);
+      const usageMember = memberIdFromElement(toRef.el);
+      if (usageMember) state.litLineMemberIds.add(usageMember);
+    }
+
+    const from = resolveEndpoint(fromRef, edge.kind);
+    const to = resolveEndpoint(toRef, edge.kind);
     for (const ep of [from, to]) {
       if (!ep) continue;
       state.litTokenKeys.add(ep.traceKey);

@@ -1,7 +1,7 @@
 /**
  * Unified interactive surface system.
  *
- * Brand-gold hover (surface, border, text, motion) lives in index.css on `.hoverable`.
+ * Brand-cyan hover (surface, border, text, motion) lives in index.css on `.hoverable`.
  * Components import these constants — do not duplicate hover:bg-brand-* in Tailwind.
  *
  * CSS tokens: --brand, --brand-surface, --brand-border,

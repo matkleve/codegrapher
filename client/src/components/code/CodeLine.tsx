@@ -58,7 +58,6 @@ export function CodeLine({
     showTokenInfo,
     pinTrace,
     pinnedTokenKey,
-    isCtrlPreviewMode,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -105,7 +104,7 @@ export function CodeLine({
         return;
       }
 
-      beginTrace(tokenKey, [buildUsagePreviewEdge(edgeKey, resolved, chipEl)]);
+      beginTrace(tokenKey, [buildUsagePreviewEdge(edgeKey, resolved, chipEl, name)]);
     },
     [
       beginTrace,
@@ -126,22 +125,31 @@ export function CodeLine({
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
       scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
     },
-    [clearHover, firePreview, lineNumber, memberId, scheduleHoverFire, sourceFlowId],
+    [
+      clearHover,
+      firePreview,
+      lineNumber,
+      memberId,
+      pinnedTokenKey,
+      scheduleHoverFire,
+      sourceFlowId,
+    ],
   );
 
   const onIdentifierLeave = useCallback(
     (name: string) => {
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
       scheduleHoverClear(tokenKey, clearHover);
     },
-    [clearHover, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
+    [clearHover, lineNumber, memberId, pinnedTokenKey, scheduleHoverClear, sourceFlowId],
   );
 
   const onIdentifierClick = useCallback(
     (name: string, el: HTMLElement, isDefinition: boolean) => {
-      if (!isCtrlPreviewMode) return;
       const entry = lookup(name);
       const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
@@ -171,7 +179,6 @@ export function CodeLine({
       filePath,
       firePreview,
       hasSymbol,
-      isCtrlPreviewMode,
       lineNumber,
       lookup,
       memberId,

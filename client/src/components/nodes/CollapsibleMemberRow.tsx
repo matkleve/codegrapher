@@ -166,7 +166,7 @@ export function CollapsibleMemberRow({
       <button
         type="button"
         className={cn(
-          "member-row-header group/member",
+          "member-row-header",
           INTERACTIVE_SURFACE,
           "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-1.5 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
@@ -180,8 +180,8 @@ export function CollapsibleMemberRow({
       >
         <ExpandChevron
           expanded={expanded}
-          groupHoverFlip="member"
-          className="member-row-caret text-muted-foreground"
+          headerHoverPreview
+          className="member-row-caret shrink-0 text-muted-foreground"
         />
         <span
           ref={labelRef}
@@ -191,7 +191,7 @@ export function CollapsibleMemberRow({
           data-local-def-id={traceable ? localDefId : undefined}
           data-token-kind={traceable ? defKind ?? undefined : undefined}
           className={cn(
-            "member-row-label relative inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-medium text-foreground",
+            "member-row-label nodrag relative inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-medium text-foreground",
             traceable && "token-def-label cursor-pointer",
             traceable && isCtrlPreviewMode && "token-interactive",
             lit && "token-chip-lit",

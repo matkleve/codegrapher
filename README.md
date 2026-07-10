@@ -2,6 +2,10 @@
 
 Ego-centric TypeScript graph explorer with a file tree, compound class containers, and incremental graph building.
 
+## Specs
+
+Behavior and interaction contracts live in **[docs/specs/](docs/specs/README.md)** (glossary, design tokens, lint via `npm run lint:specs`).
+
 ## Prerequisites
 
 - Node.js 18+

@@ -44,7 +44,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  /* Gold brand accent for interactive hover (gold in both themes) */
+  /* Coral brand accent for interactive hover (cyan in both themes) */
   --color-brand: var(--brand);
   --color-brand-surface: var(--brand-surface);
   --color-brand-border: var(--brand-border);
@@ -90,8 +90,8 @@
   --card-foreground: oklch(0.18 0.03 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 260);
-  --primary: oklch(0.48 0.14 250);
-  --primary-foreground: oklch(0.99 0.01 250);
+  --primary: oklch(0.46 0.17 278);
+  --primary-foreground: oklch(0.99 0.01 278);
   --secondary: oklch(0.94 0.02 250);
   --secondary-foreground: oklch(0.28 0.06 260);
   --muted: oklch(0.95 0.015 250);
@@ -110,28 +110,29 @@
   --sidebar-accent-foreground: oklch(0.28 0.06 260);
   --sidebar-border: oklch(0.9 0.02 250);
   --sidebar-ring: oklch(0.55 0.12 250);
-  --chart-1: oklch(0.55 0.14 250);
-  --chart-2: oklch(0.62 0.12 235);
-  --chart-3: oklch(0.58 0.13 165);
-  --chart-4: oklch(0.48 0.04 260);
+  --chart-1: oklch(0.52 0.16 278);
+  --chart-2: oklch(0.58 0.14 255);
+  --chart-3: oklch(0.54 0.11 200);
+  --chart-4: oklch(0.48 0.14 340);
   --chart-5: oklch(0.38 0.03 260);
-  --token-class: oklch(0.48 0.14 250);
-  --token-function: oklch(0.62 0.08 245);
-  --token-type: oklch(0.52 0.13 165);
-  --token-edge-function: #2563eb;
-  --token-edge-class: #b8860b;
-  --token-edge-type: #16a34a;
-  --token-edge-variable: #6366f1;
-  --code-string: #b45309;
-  --code-number: #c2410c;
+  --token-class: oklch(0.48 0.19 295);
+  --token-function: oklch(0.50 0.17 255);
+  --token-type: oklch(0.50 0.11 200);
+  --token-edge-function: oklch(0.50 0.17 255);
+  --token-edge-class: oklch(0.48 0.19 295);
+  --token-edge-type: oklch(0.50 0.11 200);
+  --token-edge-variable: oklch(0.50 0.14 305);
+  --code-keyword: oklch(0.42 0.14 295);
+  --code-string: oklch(0.46 0.11 55);
+  --code-number: oklch(0.48 0.14 300);
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
-  --explorer-file-in-graph: oklch(0.48 0.14 250);
-  /* Gold hover accent — yellow-gold text, whisper-light surface */
-  --brand: oklch(0.62 0.11 98);
-  --brand-surface: oklch(0.992 0.012 98);
-  --brand-border: oklch(0.93 0.028 98);
+  --explorer-file-in-graph: oklch(0.46 0.17 278);
+  /* Sky-cyan hover accent — clearly interactive, not error red */
+  --brand: oklch(0.52 0.12 220);
+  --brand-surface: oklch(0.96 0.02 220);
+  --brand-border: oklch(0.86 0.05 220);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
   --motion-hover-surface: 320ms;
@@ -184,9 +185,9 @@ html.dark {
   --card-foreground: oklch(0.96 0.01 250);
   --popover: oklch(0.2 0.03 258);
   --popover-foreground: oklch(0.96 0.01 250);
-  /* Yellow accent — hover, focus, primary actions */
-  --primary: oklch(0.78 0.14 85);
-  --primary-foreground: oklch(0.2 0.03 85);
+  /* Periwinkle accent — hover, focus, primary actions */
+  --primary: oklch(0.72 0.15 278);
+  --primary-foreground: oklch(0.16 0.03 278);
   /* Dark blue surfaces — secondary buttons, panels */
   --secondary: oklch(0.24 0.05 258);
   --secondary-foreground: oklch(0.92 0.02 250);
@@ -197,10 +198,10 @@ html.dark {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.96 0.02 250 / 12%);
   --input: oklch(0.96 0.02 250 / 16%);
-  --ring: oklch(0.78 0.14 85);
-  --chart-1: oklch(0.78 0.14 85);
-  --chart-2: oklch(0.68 0.12 235);
-  --chart-3: oklch(0.65 0.13 165);
+  --ring: oklch(0.72 0.15 278);
+  --chart-1: oklch(0.72 0.15 278);
+  --chart-2: oklch(0.68 0.12 255);
+  --chart-3: oklch(0.65 0.10 200);
   --chart-4: oklch(0.45 0.05 258);
   --chart-5: oklch(0.32 0.04 258);
   --sidebar: oklch(0.18 0.025 260);
@@ -211,23 +212,24 @@ html.dark {
   --sidebar-accent-foreground: var(--secondary-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --token-class: var(--primary);
-  --token-function: oklch(0.75 0.07 245);
-  --token-type: oklch(0.7 0.12 165);
-  --token-edge-function: #60a5fa;
-  --token-edge-class: #facc15;
-  --token-edge-type: #4ade80;
-  --token-edge-variable: #a5b4fc;
-  --code-string: oklch(0.92 0.08 85 / 90%);
-  --code-number: oklch(0.85 0.11 55 / 90%);
+  --token-class: oklch(0.72 0.14 295);
+  --token-function: oklch(0.74 0.11 255);
+  --token-type: oklch(0.72 0.09 200);
+  --token-edge-function: oklch(0.74 0.11 255);
+  --token-edge-class: oklch(0.72 0.14 295);
+  --token-edge-type: oklch(0.72 0.09 200);
+  --token-edge-variable: oklch(0.74 0.10 305);
+  --code-keyword: oklch(0.78 0.10 295);
+  --code-string: oklch(0.80 0.09 55);
+  --code-number: oklch(0.78 0.11 300);
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
-  --explorer-file-in-graph: oklch(0.72 0.11 235);
-  /* Gold hover accent — soft yellow-gold on dark surfaces */
-  --brand: oklch(0.88 0.12 96);
-  --brand-surface: oklch(0.22 0.022 96);
-  --brand-border: oklch(0.36 0.05 96);
+  --explorer-file-in-graph: oklch(0.72 0.12 255);
+  /* Sky-cyan hover accent on dark surfaces */
+  --brand: oklch(0.74 0.11 220);
+  --brand-surface: oklch(0.22 0.025 220);
+  --brand-border: oklch(0.38 0.06 220);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
   --faint: oklch(0.46 0.03 255);
@@ -342,19 +344,29 @@ html.dark {
     stroke var(--motion-hover-color) var(--ease);
 }
 
-.hoverable:hover,
-.hoverable[aria-expanded="true"] {
+.hoverable:hover {
   background-color: var(--brand-surface);
   border-color: var(--brand-border);
   color: var(--brand);
 }
 
 .hoverable:hover svg,
-.hoverable:hover [data-icon],
-.hoverable[aria-expanded="true"] svg,
-.hoverable[aria-expanded="true"] [data-icon] {
+.hoverable:hover [data-icon] {
   color: var(--brand);
   stroke: var(--brand);
+}
+
+/* Context bar — neutral hover; brand on chips reads as warning */
+[data-token-context-bar] .hoverable:hover {
+  background-color: var(--muted);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+[data-token-context-bar] .hoverable:hover svg,
+[data-token-context-bar] .hoverable:hover [data-icon] {
+  color: var(--foreground);
+  stroke: var(--foreground);
 }
 
 /* Border-only controls: transparent at rest; brand only on :hover */
@@ -396,26 +408,57 @@ html.dark {
   stroke: var(--brand);
 }
 
-/* Section headers: muted children at rest, brand on hover/expanded */
-.bg-sidebar button.explorer-section-header {
+/* Section headers + folder rows: muted at rest; brand only on :hover (expanded ≠ active) */
+.bg-sidebar button.explorer-section-header,
+.bg-sidebar button.explorer-folder-row {
   border-color: transparent;
   background-color: transparent;
+}
+
+.bg-sidebar button.explorer-section-header {
   color: var(--muted-foreground);
+}
+
+.bg-sidebar button.explorer-folder-row {
+  color: var(--foreground);
 }
 
 .bg-sidebar button.explorer-section-header svg,
 .bg-sidebar button.explorer-section-header [data-icon],
-.bg-sidebar button.explorer-section-header span {
-  color: var(--muted-foreground);
+.bg-sidebar button.explorer-section-header span,
+.bg-sidebar button.explorer-folder-row svg,
+.bg-sidebar button.explorer-folder-row [data-icon],
+.bg-sidebar button.explorer-folder-row span {
   transition: color var(--motion-hover-color) var(--ease);
 }
 
+.bg-sidebar button.explorer-section-header[aria-expanded="true"],
+.bg-sidebar button.explorer-folder-row[aria-expanded="true"] {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.bg-sidebar button.explorer-section-header[aria-expanded="true"] {
+  color: var(--muted-foreground);
+}
+
+.bg-sidebar button.explorer-folder-row[aria-expanded="true"] {
+  color: var(--foreground);
+}
+
+.bg-sidebar button.explorer-section-header:hover,
+.bg-sidebar button.explorer-folder-row:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+
 .bg-sidebar button.explorer-section-header:hover span,
-.bg-sidebar button.explorer-section-header[aria-expanded="true"] span,
 .bg-sidebar button.explorer-section-header:hover svg,
-.bg-sidebar button.explorer-section-header[aria-expanded="true"] svg,
 .bg-sidebar button.explorer-section-header:hover [data-icon],
-.bg-sidebar button.explorer-section-header[aria-expanded="true"] [data-icon] {
+.bg-sidebar button.explorer-folder-row:hover span,
+.bg-sidebar button.explorer-folder-row:hover svg,
+.bg-sidebar button.explorer-folder-row:hover [data-icon] {
   color: var(--brand);
 }
 
@@ -564,6 +607,36 @@ html.dark {
   background-color: transparent;
 }
 
+.node-card-header-row {
+  border-radius: var(--radius-sm);
+}
+
+.node-card-header-row.hoverable:hover,
+.node-card-header-row.hoverable[aria-expanded="true"] {
+  background-color: transparent;
+  border-color: transparent;
+  color: inherit;
+}
+
+.node-card-header-row.hoverable:hover .node-card-caret,
+.node-card-header-row.hoverable[aria-expanded="true"] .node-card-caret {
+  color: var(--brand);
+}
+
+.node-card-header-row .expand-chevron-icon {
+  transition: transform 380ms var(--ease);
+}
+
+.node-card-header-row[aria-expanded="false"]:hover:not(:has(.node-card-title:hover))
+  .expand-chevron-icon {
+  transform: rotate(90deg);
+}
+
+.node-card-header-row[aria-expanded="true"]:hover:not(:has(.node-card-title:hover))
+  .expand-chevron-icon {
+  transform: rotate(-90deg);
+}
+
 /* File-type chip — brand hover on the pill only (not the node header drag surface) */
 .file-type-chip {
   transition:
@@ -653,6 +726,34 @@ html.dark {
 /* Unicode carets sit low in the em-box — optical center against label text */
 .expand-chevron {
   translate: 0 -0.06em;
+}
+
+/* Member row: rotate caret + lighten body on header hover (not while over token label) */
+.member-row-header .expand-chevron-icon {
+  transition: transform 380ms var(--ease);
+}
+
+.member-row-header[aria-expanded="false"]:hover:not(:has(.member-row-label:hover))
+  .expand-chevron-icon {
+  transform: rotate(90deg);
+}
+
+.member-row-header[aria-expanded="true"]:hover:not(:has(.member-row-label:hover))
+  .expand-chevron-icon {
+  transform: rotate(-90deg);
+}
+
+.member-body-wrap {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  transition: background-color 0.2s var(--ease);
+}
+
+.member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
+  background-color: color-mix(in oklch, var(--background) 55%, var(--muted));
+}
+
+.dark .member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
+  background-color: color-mix(in oklch, white 8%, var(--muted));
 }
 
 @keyframes node-fade-in {

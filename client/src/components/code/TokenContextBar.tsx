@@ -7,7 +7,7 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { openFileInEditor } from "@/api";
 import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
 import type { TokenReference } from "@/lib/semanticLookup";
-import { TOKEN_EDGE_STROKE, TOKEN_PILL } from "@/lib/tokenColors";
+import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<string, string> = {
@@ -23,7 +23,7 @@ function definitionRef(refs: TokenReference[]): TokenReference | null {
 }
 
 /**
- * Docked trace action bar — only visible when a connection is pinned (Ctrl+click).
+ * Docked trace action bar — visible when a connection is pinned (click a token).
  * Sits at the bottom of the graph pane so it never covers code.
  */
 export function TokenContextBar() {
@@ -76,28 +76,28 @@ export function TokenContextBar() {
       data-token-context-bar
       className="pointer-events-auto absolute inset-x-3 bottom-3 z-50 overflow-hidden rounded-xl border border-border bg-card/95 shadow-lg backdrop-blur-sm"
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           <span
             className="size-2.5 shrink-0 rounded-full"
             style={{ background: swatch }}
             aria-hidden
           />
-          <span className="truncate font-mono text-sm font-semibold text-foreground">
+          <span className="min-w-0 shrink truncate font-mono text-sm font-semibold text-foreground">
             {token}
           </span>
           <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {KIND_LABEL[kind] ?? kind}
           </span>
-          <span className="hidden text-xs text-muted-foreground sm:inline">
+          <span className="hidden min-w-0 truncate text-xs text-muted-foreground sm:inline">
             · {role === "definition" ? "definition" : "usage"}
-          </span>
-          <span className="hidden truncate text-xs text-muted-foreground md:inline">
-            · {definedIn}
+            <span className="hidden md:inline">
+              {definedIn ? ` · ${definedIn}` : ""}
+            </span>
           </span>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           {canJumpDef ? (
             <Button
               type="button"
@@ -179,12 +179,17 @@ export function TokenContextBar() {
               <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
                 <button
                   type="button"
-                  className={cn(INTERACTIVE_ROW_LEFT, "w-full py-1.5 text-xs", TOKEN_PILL[ref.kind])}
+                  className={cn(INTERACTIVE_ROW_LEFT, "w-full gap-2 py-1.5 text-xs text-foreground")}
                   onClick={() => {
                     clearTokenInfo();
                     focusFlowNode(ref.flowNodeId!);
                   }}
                 >
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
+                    aria-hidden
+                  />
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
                   <span className="min-w-0 truncate text-left">
                     {ref.memberLabel
@@ -199,11 +204,16 @@ export function TokenContextBar() {
               <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
                 <button
                   type="button"
-                  className={cn(INTERACTIVE_ROW_LEFT, "w-full py-1.5 text-xs", TOKEN_PILL[ref.kind])}
+                  className={cn(INTERACTIVE_ROW_LEFT, "w-full gap-2 py-1.5 text-xs text-foreground")}
                   onClick={() => {
                     void onLoadFile(ref.filePath);
                   }}
                 >
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
+                    aria-hidden
+                  />
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
                   <span className="min-w-0 truncate text-left">
                     {ref.classLabel}

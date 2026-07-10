@@ -3,7 +3,7 @@ import { useReactFlow } from "@xyflow/react";
 import { GripVertical } from "lucide-react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
-import { INTERACTIVE_BORDER_BTN } from "@/lib/controlTokens";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
@@ -114,62 +114,67 @@ export function NodeCardHeader({
   return (
     <div
       className={cn(
-        NODE_DRAG_HANDLE,
-        "node-card-header flex overflow-hidden cursor-grab active:cursor-grabbing",
+        "node-card-header flex overflow-hidden",
         bodyExpanded ? "rounded-t-lg border-b border-border" : "rounded-lg",
       )}
-      title="Drag to move"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-2">
         {chip}
-        <div className="flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            className={`node-card-caret group/caret ${INTERACTIVE_BORDER_BTN} nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)]`}
-            title={bodyExpanded ? "Collapse" : "Expand"}
-            aria-label={bodyExpanded ? "Collapse" : "Expand"}
-            aria-expanded={bodyExpanded}
+        <button
+          type="button"
+          className={cn(
+            "node-card-header-row",
+            INTERACTIVE_SURFACE,
+            "nodrag flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left",
+            bodyExpanded
+              ? "node-card-header-row--expanded"
+              : "node-card-header-row--collapsed",
+          )}
+          title={bodyExpanded ? "Collapse" : "Expand"}
+          aria-label={bodyExpanded ? "Collapse" : "Expand"}
+          aria-expanded={bodyExpanded}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCollapsed();
+          }}
+        >
+          <ExpandChevron
+            expanded={bodyExpanded}
+            headerHoverPreview
+            className="node-card-caret shrink-0 text-muted-foreground"
+          />
+          <span
+            ref={titleRef}
+            data-symbol-name={indexed ? symbolName : undefined}
+            data-symbol-role={indexed ? "definition" : undefined}
+            data-trace-key={indexed ? defTokenKey : undefined}
+            data-token-kind={indexed ? defKind ?? undefined : undefined}
+            className={cn(
+              "node-card-title nodrag inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
+              indexed && "token-def-label cursor-pointer",
+              indexed && isCtrlPreviewMode && "token-interactive",
+              lit && "token-chip-lit",
+              on && "token-chip-on",
+            )}
+            style={
+              indexed
+                ? ({ "--shimmer-delay": "0s" } as React.CSSProperties)
+                : undefined
+            }
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleCollapsed();
-            }}
+            onMouseEnter={onTitleEnter}
+            onMouseLeave={onTitleLeave}
+            onClick={onTitleClick}
           >
-            <ExpandChevron expanded={bodyExpanded} groupHoverFlip="caret" />
-          </button>
-          <span className="min-w-0 flex-1">
-            <span
-              ref={titleRef}
-              data-symbol-name={indexed ? symbolName : undefined}
-              data-symbol-role={indexed ? "definition" : undefined}
-              data-trace-key={indexed ? defTokenKey : undefined}
-              data-token-kind={indexed ? defKind ?? undefined : undefined}
-              className={cn(
-                "node-card-title nodrag inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
-                indexed && "token-def-label cursor-pointer",
-                indexed && isCtrlPreviewMode && "token-interactive",
-                lit && "token-chip-lit",
-                on && "token-chip-on",
-              )}
-              style={
-                indexed
-                  ? ({ "--shimmer-delay": "0s" } as React.CSSProperties)
-                  : undefined
-              }
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseEnter={onTitleEnter}
-              onMouseLeave={onTitleLeave}
-              onClick={onTitleClick}
-            >
-              {title}
-            </span>
+            {title}
           </span>
-        </div>
+        </button>
       </div>
       <div className="flex shrink-0 items-center self-stretch py-2 pr-2">
         <button
           type="button"
-          className="node-drag-grip"
+          className={cn("node-drag-grip", NODE_DRAG_HANDLE)}
           aria-label="Drag to move"
           title="Drag to move"
         >

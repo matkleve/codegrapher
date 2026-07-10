@@ -245,9 +245,9 @@
     color 0.2s var(--ease);
 }
 
-/* Resting keyword tint — prototype `.kw` (not theme primary, which reads gold/red). */
+/* Resting keyword tint — dedicated syntax hue, separate from interactive brand. */
 .code-kw {
-  color: color-mix(in oklch, var(--brand) 62%, var(--foreground));
+  color: var(--code-keyword);
 }
 
 .code-pn {
@@ -312,6 +312,11 @@
   border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
 }
 
+/* Unlit member shells — slight wash only (proto dims ink, not container opacity) */
+.graph-trace-active .member-row:not(.trace-member-lit) {
+  background: color-mix(in oklch, var(--card) 38%, var(--muted)) !important;
+}
+
 /* Active function body — proto `.lit-line` (kw/pn readable, not fully bleached) */
 .graph-trace-active .code-line.trace-lit-line .code-kw,
 .graph-trace-active .code-line.trace-lit-line .code-pn {
@@ -358,6 +363,65 @@
   .token-chip-text {
   color: var(--muted-foreground) !important;
   -webkit-text-fill-color: currentColor;
+}
+
+/* Trace: resting chrome is dimmed; :hover still picks up brand accent */
+.graph-trace-active .hoverable:hover,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover {
+  border-color: var(--brand-border);
+  color: var(--brand) !important;
+}
+
+.graph-trace-active .hoverable:hover {
+  background-color: var(--brand-surface);
+}
+
+.graph-trace-active .member-row-header.hoverable:hover,
+.graph-trace-active .member-row-header.hoverable[aria-expanded="true"]:hover {
+  background-color: transparent;
+  border-color: transparent;
+  color: inherit !important;
+}
+
+.graph-trace-active .hoverable:hover .member-section-label,
+.graph-trace-active .hoverable:hover .member-section-bulk,
+.graph-trace-active .hoverable:hover .member-row-caret,
+.graph-trace-active .hoverable:hover .node-card-caret,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-label,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-bulk,
+.graph-trace-active .member-row-header.hoverable:hover .member-row-caret,
+.graph-trace-active .member-row-header.hoverable[aria-expanded="true"]:hover .member-row-caret,
+.graph-trace-active
+  .member-row-header:hover:not(:has(.member-row-label:hover))
+  .member-row-label:not(.token-chip-lit),
+.graph-trace-pinned .member-row-label.token-def-label:hover:not(.token-chip-lit),
+.graph-trace-pinned .node-card-title:hover:not(.token-chip-lit),
+.graph-trace-pinned .token-chip.interactive:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .hoverable:hover svg,
+.graph-trace-active .hoverable:hover [data-icon] {
+  color: var(--brand) !important;
+  stroke: var(--brand);
+  -webkit-text-fill-color: currentColor;
+  background-image: none;
+}
+
+/* Active trace: dim tokens stay dim on pass-over (switch via dwell only). */
+.graph-trace-active:not(.graph-trace-pinned)
+  .member-row-label.token-def-label:hover:not(.token-chip-lit),
+.graph-trace-active:not(.graph-trace-pinned)
+  .node-card-title:hover:not(.token-chip-lit),
+.graph-trace-active:not(.graph-trace-pinned)
+  .token-chip.interactive:hover:not(.token-chip-lit)
+  .token-chip-text {
+  color: var(--faint) !important;
+  filter: none;
+  background: transparent;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-interactive:not(.token-chip-lit),
+.graph-trace-pinned .token-def-label.token-interactive:not(.token-chip-lit) {
+  cursor: default;
 }
 
 /* ── Preview wires — `.wire-path` / `.wire-glow` / `.wire-hit` ── */

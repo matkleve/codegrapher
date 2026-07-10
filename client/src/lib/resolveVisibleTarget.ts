@@ -5,6 +5,7 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
+import { findClassDefLabel, findMemberDefLabel } from "@/lib/resolveLiveAnchor";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { GraphData, GraphNode, SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
@@ -124,25 +125,6 @@ export function isEntryInGraph(
   return Boolean(findClassGraphNode(token, entry, graphData));
 }
 
-function findMemberDefLabel(
-  flowNodeId: string,
-  memberId: string,
-  token: string,
-): HTMLElement | null {
-  const pane = document.querySelector(".graph-pane");
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] [data-member-id="${CSS.escape(memberId)}"] .member-row-label[data-symbol-name="${CSS.escape(token)}"]`,
-  );
-}
-
-function findClassDefLabel(flowNodeId: string, token: string): HTMLElement | null {
-  const pane = document.querySelector(".graph-pane");
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] .node-card-title[data-symbol-name="${CSS.escape(token)}"]`,
-  );
-}
 
 export function resolveVisibleTarget(
   token: string,

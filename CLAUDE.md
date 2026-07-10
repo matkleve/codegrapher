@@ -6,6 +6,16 @@ compound containers with expandable member rows (inline source with clickable to
 chips). Graphs are built incrementally — click a file to start a graph, drag files
 onto the canvas to merge them in.
 
+## Specs (authoritative contracts)
+
+- Index: `docs/specs/README.md` — lint with `npm run lint:specs`
+- Glossary: `docs/glossary.md`
+- Template: `docs/agent-workflows/element-spec-format.md`
+- Key system specs: `docs/specs/system/preview-edges.md`, `ego-graph-model.md`, `interaction-emphasis.md`
+- Governance: `docs/specs/GOVERNANCE-MATRIX.md`
+
+When behavior changes, update the owning spec in the same change.
+
 ## Architecture
 
 - `client/` — Vite + React 19 + `@xyflow/react` (React Flow) + dagre layout. Entry:
@@ -17,11 +27,8 @@ onto the canvas to merge them in.
   `POST /api/browse-folder` (opens a **native OS folder dialog** — never call it
   headless, it hangs).
 - Client proxies `/api/*` to 3001. `npm run dev` at the root starts both.
-- Interaction semantics (README is partially stale here): **click** file =
-  `/api/file-graph` (new graph, single file), **drag onto canvas** = `/api/file-graph`
-  merged into the existing graph, **token-reference "load into graph"** =
-  `/api/focus` (import neighborhood, brings cross-file `imports` edges).
-- Ctrl+hover preview edges are drawn exclusively by `PreviewEdgeOverlay` (a DOM/SVG
+- Interaction semantics: **click** file = `/api/file-graph` (replace graph), **drag onto canvas** = `/api/focus` depth 1 (merge), **token-reference "load into graph"** = `/api/focus`. Full contract: `docs/specs/system/ego-graph-model.md`.
+- Ctrl+hover preview edges: see `docs/specs/system/preview-edges.md`. Drawn exclusively by `PreviewEdgeOverlay` (a DOM/SVG
   overlay measuring anchor elements each frame) — there is no React-Flow-edge-based
   preview pipeline. Target anchors are per-node (`previewTargetTop(flowNodeId)`,
   `previewMemberHandle`, `previewLineHandle` in `client/src/lib/ctrlPreviewHandles.ts`);
@@ -32,7 +39,7 @@ onto the canvas to merge them in.
   (`ThemeToggle` in the graph header) persists to `localStorage["codegrapher:theme"]`.
   Colors used from JS (e.g. `TOKEN_EDGE_STROKE`) must be CSS variables applied via
   `style`, not hex literals or SVG presentation attributes.
-- Interactive hover uses a gold **brand** accent in BOTH themes (`--brand` /
+- Interactive hover: see `docs/specs/system/interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
   `--brand-surface` / `--brand-border`, gold-per-theme, registered as Tailwind
   `brand`/`brand-surface`/`brand-border`). Route any new clickable/draggable element's
   hover to these — not `--primary` (which is theme-split blue/gold). The raw hover

@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 
@@ -27,13 +26,15 @@ export function useTokenHover({
 
   const onEnter = useCallback(() => {
     if (!enabled) return;
+    if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
     scheduleHoverFire(tokenKey, onFire, clearHover);
-  }, [clearHover, enabled, onFire, scheduleHoverFire, tokenKey]);
+  }, [clearHover, enabled, onFire, pinnedTokenKey, scheduleHoverFire, tokenKey]);
 
   const onLeave = useCallback(() => {
     if (!enabled) return;
+    if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
     scheduleHoverClear(tokenKey, clearHover);
-  }, [clearHover, enabled, scheduleHoverClear, tokenKey]);
+  }, [clearHover, enabled, pinnedTokenKey, scheduleHoverClear, tokenKey]);
 
   return { onEnter, onLeave };
 }
@@ -46,7 +47,7 @@ type UseTokenPinArgs = {
   animateEl?: HTMLElement | null;
 };
 
-/** Prototype Ctrl+click pin — trace + context bar. */
+/** Click pin — trace + context bar. */
 export function useTokenPin({
   tokenKey,
   enabled,
@@ -54,12 +55,11 @@ export function useTokenPin({
   buildPinInfo,
   animateEl,
 }: UseTokenPinArgs) {
-  const { isCtrlActive } = useCtrlKey();
   const { pinTrace, showTokenInfo } = useGraphInteraction();
 
   const onPinClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!enabled || !isCtrlActive) return;
+      if (!enabled) return;
       e.stopPropagation();
       pinTrace(tokenKey);
       onFire();
@@ -74,7 +74,6 @@ export function useTokenPin({
       animateEl,
       buildPinInfo,
       enabled,
-      isCtrlActive,
       onFire,
       pinTrace,
       showTokenInfo,
@@ -82,5 +81,5 @@ export function useTokenPin({
     ],
   );
 
-  return { onPinClick, isCtrlActive };
+  return { onPinClick };
 }

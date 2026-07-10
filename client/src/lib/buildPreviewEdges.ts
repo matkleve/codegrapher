@@ -1,11 +1,26 @@
-import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
+
+function liveToFromUsageEl(token: string, usageEl: HTMLElement): LiveAnchorHint | undefined {
+  const traceKey = usageEl.dataset.traceKey;
+  if (!traceKey) return undefined;
+  const parts = traceKey.split("::");
+  if (parts.length < 4) return undefined;
+  return {
+    token,
+    flowNodeId: parts[0]!,
+    memberId: parts[1],
+    lineNumber: Number(parts[2]),
+    role: "usage",
+  };
+}
 
 export function buildUsagePreviewEdge(
   edgeId: string,
   target: GraphVisibleTarget,
   usageEl: HTMLElement,
+  token: string,
 ): PreviewEdgeSpec {
   const from =
     target.definitionEl?.isConnected
@@ -17,6 +32,14 @@ export function buildUsagePreviewEdge(
     from,
     to: { type: "element", el: usageEl },
     kind: target.kind,
+    liveFrom: {
+      token,
+      flowNodeId: target.flowNodeId,
+      memberId: target.memberId,
+      lineNumber: target.lineNumber,
+      role: "definition",
+    },
+    liveTo: liveToFromUsageEl(token, usageEl),
   };
 }
 

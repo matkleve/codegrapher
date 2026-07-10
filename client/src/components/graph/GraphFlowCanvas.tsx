@@ -36,7 +36,7 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive } =
+  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive, pinnedTokenKey } =
     useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
@@ -50,6 +50,7 @@ export function GraphFlowCanvas({
         "relative h-full w-full",
         isCtrlPreviewMode && "graph-ctrl-preview",
         isTraceActive && "graph-trace-active",
+        pinnedTokenKey != null && "graph-trace-pinned",
       )}
     >
       <ReactFlow

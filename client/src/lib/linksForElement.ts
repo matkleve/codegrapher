@@ -1,14 +1,9 @@
 import { buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
 import { toFlowId } from "@/lib/graphIds";
-import {
-  previewLineHandle,
-  previewMemberHandle,
-  previewTargetTop,
-} from "@/lib/ctrlPreviewHandles";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
-import type { AnchorRef, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
+import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
@@ -20,6 +15,11 @@ export type DefinitionEdgeContext = {
   getNode: (id: string) => Node | undefined;
   sourceFlowId: string;
   sourceMemberId?: string;
+};
+
+type UsageSite = {
+  anchor: AnchorRef;
+  liveTo: LiveAnchorHint;
 };
 
 function graphPane(): HTMLElement | null {
@@ -87,20 +87,6 @@ export function buildLocalPreviewEdges(
   );
 }
 
-function usageChipInGraph(
-  flowNodeId: string,
-  memberId: string,
-  lineNumber: number,
-  token: string,
-): HTMLElement | null {
-  const pane = graphPane();
-  if (!pane) return null;
-  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, token);
-  return pane.querySelector<HTMLElement>(
-    `[data-trace-key="${CSS.escape(traceKey)}"]`,
-  );
-}
-
 function isDefinitionSignatureLine(
   line: string,
   token: string,
@@ -114,53 +100,53 @@ function isDefinitionSignatureLine(
   return new RegExp(`\\b${escapeRegExp(token)}\\b`).test(line);
 }
 
-function anchorForUsageSite(
-  flowNodeId: string,
-  classData: ClassNodeData,
-  memberId: string,
-  lineNumber: number,
-  token: string,
-): AnchorRef {
-  const chip = usageChipInGraph(flowNodeId, memberId, lineNumber, token);
-  if (chip) return { type: "element", el: chip };
-
-  const bodyExpanded = !(classData.collapsed ?? false);
-  if (!bodyExpanded) {
-    return { type: "handle", handle: previewTargetTop(flowNodeId) };
-  }
-
-  const methodExpanded = classData.expandedMethodIds.includes(memberId);
-  if (!methodExpanded) {
-    return { type: "handle", handle: previewMemberHandle(memberId) };
-  }
-
-  return { type: "handle", handle: previewLineHandle(memberId, lineNumber) };
+function usageSiteKey(site: UsageSite): string {
+  return `${site.liveTo.flowNodeId}::${site.liveTo.memberId}::${site.liveTo.lineNumber}`;
 }
 
 /** Def → usage anchors: visible chips first, then graph handles for collapsed sites. */
-export function resolveDefinitionUsageAnchors(
+export function resolveDefinitionUsageSites(
   token: string,
   definitionEl: HTMLElement,
   graphData: GraphData | null,
   getNode: (id: string) => Node | undefined,
   sourceFlowId: string,
   sourceMemberId?: string,
-): AnchorRef[] {
-  const targets: AnchorRef[] = [];
+): UsageSite[] {
+  const targets: UsageSite[] = [];
   const seen = new Set<string>();
 
-  const add = (ref: AnchorRef) => {
+  const add = (site: UsageSite) => {
     const key =
-      ref.type === "element"
-        ? (ref.el.dataset.traceKey ?? ref.el.textContent ?? "")
-        : ref.handle;
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    targets.push(ref);
+      site.anchor.type === "element"
+        ? (site.anchor.el.dataset.traceKey ?? site.anchor.el.textContent ?? "")
+        : site.anchor.handle;
+    const dedupe = key || usageSiteKey(site);
+    if (seen.has(dedupe)) return;
+    seen.add(dedupe);
+    targets.push(site);
   };
 
   for (const el of resolveUsageAnchors(token, definitionEl)) {
-    add({ type: "element", el });
+    const traceKey = el.dataset.traceKey ?? "";
+    const parts = traceKey.split("::");
+    if (parts.length >= 4) {
+      add({
+        anchor: { type: "element", el },
+        liveTo: {
+          token,
+          flowNodeId: parts[0]!,
+          memberId: parts[1],
+          lineNumber: Number(parts[2]),
+          role: "usage",
+        },
+      });
+      continue;
+    }
+    add({
+      anchor: { type: "element", el },
+      liveTo: { token, flowNodeId: sourceFlowId, role: "usage" },
+    });
   }
 
   if (!graphData) return targets;
@@ -200,20 +186,45 @@ export function resolveDefinitionUsageAnchors(
           continue;
         }
 
-        add(
-          anchorForUsageSite(
+        add({
+          anchor: resolveUsageSiteAnchor(
             flowNodeId,
             classData,
             method.id,
             lineNumber,
             token,
           ),
-        );
+          liveTo: {
+            token,
+            flowNodeId,
+            memberId: method.id,
+            lineNumber,
+            role: "usage",
+          },
+        });
       }
     }
   }
 
   return targets;
+}
+
+export function resolveDefinitionUsageAnchors(
+  token: string,
+  definitionEl: HTMLElement,
+  graphData: GraphData | null,
+  getNode: (id: string) => Node | undefined,
+  sourceFlowId: string,
+  sourceMemberId?: string,
+): AnchorRef[] {
+  return resolveDefinitionUsageSites(
+    token,
+    definitionEl,
+    graphData,
+    getNode,
+    sourceFlowId,
+    sourceMemberId,
+  ).map((site) => site.anchor);
 }
 
 export function buildDefinitionPreviewEdges(
@@ -225,9 +236,9 @@ export function buildDefinitionPreviewEdges(
   const local = buildLocalPreviewEdges(definitionEl, kind, `local-def-${token}`);
   if (local.length > 0) return local;
 
-  const anchors =
+  const sites =
     context?.graphData && context.getNode
-      ? resolveDefinitionUsageAnchors(
+      ? resolveDefinitionUsageSites(
           token,
           definitionEl,
           context.graphData,
@@ -236,17 +247,18 @@ export function buildDefinitionPreviewEdges(
           context.sourceMemberId,
         )
       : resolveUsageAnchors(token, definitionEl).map((el) => ({
-          type: "element" as const,
-          el,
+          anchor: { type: "element" as const, el },
+          liveTo: { token, flowNodeId: context?.sourceFlowId ?? "", role: "usage" as const },
         }));
 
-  if (anchors.length === 0) return [];
+  if (sites.length === 0) return [];
 
-  return anchors.map((to, index) => ({
+  return sites.map((site, index) => ({
     id: `def-${token}-${index}`,
     from: { type: "element", el: definitionEl },
-    to,
+    to: site.anchor,
     kind,
+    liveTo: site.liveTo,
   }));
 }
 
@@ -259,7 +271,7 @@ export function connectionCountForHost(
   if (local.length > 0) return local.length;
   if (!symbolName) return 0;
   if (context?.graphData && context.getNode) {
-    return resolveDefinitionUsageAnchors(
+    return resolveDefinitionUsageSites(
       symbolName,
       host,
       context.graphData,

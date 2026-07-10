@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
@@ -20,27 +22,29 @@ type RenderedEdge = {
 function measureEdges(
   specs: PreviewEdgeSpec[],
   svgEl: SVGSVGElement,
+  getNode: (id: string) => Node | undefined,
 ): RenderedEdge[] {
   const box = svgEl.getBoundingClientRect();
   const rendered: RenderedEdge[] = [];
 
   for (const spec of specs) {
-    const from = resolvePreviewAnchor(spec.from, box, "from");
-    const to = resolvePreviewAnchor(spec.to, box, "to");
-    if (!from || !to) continue;
+    const { from, to } = refinePreviewEdge(spec, getNode);
+    const fromPt = resolvePreviewAnchor(from, box, "from");
+    const toPt = resolvePreviewAnchor(to, box, "to");
+    if (!fromPt || !toPt) continue;
 
-    const path = cubicPath(from.x, from.y, to.x, to.y, from.side, to.side);
+    const path = cubicPath(fromPt.x, fromPt.y, toPt.x, toPt.y, fromPt.side, toPt.side);
     rendered.push({
       spec,
       path,
       glowPath: path,
       stroke: TOKEN_EDGE_STROKE[spec.kind],
-      hitFrom: wireHitSegment(from.x, from.y, to.x, to.y, "from"),
-      hitTo: wireHitSegment(from.x, from.y, to.x, to.y, "to"),
-      fromX: from.x,
-      fromY: from.y,
-      toX: to.x,
-      toY: to.y,
+      hitFrom: wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from"),
+      hitTo: wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to"),
+      fromX: fromPt.x,
+      fromY: fromPt.y,
+      toX: toPt.x,
+      toY: toPt.y,
     });
   }
 
@@ -56,6 +60,7 @@ export function PreviewEdgeOverlay() {
     scheduleHoverLeaveGrace,
     pinTrace,
   } = useGraphInteraction();
+  const { getNode } = useReactFlow();
   const svgRef = useRef<SVGSVGElement>(null);
   const [edges, setEdges] = useState<RenderedEdge[]>([]);
 
@@ -68,7 +73,7 @@ export function PreviewEdgeOverlay() {
     const update = () => {
       const svgEl = svgRef.current;
       if (!svgEl) return;
-      setEdges(measureEdges(previewEdges, svgEl));
+      setEdges(measureEdges(previewEdges, svgEl, getNode));
     };
 
     let raf = 0;
@@ -78,7 +83,7 @@ export function PreviewEdgeOverlay() {
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [previewEdges]);
+  }, [getNode, previewEdges]);
 
   const onHitEnter = (
     e: React.MouseEvent,
