@@ -5,11 +5,11 @@ export type FlowAnchorSide = "left" | "right";
 
 type FlowAnchorSize = "chip" | "card" | "node";
 
-/** Round dot, mirrors the prototype's `.tok::before/::after` (6px circle, 3px gap). */
+/** Round dot beside tokens — 4px circle, 3px gap to chip edge. */
 const DOT: Record<FlowAnchorSize, { diameter: number; offset: number }> = {
-  chip: { diameter: 6, offset: 9 },
-  card: { diameter: 7, offset: 10 },
-  node: { diameter: 6, offset: 9 },
+  chip: { diameter: 4, offset: 7 },
+  card: { diameter: 5, offset: 8 },
+  node: { diameter: 4, offset: 7 },
 };
 
 type FlowAnchorProps = {
