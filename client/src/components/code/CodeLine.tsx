@@ -3,9 +3,10 @@ import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { commitTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
-import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
+import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildLocalPreviewEdges,
@@ -26,7 +27,9 @@ import {
   TOKEN_ANCHOR,
 } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
+import { makeUsageTokenKey, makeImportSpecKey } from "@/lib/traceKeys";
+import { isImportModuleSpecifier } from "@/lib/importModuleTokens";
+import { resolveClientImportPath, normalizeLoadFilePath } from "@/lib/resolveImportPath";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
 
@@ -64,8 +67,8 @@ export function CodeLine({
     edgeKindAtHandle,
     scheduleHoverFire,
     scheduleHoverClear,
-    showTokenInfo,
     pinTrace,
+    showTokenInfo,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -106,8 +109,21 @@ export function CodeLine({
         sourceFlowId,
       );
 
-      if (!resolved || resolved.mode !== "graph") {
+      if (!resolved) {
         beginTrace(tokenKey, []);
+        return;
+      }
+
+      if (resolved.mode === "external") {
+        const card = resolved.cards[0];
+        if (!card) {
+          beginTrace(tokenKey, []);
+          return;
+        }
+        const kind = semanticFromChipElement(chipEl, entry);
+        beginTrace(tokenKey, [
+          buildLoadPreviewEdge(edgeKey, card, chipEl, name, kind),
+        ]);
         return;
       }
 
@@ -126,20 +142,93 @@ export function CodeLine({
     ],
   );
 
+  const fireImportPreview = useCallback(
+    (specifier: string, chipEl: HTMLElement) => {
+      const tokenKey = makeImportSpecKey(
+        sourceFlowId,
+        memberId,
+        lineNumber,
+        specifier,
+      );
+      const edgeKey = ctrlPreviewEdgeId(
+        sourceFlowId,
+        `${memberId}::${lineNumber}::import::${specifier}`,
+      );
+      const resolvedPath = normalizeLoadFilePath(
+        filePath,
+        resolveClientImportPath(filePath, specifier),
+      );
+      beginTrace(tokenKey, [
+        buildLoadPreviewEdge(
+          edgeKey,
+          {
+            symbolName: specifier.replace(/^['"]|['"]$/g, ""),
+            filePath: resolvedPath,
+            line: 1,
+            occurrenceCount: 1,
+          },
+          chipEl,
+          specifier.replace(/^['"]|['"]$/g, ""),
+          "type",
+        ),
+      ]);
+    },
+    [beginTrace, filePath, lineNumber, memberId, sourceFlowId],
+  );
+
+  const buildUsagePinInfo = useCallback(
+    (name: string, el: HTMLElement, isDefinition: boolean) => {
+      const entry = lookup(name);
+      const kind = semanticFromChipElement(el, entry);
+      return makeTokenInfo({
+        token: name,
+        kind,
+        connectionCount: connectionCountForHost(el, hasSymbol(name) ? name : undefined),
+        definedIn: definedInLabel,
+        filePath,
+        line: lineNumber,
+        sourceFlowId,
+        sourceGraphNodeId,
+        role: isDefinition ? "definition" : "usage",
+        pinned: true,
+      });
+    },
+    [
+      definedInLabel,
+      filePath,
+      hasSymbol,
+      lineNumber,
+      lookup,
+      sourceFlowId,
+      sourceGraphNodeId,
+    ],
+  );
+
   const onIdentifierEnter = useCallback(
     (name: string, chipKey: string) => {
       const chip = chipRefs.current.get(chipKey);
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-      scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
+      scheduleHoverFire(
+        tokenKey,
+        () => firePreview(name, chipKey, chipEl),
+        clearHover,
+        () =>
+          showTokenInfo({
+            ...buildUsagePinInfo(name, chipEl, false),
+            pinned: false,
+          }),
+      );
     },
     [
+      buildUsagePinInfo,
       clearHover,
       firePreview,
       lineNumber,
       memberId,
       scheduleHoverFire,
+      showTokenInfo,
       sourceFlowId,
     ],
   );
@@ -153,43 +242,32 @@ export function CodeLine({
   );
 
   const onIdentifierClick = useCallback(
-    (name: string, el: HTMLElement, isDefinition: boolean) => {
-      const entry = lookup(name);
-      const kind = semanticFromChipElement(el, entry);
+    (
+      name: string,
+      el: HTMLElement,
+      isDefinition: boolean,
+      e?: React.MouseEvent,
+    ) => {
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-      pinTrace(tokenKey);
-      firePreview(name, `${lineNumber}`, el);
-      showTokenInfo(
-        makeTokenInfo({
-          token: name,
-          kind,
-          pinned: true,
-          connectionCount: connectionCountForHost(el, hasSymbol(name) ? name : undefined),
-          definedIn: definedInLabel,
-          filePath,
-          line: lineNumber,
-          sourceFlowId,
-          sourceGraphNodeId,
-          role: isDefinition ? "definition" : "usage",
-        }),
-      );
-      el.animate(
-        [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
-        { duration: 520, easing: "ease-out" },
-      );
+      commitTokenPin({
+        pinTrace,
+        showTokenInfo,
+        tokenKey,
+        onFire: () => firePreview(name, `${lineNumber}`, el),
+        buildPinInfo: () => buildUsagePinInfo(name, el, isDefinition),
+        animateEl: el,
+        event: e,
+        shiftKey: e?.shiftKey,
+      });
     },
     [
-      definedInLabel,
-      filePath,
+      buildUsagePinInfo,
       firePreview,
-      hasSymbol,
       lineNumber,
-      lookup,
       memberId,
       pinTrace,
       showTokenInfo,
       sourceFlowId,
-      sourceGraphNodeId,
     ],
   );
 
@@ -219,6 +297,71 @@ export function CodeLine({
         colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
       />
       {tokens.map((token, i) => {
+        if (token.kind === "string" && isImportModuleSpecifier(tokens, i)) {
+          const chipKey = `import-${lineNumber}-${i}`;
+          const tokenKey = makeImportSpecKey(
+            sourceFlowId,
+            memberId,
+            lineNumber,
+            token.text,
+          );
+          return (
+            <TokenChip
+              key={`${lineNumber}-${i}`}
+              ref={(handle) => {
+                if (handle) chipRefs.current.set(chipKey, handle);
+                else chipRefs.current.delete(chipKey);
+              }}
+              text={token.text}
+              semantic="type"
+              traceKey={tokenKey}
+              interactive
+              symbolRole="usage"
+              shimmerDelay={`-${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
+              role="button"
+              tabIndex={0}
+              onMouseEnter={() => {
+                const chip = chipRefs.current.get(chipKey);
+                const chipEl = chip?.getChipElement();
+                if (!chipEl) return;
+                scheduleHoverFire(
+                  tokenKey,
+                  () => fireImportPreview(token.text, chipEl),
+                  clearHover,
+                );
+              }}
+              onMouseLeave={() => scheduleHoverClear(tokenKey, clearHover)}
+              onClick={(e) => {
+                e.stopPropagation();
+                const chipEl = chipRefs.current.get(chipKey)?.getChipElement();
+                if (!chipEl) return;
+                commitTokenPin({
+                  pinTrace,
+                  showTokenInfo,
+                  tokenKey,
+                  onFire: () => fireImportPreview(token.text, chipEl),
+                  buildPinInfo: () =>
+                    makeTokenInfo({
+                      token: token.text.replace(/^['"]|['"]$/g, ""),
+                      kind: "type",
+                      connectionCount: 0,
+                      definedIn: definedInLabel,
+                      filePath: resolveClientImportPath(filePath, token.text),
+                      line: lineNumber,
+                      sourceFlowId,
+                      sourceGraphNodeId,
+                      role: "usage",
+                      pinned: true,
+                    }),
+                  animateEl: chipEl,
+                  event: e,
+                  shiftKey: e.shiftKey,
+                });
+              }}
+            />
+          );
+        }
+
         if (token.kind !== "identifier") {
           return (
             <span
@@ -255,7 +398,7 @@ export function CodeLine({
           return (
             <span
               key={`${lineNumber}-${i}`}
-              className={cn(inTypeContext && "text-[color:var(--token-edge-type)]")}
+              className={cn(inTypeContext && "text-[color:var(--token-edge-function)]")}
             >
               {token.text}
             </span>
@@ -311,7 +454,7 @@ export function CodeLine({
             onMouseLeave={() => onIdentifierLeave(token.text)}
             onClick={(e) => {
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget, isDefinition);
+              onIdentifierClick(token.text, e.currentTarget, isDefinition, e);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

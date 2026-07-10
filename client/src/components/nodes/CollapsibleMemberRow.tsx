@@ -78,8 +78,6 @@ export function CollapsibleMemberRow({
     memberId,
   });
 
-  const clearDefHover = useCallback(() => {}, []);
-
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
       graphData,
@@ -104,19 +102,8 @@ export function CollapsibleMemberRow({
     );
   }, [beginTrace, defEdgeContext, defKind, defTokenKey, traceName, traceable]);
 
-  const { onEnter: onDefEnter, onLeave: onDefLeave } = useTokenHover({
-    tokenKey: defTokenKey,
-    enabled: traceable,
-    onFire: fireDefPreview,
-    onClear: clearDefHover,
-  });
-
-  const { onPinClick: onDefClick } = useTokenPin({
-    tokenKey: defTokenKey,
-    enabled: traceable && Boolean(defKind),
-    onFire: fireDefPreview,
-    animateEl: undefined,
-    buildPinInfo: () =>
+  const buildDefPinInfo = useCallback(
+    () =>
       makeTokenInfo({
         token: traceName,
         kind: defKind!,
@@ -131,7 +118,40 @@ export function CollapsibleMemberRow({
         sourceFlowId: flowNodeId,
         sourceGraphNodeId: graphNodeId,
         role: "definition",
+        pinned: true,
       }),
+    [
+      classLabel,
+      defEdgeContext,
+      defKind,
+      filePath,
+      flowNodeId,
+      graphNodeId,
+      traceName,
+    ],
+  );
+
+  const { onEnter: onDefEnter, onLeave: onDefLeave } = useTokenHover({
+    tokenKey: defTokenKey,
+    enabled: traceable,
+    onFire: fireDefPreview,
+    onClear: () => {},
+    buildTransientInfo: () => {
+      const info = buildDefPinInfo();
+      const { pinned: _p, ...rest } = info;
+      return rest;
+    },
+  });
+
+  const { onPinClick: onDefClick } = useTokenPin({
+    tokenKey: defTokenKey,
+    enabled: traceable && Boolean(defKind),
+    onFire: fireDefPreview,
+    animateEl: undefined,
+    buildPinInfo: () => {
+      const { pinned: _p, ...rest } = buildDefPinInfo();
+      return rest;
+    },
   });
 
   const targetActive = isHandleActive(memberHandleId);

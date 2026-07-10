@@ -33,8 +33,8 @@ export function buildUsageSiteIndex(
     const classData = node.data as ClassNodeData;
     const flowNodeId = node.id;
 
-    for (const method of classData.methods) {
-      const lines = method.code.split("\n");
+    const scanMemberBody = (memberId: string, code: string) => {
+      const lines = code.split("\n");
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i] ?? "";
         const lineNumber = i + 1;
@@ -47,12 +47,21 @@ export function buildUsageSiteIndex(
           seenOnLine.add(token);
           add(token, {
             flowNodeId,
-            memberId: method.id,
+            memberId,
             lineNumber,
             line,
           });
         }
       }
+    };
+
+    for (const method of classData.methods) {
+      scanMemberBody(method.id, method.code);
+    }
+
+    for (const property of classData.properties) {
+      if (!property.code?.trim()) continue;
+      scanMemberBody(property.id, property.code);
     }
   }
 

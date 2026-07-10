@@ -32,8 +32,9 @@ export function createWireGroup(
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("fill", "none");
   path.classList.add("preview-edge-path");
+  if (spec.load) path.classList.add("preview-edge-load");
   if (warm) path.classList.add("preview-edge-warm");
-  path.setAttribute("marker-end", "url(#preview-edge-arrow)");
+  if (!spec.load) path.setAttribute("marker-end", "url(#preview-edge-arrow)");
 
   const hitFrom = document.createElementNS("http://www.w3.org/2000/svg", "path");
   hitFrom.setAttribute("fill", "none");
@@ -62,6 +63,28 @@ export function updateWireGeometry(
   svgBox: DOMRect,
   getNode: (id: string) => Node | undefined,
 ): boolean {
+  const spec = wire.spec;
+  if (spec.load) {
+    const toRef = refinePreviewEdge(spec, getNode).to;
+    const toPt = resolvePreviewAnchor(toRef, svgBox, "to");
+    if (!toPt) {
+      wire.group.style.display = "none";
+      return false;
+    }
+    const pillOffset = 52;
+    const fromX = toPt.x - pillOffset;
+    const fromY = toPt.y;
+    const toX = toPt.x;
+    const toY = toPt.y;
+    wire.group.style.display = "";
+    const pathD = cubicPath(fromX, fromY, toX, toY, "right", "left");
+    wire.path.setAttribute("d", pathD);
+    wire.glow.setAttribute("d", pathD);
+    wire.hitFrom.setAttribute("d", "");
+    wire.hitTo.setAttribute("d", "");
+    return true;
+  }
+
   const { from, to } = refinePreviewEdge(wire.spec, getNode);
   const fromPt = resolvePreviewAnchor(from, svgBox, "from");
   const toPt = resolvePreviewAnchor(to, svgBox, "to");

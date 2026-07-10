@@ -21,6 +21,7 @@ import {
   clearHoverTimers,
   emptyHoverTimers,
   fireDelayMs,
+  INFO_DELAY_MS,
   LEAVE_GRACE_MS,
   type HoverIntentTimers,
 } from "@/lib/hoverIntent";
@@ -37,11 +38,20 @@ import { clearJumpTooltip } from "@/context/JumpTooltipContext";
 import {
   isDefinitionSignatureLine,
 } from "@/lib/linksForElement";
+import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { buildUsageSiteIndex, type UsageSiteRecord } from "@/lib/usageSiteIndex";
+import {
+  applyPinGesture,
+  mergePinnedEdges,
+  pinnedKeys,
+  updatePinnedEdges,
+  updatePinnedInfo,
+  type PinnedTrace,
+} from "@/lib/pinnedTraces";
 import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
-export { edgeTouchesHandle } from "@/lib/resolveLiveAnchor";
+export { edgeTouchesHandle, refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 
 export type AnchorRect = {
   left: number;
@@ -75,7 +85,12 @@ type GraphInteractionContextValue = {
   /** End ephemeral hover preview; restores pinned edges when a pin is active. */
   endHoverPreview: () => void;
   isWarm: boolean;
-  scheduleHoverFire: (tokenKey: string, onFire: () => void, onClear: () => void) => void;
+  scheduleHoverFire: (
+    tokenKey: string,
+    onFire: () => void,
+    onClear: () => void,
+    onInfo?: () => void,
+  ) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleHoverLeaveGrace: () => void;
   cancelHoverLeaveGrace: () => void;
@@ -94,8 +109,12 @@ type GraphInteractionContextValue = {
   focusFlowNode: (flowNodeId: string) => void;
   onLoadFile: (filePath: string) => void | Promise<void>;
   graphData: GraphData | null;
-  pinTrace: (tokenKey: string) => void;
+  pinTrace: (tokenKey: string, shiftKey?: boolean) => void;
   pinnedTokenKey: string | null;
+  pinnedTraces: PinnedTrace[];
+  activePinKey: string | null;
+  setActivePinKey: (tokenKey: string) => void;
+  isPinnedTokenKey: (tokenKey: string) => boolean;
   hoveredTokenKey: string | null;
   lookupIndexedUsageSites: (
     token: string,
@@ -128,16 +147,16 @@ export function GraphInteractionProvider({
   const { setCenter, getNode } = useReactFlow();
 
   const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
-  const [pinnedPreviewEdges, setPinnedPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
+  const [pinnedTraces, setPinnedTraces] = useState<PinnedTrace[]>([]);
+  const [activePinKey, setActivePinKey] = useState<string | null>(null);
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
-  const [pinnedTokenKey, setPinnedTokenKey] = useState<string | null>(null);
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
-  const pinnedTokenKeyRef = useRef<string | null>(null);
-  const pinnedPreviewEdgesRef = useRef<PreviewEdgeSpec[]>([]);
+  const pinnedTracesRef = useRef<PinnedTrace[]>([]);
+  const activePinKeyRef = useRef<string | null>(null);
   const pendingFireRef = useRef<{ tokenKey: string; onFire: () => void } | null>(
     null,
   );
@@ -153,26 +172,29 @@ export function GraphInteractionProvider({
   }, []);
 
   const endHoverPreview = useCallback(() => {
-    if (pinnedTokenKeyRef.current != null) {
+    if (pinnedTracesRef.current.length > 0) {
       hoveredTokenKeyRef.current = null;
       setHoveredTokenKey(null);
       setHoverPreviewEdges([]);
+      if (!tokenInfo?.pinned) setTokenInfo(null);
       return;
     }
     endTrace();
-  }, [endTrace]);
+    if (!tokenInfo?.pinned) setTokenInfo(null);
+  }, [endTrace, tokenInfo?.pinned]);
 
   const beginTrace = useCallback((tokenKey: string, edges: PreviewEdgeSpec[]) => {
     setHoveredTokenKey(tokenKey);
     setIsWarm(true);
-    const pinned = pinnedTokenKeyRef.current;
-    if (pinned === tokenKey) {
-      pinnedPreviewEdgesRef.current = edges;
-      setPinnedPreviewEdges(edges);
+    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
+    if (pin) {
+      const updated = updatePinnedEdges(pinnedTracesRef.current, tokenKey, edges);
+      pinnedTracesRef.current = updated;
+      setPinnedTraces(updated);
       setHoverPreviewEdges([]);
       return;
     }
-    if (pinned != null) {
+    if (pinnedTracesRef.current.length > 0) {
       setHoverPreviewEdges(edges);
       return;
     }
@@ -187,40 +209,90 @@ export function GraphInteractionProvider({
   }, []);
 
   const clearTokenInfo = useCallback(() => {
-    pinnedTokenKeyRef.current = null;
-    pinnedPreviewEdgesRef.current = [];
-    setPinnedPreviewEdges([]);
+    pinnedTracesRef.current = [];
+    activePinKeyRef.current = null;
+    setPinnedTraces([]);
+    setActivePinKey(null);
     setTokenInfo(null);
-    setPinnedTokenKey(null);
     endTrace();
     resetHoverIntent();
   }, [endTrace, resetHoverIntent]);
 
   const pinTrace = useCallback(
-    (tokenKey: string) => {
+    (tokenKey: string, shiftKey = false) => {
       resetHoverIntent();
-      pinnedTokenKeyRef.current = tokenKey;
-      setPinnedTokenKey(tokenKey);
-      setHoveredTokenKey(tokenKey);
-      setIsWarm(true);
+      const mode = shiftKey
+        ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
+          ? "toggle"
+          : "accumulate"
+        : "replace";
+      const { traces, activeKey } = applyPinGesture(
+        pinnedTracesRef.current,
+        tokenKey,
+        mode,
+      );
+      pinnedTracesRef.current = traces;
+      activePinKeyRef.current = activeKey;
+      setPinnedTraces(traces);
+      setActivePinKey(activeKey);
+      if (activeKey) {
+        setHoveredTokenKey(activeKey);
+        setIsWarm(true);
+      } else {
+        setTokenInfo(null);
+        endTrace();
+      }
     },
-    [resetHoverIntent],
+    [endTrace, resetHoverIntent],
   );
 
   const showTokenInfo = useCallback(
     (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => {
       setTokenInfo(info);
+      if (info.pinned && activePinKeyRef.current) {
+        const key = activePinKeyRef.current;
+        const updated = updatePinnedInfo(
+          pinnedTracesRef.current,
+          key,
+          { ...info, pinned: true },
+        );
+        pinnedTracesRef.current = updated;
+        setPinnedTraces(updated);
+      }
     },
     [],
   );
 
+  const handleSetActivePinKey = useCallback((tokenKey: string) => {
+    if (!pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)) return;
+    activePinKeyRef.current = tokenKey;
+    setActivePinKey(tokenKey);
+    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
+    if (pin?.info) {
+      setTokenInfo(pin.info);
+    }
+  }, []);
+
+  const isPinnedTokenKey = useCallback(
+    (tokenKey: string) =>
+      pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey),
+    [],
+  );
+
   const scheduleHoverFire = useCallback(
-    (tokenKey: string, onFire: () => void, onClear: () => void) => {
+    (
+      tokenKey: string,
+      onFire: () => void,
+      onClear: () => void,
+      onInfo?: () => void,
+    ) => {
       const timers = hoverTimersRef.current;
       clearTimeout(timers.clear ?? undefined);
       clearTimeout(timers.fire ?? undefined);
+      clearTimeout(timers.info ?? undefined);
       timers.clear = null;
       timers.fire = null;
+      timers.info = null;
 
       pendingFireRef.current = { tokenKey, onFire };
       hoverClearRef.current = { tokenKey, onClear };
@@ -237,10 +309,21 @@ export function GraphInteractionProvider({
       const delay = fireDelayMs(isWarm || hoveredTokenKey != null, isCtrlActive);
       if (delay === 0) {
         runFire();
-        return;
+      } else {
+        timers.fire = setTimeout(runFire, delay);
       }
 
-      timers.fire = setTimeout(runFire, delay);
+      if (onInfo) {
+        timers.info = setTimeout(() => {
+          if (
+            hoveredTokenKeyRef.current === tokenKey &&
+            !pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
+          ) {
+            onInfo();
+          }
+          timers.info = null;
+        }, INFO_DELAY_MS);
+      }
     },
     [hoveredTokenKey, isCtrlActive, isWarm],
   );
@@ -249,19 +332,14 @@ export function GraphInteractionProvider({
     (tokenKey: string, onClear: () => void) => {
       const timers = hoverTimersRef.current;
       clearTimeout(timers.fire ?? undefined);
+      clearTimeout(timers.info ?? undefined);
       timers.fire = null;
+      timers.info = null;
 
       timers.clear = setTimeout(() => {
         if (hoveredTokenKeyRef.current === tokenKey) {
           hoveredTokenKeyRef.current = null;
           pendingFireRef.current = null;
-          const pinned = pinnedTokenKeyRef.current;
-          if (pinned != null) {
-            setHoveredTokenKey(null);
-            setHoverPreviewEdges([]);
-          } else {
-            setIsWarm(false);
-          }
           onClear();
         }
         timers.clear = null;
@@ -328,19 +406,27 @@ export function GraphInteractionProvider({
     [getNode, nodes, setCenter, setNodes],
   );
 
-  useClearPinnedOnClickAway(pinnedTokenKey != null, clearTokenInfo);
+  useClearPinnedOnClickAway(pinnedTraces.length > 0, clearTokenInfo);
 
-  const traceTokenKey = pinnedTokenKey ?? hoveredTokenKey;
-  const isTraceActive = pinnedTokenKey != null || hoveredTokenKey != null;
+  const pinnedPreviewEdges = useMemo(
+    () => mergePinnedEdges(pinnedTraces),
+    [pinnedTraces],
+  );
+  const pinnedTokenKey = activePinKey;
+
+  const traceTokenKey =
+    activePinKey ?? hoveredTokenKey ?? pinnedTraces[0]?.tokenKey ?? null;
+  const isTraceActive =
+    pinnedTraces.length > 0 || hoveredTokenKey != null;
 
   const previewEdges = useMemo(() => {
     const hasParallelHover =
-      pinnedTokenKey != null &&
+      pinnedTraces.length > 0 &&
       hoveredTokenKey != null &&
-      hoveredTokenKey !== pinnedTokenKey &&
+      !pinnedKeys(pinnedTraces).includes(hoveredTokenKey) &&
       hoverPreviewEdges.length > 0;
 
-    if (pinnedTokenKey != null && pinnedPreviewEdges.length > 0) {
+    if (pinnedPreviewEdges.length > 0) {
       return hasParallelHover
         ? [...pinnedPreviewEdges, ...hoverPreviewEdges]
         : pinnedPreviewEdges;
@@ -350,7 +436,7 @@ export function GraphInteractionProvider({
     hoverPreviewEdges,
     hoveredTokenKey,
     pinnedPreviewEdges,
-    pinnedTokenKey,
+    pinnedTraces,
   ]);
 
   const revealRevision = useMemo(() => {
@@ -420,23 +506,29 @@ export function GraphInteractionProvider({
     [activeHandleKinds],
   );
 
-  const pinnedTraceLit = useMemo(
-    () =>
-      pinnedTokenKey
-        ? computeTraceLit(pinnedTokenKey, pinnedPreviewEdges, getNode)
-        : EMPTY_TRACE_LIT,
-    [domRevision, getNode, pinnedPreviewEdges, pinnedTokenKey, revealRevision],
-  );
+  const pinnedTraceLit = useMemo(() => {
+    let lit = EMPTY_TRACE_LIT;
+    for (const trace of pinnedTraces) {
+      lit = mergeTraceLit(
+        lit,
+        computeTraceLit(trace.tokenKey, trace.edges, getNode),
+      );
+    }
+    return lit;
+  }, [domRevision, getNode, pinnedTraces, revealRevision]);
 
   const hoverTraceLit = useMemo(() => {
-    if (!hoveredTokenKey || hoveredTokenKey === pinnedTokenKey) return EMPTY_TRACE_LIT;
+    if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
+    if (pinnedKeys(pinnedTraces).includes(hoveredTokenKey)) {
+      return EMPTY_TRACE_LIT;
+    }
     return computeTraceLit(hoveredTokenKey, hoverPreviewEdges, getNode);
   }, [
     domRevision,
     getNode,
     hoverPreviewEdges,
     hoveredTokenKey,
-    pinnedTokenKey,
+    pinnedTraces,
     revealRevision,
   ]);
 
@@ -500,6 +592,10 @@ export function GraphInteractionProvider({
       graphData,
       pinTrace,
       pinnedTokenKey,
+      pinnedTraces,
+      activePinKey,
+      setActivePinKey: handleSetActivePinKey,
+      isPinnedTokenKey,
       hoveredTokenKey,
       lookupIndexedUsageSites,
     }),
@@ -532,6 +628,10 @@ export function GraphInteractionProvider({
       graphData,
       pinTrace,
       pinnedTokenKey,
+      pinnedTraces,
+      activePinKey,
+      handleSetActivePinKey,
+      isPinnedTokenKey,
       hoveredTokenKey,
       lookupIndexedUsageSites,
     ],

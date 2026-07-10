@@ -32,15 +32,13 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 2 | Hover a **definition** (member/class name) | Fan-out edges to every in-graph usage | `linksForElement` reverse |
 | 3 | Hover a **usage** | Single edge from its definition to this site | `linksForElement` forward |
 | 4 | Hold **Ctrl** (reveal, no pin) | Instant preview; all indexed tokens shimmer; syntax/keywords dampen | `graph-ctrl-preview` |
-| 5 | **Click** a token or wire hit-zone | **Pin** one trace + open info box (replaces prior pin) | `pinnedTokenKey` |
+| 5 | **Click** a token or wire hit-zone | **Pin** one trace + open info box (plain click replaces pin set; Shift+click accumulates) | `pinnedTraces` |
 | 6 | Click empty canvas / **Esc** | Clear pin + trace; return to calm | click-away |
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
-| 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) | hit click |
-| 9 | **Long-hover** (extended dwell) | Info box opens transiently ⚠ target | `INFO_DELAY` |
-| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token ⚠ target | `mode:"external"` |
-| 11 | Click the **Load** pill | `onLoadFile` → `/api/focus` pulls the definition in ⚠ target | load |
-
-⚠ = specified target, prototype only — see [SPEC-DRIFT.md](../SPEC-DRIFT.md).
+| 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
+| 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
+| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token | `mode:"external"` |
+| 11 | Click the **Load** pill | `onLoadFile` → `/api/focus` pulls the definition in | load |
 
 ## Interaction by keyword kind
 
@@ -62,9 +60,9 @@ graph-pane
 ├── CollapsibleMemberRow name  (member definition)
 ├── NodeCardHeader title       (class definition)
 ├── PreviewEdgeOverlay         (wires + hit-zones + sockets)
-├── TokenContextBar / info box (pinned facts)
+├── TokenContextBar / info box (pinned + transient long-hover)
 ├── JumpTooltip                (wire "Jump to")
-└── [LoadConnector]            (external symbol → load)  ⚠ target, prototype only
+└── LoadConnector              (external symbol → load)
 ```
 
 ## Data
@@ -81,7 +79,7 @@ graph-pane
 | `hover-intent` | pointer on token | timer running, no visual yet |
 | `traced` | dwell elapsed / Ctrl | edge drawn, dim + lit |
 | `ctrl-reveal` | Ctrl held | shimmer all indexed, dampen syntax; **no** pin |
-| `pinned` | plain **click** | trace + info box locked; foreign hover suppressed |
+| `pinned` | plain **click** (replace) / Shift+**click** (accumulate) | trace + info bar locked; breadcrumb when N>1 |
 
 ## Acceptance Criteria
 
@@ -97,7 +95,7 @@ graph-pane
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
   hovered, then a **dashed Load connector** appears; clicking it loads the
-  definition via `/api/focus`. ⚠ Target — prototype only, see SPEC-DRIFT.
+  definition via `/api/focus`.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim
   (no upward cascade); a function endpoint lights its own body.
 - [ ] Plain hover never fires without a dwell; Ctrl fires instantly.
@@ -112,4 +110,3 @@ graph-pane
 
 - [preview-edges.md](preview-edges.md) — edge timing, anchors, overlay
 - [ego-graph-model.md](ego-graph-model.md) — on-demand philosophy, loading
-- [SPEC-DRIFT.md](../SPEC-DRIFT.md) — Load connector + accumulate-pin gaps

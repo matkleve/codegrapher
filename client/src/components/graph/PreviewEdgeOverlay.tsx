@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useJumpTooltip } from "@/context/JumpTooltipContext";
+import { commitTokenPin } from "@/hooks/useTokenTrace";
+import { makeTokenInfoFromJumpTarget } from "@/lib/tokenContextInfo";
 import {
   jumpTargetForWireEnd,
   jumpTargetLabel,
@@ -22,6 +24,9 @@ export function PreviewEdgeOverlay() {
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
     pinTrace,
+    beginTrace,
+    showTokenInfo,
+    focusFlowNode,
   } = useGraphInteraction();
   const { setJumpTooltip } = useJumpTooltip();
   const { getNode } = useReactFlow();
@@ -57,11 +62,18 @@ export function PreviewEdgeOverlay() {
       const el = resolveJumpTargetElement(ref, hint, getNode);
       if (!el) return;
       const traceKey = traceKeyForJumpTarget(el, hint);
-      if (traceKey) pinTrace(traceKey);
-      el.animate(
-        [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
-        { duration: 520, easing: "ease-out" },
-      );
+      if (!traceKey) return;
+      const flowNodeId = hint?.flowNodeId;
+      commitTokenPin({
+        pinTrace,
+        showTokenInfo,
+        tokenKey: traceKey,
+        onFire: () => beginTrace(traceKey, [spec]),
+        buildPinInfo: () =>
+          makeTokenInfoFromJumpTarget(el, hint, spec.kind, true),
+        animateEl: el,
+      });
+      if (flowNodeId) focusFlowNode(flowNodeId);
       el.scrollIntoView({ block: "nearest", inline: "nearest" });
       setJumpTooltip(null);
     };

@@ -18,17 +18,16 @@ export function useTraceAppearance({
     isTraceLineLit,
     isCtrlPreviewMode,
     isTraceActive,
-    pinnedTokenKey,
+    isPinnedTokenKey,
     hoveredTokenKey,
   } = useGraphInteraction();
 
-  const pinnedSource =
-    traceKey != null && pinnedTokenKey != null && traceKey === pinnedTokenKey;
+  const pinnedSource = traceKey != null && isPinnedTokenKey(traceKey);
   const hoverPreview =
     traceKey != null &&
     hoveredTokenKey != null &&
     traceKey === hoveredTokenKey &&
-    hoveredTokenKey !== pinnedTokenKey;
+    !isPinnedTokenKey(traceKey);
 
   return {
     isCtrlPreviewMode,

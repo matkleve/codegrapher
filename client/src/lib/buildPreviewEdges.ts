@@ -1,5 +1,5 @@
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import type { GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
+import type { ExternalReferenceCard, GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
 function liveToFromUsageEl(token: string, usageEl: HTMLElement): LiveAnchorHint | undefined {
@@ -68,5 +68,27 @@ export function buildElementPreviewEdge(
     from: { type: "element", el: fromEl },
     to: { type: "element", el: toEl },
     kind,
+  };
+}
+
+/** Dashed load stub from off-graph definition to an on-graph usage chip. */
+export function buildLoadPreviewEdge(
+  edgeId: string,
+  card: ExternalReferenceCard,
+  usageEl: HTMLElement,
+  token: string,
+  kind: SemanticTokenKind,
+): PreviewEdgeSpec {
+  return {
+    id: edgeId,
+    from: { type: "element", el: usageEl },
+    to: { type: "element", el: usageEl },
+    kind,
+    load: {
+      filePath: card.filePath,
+      line: card.line,
+      occurrenceCount: card.occurrenceCount,
+    },
+    liveTo: liveToFromUsageEl(token, usageEl),
   };
 }

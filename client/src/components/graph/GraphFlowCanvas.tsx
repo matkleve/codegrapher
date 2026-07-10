@@ -10,6 +10,7 @@ import { TokenContextBar } from "@/components/code/TokenContextBar";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
+import { LoadConnector } from "@/components/graph/LoadConnector";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive, isWarm, pinnedTokenKey } =
+  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive, isWarm, pinnedTraces } =
     useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
@@ -51,7 +52,7 @@ export function GraphFlowCanvas({
         isCtrlPreviewMode && "graph-ctrl-preview",
         isTraceActive && "graph-trace-active",
         isTraceActive && isWarm && "graph-trace-warm",
-        pinnedTokenKey != null && "graph-trace-pinned",
+        pinnedTraces.length > 0 && "graph-trace-pinned",
       )}
     >
       <ReactFlow
@@ -80,6 +81,7 @@ export function GraphFlowCanvas({
         panOnDrag
       >
         <PreviewEdgeOverlay />
+        <LoadConnector />
       </ReactFlow>
       <GraphPinchZoomBoost />
       <TokenContextBar />

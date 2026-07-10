@@ -16,6 +16,16 @@ export function makeClassDefKey(symbolName: string): string {
   return `class-def::${symbolName}`;
 }
 
+export function makeImportSpecKey(
+  sourceFlowId: string,
+  memberId: string,
+  lineNumber: number,
+  specifier: string,
+): string {
+  const spec = specifier.replace(/^['"]|['"]$/g, "");
+  return `${sourceFlowId}::${memberId}::${lineNumber}::import::${spec}`;
+}
+
 export function memberIdFromUsageKey(key: string): string | null {
   const parts = key.split("::");
   if (parts.length < 4 || parts[1] === "def") return null;

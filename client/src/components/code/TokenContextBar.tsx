@@ -33,6 +33,9 @@ export function TokenContextBar() {
     findReferences,
     focusFlowNode,
     onLoadFile,
+    pinnedTraces,
+    activePinKey,
+    setActivePinKey,
   } = useGraphInteraction();
   const [expanded, setExpanded] = useState(false);
 
@@ -64,8 +67,9 @@ export function TokenContextBar() {
     [references],
   );
 
-  if (!tokenInfo?.pinned) return null;
+  if (!tokenInfo) return null;
 
+  const isPinned = tokenInfo.pinned;
   const { token, kind, connectionCount, definedIn, role } = tokenInfo;
   const swatch = TOKEN_EDGE_STROKE[kind];
   const def = definitionRef(references);
@@ -74,8 +78,34 @@ export function TokenContextBar() {
   return (
     <div
       data-token-context-bar
-      className="pointer-events-auto absolute inset-x-3 bottom-3 z-50 overflow-hidden rounded-xl border border-border bg-card/95 shadow-lg backdrop-blur-sm"
+      className={cn(
+        "pointer-events-auto absolute inset-x-3 bottom-3 z-50 overflow-hidden rounded-xl border bg-card/95 shadow-lg backdrop-blur-sm",
+        isPinned ? "border-border" : "border-brand-border/60 opacity-95",
+      )}
     >
+      {isPinned && pinnedTraces.length > 1 ? (
+        <div className="flex flex-wrap gap-1 border-b border-border px-2 py-1.5">
+          {pinnedTraces.map((trace) => {
+            const label = trace.info?.token ?? trace.tokenKey.split("::").pop() ?? "?";
+            const active = trace.tokenKey === activePinKey;
+            return (
+              <button
+                key={trace.tokenKey}
+                type="button"
+                className={cn(
+                  "rounded-md px-2 py-0.5 font-mono text-[10px] font-medium transition-colors",
+                  active
+                    ? "border border-brand-border bg-brand-surface text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setActivePinKey(trace.tokenKey)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <div className="flex items-center gap-3 px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           <span
@@ -98,7 +128,7 @@ export function TokenContextBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
-          {canJumpDef ? (
+          {isPinned && canJumpDef ? (
             <Button
               type="button"
               variant="outline"
@@ -116,7 +146,7 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {connectionCount > 0 ? (
+          {isPinned && connectionCount > 0 ? (
             <Button
               type="button"
               variant="outline"
@@ -129,7 +159,7 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {def ? (
+          {isPinned && def ? (
             <Button
               type="button"
               variant="outline"
@@ -144,7 +174,7 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {externalRefs.length > 0 ? (
+          {isPinned && externalRefs.length > 0 ? (
             <Button
               type="button"
               variant="outline"
@@ -163,8 +193,8 @@ export function TokenContextBar() {
             variant="ghost"
             size="icon"
             className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Unpin"
-            title="Unpin"
+            aria-label={isPinned ? "Unpin" : "Dismiss"}
+            title={isPinned ? "Unpin" : "Dismiss"}
             onClick={clearTokenInfo}
           >
             <X className="size-3.5" aria-hidden />

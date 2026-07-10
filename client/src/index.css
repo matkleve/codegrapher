@@ -117,10 +117,10 @@
   --chart-5: oklch(0.38 0.03 260);
   --token-class: oklch(0.48 0.19 295);
   --token-function: oklch(0.50 0.17 255);
-  --token-type: oklch(0.50 0.11 200);
+  --token-type: oklch(0.50 0.17 255);
   --token-edge-function: oklch(0.50 0.17 255);
   --token-edge-class: oklch(0.48 0.19 295);
-  --token-edge-type: oklch(0.50 0.11 200);
+  --token-edge-type: oklch(0.50 0.17 255);
   --token-edge-variable: oklch(0.50 0.14 305);
   --code-keyword: oklch(0.42 0.14 295);
   --code-string: oklch(0.46 0.11 55);
@@ -215,10 +215,10 @@ html.dark {
   --sidebar-ring: var(--ring);
   --token-class: oklch(0.72 0.14 295);
   --token-function: oklch(0.74 0.11 255);
-  --token-type: oklch(0.72 0.09 200);
+  --token-type: oklch(0.74 0.11 255);
   --token-edge-function: oklch(0.74 0.11 255);
   --token-edge-class: oklch(0.72 0.14 295);
-  --token-edge-type: oklch(0.72 0.09 200);
+  --token-edge-type: oklch(0.74 0.11 255);
   --token-edge-variable: oklch(0.74 0.10 305);
   --code-keyword: oklch(0.78 0.10 295);
   --code-string: oklch(0.80 0.09 55);

@@ -523,6 +523,55 @@
   animation: proto-flow 700ms linear infinite;
 }
 
+.preview-edge-path.preview-edge-load {
+  stroke-dasharray: 6 4;
+  opacity: 0.85;
+}
+
+.load-connector-pill {
+  z-index: 46;
+  border-radius: 999px;
+  border-width: 1.5px;
+  border-style: dashed;
+  background: var(--card);
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--ease),
+    filter 0.15s var(--ease);
+}
+
+.load-connector-pill:hover {
+  background: var(--brand-surface);
+  filter: brightness(1.05);
+}
+
+/* Inline code — one function-blue ink for every token kind (rest, hover, trace) */
+.code-line .token-chip {
+  color: var(--token-edge-function);
+}
+
+.code-line .token-chip .token-chip-text {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+}
+
+.code-line .token-chip.token-chip-on {
+  background: color-mix(in oklch, var(--token-edge-function) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-function) 76%, transparent);
+}
+
+.graph-trace-active .code-line .token-chip.token-chip-lit .token-chip-text,
+.graph-trace-active .code-line .token-chip.token-chip-on .token-chip-text,
+.graph-trace-pinned .code-line .token-chip.token-chip-on.token-chip-source .token-chip-text {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
 .preview-edge-glow.preview-edge-warm {
   animation: none;
   opacity: 0.16;

@@ -49,8 +49,6 @@ export function NodeCardHeader({
     traceKey: indexed ? defTokenKey : undefined,
   });
 
-  const clearDefHover = useCallback(() => {}, []);
-
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
       graphData,
@@ -77,11 +75,42 @@ export function NodeCardHeader({
     );
   }, [beginTrace, defEdgeContext, defTokenKey, indexed, lookup, symbolName]);
 
+  const buildTitlePinInfo = useCallback(() => {
+    const symEntry = lookup(symbolName!);
+    return makeTokenInfo({
+      token: symbolName!,
+      kind: symbolKindToSemantic(symEntry!.kind),
+      connectionCount: connectionCountForHost(
+        titleRef.current!,
+        symbolName!,
+        defEdgeContext,
+      ),
+      definedIn: symbolName!,
+      filePath,
+      line: symEntry!.line,
+      sourceFlowId: flowNodeId,
+      sourceGraphNodeId: graphNodeId,
+      role: "definition",
+      pinned: true,
+    });
+  }, [
+    defEdgeContext,
+    filePath,
+    flowNodeId,
+    graphNodeId,
+    lookup,
+    symbolName,
+  ]);
+
   const { onEnter: onTitleEnter, onLeave: onTitleLeave } = useTokenHover({
     tokenKey: defTokenKey,
     enabled: indexed,
     onFire: fireDefPreview,
-    onClear: clearDefHover,
+    onClear: () => {},
+    buildTransientInfo: () => {
+      const { pinned: _p, ...rest } = buildTitlePinInfo();
+      return rest;
+    },
   });
 
   const { onPinClick: onTitleClick } = useTokenPin({
@@ -90,22 +119,8 @@ export function NodeCardHeader({
     onFire: fireDefPreview,
     animateEl: undefined,
     buildPinInfo: () => {
-      const symEntry = lookup(symbolName!);
-      return makeTokenInfo({
-        token: symbolName!,
-        kind: symbolKindToSemantic(symEntry!.kind),
-        connectionCount: connectionCountForHost(
-          titleRef.current!,
-          symbolName!,
-          defEdgeContext,
-        ),
-        definedIn: symbolName!,
-        filePath,
-        line: symEntry!.line,
-        sourceFlowId: flowNodeId,
-        sourceGraphNodeId: graphNodeId,
-        role: "definition",
-      });
+      const { pinned: _p, ...rest } = buildTitlePinInfo();
+      return rest;
     },
   });
 

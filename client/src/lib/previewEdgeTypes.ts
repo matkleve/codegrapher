@@ -20,6 +20,12 @@ export type PreviewEdgeSpec = {
   kind: SemanticTokenKind;
   liveFrom?: LiveAnchorHint;
   liveTo?: LiveAnchorHint;
+  /** Off-graph definition — dashed load stub + pill beside usage token. */
+  load?: {
+    filePath: string;
+    line: number;
+    occurrenceCount: number;
+  };
 };
 
 export function anchorHandle(ref: AnchorRef): string | null {

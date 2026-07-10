@@ -203,9 +203,22 @@ export function GraphFlowInner({
           ? n
           : { ...n, className: cn(n.className, "node-fade-in") },
       );
+      const addedNodes = mergedNodes.filter((n) => !existingIds.has(n.id));
       applyLayoutAndFit(mergedNodes, appended.edges, false, true);
+      if (addedNodes.length > 0) {
+        const target = addedNodes[0]!;
+        const w =
+          typeof target.width === "number" ? target.width : CLASS_NODE_DEFAULT_WIDTH;
+        const h = typeof target.height === "number" ? target.height : 120;
+        requestAnimationFrame(() => {
+          void setCenter(target.position.x + w / 2, target.position.y + h / 2, {
+            zoom: 1.15,
+            duration: 350,
+          });
+        });
+      }
     },
-    [applyLayoutAndFit, setEdges, setNodes],
+    [applyLayoutAndFit, setCenter, setEdges, setNodes],
   );
 
   useImperativeHandle(
