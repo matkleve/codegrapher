@@ -232,6 +232,7 @@ export function CollapsibleMemberRow({
                 filePath={filePath}
                 definedInLabel={classLabel}
                 symbolIndex={symbolIndex}
+                memberSymbolName={symbolName}
               />
             ))}
           </div>

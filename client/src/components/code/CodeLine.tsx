@@ -10,6 +10,7 @@ import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildLocalPreviewEdges,
   connectionCountForHost,
+  isDefinitionSignatureLine,
   resolveLocalTargetId,
 } from "@/lib/linksForElement";
 import {
@@ -33,6 +34,8 @@ type CodeLineProps = {
   filePath: string;
   definedInLabel: string;
   symbolIndex: MemberSymbolIndex;
+  /** Raw member identifier — signature-line chips with this name are definitions. */
+  memberSymbolName?: string;
 };
 
 export function CodeLine({
@@ -44,6 +47,7 @@ export function CodeLine({
   filePath,
   definedInLabel,
   symbolIndex,
+  memberSymbolName,
 }: CodeLineProps) {
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
@@ -251,6 +255,20 @@ export function CodeLine({
           indexed &&
           semantic === "class" &&
           (prevText === "class" || prevText === "interface");
+        const isMemberSignatureDecl =
+          memberSymbolName != null &&
+          token.text === memberSymbolName &&
+          isDefinitionSignatureLine(
+            line,
+            token.text,
+            sourceFlowId,
+            memberId,
+            sourceFlowId,
+            memberId,
+          );
+        const isDefinition = Boolean(
+          localDefId || isClassDeclName || isMemberSignatureDecl,
+        );
         const chipKey = `${lineNumber}-${i}`;
         const tokenKey = makeUsageTokenKey(
           sourceFlowId,
@@ -272,7 +290,7 @@ export function CodeLine({
             interactive={interactive}
             localDefId={localDefId}
             localTargetId={localTargetId ?? undefined}
-            symbolRole={localDefId || isClassDeclName ? "definition" : "usage"}
+            symbolRole={isDefinition ? "definition" : "usage"}
             shimmerDelay={`-${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
             role="button"
             tabIndex={0}
@@ -280,11 +298,11 @@ export function CodeLine({
             onMouseLeave={() => onIdentifierLeave(token.text)}
             onClick={(e) => {
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget, !!(localDefId || isClassDeclName));
+              onIdentifierClick(token.text, e.currentTarget, isDefinition);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                onIdentifierClick(token.text, e.currentTarget, !!(localDefId || isClassDeclName));
+                onIdentifierClick(token.text, e.currentTarget, isDefinition);
               }
             }}
           />

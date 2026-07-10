@@ -87,7 +87,8 @@ export function buildLocalPreviewEdges(
   );
 }
 
-function isDefinitionSignatureLine(
+/** Member-body line where `token` is the declared name (not a call/reference). */
+export function isDefinitionSignatureLine(
   line: string,
   token: string,
   flowNodeId: string,
@@ -96,8 +97,9 @@ function isDefinitionSignatureLine(
   sourceMemberId?: string,
 ): boolean {
   if (flowNodeId !== sourceFlowId || memberId !== sourceMemberId) return false;
-  if (!/\bfunction\b/.test(line) && !/\bconst\b/.test(line)) return false;
-  return new RegExp(`\\b${escapeRegExp(token)}\\b`).test(line);
+  if (!new RegExp(`\\b${escapeRegExp(token)}\\b`).test(line)) return false;
+  if (/\bfunction\b/.test(line) || /\bconst\b/.test(line)) return true;
+  return new RegExp(`\\b${escapeRegExp(token)}\\s*[:=]`).test(line);
 }
 
 function usageSiteKey(site: UsageSite): string {
