@@ -44,6 +44,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  /* Gold brand accent for interactive hover (gold in both themes) */
+  --color-brand: var(--brand);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-border: var(--brand-border);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
@@ -107,10 +111,22 @@
   --token-class: oklch(0.48 0.14 250);
   --token-function: oklch(0.55 0.12 235);
   --token-type: oklch(0.52 0.13 165);
+  --token-edge-function: #2563eb;
+  --token-edge-class: #ca8a04;
+  --token-edge-type: #16a34a;
+  --code-string: #b45309;
+  --code-number: #c2410c;
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.48 0.14 250);
+  /* Gold hover accent — deeper gold so it reads on the light background */
+  --brand: oklch(0.62 0.13 74);
+  --brand-surface: color-mix(in oklch, var(--brand) 12%, var(--secondary));
+  --brand-border: color-mix(in oklch, var(--brand) 42%, var(--border));
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --faint: oklch(0.68 0.02 258);
 }
 
 @layer base {
@@ -133,20 +149,11 @@ body,
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* Cytoscape reads these via getGraphTheme() */
-:root.dark,
 html.dark {
-  --graph-card: var(--card);
-  --graph-border: var(--border);
-  --graph-foreground: var(--foreground);
-  --graph-primary: var(--primary);
-  --graph-muted: var(--muted);
-  --graph-ring: var(--ring);
-  --graph-background: var(--background);
-  --graph-muted-foreground: var(--muted-foreground);
+  color-scheme: dark;
 }
 
 .dark {
@@ -186,10 +193,20 @@ html.dark {
   --token-class: var(--primary);
   --token-function: oklch(0.72 0.11 235);
   --token-type: oklch(0.7 0.12 165);
+  --token-edge-function: #60a5fa;
+  --token-edge-class: #facc15;
+  --token-edge-type: #4ade80;
+  --code-string: oklch(0.92 0.08 85 / 90%);
+  --code-number: oklch(0.85 0.11 55 / 90%);
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
   --explorer-file-in-graph: oklch(0.72 0.11 235);
+  /* Gold hover accent — bright gold for the dark background */
+  --brand: oklch(0.82 0.14 86);
+  --brand-surface: color-mix(in oklch, var(--brand) 14%, var(--secondary));
+  --brand-border: color-mix(in oklch, var(--brand) 45%, var(--border));
+  --faint: oklch(0.46 0.03 255);
 }
 
 .graph-canvas-grid {
@@ -256,15 +273,15 @@ html.dark {
 }
 
 .hoverable:hover {
-  background-color: var(--secondary);
-  border-color: var(--border);
-  color: var(--primary);
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
 }
 
 .hoverable:hover svg,
 .hoverable:hover [data-icon] {
-  color: var(--primary);
-  stroke: var(--primary);
+  color: var(--brand);
+  stroke: var(--brand);
 }
 
 /* Section headers: muted at rest, same hover as file rows */
@@ -283,7 +300,7 @@ html.dark {
 .bg-sidebar button.explorer-section-header:hover svg,
 .bg-sidebar button.explorer-section-header:hover [data-icon],
 .bg-sidebar button.explorer-section-header:hover span {
-  color: var(--primary);
+  color: var(--brand);
 }
 
 [data-graph-control] .graph-map-control-btn {
@@ -307,15 +324,15 @@ html.dark {
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) {
-  border-color: var(--border);
-  background-color: var(--secondary);
-  color: var(--primary);
+  border-color: var(--brand-border);
+  background-color: var(--brand-surface);
+  color: var(--brand);
   box-shadow: none;
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) svg {
-  color: var(--primary);
-  stroke: var(--primary);
+  color: var(--brand);
+  stroke: var(--brand);
 }
 
 [data-graph-control] .graph-map-control-btn--active:hover {
@@ -426,9 +443,291 @@ html.dark {
   }
 }
 
+@keyframes preview-edge-bloom {
+  from {
+    opacity: 0;
+    stroke-width: 0;
+  }
+  to {
+    opacity: 1;
+    stroke-width: 1.1;
+  }
+}
+
+@keyframes preview-edge-bloom-glow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.16;
+  }
+}
+
+@keyframes token-glint {
+  0% {
+    background-position: 128% 0;
+  }
+  55% {
+    background-position: -28% 0;
+  }
+  100% {
+    background-position: -28% 0;
+  }
+}
+
+@keyframes graph-edge-breathe {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes token-info-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes proto-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@keyframes proto-glint {
+  0% {
+    background-position: 128% 0;
+  }
+  55% {
+    background-position: -28% 0;
+  }
+  100% {
+    background-position: -28% 0;
+  }
+}
+
+/* ── Interactive token chip (mirrors .tok in connectors-proto.html) ── */
+.token-chip {
+  box-shadow: inset 0 0 0 1px transparent;
+  transition:
+    background-color 220ms var(--ease),
+    box-shadow 220ms var(--ease),
+    color 280ms var(--ease),
+    filter 220ms var(--ease);
+}
+
+.token-chip[data-token-kind="class"] .token-chip-text {
+  color: var(--token-edge-class);
+}
+
+.token-chip[data-token-kind="function"] .token-chip-text {
+  color: var(--token-edge-function);
+}
+
+.token-chip[data-token-kind="type"] .token-chip-text {
+  color: var(--token-edge-type);
+}
+
+.token-def-label[data-token-kind="class"] {
+  color: var(--token-edge-class);
+}
+
+.token-def-label[data-token-kind="function"] {
+  color: var(--token-edge-function);
+}
+
+.token-def-label[data-token-kind="type"] {
+  color: var(--token-edge-type);
+}
+
+.token-chip.token-chip-on,
+.token-def-label.token-chip-on {
+  background: color-mix(in oklch, currentColor 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 52%, transparent);
+  filter: brightness(1.16) saturate(1.12);
+}
+
+/* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
+.graph-ctrl-preview .code-kw,
+.graph-ctrl-preview .code-pn,
+.graph-ctrl-preview .member-body-wrap,
+.graph-ctrl-preview .member-section-label,
+.graph-ctrl-preview .member-section-bulk,
+.graph-ctrl-preview .node-card-caret,
+.graph-ctrl-preview .member-row-caret,
+.graph-ctrl-preview .file-type-chip {
+  color: var(--faint) !important;
+  transition: color 200ms var(--ease);
+}
+
+.graph-ctrl-preview .react-flow__node.class-node-root {
+  border-color: color-mix(in oklch, var(--brand) 34%, var(--border));
+}
+
+.graph-ctrl-preview .react-flow__node.class-node-root::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand) 34%, transparent);
+  opacity: 0.5;
+  animation: graph-edge-breathe 4.6s ease-in-out infinite alternate;
+}
+
+.graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
+.graph-ctrl-preview .token-def-label.token-interactive {
+  background-image: linear-gradient(
+    100deg,
+    currentColor 0%,
+    currentColor 43%,
+    color-mix(in oklch, currentColor 48%, #fff) 50%,
+    currentColor 57%,
+    currentColor 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: proto-glint 1.9s var(--ease) infinite;
+  animation-delay: var(--shimmer-delay, 0s);
+  filter: brightness(1.06);
+}
+
+/* ── Trace mode: dim per-element, lit shines through ── */
+.graph-trace-active .code-kw,
+.graph-trace-active .code-pn,
+.graph-trace-active .member-body-wrap {
+  color: var(--faint);
+}
+
+.graph-trace-active .file-type-chip,
+.graph-trace-active .member-section-label,
+.graph-trace-active .member-section-bulk,
+.graph-trace-active .node-card-title,
+.graph-trace-active .node-card-caret,
+.graph-trace-active .member-row-caret {
+  color: var(--faint) !important;
+}
+
+.graph-trace-active .token-chip:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label:not(.token-chip-lit) {
+  color: var(--faint);
+  box-shadow: inset 0 0 0 1px transparent;
+  background: transparent;
+}
+
+.graph-trace-active .react-flow__node.class-node-root {
+  border-color: var(--border);
+}
+
+.graph-trace-active .class-node-root.trace-node-lit {
+  border-color: color-mix(in oklch, var(--brand) 34%, var(--border));
+  box-shadow:
+    0 12px 40px -12px rgb(0 0 0 / 0.25),
+    0 0 0 1px color-mix(in oklch, var(--brand) 18%, transparent);
+}
+
+.graph-trace-active .class-node-root.trace-node-lit .node-card-title {
+  color: var(--foreground) !important;
+}
+
+.graph-trace-active .trace-member-lit {
+  background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted));
+}
+
+.graph-trace-active .trace-member-owner-lit {
+  border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-kw,
+.graph-trace-active .code-line.trace-lit-line .code-pn {
+  color: var(--muted);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
+  color: var(--token-edge-class);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
+  color: var(--token-edge-function);
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
+  color: var(--token-edge-type);
+}
+
 .preview-edge-path {
-  stroke-dashoffset: 24;
-  animation: flowDash 600ms linear infinite;
+  stroke-dasharray: 10 4;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  animation:
+    proto-flow 700ms linear infinite,
+    preview-edge-bloom 340ms var(--ease) both;
+}
+
+.preview-edge-glow {
+  stroke-linecap: round;
+  stroke-width: 3.5;
+  filter: blur(2px);
+  animation: preview-edge-bloom-glow 400ms var(--ease) both;
+}
+
+.preview-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: alias;
+}
+
+.flow-anchor-off {
+  opacity: 0;
+  transform: translateY(-50%) scale(0);
+  transition:
+    transform 260ms var(--spring),
+    opacity 200ms var(--ease);
+}
+
+.flow-anchor-on {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  transition:
+    transform 260ms var(--spring),
+    opacity 200ms var(--ease);
+  box-shadow: 0 0 7px currentColor;
+}
+
+.token-chip-active {
+  /* legacy alias — use .token-chip-on */
+}
+
+.token-info-popover {
+  animation: token-info-pop 140ms ease-out;
+}
+
+.jump-tip {
+  animation: token-info-pop 120ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-edge-path,
+  .preview-edge-glow,
+  .graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
+  .graph-ctrl-preview .token-def-label.token-interactive,
+  .graph-ctrl-preview .react-flow__node.class-node-root::after {
+    animation: none !important;
+  }
+
+  .flow-anchor-off,
+  .flow-anchor-on {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @keyframes node-fade-in {

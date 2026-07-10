@@ -4,10 +4,13 @@ import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
+import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
 
@@ -18,66 +21,64 @@ type CodeLineProps = {
   sourceFlowId: string;
   sourceGraphNodeId: string;
   filePath: string;
+  definedInLabel: string;
 };
-
-function makeTokenKey(
-  sourceFlowId: string,
-  memberId: string,
-  lineNumber: number,
-  token: string,
-): string {
-  return `${sourceFlowId}::${memberId}::${lineNumber}::${token}`;
-}
 
 export function CodeLine({
   line,
   lineNumber,
   memberId,
   sourceFlowId,
-  sourceGraphNodeId,
-  filePath,
+  sourceGraphNodeId: _sourceGraphNodeId,
+  filePath: _filePath,
+  definedInLabel,
 }: CodeLineProps) {
   const { isCtrlHeld } = useCtrlKey();
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
   const {
     graphData,
-    setGraphPreview,
-    clearPreviewForKey,
+    setPreviewEdges,
+    clearPreviewEdges,
     setReferenceCards,
     scheduleHideReferenceCards,
     cancelHideReferenceCards,
-    setTokenDropdown,
-    activeTokenKey,
     setActiveTokenKey,
-    activeTargetHandle,
-    previewEdge,
+    isHandleActive,
+    edgeKindAtHandle,
+    scheduleHoverFire,
+    scheduleHoverClear,
+    scheduleInfoOpen,
+    showTokenInfo,
   } = useGraphInteraction();
+  const { lineLit } = useTraceAppearance({ memberId });
 
   const edgeKeyRef = useRef<string | null>(null);
   const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
 
   const clearHover = useCallback(() => {
-    if (edgeKeyRef.current) {
-      clearPreviewForKey(edgeKeyRef.current);
+    const key = edgeKeyRef.current;
+    if (key) {
       edgeKeyRef.current = null;
+      clearPreviewEdges();
     }
     scheduleHideReferenceCards();
-  }, [clearPreviewForKey, scheduleHideReferenceCards]);
+    setActiveTokenKey(null);
+  }, [
+    clearPreviewEdges,
+    scheduleHideReferenceCards,
+    setActiveTokenKey,
+  ]);
 
-  const onIdentifierEnter = useCallback(
-    (name: string, chipKey: string) => {
-      if (!isCtrlHeld || !hasSymbol(name)) return;
+  const firePreview = useCallback(
+    (name: string, chipKey: string, chipEl: HTMLElement) => {
+      if (!hasSymbol(name)) return;
 
       const entry = lookup(name);
       if (!entry) return;
 
-      const chip = chipRefs.current.get(chipKey);
-      const rightAnchor = chip?.getRightAnchor();
-      if (!rightAnchor) return;
-
       cancelHideReferenceCards();
-      const tokenKey = makeTokenKey(sourceFlowId, memberId, lineNumber, name);
+      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       setActiveTokenKey(tokenKey);
 
       const edgeKey = ctrlPreviewEdgeId(sourceFlowId, name);
@@ -89,88 +90,124 @@ export function CodeLine({
         graphData,
         getNode,
         sourceFlowId,
-        memberId,
-        lineNumber,
       );
 
       if (!resolved) {
-        clearPreviewForKey(edgeKey);
+        clearPreviewEdges();
         setActiveTokenKey(null);
         return;
       }
 
       if (resolved.mode === "graph") {
         setReferenceCards(null);
-        setGraphPreview(edgeKey, sourceFlowId, resolved, rightAnchor);
+        const edge = buildUsagePreviewEdge(edgeKey, resolved, chipEl);
+        setPreviewEdges([edge]);
         return;
       }
 
-      clearPreviewForKey(edgeKey);
-      const chipEl = rightAnchor.parentElement;
-      if (chipEl) {
-        setReferenceCards({
-          token: name,
-          anchor: toAnchorRect(chipEl.getBoundingClientRect()),
-          cards: resolved.cards,
-        });
-      }
+      clearPreviewEdges();
+      setReferenceCards({
+        token: name,
+        anchor: toAnchorRect(chipEl.getBoundingClientRect()),
+        cards: resolved.cards,
+      });
     },
     [
       cancelHideReferenceCards,
-      clearPreviewForKey,
+      clearPreviewEdges,
       getNode,
       graphData,
       hasSymbol,
-      isCtrlHeld,
-      lineNumber,
       lookup,
-      memberId,
       setActiveTokenKey,
-      setGraphPreview,
+      setPreviewEdges,
       setReferenceCards,
       sourceFlowId,
       symbols,
     ],
   );
 
-  const onIdentifierClick = useCallback(
-    (name: string, el: HTMLElement) => {
-      if (!isCtrlHeld || !hasSymbol(name)) return;
-
-      const rect = el.getBoundingClientRect();
-      setTokenDropdown({
+  const openInfo = useCallback(
+    (name: string, chipEl: HTMLElement) => {
+      const entry = lookup(name);
+      if (!entry) return;
+      const kind = symbolKindToSemantic(entry.kind);
+      const refs = (symbols.get(name) ?? []).length;
+      showTokenInfo({
         token: name,
-        x: rect.left,
-        y: rect.bottom + 4,
-        sourceFlowId,
-        sourceGraphNodeId,
-        filePath,
-        line: lineNumber,
+        kind,
+        anchor: toAnchorRect(chipEl.getBoundingClientRect()),
+        pinned: false,
+        connectionCount: refs,
+        definedIn: definedInLabel,
       });
-      if (edgeKeyRef.current) clearPreviewForKey(edgeKeyRef.current);
-      setReferenceCards(null);
-      setActiveTokenKey(null);
+    },
+    [definedInLabel, lookup, showTokenInfo, symbols],
+  );
+
+  const onIdentifierEnter = useCallback(
+    (name: string, chipKey: string) => {
+      if (!hasSymbol(name)) return;
+
+      const chip = chipRefs.current.get(chipKey);
+      const chipEl = chip?.getRightAnchor()?.parentElement;
+      if (!chipEl) return;
+
+      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+
+      scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl));
+      scheduleInfoOpen(tokenKey, () => openInfo(name, chipEl));
     },
     [
-      clearPreviewForKey,
-      filePath,
+      firePreview,
       hasSymbol,
-      isCtrlHeld,
       lineNumber,
-      setActiveTokenKey,
-      setReferenceCards,
-      setTokenDropdown,
+      memberId,
+      openInfo,
+      scheduleHoverFire,
+      scheduleInfoOpen,
       sourceFlowId,
-      sourceGraphNodeId,
     ],
+  );
+
+  const onIdentifierLeave = useCallback(
+    (name: string) => {
+      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      scheduleHoverClear(tokenKey, clearHover);
+    },
+    [clearHover, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
+  );
+
+  const onIdentifierClick = useCallback(
+    (name: string, el: HTMLElement) => {
+      if (!hasSymbol(name) || !isCtrlHeld) return;
+
+      const entry = lookup(name);
+      if (!entry) return;
+      showTokenInfo({
+        token: name,
+        kind: symbolKindToSemantic(entry.kind),
+        anchor: toAnchorRect(el.getBoundingClientRect()),
+        pinned: true,
+        connectionCount: (symbols.get(name) ?? []).length,
+        definedIn: definedInLabel,
+      });
+    },
+    [definedInLabel, hasSymbol, isCtrlHeld, lookup, showTokenInfo, symbols],
   );
 
   const tokens = tokenizeLine(line);
   const lineTargetId = previewLineHandle(memberId, lineNumber);
-  const lineTargetActive = activeTargetHandle === lineTargetId;
+  const lineTargetActive = isHandleActive(lineTargetId);
+  const lineKind = edgeKindAtHandle(lineTargetId);
 
   return (
-    <div className="relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed">
+    <div
+      className={cn(
+        "code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed",
+        lineLit && "trace-lit-line",
+      )}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -183,11 +220,15 @@ export function CodeLine({
         size="node"
         visible
         highlighted={lineTargetActive}
-        colorClass={
-          lineTargetActive && previewEdge
-            ? TOKEN_ANCHOR[previewEdge.kind]
-            : "bg-border"
-        }
+        colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
+      />
+      <FlowAnchor
+        side="right"
+        targetId={lineTargetId}
+        size="node"
+        visible
+        highlighted={lineTargetActive}
+        colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
       />
       {tokens.map((token, i) => {
         if (token.kind !== "identifier") {
@@ -195,10 +236,11 @@ export function CodeLine({
             <span
               key={`${lineNumber}-${i}`}
               className={cn(
-                token.kind === "keyword" && "text-primary/80",
+                token.kind === "keyword" && "code-kw text-primary/80",
+                (token.kind === "operator" || token.kind === "other") && "code-pn",
                 token.kind === "comment" && "text-muted-foreground",
-                token.kind === "string" && "text-amber-200/90",
-                token.kind === "number" && "text-orange-300/90",
+                token.kind === "string" && "text-[color:var(--code-string)]",
+                token.kind === "number" && "text-[color:var(--code-number)]",
               )}
             >
               {token.text}
@@ -212,15 +254,14 @@ export function CodeLine({
           return <span key={`${lineNumber}-${i}`}>{token.text}</span>;
         }
 
-        const interactive = isCtrlHeld;
+        const indexed = hasSymbol(token.text);
         const chipKey = `${lineNumber}-${i}`;
-        const tokenKey = makeTokenKey(
+        const tokenKey = makeUsageTokenKey(
           sourceFlowId,
           memberId,
           lineNumber,
           token.text,
         );
-        const isActive = activeTokenKey === tokenKey;
 
         return (
           <TokenChip
@@ -231,19 +272,20 @@ export function CodeLine({
             }}
             text={token.text}
             semantic={semantic}
-            active={isActive}
-            interactive={interactive}
-            role={interactive ? "button" : undefined}
-            tabIndex={interactive ? 0 : undefined}
+            traceKey={tokenKey}
+            interactive={indexed}
+            shimmerDelay={`${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
+            role={indexed ? "button" : undefined}
+            tabIndex={indexed ? 0 : undefined}
             onMouseEnter={() => onIdentifierEnter(token.text, chipKey)}
-            onMouseLeave={clearHover}
+            onMouseLeave={() => onIdentifierLeave(token.text)}
             onClick={(e) => {
-              if (!interactive) return;
+              if (!indexed) return;
               e.stopPropagation();
               onIdentifierClick(token.text, e.currentTarget);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && interactive) {
+              if (e.key === "Enter" && indexed) {
                 onIdentifierClick(token.text, e.currentTarget);
               }
             }}

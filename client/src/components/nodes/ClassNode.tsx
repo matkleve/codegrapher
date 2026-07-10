@@ -1,394 +1,71 @@
-import { memo, useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
+import { memo } from "react";
 import {
   Handle,
   NodeResizeControl,
   Position,
   type NodeProps,
-  useReactFlow,
-  useUpdateNodeInternals,
 } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { PREVIEW_TARGET_TOP } from "@/lib/ctrlPreviewHandles";
+import { useTraceAppearance } from "@/hooks/useTraceAppearance";
+import { previewTargetTop } from "@/lib/ctrlPreviewHandles";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
-import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
+import { MemberSection } from "@/components/nodes/MemberSection";
 import { NodeCardHeader } from "@/components/nodes/NodeCardHeader";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
-import {
-  CLASS_NODE_MIN_HEIGHT,
-  computeClassNodeHeight,
-  fitLayoutToHeight,
-  layoutPreferenceFromData,
-  resolveNodeHeight,
-} from "@/lib/classNodeLayout";
+import { CLASS_NODE_MIN_HEIGHT } from "@/lib/classNodeLayout";
+import { useClassNodeController } from "@/components/nodes/useClassNodeController";
 import { camelToWords } from "@/lib/camelToWords";
 import { cn } from "@/lib/utils";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-
-function MemberSection({
-  label,
-  expanded,
-  onToggle,
-  bulkActionLabel,
-  onBulkAction,
-  children,
-}: {
-  label: string;
-  expanded: boolean;
-  onToggle: () => void;
-  bulkActionLabel: string;
-  onBulkAction: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="hoverable control-row-compact nodrag flex min-w-0 flex-1 cursor-pointer items-center border border-transparent text-left"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-        >
-          <ExpandChevron expanded={expanded} className="text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        </button>
-        <button
-          type="button"
-          className="hoverable control-row-compact nodrag shrink-0 cursor-pointer border border-transparent text-muted-foreground"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onBulkAction();
-          }}
-        >
-          {bulkActionLabel}
-        </button>
-      </div>
-      {expanded ? <div className="flex flex-col gap-2">{children}</div> : null}
-    </section>
-  );
-}
 
 function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const nodeData = data as ClassNodeData;
   const bodyExpanded = !(nodeData.collapsed ?? false);
   const nodeWidth = nodeData.width ?? width ?? CLASS_NODE_DEFAULT_WIDTH;
   const nodeHeight = nodeData.height;
-  const cardRef = useRef<HTMLDivElement>(null);
-  const isResizingRef = useRef(false);
-  const { setNodes } = useReactFlow();
-  const updateNodeInternals = useUpdateNodeInternals();
-  const { activeTargetHandle, previewEdge } = useGraphInteraction();
-  const classTargetActive = activeTargetHandle === PREVIEW_TARGET_TOP;
+
+  const {
+    cardRef,
+    propertiesSectionExpanded,
+    methodsSectionExpanded,
+    anyPropertiesExpanded,
+    anyMethodsExpanded,
+    onToggleMethod,
+    onToggleProperty,
+    onToggleCollapsed,
+    onTogglePropertiesSection,
+    onToggleMethodsSection,
+    onBulkToggleProperties,
+    onBulkToggleMethods,
+    onResize,
+    onResizeEnd,
+  } = useClassNodeController({ id, nodeData, nodeWidth, nodeHeight, bodyExpanded });
+
+  const { isHandleActive, edgeKindAtHandle } = useGraphInteraction();
+  const { nodeLit } = useTraceAppearance({ flowNodeId: id });
+  const classTargetId = previewTargetTop(id);
+  const classTargetActive = isHandleActive(classTargetId);
+  const classKind = edgeKindAtHandle(classTargetId);
   const classAnchorColor =
-    classTargetActive && previewEdge
-      ? TOKEN_ANCHOR[previewEdge.kind]
-      : "bg-border";
-
-  const withPreference = useCallback(
-    (patch: Partial<ClassNodeData>): Partial<ClassNodeData> => {
-      if (patch.layoutPreference !== undefined) return patch;
-      const merged = { ...nodeData, ...patch };
-      return { ...patch, layoutPreference: layoutPreferenceFromData(merged) };
-    },
-    [nodeData],
-  );
-
-  const commitNode = useCallback(
-    (
-      patch: Partial<ClassNodeData>,
-      size?: { width: number; height?: number },
-      opts?: { keepPreference?: boolean },
-    ) => {
-      const nextPatch = opts?.keepPreference ? patch : withPreference(patch);
-      setNodes((nodes) =>
-        nodes.map((n) => {
-          if (n.id !== id || n.type !== "class") return n;
-          const prev = n.data as ClassNodeData;
-          const nextData = { ...prev, ...nextPatch };
-          const w = size?.width ?? nextData.width ?? nodeWidth;
-          let h = size?.height ?? nextData.height;
-          if (nextData.collapsed && typeof h === "number") {
-            h = Math.max(CLASS_NODE_MIN_HEIGHT, h);
-          }
-          return {
-            ...n,
-            width: w,
-            height: h,
-            style: { ...n.style, width: w, ...(h != null ? { height: h } : {}) },
-            data: { ...nextData, width: w, height: h },
-          };
-        }),
-      );
-      requestAnimationFrame(() => updateNodeInternals(id));
-    },
-    [id, nodeWidth, setNodes, updateNodeInternals, withPreference],
-  );
-
-  const toggleMember = useCallback(
-    (
-      memberId: string,
-      kind: "property" | "method",
-    ) => {
-      const expandedKey =
-        kind === "property" ? "expandedPropertyIds" : "expandedMethodIds";
-      const expanded = new Set(
-        kind === "property"
-          ? nodeData.expandedPropertyIds
-          : nodeData.expandedMethodIds,
-      );
-      const pinned = new Set(nodeData.pinnedMemberIds ?? []);
-      const opening = !expanded.has(memberId);
-
-      if (opening) {
-        expanded.add(memberId);
-        pinned.add(memberId);
-      } else {
-        expanded.delete(memberId);
-        pinned.delete(memberId);
-      }
-
-      const patch: Partial<ClassNodeData> = {
-        pinnedMemberIds: [...pinned],
-        [expandedKey]: [...expanded],
-        ...(kind === "property"
-          ? { propertiesSectionCollapsed: false }
-          : { methodsSectionCollapsed: false }),
-      };
-
-      const mergedWithPatch: ClassNodeData = { ...nodeData, ...patch };
-      const nextHeight = opening
-        ? resolveNodeHeight(mergedWithPatch, nodeHeight ?? undefined)
-        : computeClassNodeHeight(mergedWithPatch);
-
-      commitNode(
-        { ...patch, height: nextHeight },
-        { width: nodeWidth, height: nextHeight },
-      );
-    },
-    [commitNode, nodeData, nodeHeight, nodeWidth],
-  );
-
-  const onToggleMethod = useCallback(
-    (methodId: string) => toggleMember(methodId, "method"),
-    [toggleMember],
-  );
-
-  const onToggleProperty = useCallback(
-    (propertyId: string) => toggleMember(propertyId, "property"),
-    [toggleMember],
-  );
-
-  const onToggleCollapsed = useCallback(() => {
-    const collapsed = bodyExpanded;
-    const patch: Partial<ClassNodeData> = { collapsed };
-    const merged = { ...nodeData, ...patch };
-    const nextHeight = computeClassNodeHeight(merged);
-    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
-  }, [bodyExpanded, commitNode, nodeData, nodeWidth]);
-
-  const propertiesSectionExpanded = !(nodeData.propertiesSectionCollapsed ?? false);
-  const methodsSectionExpanded = !(nodeData.methodsSectionCollapsed ?? false);
-
-  const onTogglePropertiesSection = useCallback(() => {
-    const collapsing = propertiesSectionExpanded;
-    const patch: Partial<ClassNodeData> = {
-      propertiesSectionCollapsed: collapsing,
-      ...(collapsing ? { expandedPropertyIds: [] } : {}),
-    };
-    const merged = { ...nodeData, ...patch };
-    const nextHeight = collapsing
-      ? computeClassNodeHeight(merged)
-      : resolveNodeHeight(merged, nodeHeight ?? undefined);
-    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
-  }, [commitNode, nodeData, nodeHeight, nodeWidth, propertiesSectionExpanded]);
-
-  const onToggleMethodsSection = useCallback(() => {
-    const collapsing = methodsSectionExpanded;
-    const patch: Partial<ClassNodeData> = {
-      methodsSectionCollapsed: collapsing,
-      ...(collapsing ? { expandedMethodIds: [] } : {}),
-    };
-    const merged = { ...nodeData, ...patch };
-    const nextHeight = collapsing
-      ? computeClassNodeHeight(merged)
-      : resolveNodeHeight(merged, nodeHeight ?? undefined);
-    commitNode({ ...patch, height: nextHeight }, { width: nodeWidth, height: nextHeight });
-  }, [commitNode, methodsSectionExpanded, nodeData, nodeHeight, nodeWidth]);
-
-  const anyPropertiesExpanded = nodeData.expandedPropertyIds.length > 0;
-  const anyMethodsExpanded = nodeData.expandedMethodIds.length > 0;
-
-  const onBulkToggleProperties = useCallback(() => {
-    if (anyPropertiesExpanded) {
-      const pinned = (nodeData.pinnedMemberIds ?? []).filter((pid) =>
-        nodeData.methods.some((m) => m.id === pid),
-      );
-      const merged: ClassNodeData = {
-        ...nodeData,
-        expandedPropertyIds: [],
-        pinnedMemberIds: pinned,
-      };
-      const h = computeClassNodeHeight(merged);
-      commitNode(
-        {
-          expandedPropertyIds: [],
-          pinnedMemberIds: pinned,
-          height: h,
-        },
-        { width: nodeWidth, height: h },
-      );
-      return;
-    }
-    const pinned = new Set([
-      ...(nodeData.pinnedMemberIds ?? []),
-      ...nodeData.properties.map((p) => p.id),
-    ]);
-    const merged: ClassNodeData = {
-      ...nodeData,
-      propertiesSectionCollapsed: false,
-      expandedPropertyIds: nodeData.properties.map((p) => p.id),
-      pinnedMemberIds: [...pinned],
-    };
-    const nextHeight = resolveNodeHeight(merged, nodeHeight ?? undefined);
-    commitNode(
-      {
-        propertiesSectionCollapsed: false,
-        expandedPropertyIds: merged.expandedPropertyIds,
-        pinnedMemberIds: merged.pinnedMemberIds,
-        height: nextHeight,
-      },
-      { width: nodeWidth, height: nextHeight },
-    );
-  }, [anyPropertiesExpanded, commitNode, nodeData, nodeWidth]);
-
-  const onBulkToggleMethods = useCallback(() => {
-    if (anyMethodsExpanded) {
-      const pinned = (nodeData.pinnedMemberIds ?? []).filter((pid) =>
-        nodeData.properties.some((p) => p.id === pid),
-      );
-      const merged: ClassNodeData = {
-        ...nodeData,
-        expandedMethodIds: [],
-        pinnedMemberIds: pinned,
-      };
-      const h = computeClassNodeHeight(merged);
-      commitNode(
-        {
-          expandedMethodIds: [],
-          pinnedMemberIds: pinned,
-          height: h,
-        },
-        { width: nodeWidth, height: h },
-      );
-      return;
-    }
-    const pinned = new Set([
-      ...(nodeData.pinnedMemberIds ?? []),
-      ...nodeData.methods.map((m) => m.id),
-    ]);
-    const merged: ClassNodeData = {
-      ...nodeData,
-      methodsSectionCollapsed: false,
-      expandedMethodIds: nodeData.methods.map((m) => m.id),
-      pinnedMemberIds: [...pinned],
-    };
-    const nextHeight = resolveNodeHeight(merged, nodeHeight ?? undefined);
-    commitNode(
-      {
-        methodsSectionCollapsed: false,
-        expandedMethodIds: merged.expandedMethodIds,
-        pinnedMemberIds: merged.pinnedMemberIds,
-        height: nextHeight,
-      },
-      { width: nodeWidth, height: nextHeight },
-    );
-  }, [anyMethodsExpanded, commitNode, nodeData, nodeWidth]);
-
-  const onResize = useCallback(
-    (_event: unknown, params: { width: number; height: number }) => {
-      isResizingRef.current = true;
-      const fitted = fitLayoutToHeight(
-        { ...nodeData, width: params.width, collapsed: false },
-        params.height,
-        { ignorePinned: true },
-      );
-      const height = fitted.collapsed
-        ? CLASS_NODE_MIN_HEIGHT
-        : params.height;
-      commitNode(
-        {
-          width: params.width,
-          height,
-          ...fitted,
-        },
-        { width: params.width, height },
-        { keepPreference: true },
-      );
-    },
-    [commitNode, nodeData],
-  );
-
-  const onResizeEnd = useCallback(() => {
-    isResizingRef.current = false;
-  }, []);
+    classTargetActive && classKind ? TOKEN_ANCHOR[classKind] : "bg-border";
 
   const title = camelToWords(nodeData.label);
-
-  useLayoutEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-
-    const prevHeight = el.style.height;
-    el.style.height = "auto";
-    const measured = Math.ceil(el.scrollHeight);
-    el.style.height = prevHeight;
-
-    if (!bodyExpanded) {
-      const headerHeight = Math.max(CLASS_NODE_MIN_HEIGHT, measured);
-      if (nodeHeight != null && Math.abs(headerHeight - nodeHeight) <= 1) return;
-      commitNode({}, { width: nodeWidth, height: headerHeight }, { keepPreference: true });
-      return;
-    }
-
-    if (isResizingRef.current) return;
-    if (measured > (nodeHeight ?? 0) + 2) {
-      commitNode({ height: measured }, { width: nodeWidth, height: measured }, {
-        keepPreference: true,
-      });
-    }
-  }, [
-    bodyExpanded,
-    commitNode,
-    nodeData.expandedMethodIds,
-    nodeData.expandedPropertyIds,
-    nodeData.filePath,
-    nodeData.label,
-    nodeData.methodsSectionCollapsed,
-    nodeData.propertiesSectionCollapsed,
-    nodeHeight,
-    nodeWidth,
-  ]);
-
-  const contentTallerThanNode =
-    nodeHeight != null &&
-    computeClassNodeHeight(nodeData) > nodeHeight + 2;
   const hasProperties = nodeData.properties.length > 0;
   const hasMethods = nodeData.methods.length > 0;
 
   return (
     <div
       ref={cardRef}
+      data-flow-node-id={id}
       className={cn(
         "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border text-left shadow-sm",
         bodyExpanded ? "h-full bg-card" : "shrink-0 bg-accent",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+        nodeLit && "trace-node-lit",
       )}
       style={{
         width: nodeWidth,
@@ -400,12 +77,12 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        id={PREVIEW_TARGET_TOP}
+        id={previewTargetTop(id)}
         className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
       />
       <FlowAnchor
         side="left"
-        targetId={PREVIEW_TARGET_TOP}
+        targetId={previewTargetTop(id)}
         size="node"
         visible
         highlighted={classTargetActive}
@@ -413,6 +90,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       />
       <FlowAnchor
         side="right"
+        targetId={previewTargetTop(id)}
         size="node"
         visible
         highlighted={classTargetActive}
@@ -420,17 +98,13 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       />
       <NodeCardHeader
         title={title}
+        symbolName={nodeData.label}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
         bodyExpanded={bodyExpanded}
         onToggleCollapsed={onToggleCollapsed}
       />
       {bodyExpanded && (
-        <div
-          className={cn(
-            "nodrag flex min-h-0 flex-col gap-2 overflow-hidden p-3",
-            contentTallerThanNode ? "flex-1 overflow-y-auto scrollbar-thin" : "shrink-0",
-          )}
-        >
+        <div className="nodrag flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
           {hasProperties && (
             <MemberSection
               label="Properties"
@@ -450,6 +124,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
+                  classLabel={nodeData.label}
                 />
               ))}
             </MemberSection>
@@ -476,13 +151,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
+                  classLabel={nodeData.label}
                 />
               ))}
             </MemberSection>
           )}
-        {!hasProperties && !hasMethods ? (
-          <p className="text-left text-xs text-muted-foreground">No members</p>
-        ) : null}
+          {!hasProperties && !hasMethods ? (
+            <p className="text-left text-xs text-muted-foreground">No members</p>
+          ) : null}
         </div>
       )}
       <NodeResizeControl

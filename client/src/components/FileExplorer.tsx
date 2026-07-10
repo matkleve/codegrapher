@@ -1,54 +1,14 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { FolderOpen, Trash2 } from "lucide-react";
-import { browseFolder, fetchTree } from "@/api";
-import { useIndex } from "@/context/IndexContext";
+import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Container } from "@/components/ui/Container";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { DRAG_FILEPATH_KEY } from "@/lib/drag";
-import { VscodeFileIcon } from "@/components/VscodeFileIcon";
-import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
-import {
-  clearRecentFolders,
-  folderDisplayName,
-  loadRecentFolders,
-  prependRecentFolder,
-} from "@/lib/recentFolders";
-import { loadLastFolder, saveLastFolder, shouldRestoreFolder } from "@/lib/lastSession";
-import {
-  fileDisplayName,
-  loadRecentFiles,
-  loadRecentSectionOpen,
-  prependRecentFile,
-  RECENT_FILES_CHANGED_EVENT,
-  saveRecentSectionOpen,
-  setActiveFolderRoot,
-} from "@/lib/recentFiles";
-import { isFileInGraph } from "@/lib/graphFiles";
+import { TreeNode } from "@/components/explorer/FileTree";
+import { RecentFilesSection } from "@/components/explorer/RecentFilesSection";
+import { RecentFoldersDropdown } from "@/components/explorer/RecentFoldersDropdown";
+import { EXPLORER_X_PAD } from "@/components/explorer/explorerRowStyles";
+import { useFolderExplorer } from "@/components/explorer/useFolderExplorer";
 import { cn } from "@/lib/utils";
-import type { TreeEntry } from "@/types";
-
-const EXPLORER_X_PAD = "px-2";
-
-/** VS Code–like explorer row density */
-const TREE_ROW =
-  "explorer-file-row hoverable control-row-compact pointer-events-auto flex cursor-pointer items-center font-mono";
-const TREE_FOLDER_ROW =
-  "control-row-compact pointer-events-auto flex w-full cursor-pointer items-center justify-start border border-transparent py-0 font-medium disabled:cursor-not-allowed";
-
-const TREE_SECTION_ROW =
-  "explorer-section-header hoverable control-row-compact pointer-events-auto flex w-full cursor-pointer items-center justify-start border border-transparent py-0 font-medium";
-
-/** Vertical guide + indent for nested files under a folder/section. */
-function ExplorerTreeGuide({ children }: { children: ReactNode }) {
-  return (
-    <div className="explorer-tree-guide ml-3 border-l border-sidebar-border pl-2">
-      <div className="flex flex-col gap-0.5">{children}</div>
-    </div>
-  );
-}
 
 interface FileExplorerProps {
   onFileClick: (filePath: string) => void;
@@ -58,378 +18,32 @@ interface FileExplorerProps {
   graphFilePaths?: Set<string>;
 }
 
-interface FileTreeItemProps {
-  filePath: string;
-  name: string;
-  onFileClick: (filePath: string) => void;
-  disabled?: boolean;
-  inGraph?: boolean;
-}
-
-function FileTreeItem({
-  filePath,
-  name,
-  onFileClick,
-  disabled,
-  inGraph,
-}: FileTreeItemProps) {
-  const fileIcon = getFileIcon(name);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      draggable={true}
-      onDragStart={(e) => {
-        e.stopPropagation();
-        e.dataTransfer.setData(DRAG_FILEPATH_KEY, filePath);
-        e.dataTransfer.setData("text/plain", filePath);
-        e.dataTransfer.effectAllowed = "copy";
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!disabled) onFileClick(filePath);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !disabled) {
-          e.stopPropagation();
-          onFileClick(filePath);
-        }
-      }}
-      className={cn(
-        TREE_ROW,
-        "active:cursor-grabbing",
-        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
-        !inGraph && "text-foreground",
-        disabled && "pointer-events-none cursor-not-allowed opacity-50",
-      )}
-    >
-      {fileIcon.vscodeIcon ? (
-        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
-      ) : (
-        <Codicon name={fileIcon.codicon!} className={cn("shrink-0", fileIcon.colorClass)} />
-      )}
-      <span className="truncate">{name}</span>
-    </div>
-  );
-}
-
-interface TreeNodeProps {
-  entry: TreeEntry;
-  depth: number;
-  onFileClick: (filePath: string) => void;
-  disabled?: boolean;
-  graphFilePaths?: Set<string>;
-}
-
-function TreeNode({ entry, depth, onFileClick, disabled, graphFilePaths }: TreeNodeProps) {
-  const [open, setOpen] = useState(false);
-  const [children, setChildren] = useState<TreeEntry[] | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const toggleFolder = useCallback(async () => {
-    if (disabled) return;
-    if (!open && children === null) {
-      setLoading(true);
-      try {
-        const data = await fetchTree(entry.path);
-        setChildren(data.entries);
-      } finally {
-        setLoading(false);
-      }
-    }
-    setOpen((v) => !v);
-  }, [children, disabled, entry.path, open]);
-
-  if (entry.type === "directory") {
-    const folderIcon = getFolderIcon(open);
-    return (
-      <div className="flex flex-col gap-0.5">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={toggleFolder}
-          disabled={disabled}
-          className={TREE_FOLDER_ROW}
-        >
-          <Codicon
-            name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-            className="shrink-0 text-muted-foreground"
-          />
-          <Codicon name={folderIcon.codicon} className={cn("shrink-0", folderIcon.colorClass)} />
-          <span className="truncate leading-none">{entry.name}</span>
-          {loading && <span className="text-xs text-muted-foreground">…</span>}
-        </Button>
-        {open && (
-          <ExplorerTreeGuide>
-            {children?.map((child) => (
-              <TreeNode
-                key={child.path}
-                entry={child}
-                depth={depth + 1}
-                onFileClick={onFileClick}
-                disabled={disabled}
-                graphFilePaths={graphFilePaths}
-              />
-            ))}
-          </ExplorerTreeGuide>
-        )}
-      </div>
-    );
-  }
-
-  if (depth === 0) {
-    return (
-      <ExplorerTreeGuide>
-        <FileTreeItem
-          filePath={entry.path}
-          name={entry.name}
-          onFileClick={onFileClick}
-          disabled={disabled}
-          inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
-        />
-      </ExplorerTreeGuide>
-    );
-  }
-
-  return (
-    <FileTreeItem
-      filePath={entry.path}
-      name={entry.name}
-      onFileClick={onFileClick}
-      disabled={disabled}
-      inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
-    />
-  );
-}
-
-interface RecentFoldersDropdownProps {
-  folders: string[];
-  open: boolean;
-  onSelect: (path: string) => void;
-  onClear: () => void;
-}
-
-function RecentFoldersDropdown({
-  folders,
-  open,
-  onSelect,
-  onClear,
-}: RecentFoldersDropdownProps) {
-  if (!open || folders.length === 0) return null;
-
-  return (
-    <div className="pointer-events-auto absolute top-full left-0 z-[100] w-72 cursor-default p-1">
-      <Container className="cursor-default shadow-lg">
-        <p className="cursor-default px-0 pb-2 text-xs font-medium text-muted-foreground">
-          Recent folders
-        </p>
-        <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {folders.map((path) => (
-            <li key={path}>
-              <button
-                type="button"
-                className="hoverable control-row-compact w-full cursor-pointer border border-transparent py-2 text-left text-[length:var(--font-size-sm)]"
-                onClick={() => onSelect(path)}
-              >
-                <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
-                <span className="block truncate text-xs text-muted-foreground">{path}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <Separator className="my-2" />
-        <button
-          type="button"
-          className="hoverable control-row-compact flex w-full cursor-pointer items-center justify-center border border-transparent py-2 text-muted-foreground"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClear();
-          }}
-        >
-          <Trash2 className="shrink-0" aria-hidden />
-          Clear history
-        </button>
-      </Container>
-    </div>
-  );
-}
-
-interface RecentFilesSectionProps {
-  files: string[];
-  open: boolean;
-  onToggle: () => void;
-  onFileClick: (filePath: string) => void;
-  graphFilePaths?: Set<string>;
-}
-
-function RecentFilesSection({
-  files,
-  open,
-  onToggle,
-  onFileClick,
-  graphFilePaths,
-}: RecentFilesSectionProps) {
-  if (files.length === 0) return null;
-
-  return (
-    <section className="pointer-events-auto relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onToggle}
-        className={TREE_SECTION_ROW}
-        aria-expanded={open}
-      >
-        <Codicon name={open ? "codicon-chevron-down" : "codicon-chevron-right"} className="shrink-0" />
-        <span className="truncate leading-none">Recent</span>
-        <span className="ml-auto shrink-0 leading-none">{files.length}</span>
-      </Button>
-      {open && (
-        <ExplorerTreeGuide>
-          {files.map((path) => (
-            <FileTreeItem
-              key={path}
-              filePath={path}
-              name={fileDisplayName(path)}
-              onFileClick={onFileClick}
-              inGraph={isFileInGraph(path, graphFilePaths ?? new Set())}
-            />
-          ))}
-        </ExplorerTreeGuide>
-      )}
-      <Separator className="my-1 bg-sidebar-border" />
-    </section>
-  );
-}
-
 export default function FileExplorer({
   onFileClick,
   treeDisabled: disabled,
   graphFilePaths,
 }: FileExplorerProps) {
-  const [folderPath, setFolderPath] = useState(() => loadLastFolder() ?? "");
-  const [rootEntries, setRootEntries] = useState<TreeEntry[] | null>(null);
-  const [rootPath, setRootPath] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [opening, setOpening] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const { loadIndex, indexing } = useIndex();
-  const [recentFolders, setRecentFolders] = useState<string[]>(() => loadRecentFolders());
-  const [recentFiles, setRecentFiles] = useState<string[]>([]);
-  const [recentFoldersOpen, setRecentFoldersOpen] = useState(false);
-  const [recentSectionOpen, setRecentSectionOpen] = useState(loadRecentSectionOpen);
-
-  const toggleRecentSection = () => {
-    setRecentSectionOpen((open) => {
-      const next = !open;
-      saveRecentSectionOpen(next);
-      return next;
-    });
-  };
-
-  const handleFileClick = useCallback(
-    (filePath: string) => {
-      setRecentFiles((prev) => prependRecentFile(filePath, prev));
-      onFileClick(filePath);
-    },
-    [onFileClick],
-  );
-
-  const rememberFolder = useCallback((path: string) => {
-    setRecentFolders((prev) => prependRecentFolder(path, prev));
-    saveLastFolder(path);
-  }, []);
-
-  const openFolderAt = useCallback(
-    async (dirPath: string) => {
-      setOpening(true);
-      setError(null);
-      setStatusMessage("Indexing project...");
-      try {
-        await loadIndex(dirPath);
-        setStatusMessage(null);
-        const data = await fetchTree(dirPath);
-        setFolderPath(data.path);
-        setRootPath(data.path);
-        setRootEntries(data.entries);
-        setActiveFolderRoot(data.path);
-        setRecentFiles(loadRecentFiles(data.path));
-        rememberFolder(data.path);
-      } catch (err) {
-        setRootEntries(null);
-        setRootPath(null);
-        setActiveFolderRoot(null);
-        setRecentFiles([]);
-        setStatusMessage(null);
-        setError(err instanceof Error ? err.message : "Failed to open folder");
-      } finally {
-        setOpening(false);
-        setStatusMessage(null);
-      }
-    },
-    [loadIndex, rememberFolder],
-  );
-
-  useEffect(() => {
-    const refreshRecentFiles = () => {
-      if (!rootPath) {
-        setRecentFiles([]);
-        return;
-      }
-      setRecentFiles(loadRecentFiles(rootPath));
-    };
-    refreshRecentFiles();
-    window.addEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
-    return () => {
-      window.removeEventListener(RECENT_FILES_CHANGED_EVENT, refreshRecentFiles);
-    };
-  }, [rootPath]);
-
-  useEffect(() => {
-    if (!shouldRestoreFolder()) return;
-    const path = loadLastFolder();
-    if (!path) return;
-    void openFolderAt(path);
-  }, [openFolderAt]);
-
-  const handleOpen = async () => {
-    if (!folderPath.trim()) {
-      setError("Enter an absolute folder path or browse");
-      return;
-    }
-    await openFolderAt(folderPath.trim());
-  };
-
-  const handleBrowse = async () => {
-    setOpening(true);
-    setError(null);
-    try {
-      const result = await browseFolder();
-      if ("cancelled" in result) return;
-      await openFolderAt(result.path);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Folder picker unavailable — install zenity or enter a path manually",
-      );
-    } finally {
-      setOpening(false);
-    }
-  };
-
-  const handleRecentFolderSelect = (path: string) => {
-    setFolderPath(path);
-    void openFolderAt(path);
-    setRecentFoldersOpen(false);
-  };
-
-  const handleClearRecentFolders = () => {
-    clearRecentFolders();
-    setRecentFolders([]);
-    setRecentFoldersOpen(false);
-  };
+  const {
+    folderPath,
+    setFolderPath,
+    rootEntries,
+    rootPath,
+    error,
+    opening,
+    statusMessage,
+    indexing,
+    recentFolders,
+    recentFiles,
+    recentFoldersOpen,
+    setRecentFoldersOpen,
+    recentSectionOpen,
+    toggleRecentSection,
+    handleFileClick,
+    handleOpen,
+    handleBrowse,
+    handleRecentFolderSelect,
+    handleClearRecentFolders,
+  } = useFolderExplorer(onFileClick);
 
   return (
     <aside className="pointer-events-auto flex h-full w-80 shrink-0 flex-col overflow-visible border-r border-border bg-sidebar text-sidebar-foreground">

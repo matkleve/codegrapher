@@ -1,17 +1,21 @@
 import {
   ReactFlow,
-  useEdgesState,
-  useNodesState,
   type Edge,
   type Node,
   type OnMove,
+  type useEdgesState,
+  type useNodesState,
 } from "@xyflow/react";
+import { TokenInfoPopover } from "@/components/code/TokenInfoPopover";
 import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
+import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
-import { flowEdgeTypes } from "@/components/graph/flowEdgeTypes";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
 type GraphFlowCanvasProps = {
   nodes: Node[];
@@ -34,8 +38,23 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
+  const { clearTokenInfo, dismissTransient, isCtrlPreviewMode, isTraceActive } =
+    useGraphInteraction();
+
+  const handlePaneClick = useCallback(() => {
+    clearTokenInfo();
+    dismissTransient();
+    onPaneClick();
+  }, [clearTokenInfo, dismissTransient, onPaneClick]);
+
   return (
-    <>
+    <div
+      className={cn(
+        "relative h-full w-full",
+        isCtrlPreviewMode && "graph-ctrl-preview",
+        isTraceActive && "graph-trace-active",
+      )}
+    >
       <ReactFlow
         className="graph-flow-container"
         nodes={nodes}
@@ -43,10 +62,9 @@ export function GraphFlowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={flowNodeTypes}
-        edgeTypes={flowEdgeTypes}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
-        onPaneClick={onPaneClick}
+        onPaneClick={handlePaneClick}
         onMove={onMove}
         onMoveEnd={onMove}
         minZoom={0.2}
@@ -67,6 +85,8 @@ export function GraphFlowCanvas({
       <GraphPinchZoomBoost />
       <TokenReferencesDropdown />
       <TokenReferenceCards />
-    </>
+      <TokenInfoPopover />
+      <JumpTooltip />
+    </div>
   );
 }

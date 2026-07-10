@@ -1,11 +1,17 @@
 import type { Viewport } from "@xyflow/react";
 
-/** ~10× default XYFlow wheel delta on non-macOS; matches pre–pan-on-scroll feel. */
-export const GRAPH_PINCH_ZOOM_SENSITIVITY = 0.02;
+/** Small per-pixel exponent; trackpad pinches send many small deltas. */
+export const GRAPH_PINCH_ZOOM_SENSITIVITY = 0.005;
+/** Max zoom change per wheel event (≈1.25× per mouse-wheel tick). */
+const MAX_STEP_EXPONENT = 0.32;
 
 export function wheelDeltaToZoomFactor(deltaY: number, deltaMode: number): number {
-  const modeScale = deltaMode === 1 ? 0.05 : deltaMode ? 1 : GRAPH_PINCH_ZOOM_SENSITIVITY;
-  return Math.pow(2, -deltaY * modeScale);
+  const modeScale = deltaMode === 1 ? 0.02 : deltaMode ? 1 : GRAPH_PINCH_ZOOM_SENSITIVITY;
+  const exponent = Math.max(
+    -MAX_STEP_EXPONENT,
+    Math.min(MAX_STEP_EXPONENT, -deltaY * modeScale),
+  );
+  return Math.pow(2, exponent);
 }
 
 export function viewportZoomedAtPointer(

@@ -1,0 +1,163 @@
+import { useCallback, useState, type ReactNode } from "react";
+import { fetchTree } from "@/api";
+import { Button } from "@/components/ui/button";
+import { VscodeFileIcon } from "@/components/VscodeFileIcon";
+import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
+import { DRAG_FILEPATH_KEY } from "@/lib/drag";
+import { isFileInGraph } from "@/lib/graphFiles";
+import {
+  TREE_FOLDER_ROW,
+  TREE_ROW,
+} from "@/components/explorer/explorerRowStyles";
+import { cn } from "@/lib/utils";
+import type { TreeEntry } from "@/types";
+
+/** Vertical guide + indent for nested files under a folder/section. */
+export function ExplorerTreeGuide({ children }: { children: ReactNode }) {
+  return (
+    <div className="explorer-tree-guide ml-3 border-l border-sidebar-border pl-2">
+      <div className="flex flex-col gap-0.5">{children}</div>
+    </div>
+  );
+}
+
+type FileTreeItemProps = {
+  filePath: string;
+  name: string;
+  onFileClick: (filePath: string) => void;
+  disabled?: boolean;
+  inGraph?: boolean;
+};
+
+/** A draggable, clickable file row. */
+export function FileTreeItem({
+  filePath,
+  name,
+  onFileClick,
+  disabled,
+  inGraph,
+}: FileTreeItemProps) {
+  const fileIcon = getFileIcon(name);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      draggable={true}
+      onDragStart={(e) => {
+        e.stopPropagation();
+        e.dataTransfer.setData(DRAG_FILEPATH_KEY, filePath);
+        e.dataTransfer.setData("text/plain", filePath);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled) onFileClick(filePath);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !disabled) {
+          e.stopPropagation();
+          onFileClick(filePath);
+        }
+      }}
+      className={cn(
+        TREE_ROW,
+        "active:cursor-grabbing",
+        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
+        !inGraph && "text-foreground",
+        disabled && "pointer-events-none cursor-not-allowed opacity-50",
+      )}
+    >
+      {fileIcon.vscodeIcon ? (
+        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
+      ) : (
+        <Codicon name={fileIcon.codicon!} className={cn("shrink-0", fileIcon.colorClass)} />
+      )}
+      <span className="truncate">{name}</span>
+    </div>
+  );
+}
+
+type TreeNodeProps = {
+  entry: TreeEntry;
+  depth: number;
+  onFileClick: (filePath: string) => void;
+  disabled?: boolean;
+  graphFilePaths?: Set<string>;
+};
+
+/** Recursive folder/file node; folders lazy-load their children on first open. */
+export function TreeNode({
+  entry,
+  depth,
+  onFileClick,
+  disabled,
+  graphFilePaths,
+}: TreeNodeProps) {
+  const [open, setOpen] = useState(false);
+  const [children, setChildren] = useState<TreeEntry[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const toggleFolder = useCallback(async () => {
+    if (disabled) return;
+    if (!open && children === null) {
+      setLoading(true);
+      try {
+        const data = await fetchTree(entry.path);
+        setChildren(data.entries);
+      } finally {
+        setLoading(false);
+      }
+    }
+    setOpen((v) => !v);
+  }, [children, disabled, entry.path, open]);
+
+  if (entry.type === "directory") {
+    const folderIcon = getFolderIcon(open);
+    return (
+      <div className="flex flex-col gap-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={toggleFolder}
+          disabled={disabled}
+          className={TREE_FOLDER_ROW}
+        >
+          <Codicon
+            name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
+            className="shrink-0 text-muted-foreground"
+          />
+          <Codicon name={folderIcon.codicon} className={cn("shrink-0", folderIcon.colorClass)} />
+          <span className="truncate leading-none">{entry.name}</span>
+          {loading && <span className="text-xs text-muted-foreground">…</span>}
+        </Button>
+        {open && (
+          <ExplorerTreeGuide>
+            {children?.map((child) => (
+              <TreeNode
+                key={child.path}
+                entry={child}
+                depth={depth + 1}
+                onFileClick={onFileClick}
+                disabled={disabled}
+                graphFilePaths={graphFilePaths}
+              />
+            ))}
+          </ExplorerTreeGuide>
+        )}
+      </div>
+    );
+  }
+
+  const item = (
+    <FileTreeItem
+      filePath={entry.path}
+      name={entry.name}
+      onFileClick={onFileClick}
+      disabled={disabled}
+      inGraph={isFileInGraph(entry.path, graphFilePaths ?? new Set())}
+    />
+  );
+
+  return depth === 0 ? <ExplorerTreeGuide>{item}</ExplorerTreeGuide> : item;
+}
