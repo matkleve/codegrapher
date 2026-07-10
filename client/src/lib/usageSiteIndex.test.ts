@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import type { Node } from "@xyflow/react";
+import { buildUsageSiteIndex } from "@/lib/usageSiteIndex";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+
+function classNode(
+  id: string,
+  methods: ClassNodeData["methods"],
+  properties: ClassNodeData["properties"] = [],
+): Node {
+  const data: ClassNodeData = {
+    label: "Svc",
+    fileName: "Svc.ts",
+    filePath: "/svc.ts",
+    graphNodeId: `class:${id}`,
+    nodeKind: "class",
+    properties,
+    methods,
+    expandedPropertyIds: [],
+    expandedMethodIds: [],
+    collapsed: false,
+  };
+  return { id, type: "class", data, position: { x: 0, y: 0 } };
+}
+
+describe("buildUsageSiteIndex", () => {
+  it("indexes only symbols in the indexed set", () => {
+    const nodes = [
+      classNode("flow-1", [
+        {
+          id: "m1",
+          label: "run",
+          symbolName: "run",
+          code: "return charge(id) + validate(x);",
+        },
+      ]),
+    ];
+    const index = buildUsageSiteIndex(nodes, new Set(["charge", "validate"]));
+    expect(index.get("charge")).toHaveLength(1);
+    expect(index.get("validate")).toHaveLength(1);
+    expect(index.has("run")).toBe(false);
+  });
+
+  it("dedupes the same token on one line", () => {
+    const nodes = [
+      classNode("flow-1", [
+        {
+          id: "m1",
+          label: "run",
+          symbolName: "run",
+          code: "return charge(charge);",
+        },
+      ]),
+    ];
+    const index = buildUsageSiteIndex(nodes, new Set(["charge"]));
+    expect(index.get("charge")).toHaveLength(1);
+  });
+
+  it("scans property bodies", () => {
+    const nodes = [
+      classNode(
+        "flow-1",
+        [],
+        [
+          {
+            id: "p1",
+            label: "gateway",
+            symbolName: "gateway",
+            code: "new PaymentGateway()",
+          },
+        ],
+      ),
+    ];
+    const index = buildUsageSiteIndex(nodes, new Set(["PaymentGateway"]));
+    expect(index.get("PaymentGateway")).toHaveLength(1);
+  });
+
+  it("indexes 500 lines × 20 symbols under 100ms", () => {
+    const symbols = new Set(
+      Array.from({ length: 20 }, (_, i) => `sym${i}`),
+    );
+    const line = `return ${[...symbols].join(" + ")};`;
+    const code = Array.from({ length: 500 }, () => line).join("\n");
+    const nodes = [
+      classNode("flow-1", [
+        { id: "m1", label: "big", symbolName: "big", code },
+      ]),
+    ];
+    const start = performance.now();
+    const index = buildUsageSiteIndex(nodes, symbols);
+    const elapsed = performance.now() - start;
+    expect(index.size).toBe(20);
+    expect(elapsed).toBeLessThan(100);
+  });
+});

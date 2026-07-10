@@ -92,13 +92,17 @@ export function updateWireGeometry(
     const pathD = straightPath(fromPt.x, fromPt.y, toPt.x, toPt.y);
     wire.path.setAttribute("d", pathD);
     wire.glow.setAttribute("d", pathD);
+    // Full-length hit (not just the "~1cm" jump-tip segment used below): the
+    // load stub is the only path to a floating chip, so the whole run has to
+    // stay hoverable or a slow cursor loses the trace mid-transit.
+    const fullHit = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
     wire.hitFrom.setAttribute(
       "d",
-      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from"),
+      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from", fullHit),
     );
     wire.hitTo.setAttribute(
       "d",
-      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to"),
+      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to", fullHit),
     );
     return true;
   }

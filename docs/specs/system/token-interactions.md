@@ -38,7 +38,7 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
 | 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas) | `mode:"external"` |
-| 11 | Click the **Load** pill | `onLoadFile` → `/api/focus` pulls the definition in; load stubs upgrade to in-graph wires when nodes are ready | load |
+| 11 | Click the **Load** pill | N=1: load immediately; N>1: open **LoadTargetPicker** (search when >6 files) | load |
 
 ## Interaction by keyword kind
 
@@ -63,6 +63,7 @@ graph-pane
 ├── TokenContextBar / info box (pinned + transient long-hover)
 ├── JumpTooltip                (wire "Jump to")
 └── LoadConnector              (external symbol → load)
+    └── LoadTargetPicker       (multi-file pick + filter)
 ```
 
 ## Data
@@ -94,8 +95,11 @@ graph-pane
 - [ ] Given an active wire, when the pointer enters its first ~cm, then a
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
-  hovered, then a **dashed Load connector** appears; clicking it loads the
-  definition via `/api/focus` and swaps the stub for an in-graph preview wire.
+  hovered, then a **dashed Load connector** appears.
+- [ ] Given multiple off-graph definitions, when Load is clicked, then
+  **LoadTargetPicker** opens (search when >6 files); N=1 loads immediately.
+- [ ] After load, the stub upgrades to an in-graph preview wire when the
+  definition is on the canvas.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim
   (no upward cascade); a function endpoint lights its own body.
 - [ ] Plain hover never fires without a dwell; Ctrl fires instantly.

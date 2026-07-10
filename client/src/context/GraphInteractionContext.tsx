@@ -123,7 +123,19 @@ type GraphInteractionContextValue = {
     sourceFlowId: string,
     sourceMemberId?: string,
   ) => UsageSiteRecord[];
+  /** Undo one pin/clear action, restoring the selection it replaced. */
+  goBackPin: () => void;
+  canGoBackPin: boolean;
 };
+
+type PinSnapshot = {
+  traces: PinnedTrace[];
+  activePinKey: string | null;
+  tokenInfo: TokenInfoState;
+};
+
+/** Caps memory use; deep back-tracking beyond this isn't a realistic use case. */
+const PIN_HISTORY_LIMIT = 20;
 
 const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
   null,
@@ -156,11 +168,15 @@ export function GraphInteractionProvider({
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
+  const [pinHistoryLength, setPinHistoryLength] = useState(0);
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
   const pinnedTracesRef = useRef<PinnedTrace[]>([]);
   const activePinKeyRef = useRef<string | null>(null);
+  const tokenInfoRef = useRef<TokenInfoState>(null);
+  tokenInfoRef.current = tokenInfo;
+  const pinHistoryRef = useRef<PinSnapshot[]>([]);
   const pendingFireRef = useRef<{ tokenKey: string; onFire: () => void } | null>(
     null,
   );
@@ -212,7 +228,20 @@ export function GraphInteractionProvider({
     hoverClearRef.current = null;
   }, []);
 
+  const pushPinHistory = useCallback(() => {
+    if (pinnedTracesRef.current.length === 0) return;
+    const history = pinHistoryRef.current;
+    history.push({
+      traces: pinnedTracesRef.current,
+      activePinKey: activePinKeyRef.current,
+      tokenInfo: tokenInfoRef.current,
+    });
+    if (history.length > PIN_HISTORY_LIMIT) history.shift();
+    setPinHistoryLength(history.length);
+  }, []);
+
   const clearTokenInfo = useCallback(() => {
+    pushPinHistory();
     pinnedTracesRef.current = [];
     activePinKeyRef.current = null;
     setPinnedTraces([]);
@@ -220,10 +249,31 @@ export function GraphInteractionProvider({
     setTokenInfo(null);
     endTrace();
     resetHoverIntent();
+  }, [endTrace, pushPinHistory, resetHoverIntent]);
+
+  const goBackPin = useCallback(() => {
+    const history = pinHistoryRef.current;
+    const snapshot = history.pop();
+    setPinHistoryLength(history.length);
+    if (!snapshot) return;
+
+    resetHoverIntent();
+    pinnedTracesRef.current = snapshot.traces;
+    activePinKeyRef.current = snapshot.activePinKey;
+    setPinnedTraces(snapshot.traces);
+    setActivePinKey(snapshot.activePinKey);
+    setTokenInfo(snapshot.tokenInfo);
+    if (snapshot.activePinKey) {
+      setHoveredTokenKey(snapshot.activePinKey);
+      setIsWarm(true);
+    } else {
+      endTrace();
+    }
   }, [endTrace, resetHoverIntent]);
 
   const pinTrace = useCallback(
     (tokenKey: string, shiftKey = false) => {
+      pushPinHistory();
       resetHoverIntent();
       const mode = shiftKey
         ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
@@ -247,7 +297,7 @@ export function GraphInteractionProvider({
         endTrace();
       }
     },
-    [endTrace, resetHoverIntent],
+    [endTrace, pushPinHistory, resetHoverIntent],
   );
 
   const showTokenInfo = useCallback(
@@ -669,6 +719,8 @@ export function GraphInteractionProvider({
       isPinnedTokenKey,
       hoveredTokenKey,
       lookupIndexedUsageSites,
+      goBackPin,
+      canGoBackPin: pinHistoryLength > 0,
     }),
     [
       previewEdges,
@@ -705,6 +757,8 @@ export function GraphInteractionProvider({
       isPinnedTokenKey,
       hoveredTokenKey,
       lookupIndexedUsageSites,
+      goBackPin,
+      pinHistoryLength,
     ],
   );
 

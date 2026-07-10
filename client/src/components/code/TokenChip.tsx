@@ -25,6 +25,7 @@ type TokenChipProps = {
   onKeyDown?: (e: React.KeyboardEvent) => void;
   tabIndex?: number;
   role?: string;
+  className?: string;
 };
 
 export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
@@ -44,6 +45,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
       onKeyDown,
       tabIndex,
       role,
+      className: chipClassName,
     },
     ref,
   ) {
@@ -80,6 +82,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         {...(localDefId ? { "data-local-def-id": localDefId } : {})}
         {...(localTargetId ? { "data-local-target-id": localTargetId } : {})}
         className={cn(
+          chipClassName,
           interactive && "cursor-pointer",
           lit && "token-chip-lit",
           on && pinnedSource && "token-chip-source",

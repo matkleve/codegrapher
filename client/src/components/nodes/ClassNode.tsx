@@ -146,6 +146,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   label={m.label}
                   symbolName={m.symbolName}
                   code={m.code}
+                  showSignatureTags
                   expanded={nodeData.expandedMethodIds.includes(m.id)}
                   onToggle={onToggleMethod}
                   flowNodeId={id}

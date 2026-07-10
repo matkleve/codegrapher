@@ -2,14 +2,8 @@ import { useLayoutEffect, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useJumpTooltip } from "@/context/JumpTooltipContext";
-import { commitTokenPin } from "@/hooks/useTokenTrace";
-import { makeTokenInfoFromJumpTarget } from "@/lib/tokenContextInfo";
-import {
-  jumpTargetForWireEnd,
-  jumpTargetLabel,
-  resolveJumpTargetElement,
-  traceKeyForJumpTarget,
-} from "@/lib/resolveJumpTarget";
+import { useJumpClick } from "@/hooks/useJumpClick";
+import { jumpTargetForWireEnd, jumpTargetLabel } from "@/lib/resolveJumpTarget";
 import {
   syncWireDom,
   updateWireGeometry,
@@ -18,18 +12,11 @@ import {
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 
 export function PreviewEdgeOverlay() {
-  const {
-    previewEdges,
-    isWarm,
-    cancelHoverLeaveGrace,
-    scheduleHoverLeaveGrace,
-    pinTrace,
-    beginTrace,
-    showTokenInfo,
-    focusFlowNode,
-  } = useGraphInteraction();
+  const { previewEdges, isWarm, cancelHoverLeaveGrace, scheduleHoverLeaveGrace } =
+    useGraphInteraction();
   const { setJumpTooltip } = useJumpTooltip();
   const { getNode } = useReactFlow();
+  const onWireClick = useJumpClick();
   const svgRef = useRef<SVGSVGElement>(null);
   const wiresRef = useRef<Map<string, WireElements>>(new Map());
   const specsRef = useRef<PreviewEdgeSpec[]>([]);
@@ -56,36 +43,15 @@ export function PreviewEdgeOverlay() {
       setJumpTooltip(null);
       scheduleHoverLeaveGrace();
     };
-    const onClick = (end: "from" | "to") => (e: MouseEvent) => {
-      e.stopPropagation();
-      const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
-      const el = resolveJumpTargetElement(ref, hint, getNode);
-      if (!el) return;
-      const traceKey = traceKeyForJumpTarget(el, hint);
-      if (!traceKey) return;
-      const flowNodeId = hint?.flowNodeId;
-      commitTokenPin({
-        pinTrace,
-        showTokenInfo,
-        tokenKey: traceKey,
-        onFire: () => beginTrace(traceKey, [spec]),
-        buildPinInfo: () =>
-          makeTokenInfoFromJumpTarget(el, hint, spec.kind, true),
-        animateEl: el,
-      });
-      if (flowNodeId) focusFlowNode(flowNodeId);
-      el.scrollIntoView({ block: "nearest", inline: "nearest" });
-      setJumpTooltip(null);
-    };
 
     wire.hitFrom.onmouseenter = onEnter("from");
     wire.hitFrom.onmousemove = onMove;
     wire.hitFrom.onmouseleave = onLeave;
-    wire.hitFrom.onclick = onClick("from");
+    wire.hitFrom.onclick = onWireClick(spec, "from");
     wire.hitTo.onmouseenter = onEnter("to");
     wire.hitTo.onmousemove = onMove;
     wire.hitTo.onmouseleave = onLeave;
-    wire.hitTo.onclick = onClick("to");
+    wire.hitTo.onclick = onWireClick(spec, "to");
   };
 
   useLayoutEffect(() => {

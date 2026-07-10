@@ -193,24 +193,33 @@
 }
 
 /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
-.graph-ctrl-preview .code-kw,
-.graph-ctrl-preview .code-pn,
-.graph-ctrl-preview .code-comment,
-.graph-ctrl-preview .code-string,
-.graph-ctrl-preview .code-number,
-.graph-ctrl-preview .member-body-wrap,
-.graph-ctrl-preview .member-section-label,
-.graph-ctrl-preview .member-section-bulk,
-.graph-ctrl-preview .node-card-caret,
-.graph-ctrl-preview .member-row-caret,
-.graph-ctrl-preview .file-type-chip {
-  color: var(--faint-ctrl) !important;
-  transition:
-    color 0s,
-    opacity 0s;
+/* One-shot dim on the line — every span inherits the same faint ink (no per-class
+   fade stagger between keywords, punctuation, and bare identifiers). */
+html.graph-ctrl-preview .react-flow__node * {
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
 }
 
-.graph-ctrl-preview .react-flow__node.class-node-root {
+html.graph-ctrl-preview .member-body-wrap,
+html.graph-ctrl-preview .member-section-label,
+html.graph-ctrl-preview .member-section-bulk,
+html.graph-ctrl-preview .node-card-caret,
+html.graph-ctrl-preview .member-row-caret,
+html.graph-ctrl-preview .file-type-chip,
+html.graph-ctrl-preview .member-row-label:not(.cursor-pointer),
+html.graph-ctrl-preview .node-card-title:not(.cursor-pointer) {
+  color: var(--faint-ctrl) !important;
+}
+
+html.graph-ctrl-preview .code-line {
+  color: var(--faint-ctrl) !important;
+}
+
+html.graph-ctrl-preview .code-line :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
+}
+
+html.graph-ctrl-preview .react-flow__node.class-node-root {
   border-color: color-mix(in oklch, var(--foreground) 24%, var(--border));
 }
 
@@ -220,7 +229,7 @@
   box-shadow: var(--node-shadow);
 }
 
-.graph-ctrl-preview .react-flow__node.class-node-root::after {
+html.graph-ctrl-preview .react-flow__node.class-node-root::after {
   content: "";
   position: absolute;
   inset: -1px;
@@ -231,14 +240,14 @@
   animation: graph-edge-breathe 4.6s ease-in-out infinite alternate;
 }
 
-.graph-ctrl-preview .token-chip.cursor-pointer,
-.graph-ctrl-preview .token-def-label.cursor-pointer {
+html.graph-ctrl-preview .token-chip.cursor-pointer,
+html.graph-ctrl-preview .token-def-label.cursor-pointer {
   background: transparent;
   box-shadow: none;
 }
 
 /* "Light in glass": glyphs stay fully readable; only a specular streak passes over. */
-.graph-ctrl-preview .token-shimmer-target::after {
+html.graph-ctrl-preview .token-shimmer-target::after {
   content: attr(data-text);
   position: absolute;
   left: 0;
@@ -263,12 +272,11 @@
   background-repeat: no-repeat;
   animation: proto-glint 1.9s var(--ease) infinite;
   animation-delay: var(--shimmer-delay, 0s);
-  filter: brightness(1.06);
 }
 
-.graph-ctrl-preview .token-chip.cursor-pointer .token-chip-text,
-.graph-ctrl-preview .token-def-label.cursor-pointer {
-  filter: brightness(1.06);
+html.graph-ctrl-preview .token-chip.cursor-pointer .token-chip-text,
+html.graph-ctrl-preview .token-def-label.cursor-pointer {
+  filter: none;
 }
 
 /* Trace + Ctrl: trace focus wins — no glint overlay. */
@@ -285,18 +293,21 @@
   filter: none;
 }
 
-.graph-ctrl-preview.graph-trace-active .code-kw,
-.graph-ctrl-preview.graph-trace-active .code-pn,
-.graph-ctrl-preview.graph-trace-active .code-comment,
-.graph-ctrl-preview.graph-trace-active .code-string,
-.graph-ctrl-preview.graph-trace-active .code-number,
-.graph-ctrl-preview.graph-trace-active .member-body-wrap,
-.graph-ctrl-preview.graph-trace-active .member-section-label,
-.graph-ctrl-preview.graph-trace-active .member-section-bulk,
-.graph-ctrl-preview.graph-trace-active .node-card-caret,
-.graph-ctrl-preview.graph-trace-active .member-row-caret,
-.graph-ctrl-preview.graph-trace-active .file-type-chip {
+html.graph-ctrl-preview .graph-trace-active .member-body-wrap,
+html.graph-ctrl-preview .graph-trace-active .member-section-label,
+html.graph-ctrl-preview .graph-trace-active .member-section-bulk,
+html.graph-ctrl-preview .graph-trace-active .node-card-caret,
+html.graph-ctrl-preview .graph-trace-active .member-row-caret,
+html.graph-ctrl-preview .graph-trace-active .file-type-chip {
   color: var(--faint) !important;
+}
+
+html.graph-ctrl-preview .graph-trace-active .code-line {
+  color: var(--faint) !important;
+}
+
+html.graph-ctrl-preview .graph-trace-active .code-line :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
 }
 
 /* Member container keeps a permanent transparent 1px border (like `.member` in
@@ -342,6 +353,8 @@
 .member-body-wrap,
 .member-section-label,
 .member-section-bulk,
+.member-sig-value,
+.member-sig-kind-icon,
 .node-card-caret,
 .member-row-caret,
 .node-card-title,
@@ -361,6 +374,8 @@
 .graph-trace-active .file-type-chip,
 .graph-trace-active .member-section-label,
 .graph-trace-active .member-section-bulk,
+.graph-trace-active .member-sig-value,
+.graph-trace-active .member-sig-kind-icon,
 .graph-trace-active .node-card-title,
 .graph-trace-active .node-card-caret,
 .graph-trace-active .member-row-caret {
@@ -405,39 +420,39 @@
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
 .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"],
-.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
-.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
+html.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
+html.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
   color: var(--token-edge-class) !important;
   -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
 .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"],
-.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
-.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
+html.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
+html.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
   color: var(--token-edge-function) !important;
   -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
 .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"],
-.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
-.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
+html.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
+html.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
   color: var(--token-edge-type) !important;
   -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
 .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"],
-.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
-.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
+html.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
+html.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
   color: var(--token-edge-variable) !important;
   -webkit-text-fill-color: currentColor;
 }
 
 /* Function body spread: only wire endpoints keep semantic color */
 .graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit:not(.token-chip-on) .token-chip-text,
-.graph-ctrl-preview.graph-trace-active
+html.graph-ctrl-preview .graph-trace-active
   .code-line.trace-lit-line
   .token-chip.token-chip-lit:not(.token-chip-on)
   .token-chip-text {
@@ -627,8 +642,8 @@
 @media (prefers-reduced-motion: reduce) {
   .preview-edge-path,
   .preview-edge-glow,
-  .graph-ctrl-preview .token-shimmer-target::after,
-  .graph-ctrl-preview .react-flow__node.class-node-root::after {
+  html.graph-ctrl-preview .token-shimmer-target::after,
+  html.graph-ctrl-preview .react-flow__node.class-node-root::after {
     animation: none !important;
   }
 

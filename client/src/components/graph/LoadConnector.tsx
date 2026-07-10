@@ -1,13 +1,22 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { ConnectorChip } from "@/components/code/ConnectorChip";
+import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { collectGraphFilePaths, isFileInGraph } from "@/lib/graphFiles";
+import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
+import { fromExternalCards } from "@/lib/loadTargets";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { resolvePreviewAnchor } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 
 const LOAD_STUB_OFFSET_PX = 72;
+
+type PickerState = {
+  token: string;
+  targets: ReturnType<typeof fromExternalCards>;
+  anchor: { x: number; y: number };
+  contextFilePath?: string;
+};
 
 function loadSocketSide(flip: boolean): "left" | "right" {
   return flip ? "left" : "right";
@@ -36,13 +45,13 @@ function positionChip(
 
 type LoadChipProps = {
   spec: PreviewEdgeSpec;
-  onLoad: (spec: PreviewEdgeSpec) => void;
+  onActivate: (spec: PreviewEdgeSpec) => void;
   onEnter: () => void;
   chipRef: (el: HTMLSpanElement | null) => void;
 };
 
-function LoadChip({ spec, onLoad, onEnter, chipRef }: LoadChipProps) {
-  const count = spec.load?.occurrenceCount ?? 1;
+function LoadChip({ spec, onActivate, onEnter, chipRef }: LoadChipProps) {
+  const count = spec.load?.candidates.length ?? spec.load?.occurrenceCount ?? 1;
   const label = count > 1 ? `Load · ${count} files` : "Load";
 
   return (
@@ -58,18 +67,22 @@ function LoadChip({ spec, onLoad, onEnter, chipRef }: LoadChipProps) {
       data-load-edge-id={spec.id}
       data-load-socket="right"
       className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
-      title={`Load definition (${count} definition${count === 1 ? "" : "s"} in repo)`}
+      title={
+        count > 1
+          ? `Choose which file to load (${count} definitions in repo)`
+          : "Load definition into graph"
+      }
       onMouseEnter={onEnter}
       onPointerDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        onLoad(spec);
+        onActivate(spec);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           e.stopPropagation();
-          onLoad(spec);
+          onActivate(spec);
         }
       }}
     />
@@ -77,17 +90,13 @@ function LoadChip({ spec, onLoad, onEnter, chipRef }: LoadChipProps) {
 }
 
 export function LoadConnector() {
-  const {
-    previewEdges,
-    onLoadFile,
-    graphData,
-    refreshLoadTraces,
-    cancelHoverLeaveGrace,
-  } = useGraphInteraction();
+  const { previewEdges, cancelHoverLeaveGrace } = useGraphInteraction();
+  const loadTarget = useLoadTargetAction();
   const { getNode } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<Map<string, HTMLSpanElement>>(new Map());
   const specsRef = useRef<PreviewEdgeSpec[]>([]);
+  const [picker, setPicker] = useState<PickerState | null>(null);
 
   const loadSpecs = previewEdges.filter((e) => e.load);
   const loadEdgeKey = loadSpecs.map((e) => e.id).join(",");
@@ -115,36 +124,58 @@ export function LoadConnector() {
     return () => cancelAnimationFrame(raf);
   }, [getNode, loadEdgeKey]);
 
-  const handleLoad = (spec: PreviewEdgeSpec) => {
+  const handleActivate = (spec: PreviewEdgeSpec) => {
     cancelHoverLeaveGrace();
-    const path = spec.load?.filePath;
-    if (!path) return;
-    const graphPaths = collectGraphFilePaths(graphData);
-    if (isFileInGraph(path, graphPaths)) {
-      refreshLoadTraces();
+    const load = spec.load;
+    if (!load) return;
+
+    const candidates = load.candidates ?? [];
+    if (candidates.length > 1) {
+      const chip = chipsRef.current.get(spec.id);
+      const rect = chip?.getBoundingClientRect();
+      if (!rect) return;
+      setPicker({
+        token: load.token,
+        targets: fromExternalCards(candidates),
+        anchor: { x: rect.left + rect.width / 2, y: rect.bottom },
+      });
       return;
     }
-    void onLoadFile(path);
+
+    loadTarget(load.filePath);
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="pointer-events-none absolute inset-0 z-[48] overflow-visible"
-      aria-hidden={!loadEdgeKey}
-    >
-      {loadSpecs.map((spec) => (
-        <LoadChip
-          key={spec.id}
-          spec={spec}
-          onLoad={handleLoad}
-          onEnter={cancelHoverLeaveGrace}
-          chipRef={(el) => {
-            if (el) chipsRef.current.set(spec.id, el);
-            else chipsRef.current.delete(spec.id);
-          }}
+    <>
+      <div
+        ref={containerRef}
+        className="pointer-events-none absolute inset-0 z-[48] overflow-visible"
+        aria-hidden={!loadEdgeKey}
+      >
+        {loadSpecs.map((spec) => (
+          <LoadChip
+            key={spec.id}
+            spec={spec}
+            onActivate={handleActivate}
+            onEnter={cancelHoverLeaveGrace}
+            chipRef={(el) => {
+              if (el) chipsRef.current.set(spec.id, el);
+              else chipsRef.current.delete(spec.id);
+            }}
+          />
+        ))}
+      </div>
+
+      {picker ? (
+        <LoadTargetPicker
+          token={picker.token}
+          targets={picker.targets}
+          anchor={picker.anchor}
+          contextFilePath={picker.contextFilePath}
+          onSelect={loadTarget}
+          onClose={() => setPicker(null)}
         />
-      ))}
-    </div>
+      ) : null}
+    </>
   );
 }

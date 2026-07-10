@@ -60,6 +60,27 @@ function extractParams(
   return out;
 }
 
+/** Param on a signature continuation line (`name: Type,`) without `(`. */
+function extractContinuationParams(
+  line: string,
+  memberId: string,
+  lineNumber: number,
+): { name: string; tokenIndex: number; defId: string }[] {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith(")")) return [];
+
+  const tokens = tokenizeLine(line);
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.kind !== "identifier" || t.text === "this") continue;
+    const next = tokens.slice(i + 1).find((tok) => tok.kind !== "whitespace");
+    if (next?.text !== ":") continue;
+    const defId = localDefId(memberId, t.text, lineNumber, "param");
+    return [{ name: t.text, tokenIndex: i, defId }];
+  }
+  return [];
+}
+
 /**
  * Build def/usage map for one member body — mirrors connectors-proto.html
  * `data-def` / `data-target` wiring for params, locals, and property refs.
@@ -76,9 +97,15 @@ export function buildMemberSymbolIndex(
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineNumber = lineIdx + 1;
     const line = lines[lineIdx] ?? "";
+    const trimmed = line.trim();
 
-    if (lineNumber === 1 || line.includes("(")) {
+    if (line.includes("(")) {
       for (const p of extractParams(line, memberId, lineNumber)) {
+        scope.set(p.name, p.defId);
+        defSites.set(`${lineNumber}:${p.tokenIndex}`, p.defId);
+      }
+    } else if (lineNumber === 1 || /^\w+\s*\??\s*:/.test(trimmed)) {
+      for (const p of extractContinuationParams(line, memberId, lineNumber)) {
         scope.set(p.name, p.defId);
         defSites.set(`${lineNumber}:${p.tokenIndex}`, p.defId);
       }
@@ -127,4 +154,20 @@ export function defSiteFor(
   tokenIndex: number,
 ): string | undefined {
   return index.defSites.get(`${lineNumber}:${tokenIndex}`);
+}
+
+/** Param definition id + line for a member (supports multiline signatures). */
+export function paramDefForName(
+  index: MemberSymbolIndex,
+  memberId: string,
+  paramName: string,
+): { defId: string; lineNumber: number } | null {
+  const prefix = `local-def::${memberId}::param::${paramName}::`;
+  for (const defId of index.defSites.values()) {
+    if (!defId.startsWith(prefix)) continue;
+    const lineNumber = Number(defId.slice(prefix.length));
+    if (!Number.isFinite(lineNumber) || lineNumber < 1) continue;
+    return { defId, lineNumber };
+  }
+  return null;
 }

@@ -6,7 +6,7 @@ React Flow compound node rendering one parsed class: header, collapsible propert
 
 ## What It Looks Like
 
-Rounded card with file-type chip, camelCase-split title, expand chevron. Member rows stack vertically; expanded methods show monospace source. Resize handle at bottom; height always fits open content.
+Rounded card with file-type chip, camelCase-split title, expand chevron. Method row headers show compact param and return-type tags parsed from the signature. Member rows stack vertically; expanded methods show monospace source. Resize handle at bottom; height always fits open content.
 
 ## Where It Lives
 
@@ -49,6 +49,7 @@ ClassNode
 | ----- | ------ |
 | `ClassNodeData` | `/api/file-graph` / merge |
 | `methods[]`, `properties[]` | server parser |
+| method header tags | client `parseMethodSignature` on method `code` |
 | `width`, `height` | node state + resize commit |
 
 ## State
@@ -88,6 +89,8 @@ Resize MUST commit via `computeClassNodeHeight` — do not bind card CSS height 
 - [ ] Collapsed node shows header only; body does not overflow card
 - [ ] Resize never leaves empty space below last visible row
 - [ ] Shrinking height closes members top→bottom before clipping
+- [ ] Method row headers show param + return tags when signature parses
+- [ ] Header param names use TokenChip connectors (def → in-body usages)
 - [ ] Only expanded method bodies expose indexed token chips for preview
 - [ ] `previewTargetTop(id)` handle is unique per node
 - [ ] ClassNode.tsx stays render-only; logic in hooks

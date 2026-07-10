@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef } from "react";
+import { MemberSignatureTags } from "@/components/nodes/MemberSignatureTags";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
@@ -21,6 +22,7 @@ import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeMemberDefKey } from "@/lib/traceKeys";
 import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
+import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -28,6 +30,8 @@ type CollapsibleMemberRowProps = {
   label: string;
   symbolName?: string;
   code: string;
+  /** When true, show parsed param/return tags in the row header. */
+  showSignatureTags?: boolean;
   expanded: boolean;
   onToggle: (memberId: string) => void;
   flowNodeId: string;
@@ -41,6 +45,7 @@ export function CollapsibleMemberRow({
   label,
   symbolName,
   code,
+  showSignatureTags = false,
   expanded,
   onToggle,
   flowNodeId,
@@ -70,6 +75,10 @@ export function CollapsibleMemberRow({
   const symbolIndex = useMemo(
     () => buildMemberSymbolIndex(memberId, code),
     [memberId, code],
+  );
+  const methodSignature = useMemo(
+    () => (showSignatureTags ? parseMethodSignature(code) : null),
+    [code, showSignatureTags],
   );
 
   const { lit, on, memberLit, ownerLit, pinnedSource, hoverPreview } = useTraceAppearance({
@@ -184,7 +193,7 @@ export function CollapsibleMemberRow({
         className={cn(
           "member-row-header",
           INTERACTIVE_SURFACE,
-          "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-1.5 text-left",
+          "flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 border-x-0 border-t-0 px-2 py-1.5 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
         aria-expanded={expanded}
@@ -237,6 +246,17 @@ export function CollapsibleMemberRow({
             {label}
           </span>
         </span>
+        {methodSignature ? (
+          <MemberSignatureTags
+            signature={methodSignature}
+            memberId={memberId}
+            flowNodeId={flowNodeId}
+            graphNodeId={graphNodeId}
+            filePath={filePath}
+            classLabel={classLabel}
+            symbolIndex={symbolIndex}
+          />
+        ) : null}
       </button>
       {expanded && code.trim() ? (
         <div className="member-body-wrap nodrag overflow-visible px-2 pb-2 pl-5 pt-1.5 text-muted-foreground">

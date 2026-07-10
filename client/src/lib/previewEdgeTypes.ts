@@ -1,4 +1,5 @@
 import type { SemanticTokenKind } from "@/lib/tokenColors";
+import type { ExternalReferenceCard } from "@/lib/resolveVisibleTarget";
 
 export type AnchorRef =
   | { type: "element"; el: HTMLElement; side?: "left" | "right" }
@@ -22,9 +23,11 @@ export type PreviewEdgeSpec = {
   liveTo?: LiveAnchorHint;
   /** Off-graph definition — dashed load stub + pill beside usage token. */
   load?: {
+    token: string;
     filePath: string;
     line: number;
     occurrenceCount: number;
+    candidates: ExternalReferenceCard[];
   };
 };
 

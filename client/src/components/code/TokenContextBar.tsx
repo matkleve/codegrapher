@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Code2, Crosshair, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Code2, Crosshair, X } from "lucide-react";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Button } from "@/components/ui/button";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
+import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
 import { openFileInEditor } from "@/api";
 import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
+import { fromTokenReferences } from "@/lib/loadTargets";
 import type { TokenReference } from "@/lib/semanticLookup";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
@@ -32,25 +35,34 @@ export function TokenContextBar() {
     clearTokenInfo,
     findReferences,
     focusFlowNode,
-    onLoadFile,
     pinnedTraces,
     activePinKey,
     setActivePinKey,
+    goBackPin,
+    canGoBackPin,
   } = useGraphInteraction();
+  const loadTarget = useLoadTargetAction();
+  const loadButtonRef = useRef<HTMLButtonElement>(null);
+  const [loadPickerOpen, setLoadPickerOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setExpanded(false);
+    setLoadPickerOpen(false);
   }, [tokenInfo?.token]);
 
   useEffect(() => {
     if (!tokenInfo?.pinned) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") clearTokenInfo();
+      if (e.altKey && e.key === "ArrowLeft" && canGoBackPin) {
+        e.preventDefault();
+        goBackPin();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clearTokenInfo, tokenInfo?.pinned]);
+  }, [canGoBackPin, clearTokenInfo, goBackPin, tokenInfo?.pinned]);
 
   const references = useMemo(
     () => (tokenInfo ? findReferences(tokenInfo.token) : []),
@@ -65,6 +77,11 @@ export function TokenContextBar() {
   const externalRefs = useMemo(
     () => references.filter((r) => !r.inGraph),
     [references],
+  );
+
+  const externalLoadTargets = useMemo(
+    () => fromTokenReferences(externalRefs),
+    [externalRefs],
   );
 
   if (!tokenInfo) return null;
@@ -128,6 +145,20 @@ export function TokenContextBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {isPinned && canGoBackPin ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label="Back to previous selection"
+              title="Back to previous selection (Alt+←)"
+              onClick={goBackPin}
+            >
+              <ArrowLeft className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+
           {isPinned && canJumpDef ? (
             <Button
               type="button"
@@ -176,15 +207,21 @@ export function TokenContextBar() {
 
           {isPinned && externalRefs.length > 0 ? (
             <Button
+              ref={loadButtonRef}
               type="button"
               variant="outline"
               size="sm"
               className="h-7 text-[11px]"
               onClick={() => {
-                void onLoadFile(externalRefs[0]!.filePath);
+                if (externalRefs.length === 1) {
+                  loadTarget(externalRefs[0]!.filePath);
+                  return;
+                }
+                setLoadPickerOpen(true);
               }}
             >
-              + Load into graph
+              + Load
+              {externalRefs.length > 1 ? ` · ${externalRefs.length} files` : " into graph"}
             </Button>
           ) : null}
 
@@ -236,7 +273,7 @@ export function TokenContextBar() {
                   type="button"
                   className={cn(INTERACTIVE_ROW_LEFT, "w-full gap-2 py-1.5 text-xs text-foreground")}
                   onClick={() => {
-                    void onLoadFile(ref.filePath);
+                    loadTarget(ref.filePath);
                   }}
                 >
                   <span
@@ -254,6 +291,20 @@ export function TokenContextBar() {
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {loadPickerOpen && externalLoadTargets.length > 1 && loadButtonRef.current ? (
+        <LoadTargetPicker
+          token={token}
+          targets={externalLoadTargets}
+          anchor={(() => {
+            const rect = loadButtonRef.current!.getBoundingClientRect();
+            return { x: rect.left + rect.width / 2, y: rect.top };
+          })()}
+          contextFilePath={tokenInfo.filePath}
+          onSelect={loadTarget}
+          onClose={() => setLoadPickerOpen(false)}
+        />
       ) : null}
     </div>
   );

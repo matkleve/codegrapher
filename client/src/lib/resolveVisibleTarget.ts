@@ -285,7 +285,7 @@ export function isEntryInGraph(
   return Boolean(graphNodeForEntry(entry, token, graphData));
 }
 
-function externalCardsNotYetInGraph(
+export function externalCardsNotYetInGraph(
   token: string,
   symbols: Map<string, SymbolEntry[]>,
   graphData: GraphData | null,

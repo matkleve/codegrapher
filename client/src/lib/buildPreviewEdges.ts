@@ -74,20 +74,27 @@ export function buildElementPreviewEdge(
 /** Dashed load stub from off-graph definition to an on-graph usage chip. */
 export function buildLoadPreviewEdge(
   edgeId: string,
-  card: ExternalReferenceCard,
+  cards: ExternalReferenceCard[],
   usageEl: HTMLElement,
   token: string,
   kind: SemanticTokenKind,
 ): PreviewEdgeSpec {
+  const primary = cards[0];
+  if (!primary) {
+    throw new Error("buildLoadPreviewEdge requires at least one card");
+  }
+
   return {
     id: edgeId,
     from: { type: "element", el: usageEl },
     to: { type: "element", el: usageEl },
     kind,
     load: {
-      filePath: card.filePath,
-      line: card.line,
-      occurrenceCount: card.occurrenceCount,
+      token,
+      filePath: primary.filePath,
+      line: primary.line,
+      occurrenceCount: cards.length,
+      candidates: cards,
     },
     liveTo: liveToFromUsageEl(token, usageEl),
   };

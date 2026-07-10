@@ -9,10 +9,12 @@ import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
+  buildDefinitionPreviewEdges,
   buildLocalPreviewEdges,
   connectionCountForHost,
   isDefinitionSignatureLine,
   resolveLocalTargetId,
+  type DefinitionEdgeContext,
 } from "@/lib/linksForElement";
 import {
   defSiteFor,
@@ -27,7 +29,7 @@ import {
   TOKEN_ANCHOR,
 } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
-import { makeUsageTokenKey, makeImportSpecKey } from "@/lib/traceKeys";
+import { makeMemberDefKey, makeUsageTokenKey, makeImportSpecKey } from "@/lib/traceKeys";
 import { isImportModuleSpecifier } from "@/lib/importModuleTokens";
 import { resolveClientImportPath, normalizeLoadFilePath } from "@/lib/resolveImportPath";
 import { tokenizeLine } from "@/lib/tokenizeLine";
@@ -69,6 +71,7 @@ export function CodeLine({
     scheduleHoverClear,
     pinTrace,
     showTokenInfo,
+    lookupIndexedUsageSites,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -76,6 +79,17 @@ export function CodeLine({
   const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
 
   const tokens = useMemo(() => tokenizeLine(line), [line]);
+
+  const defEdgeContext = useMemo<DefinitionEdgeContext>(
+    () => ({
+      graphData,
+      getNode,
+      sourceFlowId,
+      sourceMemberId: memberId,
+      lookupIndexedUsageSites,
+    }),
+    [getNode, graphData, lookupIndexedUsageSites, memberId, sourceFlowId],
+  );
 
   const clearHover = useCallback(() => {
     edgeKeyRef.current = null;
@@ -115,14 +129,13 @@ export function CodeLine({
       }
 
       if (resolved.mode === "external") {
-        const card = resolved.cards[0];
-        if (!card) {
+        if (resolved.cards.length === 0) {
           beginTrace(tokenKey, []);
           return;
         }
         const kind = semanticFromChipElement(chipEl, entry);
         beginTrace(tokenKey, [
-          buildLoadPreviewEdge(edgeKey, card, chipEl, name, kind),
+          buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, kind),
         ]);
         return;
       }
@@ -161,12 +174,14 @@ export function CodeLine({
       beginTrace(tokenKey, [
         buildLoadPreviewEdge(
           edgeKey,
-          {
-            symbolName: specifier.replace(/^['"]|['"]$/g, ""),
-            filePath: resolvedPath,
-            line: 1,
-            occurrenceCount: 1,
-          },
+          [
+            {
+              symbolName: specifier.replace(/^['"]|['"]$/g, ""),
+              filePath: resolvedPath,
+              line: 1,
+              occurrenceCount: 1,
+            },
+          ],
           chipEl,
           specifier.replace(/^['"]|['"]$/g, ""),
           "type",
@@ -176,6 +191,18 @@ export function CodeLine({
     [beginTrace, filePath, lineNumber, memberId, sourceFlowId],
   );
 
+  const fireDefPreview = useCallback(
+    (name: string, chipEl: HTMLElement) => {
+      const tokenKey = makeMemberDefKey(sourceFlowId, memberId);
+      const kind = semanticFromChipElement(chipEl, lookup(name));
+      beginTrace(
+        tokenKey,
+        buildDefinitionPreviewEdges(name, kind, chipEl, defEdgeContext),
+      );
+    },
+    [beginTrace, defEdgeContext, lookup, memberId, sourceFlowId],
+  );
+
   const buildUsagePinInfo = useCallback(
     (name: string, el: HTMLElement, isDefinition: boolean) => {
       const entry = lookup(name);
@@ -183,7 +210,11 @@ export function CodeLine({
       return makeTokenInfo({
         token: name,
         kind,
-        connectionCount: connectionCountForHost(el, hasSymbol(name) ? name : undefined),
+        connectionCount: connectionCountForHost(
+          el,
+          hasSymbol(name) ? name : undefined,
+          isDefinition ? defEdgeContext : undefined,
+        ),
         definedIn: definedInLabel,
         filePath,
         line: lineNumber,
@@ -194,6 +225,7 @@ export function CodeLine({
       });
     },
     [
+      defEdgeContext,
       definedInLabel,
       filePath,
       hasSymbol,
@@ -204,19 +236,33 @@ export function CodeLine({
     ],
   );
 
+  const defTokenKey = useMemo(
+    () => makeMemberDefKey(sourceFlowId, memberId),
+    [memberId, sourceFlowId],
+  );
+
+  // `memberFanOut` is true only for the occurrence of the member/class's own
+  // name on its signature line — the same symbol the member-row label traces.
+  // Local param/variable defs keep the old per-occurrence key: they already
+  // fan out correctly via `buildLocalPreviewEdges`, scoped to this member body.
   const onIdentifierEnter = useCallback(
-    (name: string, chipKey: string) => {
+    (name: string, chipKey: string, isDefinition: boolean, memberFanOut: boolean) => {
       const chip = chipRefs.current.get(chipKey);
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
-      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      const tokenKey = memberFanOut
+        ? defTokenKey
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       scheduleHoverFire(
         tokenKey,
-        () => firePreview(name, chipKey, chipEl),
+        () =>
+          memberFanOut
+            ? fireDefPreview(name, chipEl)
+            : firePreview(name, chipKey, chipEl),
         clearHover,
         () =>
           showTokenInfo({
-            ...buildUsagePinInfo(name, chipEl, false),
+            ...buildUsagePinInfo(name, chipEl, isDefinition),
             pinned: false,
           }),
       );
@@ -224,6 +270,8 @@ export function CodeLine({
     [
       buildUsagePinInfo,
       clearHover,
+      defTokenKey,
+      fireDefPreview,
       firePreview,
       lineNumber,
       memberId,
@@ -234,11 +282,13 @@ export function CodeLine({
   );
 
   const onIdentifierLeave = useCallback(
-    (name: string) => {
-      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+    (name: string, memberFanOut: boolean) => {
+      const tokenKey = memberFanOut
+        ? defTokenKey
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       scheduleHoverClear(tokenKey, clearHover);
     },
-    [clearHover, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
+    [clearHover, defTokenKey, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
   );
 
   const onIdentifierClick = useCallback(
@@ -246,14 +296,20 @@ export function CodeLine({
       name: string,
       el: HTMLElement,
       isDefinition: boolean,
+      memberFanOut: boolean,
       e?: React.MouseEvent,
     ) => {
-      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      const tokenKey = memberFanOut
+        ? defTokenKey
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       commitTokenPin({
         pinTrace,
         showTokenInfo,
         tokenKey,
-        onFire: () => firePreview(name, `${lineNumber}`, el),
+        onFire: () =>
+          memberFanOut
+            ? fireDefPreview(name, el)
+            : firePreview(name, `${lineNumber}`, el),
         buildPinInfo: () => buildUsagePinInfo(name, el, isDefinition),
         animateEl: el,
         event: e,
@@ -262,6 +318,8 @@ export function CodeLine({
     },
     [
       buildUsagePinInfo,
+      defTokenKey,
+      fireDefPreview,
       firePreview,
       lineNumber,
       memberId,
@@ -425,13 +483,14 @@ export function CodeLine({
         const isDefinition = Boolean(
           localDefId || isClassDeclName || isMemberSignatureDecl,
         );
+        // Only the member/class's own name repeated on its signature line
+        // shares the member-row label's fan-out key; local param/var defs
+        // keep their own per-occurrence local tracing (see handlers above).
+        const memberFanOut = isClassDeclName || isMemberSignatureDecl;
         const chipKey = `${lineNumber}-${i}`;
-        const tokenKey = makeUsageTokenKey(
-          sourceFlowId,
-          memberId,
-          lineNumber,
-          token.text,
-        );
+        const tokenKey = memberFanOut
+          ? defTokenKey
+          : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, token.text);
 
         return (
           <TokenChip
@@ -450,15 +509,17 @@ export function CodeLine({
             shimmerDelay={`-${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
             role="button"
             tabIndex={0}
-            onMouseEnter={() => onIdentifierEnter(token.text, chipKey)}
-            onMouseLeave={() => onIdentifierLeave(token.text)}
+            onMouseEnter={() =>
+              onIdentifierEnter(token.text, chipKey, isDefinition, memberFanOut)
+            }
+            onMouseLeave={() => onIdentifierLeave(token.text, memberFanOut)}
             onClick={(e) => {
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget, isDefinition, e);
+              onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut, e);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                onIdentifierClick(token.text, e.currentTarget, isDefinition);
+                onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut);
               }
             }}
           />
