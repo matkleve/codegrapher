@@ -15,6 +15,7 @@ Last updated: 2026-07-10
 | [docs/design/tokens.md](../design/tokens.md) | Color/motion tokens |
 | [docs/design/state-visuals.md](../design/state-visuals.md) | Hover/focus contract |
 | [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md) | Who owns what |
+| [SPEC-DRIFT.md](SPEC-DRIFT.md) | Open spec ↔ code mismatches (human decision) |
 
 **Before editing a spec:** read the folder README for that area.
 

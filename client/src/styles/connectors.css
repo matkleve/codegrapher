@@ -10,7 +10,7 @@
  *   .wire-path                →  .preview-edge-path
  *   .wire-glow                →  .preview-edge-glow
  *   .wire-hit                 →  .preview-edge-hit
- *   .node.lit                 →  .class-node-root.trace-node-lit
+ *   .node.lit                 →  (unused — trace does not tint whole card per spec)
  *   .member.lit               →  .trace-member-lit
  *   .member.owner-lit         →  .trace-member-owner-lit
  *   .lit-line                 →  .trace-lit-line
@@ -71,13 +71,16 @@
 .token-chip,
 .token-def-label {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
   width: fit-content;
   max-width: 100%;
   margin: 0 -2px;
   padding: var(--token-chip-pad-y) var(--token-chip-pad-x);
   border-radius: var(--token-chip-radius);
   font-weight: 560;
+  line-height: 1;
   white-space: nowrap;
   transition:
     background-color 0.22s var(--ease),
@@ -123,14 +126,21 @@
   color: var(--token-edge-variable);
 }
 
-/* Resting text-fill. The Ctrl shimmer sets `-webkit-text-fill-color: transparent`
-   + `background-clip: text`; when Ctrl is released Chromium keeps the transparent
-   fill (stale paint) until a reflow, so glyphs read as white until you click away.
-   An explicit concrete value here forces the cascade to repaint immediately. */
-.token-chip-text,
+/* Resting text-fill — base glyphs always use currentColor; Ctrl glint is ::after only. */
+.token-chip-text {
+  display: block;
+  line-height: 1;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}
+
 .token-def-label {
   background-image: none;
   -webkit-text-fill-color: currentColor;
+}
+
+.token-shimmer-target {
+  position: relative;
 }
 
 .token-chip.token-chip-on,
@@ -155,7 +165,13 @@
 }
 
 .graph-ctrl-preview .react-flow__node.class-node-root {
-  border-color: var(--border);
+  border-color: color-mix(in oklch, var(--foreground) 24%, var(--border));
+}
+
+/* Class node card — prototype depth + radius (connectors-proto.html `.node`) */
+.class-node-root {
+  border-radius: 13px;
+  box-shadow: var(--node-shadow);
 }
 
 .graph-ctrl-preview .react-flow__node.class-node-root::after {
@@ -175,19 +191,28 @@
   box-shadow: none;
 }
 
-.graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
-.graph-ctrl-preview .token-def-label.token-interactive {
+/* "Light in glass": glyphs stay fully readable; only a specular streak passes over. */
+.graph-ctrl-preview .token-shimmer-target::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  pointer-events: none;
   background-image: linear-gradient(
     100deg,
-    currentColor 0%,
-    currentColor 43%,
+    transparent 0%,
+    transparent 43%,
     color-mix(in oklch, currentColor 48%, var(--glint-hi)) 50%,
-    currentColor 57%,
-    currentColor 100%
+    transparent 57%,
+    transparent 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent;
   background-size: 300% 100%;
   background-repeat: no-repeat;
   animation: proto-glint 1.9s var(--ease) infinite;
@@ -195,13 +220,20 @@
   filter: brightness(1.06);
 }
 
-/* Trace + Ctrl: trace focus wins — no shimmer (transparent text-fill reads as
-   white) and no extra bleach via --faint-ctrl on top of --faint. */
+.graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
+.graph-ctrl-preview .token-def-label.token-interactive {
+  filter: brightness(1.06);
+}
+
+/* Trace + Ctrl: trace focus wins — no glint overlay. */
+.graph-trace-active .token-shimmer-target::after {
+  content: none;
+  animation: none;
+}
+
 .graph-trace-active .token-chip.token-interactive .token-chip-text,
 .graph-trace-active .token-def-label.token-interactive {
   background-image: none;
-  -webkit-background-clip: border-box;
-  background-clip: border-box;
   -webkit-text-fill-color: currentColor;
   animation: none;
   filter: none;
@@ -432,14 +464,14 @@
   stroke-dashoffset: 0;
   animation:
     proto-flow 700ms linear infinite,
-    preview-edge-bloom 120ms ease-out both;
+    preview-edge-bloom 340ms var(--ease) both;
 }
 
 .preview-edge-glow {
   stroke-linecap: round;
   stroke-width: 3.5;
   filter: blur(2px);
-  animation: preview-edge-bloom-glow 120ms ease-out both;
+  animation: preview-edge-bloom-glow 400ms var(--ease) both;
 }
 
 .preview-edge-hit {
@@ -471,12 +503,8 @@
   background: color-mix(in oklch, currentColor 86%, white) !important;
   filter: brightness(1.14) saturate(1.08);
   box-shadow:
-    0 0 2px 0.5px color-mix(in oklch, currentColor 88%, white),
-    0 0 7px 2px color-mix(in oklch, currentColor 48%, transparent);
-}
-
-.token-info-popover {
-  animation: token-info-pop 140ms ease-out;
+    0 0 1.5px 0.5px color-mix(in oklch, currentColor 88%, white),
+    0 0 5px 1.5px color-mix(in oklch, currentColor 42%, transparent);
 }
 
 .jump-tip {
@@ -486,8 +514,7 @@
 @media (prefers-reduced-motion: reduce) {
   .preview-edge-path,
   .preview-edge-glow,
-  .graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
-  .graph-ctrl-preview .token-def-label.token-interactive,
+  .graph-ctrl-preview .token-shimmer-target::after,
   .graph-ctrl-preview .react-flow__node.class-node-root::after {
     animation: none !important;
   }

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, type MouseEvent, type ReactNode } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { GripVertical } from "lucide-react";
+import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
@@ -8,7 +9,7 @@ import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
 import { buildDefinitionPreviewEdges, connectionCountForHost, type DefinitionEdgeContext } from "@/lib/linksForElement";
-import { symbolKindToSemantic } from "@/lib/tokenColors";
+import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
 import { cn } from "@/lib/utils";
@@ -154,7 +155,7 @@ export function NodeCardHeader({
             data-trace-key={indexed ? defTokenKey : undefined}
             data-token-kind={indexed ? defKind ?? undefined : undefined}
             className={cn(
-              "node-card-title nodrag inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
+              "node-card-title nodrag relative inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
               indexed && "token-def-label cursor-pointer",
               indexed && isCtrlPreviewMode && "token-interactive",
               lit && "token-chip-lit",
@@ -170,7 +171,18 @@ export function NodeCardHeader({
             onMouseLeave={onTitleLeave}
             onClick={onTitleClick}
           >
-            {title}
+            {defKind ? (
+              <FlowAnchor
+                side="right"
+                colorClass={on ? TOKEN_ANCHOR[defKind] : "bg-border"}
+                visible={on}
+                highlighted={on}
+                size="chip"
+              />
+            ) : null}
+            <span className="token-shimmer-target" data-text={title}>
+              {title}
+            </span>
           </span>
         </div>
       </div>

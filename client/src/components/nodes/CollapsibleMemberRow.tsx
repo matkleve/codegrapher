@@ -199,7 +199,7 @@ export function CollapsibleMemberRow({
           )}
           style={
             traceable
-              ? ({ "--shimmer-delay": `${memberId.length * 0.37}s` } as React.CSSProperties)
+              ? ({ "--shimmer-delay": `-${(memberId.length * 0.37).toFixed(2)}s` } as React.CSSProperties)
               : undefined
           }
           onPointerDown={(e) => e.stopPropagation()}
@@ -216,7 +216,9 @@ export function CollapsibleMemberRow({
               size="chip"
             />
           ) : null}
-          {label}
+          <span className="token-shimmer-target" data-text={label}>
+            {label}
+          </span>
         </span>
       </button>
       {expanded && code.trim() ? (

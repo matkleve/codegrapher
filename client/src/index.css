@@ -149,6 +149,7 @@
      white, so light theme darkens the streak instead (same "light through
      glass" travel, always visible). */
   --glint-hi: oklch(0.28 0.03 258);
+  --node-shadow: 0 12px 34px -14px rgb(30 40 70 / 0.28);
 }
 
 @layer base {
@@ -235,6 +236,7 @@ html.dark {
   --faint: oklch(0.46 0.03 255);
   --faint-ctrl: oklch(0.34 0.03 255);
   --glint-hi: #ffffff;
+  --node-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.55);
 }
 
 .graph-canvas-grid {

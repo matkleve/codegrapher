@@ -59,7 +59,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       ref={cardRef}
       data-flow-node-id={id}
       className={cn(
-        "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border/40 text-left shadow-sm",
+        "class-node-root relative flex flex-col overflow-visible border border-border/40 text-left",
         bodyExpanded ? "h-full bg-card" : "h-full shrink-0 bg-card",
         (selected || nodeData.selected) && "ring-1 ring-ring/50",
         nodeData.pathHighlighted && "ring-1 ring-ring ring-offset-1 ring-offset-background",

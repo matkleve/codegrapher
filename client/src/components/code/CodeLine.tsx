@@ -232,6 +232,12 @@ export function CodeLine({
           );
         }
 
+        const prevToken = tokens
+          .slice(0, i)
+          .reverse()
+          .find((t) => t.kind !== "whitespace");
+        const prevText = prevToken?.text ?? null;
+
         const rawLocalTarget = usageTargetFor(symbolIndex, lineNumber, i);
         const localDefId = defSiteFor(symbolIndex, lineNumber, i);
         const localTargetId = rawLocalTarget
@@ -246,6 +252,10 @@ export function CodeLine({
 
         const entry = lookup(token.text);
         const semantic = entry ? symbolKindToSemantic(entry.kind) : "variable";
+        const isClassDeclName =
+          indexed &&
+          semantic === "class" &&
+          (prevText === "class" || prevText === "interface");
         const chipKey = `${lineNumber}-${i}`;
         const tokenKey = makeUsageTokenKey(
           sourceFlowId,
@@ -267,19 +277,19 @@ export function CodeLine({
             interactive={interactive}
             localDefId={localDefId}
             localTargetId={localTargetId ?? undefined}
-            symbolRole={localDefId ? "definition" : "usage"}
-            shimmerDelay={`${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
+            symbolRole={localDefId || isClassDeclName ? "definition" : "usage"}
+            shimmerDelay={`-${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
             role="button"
             tabIndex={0}
             onMouseEnter={() => onIdentifierEnter(token.text, chipKey)}
             onMouseLeave={() => onIdentifierLeave(token.text)}
             onClick={(e) => {
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget, !!localDefId);
+              onIdentifierClick(token.text, e.currentTarget, !!(localDefId || isClassDeclName));
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                onIdentifierClick(token.text, e.currentTarget, !!localDefId);
+                onIdentifierClick(token.text, e.currentTarget, !!(localDefId || isClassDeclName));
               }
             }}
           />

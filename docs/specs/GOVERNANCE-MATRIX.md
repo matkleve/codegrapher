@@ -33,4 +33,4 @@ Last updated: 2026-07-10
 
 ## Traceability
 
-Implementation MUST match specs. If code diverges, either fix code or update spec in the same change — never leave silent drift.
+Implementation MUST match specs. If code diverges, either fix code or update spec in the same change — never leave silent drift. Unresolved mismatches are listed in [SPEC-DRIFT.md](SPEC-DRIFT.md).

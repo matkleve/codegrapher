@@ -96,7 +96,9 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
           highlighted={showIncoming}
           size="chip"
         />
-        <span className="token-chip-text relative z-[1]">{text}</span>
+        <span className="token-chip-text token-shimmer-target relative z-[1]" data-text={text}>
+          {text}
+        </span>
         <FlowAnchor
           ref={rightRef}
           side="right"

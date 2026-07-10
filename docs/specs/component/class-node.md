@@ -34,7 +34,7 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Member 
 ClassNode
 ├── Handle (previewTargetTop — invisible)
 ├── FlowAnchor (class header)
-├── NodeCardHeader
+├── NodeCardHeader (title def + FlowAnchor socket)
 ├── [body expanded]
 │   ├── MemberSection (properties)
 │   │   └── CollapsibleMemberRow → CodeLine
