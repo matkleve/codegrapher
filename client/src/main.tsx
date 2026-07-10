@@ -2,11 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { registerVscodeIcons } from "@/lib/registerVscodeIcons";
+import { applyStoredTheme } from "@/lib/theme";
 import "./index.css";
 
 registerVscodeIcons();
 
-document.documentElement.classList.add("dark");
+applyStoredTheme();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -55,6 +55,7 @@ export function CollapsibleMemberRow({
       />
       <FlowAnchor
         side="right"
+        targetId={memberHandleId}
         size="node"
         visible
         highlighted={targetActive}

@@ -1,8 +1,8 @@
 import { toFlowId } from "@/lib/graphIds";
 import {
-  PREVIEW_TARGET_TOP,
   previewLineHandle,
   previewMemberHandle,
+  previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -15,7 +15,6 @@ export type GraphVisibleTarget = {
   mode: "graph";
   level: GraphTargetLevel;
   flowNodeId: string;
-  sourceHandle: string;
   targetHandle: string;
   label: string;
   kind: SemanticTokenKind;
@@ -129,13 +128,9 @@ export function resolveVisibleTarget(
   graphData: GraphData | null,
   getNode: (id: string) => Node | undefined,
   sourceFlowId: string,
-  sourceMemberId: string,
-  sourceLineNumber: number,
 ): VisibleTargetResult {
   const entries = symbols.get(token) ?? [];
   if (entries.length === 0) return null;
-
-  const sourceHandle = `preview-source-${sourceMemberId}-${sourceLineNumber}`;
 
   if (graphData) {
     for (const entry of entries) {
@@ -164,8 +159,7 @@ export function resolveVisibleTarget(
             mode: "graph",
             level: "class",
             flowNodeId,
-            sourceHandle,
-            targetHandle: PREVIEW_TARGET_TOP,
+            targetHandle: previewTargetTop(flowNodeId),
             label: methodNode.label,
             kind,
             memberId,
@@ -178,7 +172,6 @@ export function resolveVisibleTarget(
             mode: "graph",
             level: "member",
             flowNodeId,
-            sourceHandle,
             targetHandle: previewMemberHandle(memberId),
             label: methodNode.label,
             kind,
@@ -199,7 +192,6 @@ export function resolveVisibleTarget(
           mode: "graph",
           level: "line",
           flowNodeId,
-          sourceHandle,
           targetHandle: previewLineHandle(memberId, relativeLine),
           label: String(relativeLine),
           kind,
@@ -218,8 +210,7 @@ export function resolveVisibleTarget(
         mode: "graph",
         level: "class",
         flowNodeId,
-        sourceHandle,
-        targetHandle: PREVIEW_TARGET_TOP,
+        targetHandle: previewTargetTop(flowNodeId),
         label: classNode.label,
         kind,
       };

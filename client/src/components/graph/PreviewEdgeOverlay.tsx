@@ -1,5 +1,4 @@
-import { useLayoutEffect, useState } from "react";
-import { useReactFlow, useStore } from "@xyflow/react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
@@ -15,18 +14,25 @@ function cubicPath(
   return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
 }
 
-function findTargetAnchor(handleId: string): HTMLElement | null {
-  return document.querySelector(
-    `[data-flow-anchor-target="${handleId}"][data-flow-anchor="left"]`,
+function findTargetAnchor(
+  handleId: string,
+  side: "left" | "right",
+): HTMLElement | null {
+  return (
+    document.querySelector<HTMLElement>(
+      `[data-flow-anchor-target="${handleId}"][data-flow-anchor="${side}"]`,
+    ) ??
+    document.querySelector<HTMLElement>(
+      `[data-flow-anchor-target="${handleId}"]`,
+    )
   );
 }
 
 export function PreviewEdgeOverlay() {
-  const { screenToFlowPosition, flowToScreenPosition } = useReactFlow();
   const { previewEdge } = useGraphInteraction();
-  const transform = useStore((s) => s.transform);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [path, setPath] = useState<string | null>(null);
-  const [stroke, setStroke] = useState("#60a5fa");
+  const [stroke, setStroke] = useState("var(--token-edge-function)");
 
   useLayoutEffect(() => {
     if (!previewEdge) {
@@ -35,71 +41,92 @@ export function PreviewEdgeOverlay() {
     }
 
     const update = () => {
+      const svgEl = svgRef.current;
       const sourceEl = previewEdge.sourceRightAnchor;
-      const targetEl = findTargetAnchor(previewEdge.targetHandle);
-      if (!sourceEl || !targetEl) {
+      // The line leaves the token chip on whichever side faces the target,
+      // and enters the target through the semicircle anchor on the facing side.
+      const chipEl = sourceEl?.parentElement ?? sourceEl;
+      const probe = findTargetAnchor(previewEdge.targetHandle, "left");
+      if (!svgEl || !chipEl?.isConnected || !probe?.isConnected) {
         setPath(null);
         return;
       }
 
-      const srcRect = sourceEl.getBoundingClientRect();
+      const srcRect = chipEl.getBoundingClientRect();
+      const targetLeftOfSource =
+        probe.getBoundingClientRect().left + probe.getBoundingClientRect().width / 2 <
+        srcRect.left + srcRect.width / 2;
+
+      const targetEl = findTargetAnchor(
+        previewEdge.targetHandle,
+        targetLeftOfSource ? "right" : "left",
+      );
+      if (!targetEl?.isConnected) {
+        setPath(null);
+        return;
+      }
+
+      // Path coordinates are local to the overlay svg, so subtract its
+      // viewport origin from the anchors' client rects.
+      const box = svgEl.getBoundingClientRect();
       const tgtRect = targetEl.getBoundingClientRect();
-
-      const sourceFlow = screenToFlowPosition({
-        x: srcRect.left,
-        y: srcRect.top + srcRect.height / 2,
-      });
-      const targetFlow = screenToFlowPosition({
-        x: tgtRect.left,
-        y: tgtRect.top + tgtRect.height / 2,
-      });
-
-      const s = flowToScreenPosition(sourceFlow);
-      const t = flowToScreenPosition(targetFlow);
+      const targetSide = targetEl.getAttribute("data-flow-anchor");
 
       setStroke(TOKEN_EDGE_STROKE[previewEdge.kind]);
-      setPath(cubicPath(s.x, s.y, t.x, t.y));
+      setPath(
+        cubicPath(
+          (targetLeftOfSource ? srcRect.left : srcRect.right) - box.left,
+          srcRect.top + srcRect.height / 2 - box.top,
+          (targetSide === "right" ? tgtRect.right : tgtRect.left) - box.left,
+          tgtRect.top + tgtRect.height / 2 - box.top,
+        ),
+      );
     };
 
-    update();
-    const raf = requestAnimationFrame(update);
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
+    // Re-measure every frame while the preview is active: panning, zooming,
+    // and expanding or collapsing members all shift the anchors.
+    let raf = 0;
+    const tick = () => {
+      update();
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
     };
-  }, [flowToScreenPosition, previewEdge, screenToFlowPosition, transform]);
-
-  if (!path) return null;
+  }, [previewEdge]);
 
   return (
     <svg
+      ref={svgRef}
       className="pointer-events-none absolute inset-0 z-40 overflow-visible"
       aria-hidden
     >
-      <defs>
-        <marker
-          id="preview-edge-arrow"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="4"
-          orient="auto"
-        >
-          <path d="M0,0 L8,4 L0,8 Z" fill={stroke} />
-        </marker>
-      </defs>
-      <path
-        d={path}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={1.5}
-        strokeDasharray="5 3"
-        markerEnd="url(#preview-edge-arrow)"
-        className="preview-edge-path"
-      />
+      {path && (
+        <>
+          <defs>
+            <marker
+              id="preview-edge-arrow"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="4"
+              orient="auto"
+            >
+              <path d="M0,0 L8,4 L0,8 Z" style={{ fill: stroke }} />
+            </marker>
+          </defs>
+          <path
+            d={path}
+            fill="none"
+            style={{ stroke }}
+            strokeWidth={1.5}
+            strokeDasharray="5 3"
+            markerEnd="url(#preview-edge-arrow)"
+            className="preview-edge-path"
+          />
+        </>
+      )}
     </svg>
   );
 }

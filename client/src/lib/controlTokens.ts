@@ -1,6 +1,6 @@
-/** Shared Tailwind classes — must match `.hoverable:hover` in index.css */
+/** Shared Tailwind classes — must match `.hoverable:hover` in index.css (gold brand hover) */
 export const CONTROL_INTERACTIVE_HOVER =
-  "hover:border-border hover:bg-secondary hover:text-primary hover:[&_svg]:text-primary hover:[&_svg]:stroke-primary";
+  "hover:border-brand-border hover:bg-brand-surface hover:text-brand hover:[&_svg]:text-brand hover:[&_svg]:stroke-brand";
 
 export const CONTROL_INTERACTIVE_EXPANDED =
-  "aria-expanded:border-border aria-expanded:bg-secondary aria-expanded:text-primary aria-expanded:[&_svg]:text-primary";
+  "aria-expanded:border-brand-border aria-expanded:bg-brand-surface aria-expanded:text-brand aria-expanded:[&_svg]:text-brand";

@@ -1,16 +1,15 @@
 import {
   ReactFlow,
-  useEdgesState,
-  useNodesState,
   type Edge,
   type Node,
   type OnMove,
+  type useEdgesState,
+  type useNodesState,
 } from "@xyflow/react";
 import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
-import { flowEdgeTypes } from "@/components/graph/flowEdgeTypes";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 
 type GraphFlowCanvasProps = {
@@ -43,7 +42,6 @@ export function GraphFlowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={flowNodeTypes}
-        edgeTypes={flowEdgeTypes}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onPaneClick={onPaneClick}

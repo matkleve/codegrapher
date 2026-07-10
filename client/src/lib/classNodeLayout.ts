@@ -1,24 +1,44 @@
 import type { ClassNodeData, MemberItem } from "@/components/nodes/flowNodeData";
 
+/**
+ * All heights below are calibrated against the real rendered DOM
+ * (offsetHeight, unaffected by canvas zoom). Keep them in sync with the
+ * markup in ClassNode / CollapsibleMemberRow / CodeLine.
+ */
+
 /** Header-only node (body hidden); floor for measure + resize. */
 export const CLASS_NODE_MIN_HEIGHT = 88;
 const HEADER_COLLAPSED = CLASS_NODE_MIN_HEIGHT;
-/** Expanded card header (chip + title + chrome). */
-const HEADER_HEIGHT = 96;
+/** Expanded card header (p-2 header ≈85px) + card border. */
+const HEADER_HEIGHT = 87;
 /** Resize below this hides the body and leaves only the header. */
 const BODY_COLLAPSE_HEIGHT = HEADER_HEIGHT + 8;
+/** Body p-3 top + bottom. */
 const BODY_PADDING = 24;
-const SECTION_HEADER = 28;
-const MEMBER_COLLAPSED = 36;
+/** Section label row (22px) + gap to the first member row. */
+const SECTION_HEADER = 30;
+/** Collapsed member row: p-2 + border + 21px label button. */
+const MEMBER_COLLAPSED = 39;
 const MEMBER_GAP = 8;
-const SECTION_GAP = 16;
-/** Avoid collapsing while estimates still fit inside the box. */
-const FIT_SLACK = 20;
+/** Separator line + body gap above and below it. */
+const SECTION_GAP = 17;
+/** Small hysteresis so estimate error doesn't flap rows open/closed. */
+const FIT_SLACK = 6;
+
+/** Code block: mt-1.5 above, 20px per non-empty line, 2px gap between lines. */
+const CODE_TOP_MARGIN = 6;
+const CODE_LINE_HEIGHT = 20;
+const CODE_LINE_GAP = 2;
 
 function estimateExpandedMemberHeight(code: string): number {
-  const lines = Math.max(1, code.split("\n").length);
-  const rowChrome = 44 + 6;
-  return rowChrome + lines * 19 + 8;
+  const lines = code.split("\n");
+  const nonEmpty = lines.filter((l) => l.trim().length > 0).length;
+  return (
+    MEMBER_COLLAPSED +
+    CODE_TOP_MARGIN +
+    Math.max(1, nonEmpty) * CODE_LINE_HEIGHT +
+    Math.max(0, lines.length - 1) * CODE_LINE_GAP
+  );
 }
 
 type LayoutMember = {
@@ -142,7 +162,13 @@ function snapshotFromData(data: ClassNodeData): LayoutState {
 }
 
 /**
- * Shrink bottom-up, then expand toward layoutPreference when height allows.
+ * Height-driven layout with deterministic breakpoints.
+ *
+ * Opening order while growing: properties section, methods section, then
+ * members strictly top to bottom (all properties, then all methods). The
+ * next member only opens once its expanded row fits — nothing is skipped.
+ * Closing while shrinking is the exact reverse: members bottom to top,
+ * then the sections, then the whole body.
  */
 export function fitLayoutToHeight(
   data: ClassNodeData,
@@ -152,7 +178,6 @@ export function fitLayoutToHeight(
   const pinned = options?.ignorePinned
     ? new Set<string>()
     : new Set(data.pinnedMemberIds ?? []);
-  const pref = getLayoutPreference(data);
   const props = buildMemberList(data.properties);
   const methods = buildMemberList(data.methods);
 
@@ -171,20 +196,27 @@ export function fitLayoutToHeight(
 
   const height = () => stateHeight(data, state);
 
-  const popUnpinned = (ids: string[]): boolean => {
-    for (let i = ids.length - 1; i >= 0; i--) {
-      const id = ids[i]!;
-      if (!pinned.has(id)) {
-        ids.splice(i, 1);
+  // Collapse the bottom-most expanded member (document order, not
+  // insertion order) so shrinking closes last → first.
+  const collapseLast = (members: LayoutMember[], ids: string[]): boolean => {
+    for (let i = members.length - 1; i >= 0; i--) {
+      const id = members[i]!.id;
+      const idx = ids.indexOf(id);
+      if (idx !== -1 && !pinned.has(id)) {
+        ids.splice(idx, 1);
         return true;
       }
     }
     return false;
   };
 
+  // Close eagerly: the moment the open content would exceed the box, drop the
+  // bottom-most member. This keeps functions from being clipped while shrinking
+  // (better to show empty space than a cut-off row — the snap-back removes it).
   let guard = 0;
-  while (height() > targetHeight + FIT_SLACK && guard++ < 200) {
-    if (popUnpinned(state.expandedMethodIds)) continue;
+  while (height() > targetHeight && guard++ < 400) {
+    if (collapseLast(methods, state.expandedMethodIds)) continue;
+    if (collapseLast(props, state.expandedPropertyIds)) continue;
 
     if (methods.length > 0 && !state.methodsSectionCollapsed) {
       state.methodsSectionCollapsed = true;
@@ -193,8 +225,6 @@ export function fitLayoutToHeight(
       );
       continue;
     }
-
-    if (popUnpinned(state.expandedPropertyIds)) continue;
 
     if (props.length > 0 && !state.propertiesSectionCollapsed) {
       state.propertiesSectionCollapsed = true;
@@ -216,52 +246,42 @@ export function fitLayoutToHeight(
     break;
   }
 
+  // A member only expands while its expanded row still fits the target
+  // height, so dragging taller opens members one by one at breakpoints.
+  const expandFits = (m: LayoutMember): boolean =>
+    height() - m.collapsedHeight + m.expandedHeight <= targetHeight + FIT_SLACK;
+
   guard = 0;
-  while (height() < targetHeight - FIT_SLACK && guard++ < 200) {
+  while (height() < targetHeight - FIT_SLACK && guard++ < 400) {
     if (state.collapsed) {
       state.collapsed = false;
-      state.propertiesSectionCollapsed = pref.propertiesSectionCollapsed;
-      state.methodsSectionCollapsed = pref.methodsSectionCollapsed;
-      state.expandedPropertyIds = [...pref.expandedPropertyIds];
-      state.expandedMethodIds = [...pref.expandedMethodIds];
+      state.propertiesSectionCollapsed = props.length > 0;
+      state.methodsSectionCollapsed = methods.length > 0;
       continue;
     }
 
-    if (
-      props.length > 0 &&
-      pref.propertiesSectionCollapsed === false &&
-      state.propertiesSectionCollapsed
-    ) {
+    if (props.length > 0 && state.propertiesSectionCollapsed) {
       state.propertiesSectionCollapsed = false;
       continue;
     }
 
-    const nextProp = pref.expandedPropertyIds.find(
-      (id) => !state.expandedPropertyIds.includes(id),
-    );
-    if (nextProp && !state.propertiesSectionCollapsed) {
-      state.expandedPropertyIds.push(nextProp);
-      continue;
-    }
-
-    if (
-      methods.length > 0 &&
-      pref.methodsSectionCollapsed === false &&
-      state.methodsSectionCollapsed
-    ) {
+    if (methods.length > 0 && state.methodsSectionCollapsed) {
       state.methodsSectionCollapsed = false;
       continue;
     }
 
-    const nextMethod = pref.expandedMethodIds.find(
-      (id) => !state.expandedMethodIds.includes(id),
-    );
-    if (nextMethod && !state.methodsSectionCollapsed) {
-      state.expandedMethodIds.push(nextMethod);
-      continue;
-    }
+    // Strictly the next unexpanded member top to bottom — if it doesn't
+    // fit yet, wait for more height instead of skipping past it.
+    const nextMember =
+      props.find((m) => !state.expandedPropertyIds.includes(m.id)) ??
+      methods.find((m) => !state.expandedMethodIds.includes(m.id));
+    if (!nextMember || !expandFits(nextMember)) break;
 
-    break;
+    if (props.some((m) => m.id === nextMember.id)) {
+      state.expandedPropertyIds.push(nextMember.id);
+    } else {
+      state.expandedMethodIds.push(nextMember.id);
+    }
   }
 
   return { ...state };

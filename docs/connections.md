@@ -1,0 +1,92 @@
+# Connections (Ctrl-hover preview edges)
+
+## What it is
+
+Hold **Ctrl** and hover an identifier inside an expanded method body. If that
+identifier is a symbol codegrapher has indexed (a class or a method), it becomes a
+clickable chip and a dashed **preview edge** is drawn from the usage to the symbol's
+definition. The edge lands as precisely as the target is currently revealed:
+
+- target class collapsed → edge points at the **class header** anchor;
+- target method collapsed → edge points at the **member row** anchor;
+- target method expanded → edge points at the **exact line** where the symbol appears.
+
+If the definition is not in the current graph, you instead get a small **reference
+card** ("load into graph") that pulls it in via `/api/focus`.
+
+## The philosophy
+
+codegrapher is an *ego-centric* explorer: you never see the whole codebase, you see
+the neighborhood of the thing you are looking at right now. A full call-graph of a real
+project is a hairball — thousands of permanent edges that no human reads. So the guiding
+idea is:
+
+1. **Edges are a question, not a fact.** You don't render every relationship up front;
+   you summon one relationship on demand by pointing at the token you're curious about.
+   Ctrl is the "explain this" modifier. Release Ctrl and the graph is calm again.
+2. **The edge answers "where does this come from?" at the reader's zoom level.** Because
+   the target anchor tracks how far the target is expanded (class → member → line), the
+   connection is as specific as your current attention. You're reading `checkout`, you
+   Ctrl-hover `charge`, and the line is drawn straight to the body of `charge` — the
+   answer, not just its neighborhood.
+3. **Only meaningful nodes connect.** The symbol index holds the things worth navigating
+   between — the named, addressable units of the program (classes, methods). That is a
+   deliberate signal-to-noise choice, see below.
+
+## What lights up, and why (verified)
+
+Tested on `fixtures/demo` (`OrderService.checkout` expanded, all three classes in the
+graph):
+
+| Token in `checkout` body        | Kind            | Ctrl-hover behavior              |
+| ------------------------------- | --------------- | -------------------------------- |
+| `checkout`                      | method (self)   | interactive chip                 |
+| `charge`                        | method (other)  | **edge → `charge` in PaymentGateway** |
+| `PaymentGateway`                | class           | edge → PaymentGateway node       |
+| `orders`, `gateway`             | property        | inert (not indexed)              |
+| `amount`, `id`                  | local / param   | inert (not indexed)              |
+
+So today the graph connects **functions and classes**. **Variables, properties, and
+object fields do not connect** — the server parser (`server/src/parser.ts`) only puts
+class and method names in the symbol index. This is partly principled (a variable named
+`id` appears everywhere; edges to it would be pure noise) and partly just unfinished.
+
+## Use cases
+
+**Working today (class/method connections):**
+
+1. **Trace a call to its definition** — reading a method, Ctrl-hover a call to jump your
+   eye to the callee's source without leaving the node you're in.
+2. **Cross-file "who do I depend on?"** — Ctrl-hover a class/method whose definition
+   lives in another file; the reference card loads that file's neighborhood into the
+   graph, growing the ego-graph one deliberate hop at a time.
+3. **Impact preview before a rename/refactor** — sweep Ctrl across a method body to see,
+   at a glance, which of its calls resolve into the current graph vs. reach outside it.
+4. **Onboarding read-through** — start from one entry point, follow the gold-highlighted
+   symbols outward, building a mental model hop by hop instead of drowning in a full map.
+
+**Unlocked by indexing variables/properties/objects (roadmap):**
+
+5. **Data-flow, not just call-flow** — Ctrl-hover a property (`this.orders`) and see every
+   method in the class that reads or writes it: the *state* neighborhood, complementing
+   the *call* neighborhood.
+6. **Object shape navigation** — hover a field access (`order.total`) and jump to where
+   that field is declared on the type/interface.
+7. **"What touches this variable?"** — scope-aware highlighting of a local's
+   read/write sites within a body, for reasoning about a single value's lifetime.
+
+To enable 5–7, `parser.ts` must index property declarations, parameters, and (scope-
+permitting) locals, tagging each with a scope so an `id` in one method never draws an
+edge to an unrelated `id` elsewhere. The rendering side already supports arbitrary
+per-node line anchors (`previewLineHandle`), so most of the work is in the indexer, not
+the canvas.
+
+## Design constraints worth keeping
+
+- **Scope before connect.** The moment variables are indexed, identity must be
+  scope-qualified or the graph fills with false edges between same-named locals. Index
+  by `(filePath, enclosingSymbol, name)`, not by bare `name`.
+- **Stay on-demand.** Even with more symbol types indexed, edges should remain a
+  Ctrl-hover summon, never a persistent layer — the value is the calm default.
+- **Anchor to attention.** Keep resolving the target to the finest revealed level
+  (class → member → line); that specificity is the feature.

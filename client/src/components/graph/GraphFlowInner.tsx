@@ -16,6 +16,7 @@ import {
 import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -388,6 +389,7 @@ export function GraphFlowInner({
             Next graph
             <ChevronRight data-icon="inline-end" />
           </Button>
+          <ThemeToggle />
         </div>
         {loading && (
           <span className="shrink-0 text-sm text-muted-foreground">Loading…</span>

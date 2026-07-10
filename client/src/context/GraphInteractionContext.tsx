@@ -8,11 +8,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useIndex } from "@/context/IndexContext";
-import { ctrlPreviewMarkerEnd } from "@/components/graph/CtrlPreviewEdge";
 import {
   findSemanticReferences,
   type TokenReference,
@@ -30,16 +29,6 @@ import type {
 } from "@/lib/resolveVisibleTarget";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { GraphData } from "@/types";
-
-export type PreviewEdgeConfig = {
-  id: string;
-  sourceFlowId: string;
-  sourceHandle: string;
-  targetFlowId: string;
-  targetHandle: string;
-  kind: SemanticTokenKind;
-  label?: string;
-};
 
 export type AnchorRect = {
   left: number;
@@ -78,12 +67,10 @@ export type TokenDropdownState = {
 } | null;
 
 type GraphInteractionContextValue = {
-  previewEdges: PreviewEdgeConfig[];
   previewEdge: PreviewEdgeState;
   activeTargetHandle: string | null;
   setGraphPreview: (
     edgeKey: string,
-    sourceFlowId: string,
     target: GraphVisibleTarget | null,
     sourceRightAnchor: HTMLElement | null,
   ) => void;
@@ -124,17 +111,15 @@ export function GraphInteractionProvider({
   const { isCtrlHeld } = useCtrlKey();
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
-  const [previewEdges, setPreviewEdges] = useState<PreviewEdgeConfig[]>([]);
   const [previewEdge, setPreviewEdge] = useState<PreviewEdgeState>(null);
   const [activeTokenKey, setActiveTokenKey] = useState<string | null>(null);
   const [referenceCards, setReferenceCards] = useState<ReferenceCardsState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
-  const tempEdgeIdsRef = useRef<Set<string>>(new Set());
+  const activeEdgeKeyRef = useRef<string | null>(null);
   const hideCardsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearAllPreviews = useCallback(() => {
-    tempEdgeIdsRef.current.clear();
-    setPreviewEdges([]);
+    activeEdgeKeyRef.current = null;
     setPreviewEdge(null);
     setReferenceCards(null);
     setActiveTokenKey(null);
@@ -152,15 +137,14 @@ export function GraphInteractionProvider({
   }, [clearAllPreviews, isCtrlHeld]);
 
   const clearPreviewForKey = useCallback((edgeKey: string) => {
-    tempEdgeIdsRef.current.delete(edgeKey);
-    setPreviewEdges((prev) => prev.filter((e) => e.id !== edgeKey));
+    if (activeEdgeKeyRef.current !== edgeKey) return;
+    activeEdgeKeyRef.current = null;
     setPreviewEdge(null);
   }, []);
 
   const setGraphPreview = useCallback(
     (
       edgeKey: string,
-      sourceFlowId: string,
       target: GraphVisibleTarget | null,
       sourceRightAnchor: HTMLElement | null,
     ) => {
@@ -170,18 +154,7 @@ export function GraphInteractionProvider({
         return;
       }
 
-      const config: PreviewEdgeConfig = {
-        id: edgeKey,
-        sourceFlowId,
-        sourceHandle: target.sourceHandle,
-        targetFlowId: target.flowNodeId,
-        targetHandle: target.targetHandle,
-        kind: target.kind,
-        label: target.label,
-      };
-
-      tempEdgeIdsRef.current.add(edgeKey);
-      setPreviewEdges((prev) => [...prev.filter((e) => e.id !== edgeKey), config]);
+      activeEdgeKeyRef.current = edgeKey;
       setPreviewEdge({
         sourceRightAnchor,
         targetHandle: target.targetHandle,
@@ -245,7 +218,6 @@ export function GraphInteractionProvider({
 
   const value = useMemo(
     () => ({
-      previewEdges,
       previewEdge,
       activeTargetHandle,
       setGraphPreview,
@@ -264,7 +236,6 @@ export function GraphInteractionProvider({
       graphData,
     }),
     [
-      previewEdges,
       previewEdge,
       activeTargetHandle,
       setGraphPreview,
@@ -295,19 +266,4 @@ export function useGraphInteraction(): GraphInteractionContextValue {
     throw new Error("useGraphInteraction must be used within GraphInteractionProvider");
   }
   return ctx;
-}
-
-export function buildPreviewFlowEdges(configs: PreviewEdgeConfig[]): Edge[] {
-  return configs.map((config) => ({
-    id: config.id,
-    type: "ctrlPreview",
-    source: config.sourceFlowId,
-    target: config.targetFlowId,
-    sourceHandle: config.sourceHandle,
-    targetHandle: config.targetHandle,
-    selectable: false,
-    focusable: false,
-    data: { kind: config.kind, label: config.label },
-    markerEnd: ctrlPreviewMarkerEnd(config.kind),
-  }));
 }

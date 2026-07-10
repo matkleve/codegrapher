@@ -44,6 +44,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  /* Gold brand accent for interactive hover (gold in both themes) */
+  --color-brand: var(--brand);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-border: var(--brand-border);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
@@ -107,10 +111,19 @@
   --token-class: oklch(0.48 0.14 250);
   --token-function: oklch(0.55 0.12 235);
   --token-type: oklch(0.52 0.13 165);
+  --token-edge-function: #2563eb;
+  --token-edge-class: #ca8a04;
+  --token-edge-type: #16a34a;
+  --code-string: #b45309;
+  --code-number: #c2410c;
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.48 0.14 250);
+  /* Gold hover accent — deeper gold so it reads on the light background */
+  --brand: oklch(0.62 0.13 74);
+  --brand-surface: color-mix(in oklch, var(--brand) 12%, var(--secondary));
+  --brand-border: color-mix(in oklch, var(--brand) 42%, var(--border));
 }
 
 @layer base {
@@ -133,20 +146,11 @@ body,
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* Cytoscape reads these via getGraphTheme() */
-:root.dark,
 html.dark {
-  --graph-card: var(--card);
-  --graph-border: var(--border);
-  --graph-foreground: var(--foreground);
-  --graph-primary: var(--primary);
-  --graph-muted: var(--muted);
-  --graph-ring: var(--ring);
-  --graph-background: var(--background);
-  --graph-muted-foreground: var(--muted-foreground);
+  color-scheme: dark;
 }
 
 .dark {
@@ -186,10 +190,19 @@ html.dark {
   --token-class: var(--primary);
   --token-function: oklch(0.72 0.11 235);
   --token-type: oklch(0.7 0.12 165);
+  --token-edge-function: #60a5fa;
+  --token-edge-class: #facc15;
+  --token-edge-type: #4ade80;
+  --code-string: oklch(0.92 0.08 85 / 90%);
+  --code-number: oklch(0.85 0.11 55 / 90%);
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
   --explorer-file-in-graph: oklch(0.72 0.11 235);
+  /* Gold hover accent — bright gold for the dark background */
+  --brand: oklch(0.82 0.14 86);
+  --brand-surface: color-mix(in oklch, var(--brand) 14%, var(--secondary));
+  --brand-border: color-mix(in oklch, var(--brand) 45%, var(--border));
 }
 
 .graph-canvas-grid {
@@ -256,15 +269,15 @@ html.dark {
 }
 
 .hoverable:hover {
-  background-color: var(--secondary);
-  border-color: var(--border);
-  color: var(--primary);
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
 }
 
 .hoverable:hover svg,
 .hoverable:hover [data-icon] {
-  color: var(--primary);
-  stroke: var(--primary);
+  color: var(--brand);
+  stroke: var(--brand);
 }
 
 /* Section headers: muted at rest, same hover as file rows */
@@ -283,7 +296,7 @@ html.dark {
 .bg-sidebar button.explorer-section-header:hover svg,
 .bg-sidebar button.explorer-section-header:hover [data-icon],
 .bg-sidebar button.explorer-section-header:hover span {
-  color: var(--primary);
+  color: var(--brand);
 }
 
 [data-graph-control] .graph-map-control-btn {
@@ -307,15 +320,15 @@ html.dark {
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) {
-  border-color: var(--border);
-  background-color: var(--secondary);
-  color: var(--primary);
+  border-color: var(--brand-border);
+  background-color: var(--brand-surface);
+  color: var(--brand);
   box-shadow: none;
 }
 
 [data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) svg {
-  color: var(--primary);
-  stroke: var(--primary);
+  color: var(--brand);
+  stroke: var(--brand);
 }
 
 [data-graph-control] .graph-map-control-btn--active:hover {

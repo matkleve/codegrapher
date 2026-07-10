@@ -1,4 +1,3 @@
-import { useCallback, useRef } from "react";
 import { Code2, Plus } from "lucide-react";
 import { createPortal } from "react-dom";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
@@ -23,10 +22,6 @@ export function TokenReferenceCards() {
     setActiveTokenKey,
   } = useGraphInteraction();
 
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
-  const getCardElement = useCallback((key: string) => cardRefs.current.get(key) ?? null, []);
-
   if (!referenceCards) return null;
 
   const { anchor, cards } = referenceCards;
@@ -46,10 +41,6 @@ export function TokenReferenceCards() {
         return (
           <div
             key={key}
-            ref={(el) => {
-              if (el) cardRefs.current.set(key, el);
-              else cardRefs.current.delete(key);
-            }}
             role="button"
             tabIndex={0}
             className={cn(LOAD_ROW, "group/load relative")}

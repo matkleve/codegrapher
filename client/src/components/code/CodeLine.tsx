@@ -89,8 +89,6 @@ export function CodeLine({
         graphData,
         getNode,
         sourceFlowId,
-        memberId,
-        lineNumber,
       );
 
       if (!resolved) {
@@ -101,7 +99,7 @@ export function CodeLine({
 
       if (resolved.mode === "graph") {
         setReferenceCards(null);
-        setGraphPreview(edgeKey, sourceFlowId, resolved, rightAnchor);
+        setGraphPreview(edgeKey, resolved, rightAnchor);
         return;
       }
 
@@ -189,6 +187,18 @@ export function CodeLine({
             : "bg-border"
         }
       />
+      <FlowAnchor
+        side="right"
+        targetId={lineTargetId}
+        size="node"
+        visible
+        highlighted={lineTargetActive}
+        colorClass={
+          lineTargetActive && previewEdge
+            ? TOKEN_ANCHOR[previewEdge.kind]
+            : "bg-border"
+        }
+      />
       {tokens.map((token, i) => {
         if (token.kind !== "identifier") {
           return (
@@ -197,8 +207,8 @@ export function CodeLine({
               className={cn(
                 token.kind === "keyword" && "text-primary/80",
                 token.kind === "comment" && "text-muted-foreground",
-                token.kind === "string" && "text-amber-200/90",
-                token.kind === "number" && "text-orange-300/90",
+                token.kind === "string" && "text-[color:var(--code-string)]",
+                token.kind === "number" && "text-[color:var(--code-number)]",
               )}
             >
               {token.text}
