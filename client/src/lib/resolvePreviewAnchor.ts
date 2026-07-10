@@ -97,8 +97,8 @@ export function cubicPath(
 
   let c1x = x1 + dx * 0.45;
   let c2x = x2 - dx * 0.45;
-  let c1y = y1;
-  let c2y = y2;
+  let c1y: number;
+  let c2y: number;
 
   if (sameRow) {
     const bulge = -Math.max(MIN_ARC_BULGE, Math.min(MAX_ARC_BULGE, Math.abs(dx) * 0.12));
