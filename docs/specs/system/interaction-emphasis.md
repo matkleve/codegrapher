@@ -6,7 +6,7 @@ Cross-app contract for pointer hover on clickable surfaces: **brand gold** in bo
 
 ## What It Looks Like
 
-Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, dim indexed tokens stay `--faint` on pass-over; only **lit** endpoints get semantic color + socket glow. Pinned trace blocks foreign token hover entirely.
+Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, dim indexed tokens stay `--faint` on pass-over; only **lit** endpoints get semantic color + socket glow. **Pinned** trace keeps the pin lit; hovering another indexed token still runs the normal dwell preview (chip-on + wires) without changing the pin until click.
 
 ## Where It Lives
 
@@ -21,7 +21,7 @@ flowchart TB
   Base[Resting UI] --> Hover[.hoverable brand hover]
   Base --> Ctrl[graph-ctrl-preview shimmer on indexed tokens]
   Base --> Trace[graph-trace-active dim + lit endpoints]
-  Trace --> Pin[graph-trace-pinned lock foreign hover]
+  Trace --> Pin[graph-trace-pinned: pin lit + foreign hover preview]
   Hover -.->|suppressed on dim tokens during trace| Trace
 ```
 
@@ -33,7 +33,7 @@ flowchart TB
 | 2 | Hovers explorer row | `INTERACTIVE_ROW` | class on row |
 | 3 | Ctrl held on graph | Shimmer on indexed chips | `graph-ctrl-preview` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
-| 5 | Pinned trace | Foreign tokens: no brand pass-over | `graph-trace-pinned` |
+| 5 | Pinned trace | Pin stays lit; other tokens preview on dwell, pin on click | `graph-trace-pinned` + merged trace lit |
 | 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `INTERACTIVE_SURFACE` |
 
 ## Trace vs brand (normative)
@@ -70,7 +70,7 @@ index.css (.hoverable)
 - [ ] New clickables use `.hoverable` or `controlTokens` — not `hover:bg-primary`
 - [ ] JS/SVG colors via CSS variables in `style`
 - [ ] Trace dim is color-only — no container opacity / bg wash on code
-- [ ] Pinned trace: non-lit tokens do not show brand hover
+- [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Brand hover on member header is `:hover` only, not expanded state
 - [ ] `controlTokens.ts` and `index.css` stay in sync
 

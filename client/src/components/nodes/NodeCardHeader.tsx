@@ -37,8 +37,7 @@ export function NodeCardHeader({
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, endTrace, isCtrlPreviewMode, pinnedTokenKey, graphData } =
-    useGraphInteraction();
+  const { beginTrace, isCtrlPreviewMode, graphData } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
   const indexed = Boolean(symbolName && hasSymbol(symbolName));
@@ -49,10 +48,7 @@ export function NodeCardHeader({
     traceKey: indexed ? defTokenKey : undefined,
   });
 
-  const clearDefHover = useCallback(() => {
-    if (pinnedTokenKey) return;
-    endTrace();
-  }, [endTrace, pinnedTokenKey]);
+  const clearDefHover = useCallback(() => {}, []);
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({

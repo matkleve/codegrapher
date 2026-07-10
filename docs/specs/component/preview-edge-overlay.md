@@ -87,6 +87,7 @@ Path coordinates are local to the overlay SVG — not flow-space only.
 - [ ] Stroke uses CSS variables, not hex in SVG attributes
 - [ ] Node resize / member expand updates wire endpoints same frame
 - [ ] Hit-zones ~46px along wire ends for jump interaction
+- [ ] Handle socket dots (`isHandleActive`) follow `refinePreviewEdge` — coarse member/top dots hide when a finer line/chip anchor is revealed
 
 ## References
 

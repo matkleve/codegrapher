@@ -24,7 +24,7 @@ export type TraceLitState = {
   tokenKinds: ReadonlyMap<string, SemanticTokenKind>;
 };
 
-const EMPTY: TraceLitState = {
+export const EMPTY_TRACE_LIT: TraceLitState = {
   litTokenKeys: new Set(),
   endpointTokenKeys: new Set(),
   litMemberIds: new Set(),
@@ -33,6 +33,19 @@ const EMPTY: TraceLitState = {
   litFlowNodeIds: new Set(),
   tokenKinds: new Map(),
 };
+
+/** Union two trace-lit snapshots (e.g. pinned + ephemeral hover while pin is held). */
+export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState {
+  return {
+    litTokenKeys: new Set([...a.litTokenKeys, ...b.litTokenKeys]),
+    endpointTokenKeys: new Set([...a.endpointTokenKeys, ...b.endpointTokenKeys]),
+    litMemberIds: new Set([...a.litMemberIds, ...b.litMemberIds]),
+    ownerLitMemberIds: new Set([...a.ownerLitMemberIds, ...b.ownerLitMemberIds]),
+    litLineMemberIds: new Set([...a.litLineMemberIds, ...b.litLineMemberIds]),
+    litFlowNodeIds: new Set([...a.litFlowNodeIds, ...b.litFlowNodeIds]),
+    tokenKinds: new Map([...a.tokenKinds, ...b.tokenKinds]),
+  };
+}
 
 type LitCollections = {
   litTokenKeys: Set<string>;
@@ -271,7 +284,7 @@ export function computeTraceLit(
   previewEdges: PreviewEdgeSpec[],
   getNode?: (id: string) => Node | undefined,
 ): TraceLitState {
-  if (!activeTokenKey) return EMPTY;
+  if (!activeTokenKey) return EMPTY_TRACE_LIT;
 
   const state: LitCollections = {
     litTokenKeys: new Set<string>([activeTokenKey]),

@@ -16,25 +16,23 @@ export function useTokenHover({
   onFire,
   onClear,
 }: UseTokenHoverArgs) {
-  const { scheduleHoverFire, scheduleHoverClear, pinnedTokenKey } =
+  const { scheduleHoverFire, scheduleHoverClear, endHoverPreview } =
     useGraphInteraction();
 
   const clearHover = useCallback(() => {
-    if (pinnedTokenKey) return;
+    endHoverPreview();
     onClear();
-  }, [onClear, pinnedTokenKey]);
+  }, [endHoverPreview, onClear]);
 
   const onEnter = useCallback(() => {
     if (!enabled) return;
-    if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
     scheduleHoverFire(tokenKey, onFire, clearHover);
-  }, [clearHover, enabled, onFire, pinnedTokenKey, scheduleHoverFire, tokenKey]);
+  }, [clearHover, enabled, onFire, scheduleHoverFire, tokenKey]);
 
   const onLeave = useCallback(() => {
     if (!enabled) return;
-    if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
     scheduleHoverClear(tokenKey, clearHover);
-  }, [clearHover, enabled, pinnedTokenKey, scheduleHoverClear, tokenKey]);
+  }, [clearHover, enabled, scheduleHoverClear, tokenKey]);
 
   return { onEnter, onLeave };
 }

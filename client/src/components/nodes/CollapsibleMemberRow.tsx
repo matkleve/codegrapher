@@ -56,9 +56,7 @@ export function CollapsibleMemberRow({
     isHandleActive,
     edgeKindAtHandle,
     beginTrace,
-    endTrace,
     isCtrlPreviewMode,
-    pinnedTokenKey,
     graphData,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
@@ -79,10 +77,7 @@ export function CollapsibleMemberRow({
     memberId,
   });
 
-  const clearDefHover = useCallback(() => {
-    if (pinnedTokenKey) return;
-    endTrace();
-  }, [endTrace, pinnedTokenKey]);
+  const clearDefHover = useCallback(() => {}, []);
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({

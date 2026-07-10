@@ -27,15 +27,14 @@ stateDiagram-v2
   end note
 
   note right of Pinned
-    traceTokenKey = pinnedTokenKey
-    graph-trace-active + graph-trace-pinned
-    other tokens ignore hover
+    pinned trace lit + graph-trace-pinned
+    foreign hover: ephemeral preview (pin on click)
   end note
 ```
 
 **Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow).
 
-**Effective trace key:** `traceTokenKey = pinnedTokenKey ?? hoveredTokenKey` drives `computeTraceLit`.
+**Effective trace lit:** `mergeTraceLit(pinned, hover)` when both differ; `pinnedPreviewEdges` restore on hover leave.
 
 ---
 
@@ -178,24 +177,28 @@ Implementation: `client/src/lib/computeTraceLit.ts`, `GraphInteractionContext` `
 
 ## Pin lock
 
-While `pinnedTokenKey` is set:
+While `pinnedTokenKey` is set, the **pinned trace stays lit** (context bar, pinned endpoints, pinned wires after hover ends). **Foreign token hover** still runs the normal dwell → `beginTrace` preview (chip-on, wires, lit chain) but does **not** change the pin until the user **clicks** the new token.
 
 ```mermaid
 flowchart LR
-  Pin[pinnedTokenKey set] --> G1[scheduleHoverFire: ignore other keys]
-  Pin --> G2[beginTrace: ignore other keys]
+  Pin[pinnedTokenKey set] --> G1[scheduleHoverFire: any indexed key]
+  Pin --> G2[beginTrace: updates ephemeral previewEdges]
   Pin --> G3[graph-trace-pinned on canvas]
-  G3 --> CSS[Non-lit tokens: no brand pass-over hover]
-  Pin --> OK[Same pinned key: allowed]
+  Pin --> G4[pinnedPreviewEdges restored on hover leave]
+  Pin --> G5[computeTraceLit: merge pinned + hover]
+  Pin --> OK[Click other token: re-pin]
 ```
 
 | Action | Unpinned trace | Pinned trace |
 | ------ | -------------- | ------------ |
-| Hover other token | Switch after dwell | **Ignored** |
-| Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` |
+| Hover other token | Switch after dwell | **Ephemeral preview** (pin unchanged) |
+| Leave hovered token | endTrace | Restore `pinnedPreviewEdges`; pin lit persists |
+| Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` until dwell fires |
 | Expand member | Live retarget wires | Live retarget wires |
-| Ctrl-click other token | N/A | Re-pin to new token |
+| Click other token | Pin | Re-pin to new token |
 | Empty canvas / Esc | endTrace | clearTokenInfo |
+
+**Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin; `previewEdges` follow the active hover preview and restore to pinned edges on leave.
 
 ---
 
@@ -208,7 +211,7 @@ flowchart TB
   subgraph classes [Canvas classes]
     C[graph-ctrl-preview] -->|Ctrl held| Shimmer[indexed token glint]
     T[graph-trace-active] -->|traceTokenKey set| Dim[dim non-lit tokens color-only]
-    P[graph-trace-pinned] -->|pinnedTokenKey set| Lock[suppress foreign hover]
+    P[graph-trace-pinned] -->|pinnedTokenKey set| Pin[pinned trace + ephemeral hover preview]
   end
 ```
 
@@ -217,7 +220,7 @@ flowchart TB
 | Idle | semantic colors | normal | card background |
 | Trace active | semantic + endpoints `token-chip-on` | `--faint` text, **no bg wash** | **no tint** (stays white/card) |
 | Ctrl + trace | no shimmer on lit (trace wins) | faint | no tint |
-| Pinned | pinned trace lit only | faint; foreign hover blocked | no tint |
+| Pinned | pinned trace lit + optional hover preview | faint until dwell | no tint |
 
 **Sockets (`FlowAnchor`):** bloom on endpoints only (`token-chip-on`); soft glow via `currentColor` + tight box-shadow (not oversized blur).
 

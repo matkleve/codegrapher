@@ -50,14 +50,13 @@ export function CodeLine({
   const {
     graphData,
     beginTrace,
-    endTrace,
+    endHoverPreview,
     isHandleActive,
     edgeKindAtHandle,
     scheduleHoverFire,
     scheduleHoverClear,
     showTokenInfo,
     pinTrace,
-    pinnedTokenKey,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -67,10 +66,9 @@ export function CodeLine({
   const tokens = useMemo(() => tokenizeLine(line), [line]);
 
   const clearHover = useCallback(() => {
-    if (pinnedTokenKey) return;
     edgeKeyRef.current = null;
-    endTrace();
-  }, [endTrace, pinnedTokenKey]);
+    endHoverPreview();
+  }, [endHoverPreview]);
 
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
@@ -125,7 +123,6 @@ export function CodeLine({
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-      if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
       scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
     },
     [
@@ -133,7 +130,6 @@ export function CodeLine({
       firePreview,
       lineNumber,
       memberId,
-      pinnedTokenKey,
       scheduleHoverFire,
       sourceFlowId,
     ],
@@ -142,10 +138,9 @@ export function CodeLine({
   const onIdentifierLeave = useCallback(
     (name: string) => {
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-      if (pinnedTokenKey != null && pinnedTokenKey !== tokenKey) return;
       scheduleHoverClear(tokenKey, clearHover);
     },
-    [clearHover, lineNumber, memberId, pinnedTokenKey, scheduleHoverClear, sourceFlowId],
+    [clearHover, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
   );
 
   const onIdentifierClick = useCallback(

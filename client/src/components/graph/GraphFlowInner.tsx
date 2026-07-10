@@ -13,7 +13,7 @@ import {
   type Node,
   type OnMove,
 } from "@xyflow/react";
-import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2, Waypoints } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -354,9 +354,12 @@ export function GraphFlowInner({
   const visibleNodes =
     graphData?.nodes.filter((n) => n.type !== "file" && n.label?.trim()) ?? [];
   const hasGraph = nodes.length > 0 || visibleNodes.length > 0;
-  const emptyMessage = graphData?.focusFile
-    ? "No classes or functions found in this file"
-    : "Click or drag a file to start";
+  const emptyTitle = graphData?.focusFile
+    ? "Nothing to graph here"
+    : "Start exploring";
+  const emptyHint = graphData?.focusFile
+    ? "No classes or functions found in this file."
+    : "Click a file in the explorer, or drag one onto the canvas.";
 
   return (
     <div className="pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col">
