@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -59,11 +58,12 @@ import {
   applyReadingFocusToNodes,
   clearFocusFromUrl,
   findFocusTargetElement,
+  normalizeReadingFocus,
   parseFocusFromUrl,
-  readingFocusKey,
-  resolveReadingFocus,
+  resolveFocusFromClick,
   scrollToReadingPosition,
   writeFocusToUrl,
+  type ReadingFocus,
 } from "@/lib/graphReadingFocus";
 import { cn } from "@/lib/utils";
 import type { GraphData } from "@/types";
@@ -106,6 +106,7 @@ export function GraphFlowInner({
   const [graphError, setGraphError] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(loadShowGrid);
   const [mapControlFlash, setMapControlFlash] = useState<string | null>(null);
+  const [readingFocus, setReadingFocus] = useState<ReadingFocus | null>(null);
   const mapControlFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flashMapControl = useCallback((key: string) => {
@@ -263,11 +264,10 @@ export function GraphFlowInner({
   };
 
   const focusReadingView = useCallback(() => {
-    const focus = resolveReadingFocus(nodes);
     const pane = graphPaneRef.current;
-    if (!focus || !pane) return;
+    if (!readingFocus || !pane) return;
 
-    const targetEl = findFocusTargetElement(focus);
+    const targetEl = findFocusTargetElement(readingFocus);
     if (!targetEl) return;
 
     scrollToReadingPosition({
@@ -278,7 +278,11 @@ export function GraphFlowInner({
       screenToFlowPosition,
     });
     syncGrid();
-  }, [getViewport, nodes, screenToFlowPosition, setViewport, syncGrid]);
+  }, [getViewport, readingFocus, screenToFlowPosition, setViewport, syncGrid]);
+
+  const handleReadingFocusCapture = useCallback((e: React.MouseEvent) => {
+    setReadingFocus(resolveFocusFromClick(e.target));
+  }, []);
 
   const centerView = () => {
     if (nodes.length > 0) {
@@ -391,20 +395,30 @@ export function GraphFlowInner({
     if (!pathFromIdRef.current) setPathInfo(null);
   }, []);
 
-  const focusKey = useMemo(() => readingFocusKey(nodes), [nodes]);
-  const hasReadingFocus = focusKey.length > 0;
+  const hasReadingFocus = readingFocus != null;
 
   useEffect(() => {
-    if (!focusKey) {
+    if (!readingFocus) {
       clearFocusFromUrl();
       return;
     }
-    const focus = resolveReadingFocus(nodes);
-    if (focus) writeFocusToUrl(focus);
-  }, [focusKey, nodes]);
+    writeFocusToUrl(readingFocus);
+  }, [readingFocus]);
+
+  useEffect(() => {
+    if (!readingFocus) return;
+    const normalized = normalizeReadingFocus(nodes, readingFocus);
+    if (
+      normalized.flowNodeId !== readingFocus.flowNodeId ||
+      normalized.memberId !== readingFocus.memberId
+    ) {
+      setReadingFocus(normalized);
+    }
+  }, [nodes, readingFocus]);
 
   useEffect(() => {
     urlFocusAppliedRef.current = false;
+    setReadingFocus(null);
   }, [graphResetKey]);
 
   useEffect(() => {
@@ -414,6 +428,7 @@ export function GraphFlowInner({
     if (!nodes.some((n) => n.id === urlFocus.flowNodeId)) return;
 
     urlFocusAppliedRef.current = true;
+    setReadingFocus(urlFocus);
     setNodes((nds) => applyReadingFocusToNodes(nds, urlFocus));
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -515,6 +530,7 @@ export function GraphFlowInner({
       <div
         ref={graphPaneRef}
         className="graph-pane relative min-h-0 flex-1 bg-background"
+        onClickCapture={handleReadingFocusCapture}
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";

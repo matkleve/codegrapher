@@ -36,36 +36,42 @@ export function clearFocusFromUrl(): void {
   window.history.replaceState(null, "", url);
 }
 
-function isNodeSelected(node: Node): boolean {
-  const data = node.data as { selected?: boolean };
-  return Boolean(node.selected || data.selected);
+/** Resolve reading focus from a click inside a class or member container. */
+export function resolveFocusFromClick(
+  target: EventTarget | null,
+): ReadingFocus | null {
+  if (!(target instanceof Element)) return null;
+
+  const nodeEl = target.closest<HTMLElement>("[data-flow-node-id]");
+  const flowNodeId = nodeEl?.dataset.flowNodeId;
+  if (!flowNodeId) return null;
+
+  const memberEl = target.closest<HTMLElement>("[data-member-id]");
+  const memberId = memberEl?.dataset.memberId;
+  if (memberId) return { flowNodeId, memberId };
+
+  return { flowNodeId };
 }
 
-/** Selected class node, or any class with an expanded member; narrows to last expanded member. */
-export function resolveReadingFocus(nodes: Node[]): ReadingFocus | null {
-  const selected = nodes.find((n) => n.type === "class" && isNodeSelected(n));
-  const node =
-    selected ??
-    nodes.find((n) => {
-      if (n.type !== "class") return false;
-      const data = n.data as ClassNodeData;
-      return (
-        data.expandedMethodIds.length > 0 || data.expandedPropertyIds.length > 0
-      );
-    });
-  if (!node) return null;
-
-  const data = node.data as ClassNodeData;
-  const memberId =
-    data.expandedMethodIds.at(-1) ?? data.expandedPropertyIds.at(-1);
-
-  return { flowNodeId: node.id, memberId };
-}
-
-export function readingFocusKey(nodes: Node[]): string {
-  const focus = resolveReadingFocus(nodes);
+export function readingFocusKey(focus: ReadingFocus | null): string {
   if (!focus) return "";
   return `${focus.flowNodeId}\0${focus.memberId ?? ""}`;
+}
+
+export function normalizeReadingFocus(
+  nodes: Node[],
+  focus: ReadingFocus,
+): ReadingFocus {
+  const node = nodes.find((n) => n.id === focus.flowNodeId);
+  if (!node || node.type !== "class") return focus;
+  if (!focus.memberId) return focus;
+
+  const data = node.data as ClassNodeData;
+  const memberExists =
+    data.methods.some((m) => m.id === focus.memberId) ||
+    data.properties.some((p) => p.id === focus.memberId);
+  if (memberExists) return focus;
+  return { flowNodeId: focus.flowNodeId };
 }
 
 export function applyReadingFocusToNodes(
