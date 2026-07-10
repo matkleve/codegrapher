@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -336,9 +337,15 @@ export function GraphInteractionProvider({
     return parts.join("|");
   }, [nodes]);
 
+  const [domRevision, setDomRevision] = useState(0);
+  useLayoutEffect(() => {
+    if (!traceTokenKey) return;
+    setDomRevision((r) => r + 1);
+  }, [revealRevision, traceTokenKey]);
+
   const traceLit = useMemo(
     () => computeTraceLit(traceTokenKey, previewEdges, getNode),
-    [getNode, previewEdges, revealRevision, traceTokenKey],
+    [domRevision, getNode, previewEdges, revealRevision, traceTokenKey],
   );
 
   const isTraceLit = useCallback(

@@ -4,10 +4,12 @@ import {
 } from "@/lib/ctrlPreviewHandles";
 import { linksForElement } from "@/lib/linksForElement";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
-import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import {
   flowNodeIdFromDefKey,
+  makeMemberDefKey,
+  makeUsageTokenKey,
   memberIdFromDefKey,
   memberIdFromUsageKey,
 } from "@/lib/traceKeys";
@@ -212,6 +214,40 @@ function spreadFunctionMember(
   if (flowId) state.litFlowNodeIds.add(flowId);
 }
 
+/** Light usage/def sites from edge hints even when the anchor is still a handle. */
+function absorbLiveHint(
+  hint: LiveAnchorHint,
+  state: LitCollections,
+  asEndpoint: boolean,
+): void {
+  if (hint.role === "usage" && hint.memberId && hint.lineNumber != null) {
+    const usageKey = makeUsageTokenKey(
+      hint.flowNodeId,
+      hint.memberId,
+      hint.lineNumber,
+      hint.token,
+    );
+    state.litTokenKeys.add(usageKey);
+    if (asEndpoint) state.endpointTokenKeys.add(usageKey);
+    state.litLineMemberIds.add(hint.memberId);
+    state.litFlowNodeIds.add(hint.flowNodeId);
+
+    const chip = elementForTraceKey(usageKey);
+    if (chip) absorbToken(chip, state, asEndpoint);
+    return;
+  }
+
+  if (hint.role === "definition" && hint.memberId) {
+    const defKey = makeMemberDefKey(hint.flowNodeId, hint.memberId);
+    state.litTokenKeys.add(defKey);
+    if (asEndpoint) state.endpointTokenKeys.add(defKey);
+    state.litFlowNodeIds.add(hint.flowNodeId);
+
+    const label = elementForTraceKey(defKey);
+    if (label) absorbToken(label, state, asEndpoint);
+  }
+}
+
 function spreadFunctionBodiesFromLit(
   activeTokenKey: string,
   state: LitCollections,
@@ -277,7 +313,11 @@ export function computeTraceLit(
       state.endpointTokenKeys.add(ep.traceKey);
       if (ep.kind) state.tokenKinds.set(ep.traceKey, ep.kind);
       if (ep.flowNodeId) state.litFlowNodeIds.add(ep.flowNodeId);
+      if (ep.memberId) state.litLineMemberIds.add(ep.memberId);
     }
+
+    if (edge.liveFrom) absorbLiveHint(edge.liveFrom, state, true);
+    if (edge.liveTo) absorbLiveHint(edge.liveTo, state, true);
   }
 
   spreadLocalLinkChain(activeTokenKey, state);
