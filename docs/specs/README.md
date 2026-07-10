@@ -52,6 +52,7 @@ Split strategy: see [element-spec-format.md](../agent-workflows/element-spec-for
 - **Preview edges:** [system/preview-edges.md](system/preview-edges.md) · [interactions supplement](system/preview-edges.interactions.supplement.md) (mermaid)
 - **Ego-graph philosophy:** [system/ego-graph-model.md](system/ego-graph-model.md)
 - **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md)
+- **Keyword interactions:** [system/token-interactions.md](system/token-interactions.md) · use cases: [design/token-interaction-use-cases.md](../design/token-interaction-use-cases.md)
 - **Symbol index:** [service/parser-index.md](service/parser-index.md)
 
 ---

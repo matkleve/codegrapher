@@ -8,6 +8,7 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [preview-edges](preview-edges.md) — token hover, Ctrl reveal, pinning, timing
 - [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, anchors, pin lock, live retarget
 - [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim modes
+- [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
 
 ## Rules
 
