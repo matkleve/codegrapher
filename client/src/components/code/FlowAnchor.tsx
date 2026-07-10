@@ -42,16 +42,9 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
   ) {
     const { width, height } = SEMICIRCLE[size];
 
-    const opacity =
-      !visible
-        ? "opacity-0"
-        : size === "chip"
-          ? highlighted
-            ? "opacity-100"
-            : "opacity-0"
-          : highlighted
-            ? "opacity-100"
-            : "opacity-30";
+    const show =
+      visible &&
+      (size === "chip" ? highlighted : highlighted || size === "node");
 
     return (
       <span
@@ -66,9 +59,9 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
           ...(side === "left" ? { left: -width } : { right: -width }),
         }}
         className={cn(
-          "pointer-events-none absolute top-1/2 block shrink-0 -translate-y-1/2 transition-opacity duration-100",
+          "flow-anchor pointer-events-none absolute top-1/2 block shrink-0 -translate-y-1/2",
+          show ? "flow-anchor-on" : "flow-anchor-off",
           colorClass,
-          opacity,
           className,
         )}
       />

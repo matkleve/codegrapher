@@ -1,10 +1,17 @@
+import { useCallback, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useCtrlKey } from "@/context/CtrlKeyContext";
+import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useTraceAppearance } from "@/hooks/useTraceAppearance";
+import { useIndex } from "@/context/IndexContext";
+import { buildDefinitionFanOutEdges } from "@/lib/buildPreviewEdges";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
-import { TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
+import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { makeMemberDefKey } from "@/lib/traceKeys";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -16,6 +23,7 @@ type CollapsibleMemberRowProps = {
   flowNodeId: string;
   graphNodeId: string;
   filePath: string;
+  classLabel: string;
 };
 
 export function CollapsibleMemberRow({
@@ -27,18 +35,115 @@ export function CollapsibleMemberRow({
   flowNodeId,
   graphNodeId,
   filePath,
+  classLabel,
 }: CollapsibleMemberRowProps) {
   const lines = code.split("\n");
   const memberHandleId = previewMemberHandle(memberId);
-  const { activeTargetHandle, previewEdge } = useGraphInteraction();
-  const targetActive = activeTargetHandle === memberHandleId;
-  const anchorColor =
-    targetActive && previewEdge
-      ? TOKEN_ANCHOR[previewEdge.kind]
-      : "bg-border";
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const { isCtrlHeld } = useCtrlKey();
+  const { lookup, hasSymbol } = useIndex();
+  const {
+    isHandleActive,
+    edgeKindAtHandle,
+    setActiveTokenKey,
+    setPreviewEdges,
+    clearPreviewEdges,
+    scheduleHoverFire,
+    scheduleHoverClear,
+    scheduleInfoOpen,
+    showTokenInfo,
+    isCtrlPreviewMode,
+  } = useGraphInteraction();
+
+  const defTokenKey = makeMemberDefKey(flowNodeId, memberId);
+  const entry = lookup(label);
+  const defKind = entry ? symbolKindToSemantic(entry.kind) : null;
+  const { lit, on, memberLit, ownerLit } = useTraceAppearance({
+    traceKey: defTokenKey,
+    memberId,
+  });
+
+  const clearDefHover = useCallback(() => {
+    clearPreviewEdges();
+    setActiveTokenKey(null);
+  }, [clearPreviewEdges, setActiveTokenKey]);
+
+  const targetActive = isHandleActive(memberHandleId);
+  const memberKind = edgeKindAtHandle(memberHandleId);
+  const indexed = hasSymbol(label);
+
+  const fireDefPreview = useCallback(() => {
+    if (!indexed || !labelRef.current) return;
+
+    const defEntry = lookup(label);
+    if (!defEntry) return;
+
+    setActiveTokenKey(defTokenKey);
+    const kind = symbolKindToSemantic(defEntry.kind);
+    const usages = resolveUsageAnchors(label, labelRef.current);
+    const edges = buildDefinitionFanOutEdges(
+      label,
+      kind,
+      labelRef.current,
+      usages,
+    );
+    setPreviewEdges(edges);
+  }, [defTokenKey, indexed, label, lookup, setActiveTokenKey, setPreviewEdges]);
+
+  const openDefInfo = useCallback(() => {
+    if (!indexed || !labelRef.current) return;
+    const entry = lookup(label);
+    if (!entry) return;
+    showTokenInfo({
+      token: label,
+      kind: symbolKindToSemantic(entry.kind),
+      anchor: toAnchorRect(labelRef.current.getBoundingClientRect()),
+      pinned: false,
+      connectionCount: resolveUsageAnchors(label).length,
+      definedIn: classLabel,
+    });
+  }, [classLabel, indexed, label, lookup, showTokenInfo]);
+
+  const onDefEnter = useCallback(() => {
+    if (!indexed) return;
+    scheduleHoverFire(defTokenKey, fireDefPreview);
+    scheduleInfoOpen(defTokenKey, openDefInfo);
+  }, [defTokenKey, fireDefPreview, indexed, openDefInfo, scheduleHoverFire, scheduleInfoOpen]);
+
+  const onDefLeave = useCallback(() => {
+    if (!indexed) return;
+    scheduleHoverClear(defTokenKey, clearDefHover);
+  }, [clearDefHover, defTokenKey, indexed, scheduleHoverClear]);
+
+  const onDefClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!indexed) return;
+      e.stopPropagation();
+      if (!isCtrlHeld) return;
+      if (!labelRef.current) return;
+      const entry = lookup(label);
+      if (!entry) return;
+      showTokenInfo({
+        token: label,
+        kind: symbolKindToSemantic(entry.kind),
+        anchor: toAnchorRect(labelRef.current.getBoundingClientRect()),
+        pinned: true,
+        connectionCount: resolveUsageAnchors(label).length,
+        definedIn: classLabel,
+      });
+    },
+    [classLabel, indexed, isCtrlHeld, label, lookup, showTokenInfo],
+  );
 
   return (
-    <div className="group/member hoverable nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2">
+    <div
+      data-member-id={memberId}
+      className={cn(
+        "group/member hoverable nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2",
+        memberLit && "trace-member-lit",
+        ownerLit && "trace-member-owner-lit",
+      )}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -51,7 +156,7 @@ export function CollapsibleMemberRow({
         size="node"
         visible
         highlighted={targetActive}
-        colorClass={anchorColor}
+        colorClass={targetActive && memberKind ? TOKEN_ANCHOR[memberKind] : "bg-border"}
       />
       <FlowAnchor
         side="right"
@@ -59,7 +164,7 @@ export function CollapsibleMemberRow({
         size="node"
         visible
         highlighted={targetActive}
-        colorClass={anchorColor}
+        colorClass={targetActive && memberKind ? TOKEN_ANCHOR[memberKind] : "bg-border"}
       />
       <button
         type="button"
@@ -70,17 +175,34 @@ export function CollapsibleMemberRow({
           onToggle(memberId);
         }}
       >
-        <ExpandChevron expanded={expanded} className="text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-medium text-foreground">
+        <ExpandChevron expanded={expanded} className="member-row-caret text-muted-foreground" />
+        <span
+          ref={labelRef}
+          data-symbol-name={indexed ? label : undefined}
+          data-symbol-role={indexed ? "definition" : undefined}
+          data-trace-key={indexed ? defTokenKey : undefined}
+          data-token-kind={indexed ? defKind ?? undefined : undefined}
+          className={cn(
+            "min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-medium",
+            indexed && "token-def-label cursor-pointer",
+            indexed && isCtrlPreviewMode && "token-interactive",
+            lit && "token-chip-lit",
+            on && "token-chip-on",
+          )}
+          style={
+            indexed
+              ? ({ "--shimmer-delay": `${memberId.length * 0.37}s` } as React.CSSProperties)
+              : undefined
+          }
+          onMouseEnter={onDefEnter}
+          onMouseLeave={onDefLeave}
+          onClick={onDefClick}
+        >
           {label}
         </span>
       </button>
       {expanded && code.trim() ? (
-        <div
-          className={cn(
-            "nodrag mt-1.5 ml-5 overflow-visible text-muted-foreground",
-          )}
-        >
+        <div className="member-body-wrap nodrag mt-1.5 ml-5 overflow-visible text-muted-foreground">
           <div className="flex flex-col gap-0.5">
             {lines.map((line, i) => (
               <CodeLine
@@ -91,6 +213,7 @@ export function CollapsibleMemberRow({
                 sourceFlowId={flowNodeId}
                 sourceGraphNodeId={graphNodeId}
                 filePath={filePath}
+                definedInLabel={classLabel}
               />
             ))}
           </div>

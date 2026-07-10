@@ -1,0 +1,485 @@
+<style>
+  :root {
+    --bg: oklch(0.145 0.02 260);
+    --grid: oklch(0.96 0.02 250 / 6%);
+    --card: oklch(0.2 0.03 258);
+    --card-2: oklch(0.24 0.05 258);
+    --border: oklch(0.96 0.02 250 / 12%);
+    --border-strong: oklch(0.96 0.02 250 / 24%);
+    --fg: oklch(0.96 0.01 250);
+    --muted: oklch(0.68 0.04 250);
+    --faint: oklch(0.46 0.03 255);       /* dimmed code / unconnected */
+    --brand: oklch(0.82 0.14 86);
+    --tok-class: #facc15;
+    --tok-func: #60a5fa;
+    --tok-var: #a5b4fc;
+    --shadow: 0 12px 40px -12px rgb(0 0 0 / 0.55);
+    --mono: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ease: cubic-bezier(.22, 1, .36, 1);      /* easeOutQuint — smooth settle */
+    --spring: cubic-bezier(.34, 1.56, .64, 1);  /* gentle overshoot */
+  }
+  :root[data-theme="light"] {
+    --bg: oklch(0.985 0.005 250); --grid: oklch(0.5 0.05 255 / 8%);
+    --card: oklch(1 0 0); --card-2: oklch(0.965 0.008 250);
+    --border: oklch(0.5 0.03 255 / 16%); --border-strong: oklch(0.5 0.05 255 / 32%);
+    --fg: oklch(0.2 0.03 260); --muted: oklch(0.45 0.03 260); --faint: oklch(0.68 0.02 258);
+    --brand: oklch(0.62 0.13 74);
+    --tok-class: #b8860b; --tok-func: #2563eb; --tok-var: #6366f1;
+    --shadow: 0 12px 34px -14px rgb(30 40 70 / 0.28);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: oklch(0.985 0.005 250); --grid: oklch(0.5 0.05 255 / 8%);
+      --card: oklch(1 0 0); --card-2: oklch(0.965 0.008 250);
+      --border: oklch(0.5 0.03 255 / 16%); --border-strong: oklch(0.5 0.05 255 / 32%);
+      --fg: oklch(0.2 0.03 260); --muted: oklch(0.45 0.03 260); --faint: oklch(0.68 0.02 258);
+      --brand: oklch(0.62 0.13 74);
+      --tok-class: #b8860b; --tok-func: #2563eb; --tok-var: #6366f1;
+      --shadow: 0 12px 34px -14px rgb(30 40 70 / 0.28);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  .proto {
+    font-family: var(--sans); color: var(--fg); background: var(--bg);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 26px 26px; min-height: 100%; padding: 20px clamp(16px,4vw,48px) 64px; position: relative;
+  }
+
+  .hud { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 auto 22px; max-width: 1040px; }
+  .hud h1 { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; margin: 0; display: flex; align-items: center; gap: 9px; }
+  .hud h1 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 12px var(--brand); }
+  .hud .spacer { flex: 1; }
+  .steps { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+  .steps kbd { font-family: var(--mono); font-size: 11px; color: var(--fg); background: var(--card-2); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
+  .steps b { color: var(--fg); font-weight: 600; }
+  .toggle { font: inherit; font-size: 12px; font-weight: 550; cursor: pointer; color: var(--fg); background: var(--card); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 11px; display: inline-flex; align-items: center; gap: 7px; transition: border-color .15s, background .15s, color .15s; }
+  .toggle:hover { border-color: var(--brand); color: var(--brand); }
+  .toggle[aria-pressed="true"] { background: color-mix(in oklch, var(--brand) 15%, transparent); border-color: var(--brand); color: var(--brand); }
+
+  .canvas { position: relative; max-width: 1040px; margin: 0 auto; display: flex; gap: 90px; flex-wrap: wrap; justify-content: center; }
+  .wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 6; }
+
+  .node { position: relative; width: 340px; background: var(--card); border: 1px solid var(--border); border-radius: 13px; box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s; }
+  .node-head { display: flex; flex-direction: column; gap: 7px; padding: 13px 14px 11px; }
+  .chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted); background: color-mix(in oklch, var(--tok-func) 10%, transparent); border: 1px solid color-mix(in oklch, var(--tok-func) 28%, transparent); border-radius: 999px; padding: 2px 8px; transition: color .2s; }
+  .chip .sq { width: 11px; height: 11px; border-radius: 3px; background: var(--tok-func); display: grid; place-items: center; color: #fff; font-size: 7px; font-weight: 800; }
+  .node-title { display: flex; align-items: center; gap: 8px; }
+  .node-title .caret { color: var(--faint); font-size: 11px; }
+  .node-title .name { font-size: 14px; font-weight: 640; letter-spacing: -0.01em; transition: color .2s; }
+
+  .section { border-top: 1px solid var(--border); }
+  .section-label { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; font-size: 11px; color: var(--muted); font-weight: 550; transition: color .2s; }
+  .section-label .all { color: var(--faint); font-size: 10.5px; }
+
+  .member { margin: 0 8px 6px; border-radius: 8px; background: var(--card-2); border: 1px solid transparent; transition: border-color .2s, background .2s; }
+  .member-head { display: flex; align-items: center; gap: 7px; width: 100%; font: inherit; text-align: left; cursor: pointer; background: transparent; border: 0; color: var(--fg); padding: 7px 10px; border-radius: 8px; }
+  .member-head .caret { color: var(--faint); font-size: 10px; }
+  .member-body { padding: 0 10px 9px 26px; font-family: var(--mono); font-size: 11.5px; line-height: 1.78; color: var(--muted); }
+  .member-body .ln { white-space: pre-wrap; }
+  .kw { color: color-mix(in oklch, var(--brand) 62%, var(--fg)); transition: color .2s, opacity .2s; }
+  .pn { color: var(--muted); transition: color .2s, opacity .2s; }
+
+  /* ── Interactive token / heading name — the "chip" ──
+     Space is reserved at all times (padding + inset-shadow border) so a state
+     change never reflows the line in any direction. */
+  .tok, .member-head .name {
+    position: relative; display: inline; border-radius: 5px; padding: 1px 4px; margin: 0 -2px;
+    cursor: pointer; font-weight: 560; white-space: nowrap; color: var(--tok-var);
+    box-shadow: inset 0 0 0 1px transparent;
+    transition: background-color .22s var(--ease), box-shadow .22s var(--ease), color .28s var(--ease), filter .22s var(--ease);
+  }
+  .tok[data-kind="class"], .member-head .name[data-kind="class"] { color: var(--tok-class); }
+  .tok[data-kind="function"], .member-head .name[data-kind="function"] { color: var(--tok-func); }
+  .tok[data-kind="variable"], .member-head .name[data-kind="variable"] { color: var(--tok-var); }
+  .member-head .name { font-weight: 620; }
+
+  /* connector sockets — little circles with a gap, both sides, only when active */
+  .tok::before, .tok::after, .member-head .name::before, .member-head .name::after {
+    content: ""; position: absolute; top: 50%; width: 6px; height: 6px; border-radius: 50%;
+    transform: translateY(-50%) scale(0); opacity: 0; background: currentColor; box-shadow: 0 0 7px currentColor;
+    transition: transform .26s var(--spring), opacity .2s var(--ease);
+  }
+  .tok::before, .member-head .name::before { left: -9px; }
+  .tok::after, .member-head .name::after { right: -9px; }
+
+  .tok.on, .member-head .name.on {
+    background: color-mix(in oklch, currentColor 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 52%, transparent);
+    filter: brightness(1.16) saturate(1.12);
+  }
+  .tok.on::before, .tok.on::after, .member-head .name.on::before, .member-head .name.on::after { transform: translateY(-50%) scale(1); opacity: 1; }
+
+  /* ── Trace mode: dim per-element (never container opacity, so lit shines) ── */
+  .proto.trace .kw, .proto.trace .pn, .proto.trace .member-body { color: var(--faint); }
+  .proto.trace .chip, .proto.trace .section-label, .proto.trace .node-title .name, .proto.trace .member-head .caret { color: var(--faint); }
+  .proto.trace .tok, .proto.trace .member-head .name { color: var(--faint); box-shadow: inset 0 0 0 1px transparent; background: transparent; }
+  .proto.trace .node { border-color: var(--border); }
+
+  .proto.trace .node.lit { border-color: var(--border-strong); box-shadow: var(--shadow), 0 0 0 1px color-mix(in oklch, var(--brand) 18%, transparent); }
+  .proto.trace .node.lit .node-title .name { color: var(--fg); }
+  .proto.trace .member.lit { background: color-mix(in oklch, var(--tok-func) 6%, var(--card-2)); }
+  .proto.trace .member.owner-lit { border-color: color-mix(in oklch, var(--tok-func) 38%, transparent); }
+  .proto.trace .lit-line .kw, .proto.trace .lit-line .pn { color: var(--muted); }
+  .proto.trace .tok.lit[data-kind="class"], .proto.trace .member-head .name.lit[data-kind="class"] { color: var(--tok-class); }
+  .proto.trace .tok.lit[data-kind="function"], .proto.trace .member-head .name.lit[data-kind="function"] { color: var(--tok-func); }
+  .proto.trace .tok.lit[data-kind="variable"], .proto.trace .member-head .name.lit[data-kind="variable"] { color: var(--tok-var); }
+
+  /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer the TEXT ── */
+  .proto.ctrl .kw, .proto.ctrl .pn, .proto.ctrl .member-body, .proto.ctrl .section-label, .proto.ctrl .chip { color: var(--faint); }
+  .proto.ctrl .node { border-color: var(--border-strong); }
+  .proto.ctrl .node::after {
+    content: ""; position: absolute; inset: -1px; border-radius: 13px; pointer-events: none;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand) 34%, transparent);
+    opacity: .5; animation: edge-breathe 4.6s ease-in-out infinite alternate;
+  }
+  /* "light in glass": the glyph stays fully its own colour (readable at every
+     moment); only a narrow specular glint travels across it, so a thin bright
+     streak catches the letters like light through glass. */
+  .proto.ctrl .tok, .proto.ctrl .member-head .name {
+    background: transparent; box-shadow: none;
+    background-image: linear-gradient(100deg,
+      currentColor 0%, currentColor 43%,
+      color-mix(in oklch, currentColor 48%, #fff) 50%,
+      currentColor 57%, currentColor 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    background-size: 300% 100%; background-repeat: no-repeat;
+    animation: glint 1.9s var(--ease) infinite; animation-delay: var(--d, 0s);
+    filter: brightness(1.06);
+  }
+  @keyframes edge-breathe { to { opacity: 1; } }
+  @keyframes glint {
+    0%   { background-position: 128% 0; }
+    55%  { background-position: -28% 0; }
+    100% { background-position: -28% 0; }   /* glint passes, then a short rest */
+  }
+
+  .popover { position: absolute; z-index: 40; width: 232px; background: var(--card); border: 1px solid var(--border-strong); border-radius: 11px; box-shadow: var(--shadow); padding: 11px 12px; font-size: 12px; color: var(--fg); animation: pop .14s ease-out; }
+  .popover[hidden] { display: none; }
+  .popover .pk { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .popover .pt { display: flex; align-items: center; gap: 7px; font-weight: 640; margin: 2px 0 8px; }
+  .popover .swatch { width: 9px; height: 9px; border-radius: 3px; }
+  .popover .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-top: 1px solid var(--border); }
+  .popover .row:first-of-type { border-top: 0; }
+  .popover .row span:last-child { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .popover .pin { margin-top: 9px; font-size: 11px; color: var(--brand); display: flex; align-items: center; gap: 6px; }
+  @keyframes pop { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+
+  .wire-path { fill: none; stroke-width: 1.1; stroke-linecap: round; stroke-dasharray: 10 4;
+    animation: flow .7s linear infinite, bloom .34s var(--ease) both; }
+  .wire-glow { fill: none; stroke-width: 3.5; stroke-linecap: round; filter: blur(2px);
+    animation: bloom-glow .4s var(--ease) both; }
+  /* invisible fat hit-zone over the first ~cm of each wire end → "jump to" */
+  .wire-hit { fill: none; stroke: transparent; stroke-width: 16; stroke-linecap: round; pointer-events: stroke; cursor: alias; }
+  @keyframes flow { to { stroke-dashoffset: -14; } }
+  @keyframes bloom { from { opacity: 0; stroke-width: 0; } to { opacity: 1; stroke-width: 1.1; } }
+  @keyframes bloom-glow { from { opacity: 0; } to { opacity: .16; } }
+
+  .jump-tip {
+    position: absolute; z-index: 60; pointer-events: none; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 550; color: var(--fg);
+    background: var(--card); border: 1px solid var(--border-strong); border-radius: 8px; padding: 5px 9px;
+    box-shadow: var(--shadow); animation: pop .12s var(--ease);
+  }
+  .jump-tip[hidden] { display: none; }
+  .jump-tip .jt-swatch { width: 8px; height: 8px; border-radius: 2px; }
+  .jump-tip b { font-weight: 650; }
+  .jump-tip .jt-kind { color: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+  .jump-tip .jt-arrow { color: var(--brand); font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition-duration: .01ms !important; } }
+</style>
+
+<div class="proto" id="proto">
+  <div class="hud">
+    <h1><span class="dot"></span> Connection language — prototype</h1>
+    <div class="spacer"></div>
+    <div class="steps">
+      <span><b>Hover</b> a name</span><span>·</span>
+      <span><kbd>Ctrl</kbd> reveals every link</span><span>·</span>
+      <span><kbd>Ctrl</kbd>+<b>click</b> pins</span>
+    </div>
+    <button class="toggle" id="ctrlBtn" aria-pressed="false" title="Toggle Ctrl mode">⌃ Ctrl</button>
+    <button class="toggle" id="themeBtn" title="Toggle theme">◐ Theme</button>
+  </div>
+
+  <div class="canvas" id="canvas">
+    <svg class="wires" id="wires"><defs>
+      <marker id="ah" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="context-stroke"/></marker>
+    </defs></svg>
+
+    <article class="node" id="n-os">
+      <div class="node-head">
+        <span class="chip"><span class="sq">TS</span> OrderService.ts</span>
+        <div class="node-title"><span class="caret">▾</span><span class="name">Order Service</span></div>
+      </div>
+      <div class="section">
+        <div class="section-label"><span>Properties</span><span class="all">Close all</span></div>
+        <div class="member" id="m-orders" data-member>
+          <button class="member-head" data-def id="def-orders"><span class="caret">▾</span><span class="name" data-kind="variable">orders</span></button>
+          <div class="member-body"><span class="ln"><span class="kw">private</span> <span class="tok" data-kind="variable" data-target="def-orders">orders</span><span class="pn">: Map&lt;string, number&gt; = </span><span class="kw">new</span><span class="pn"> Map();</span></span></div>
+        </div>
+        <div class="member" id="m-gateway" data-member>
+          <button class="member-head" data-def id="def-gateway"><span class="caret">▾</span><span class="name" data-kind="variable">gateway</span></button>
+          <div class="member-body"><span class="ln"><span class="kw">private</span> <span class="tok" data-kind="variable" data-target="def-gateway">gateway</span><span class="pn">: </span><span class="tok" data-kind="class" data-target="def-PaymentGateway">PaymentGateway</span><span class="pn">;</span></span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label"><span>Methods</span><span class="all">Close all</span></div>
+        <div class="member owner" id="m-checkout" data-member>
+          <button class="member-head" data-def id="def-checkout"><span class="caret">▾</span><span class="name" data-kind="function">checkout</span></button>
+          <div class="member-body">
+<span class="ln"><span class="kw">async</span> <span class="pn">checkout(</span><span class="tok" data-kind="variable" data-def id="def-id-c">id</span><span class="pn">: string) {</span></span>
+<span class="ln"><span class="pn">  </span><span class="kw">const</span> <span class="tok" data-kind="variable" data-def id="def-amt">amount</span><span class="pn"> = </span><span class="kw">this</span><span class="pn">.</span><span class="tok" data-kind="variable" data-target="def-orders">orders</span><span class="pn">.get(</span><span class="tok" data-kind="variable" data-target="def-id-c">id</span><span class="pn">);</span></span>
+<span class="ln"><span class="pn">  </span><span class="kw">return</span><span class="pn"> </span><span class="kw">this</span><span class="pn">.</span><span class="tok" data-kind="variable" data-target="def-gateway">gateway</span><span class="pn">.</span><span class="tok" data-kind="function" data-target="def-charge">charge</span><span class="pn">(</span><span class="tok" data-kind="variable" data-target="def-id-c">id</span><span class="pn">, </span><span class="tok" data-kind="variable" data-target="def-amt">amount</span><span class="pn">);</span></span>
+          </div>
+        </div>
+        <div class="member" id="m-cancel" data-member>
+          <button class="member-head" data-def id="def-cancel"><span class="caret">▸</span><span class="name" data-kind="function">cancelOrder</span></button>
+        </div>
+      </div>
+    </article>
+
+    <article class="node" id="n-pg">
+      <div class="node-head">
+        <span class="chip"><span class="sq">TS</span> PaymentGateway.ts</span>
+        <div class="node-title"><span class="caret">▾</span><span class="name"><span class="tok" data-kind="class" data-def id="def-PaymentGateway">Payment Gateway</span></span></div>
+      </div>
+      <div class="section">
+        <div class="section-label"><span>Properties</span><span class="all">Close all</span></div>
+        <div class="member" id="m-retries" data-member>
+          <button class="member-head" data-def id="def-retries"><span class="caret">▾</span><span class="name" data-kind="variable">retries</span></button>
+          <div class="member-body"><span class="ln"><span class="kw">private</span> <span class="tok" data-kind="variable" data-target="def-retries">retries</span><span class="pn"> = 3;</span></span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label"><span>Methods</span><span class="all">Close all</span></div>
+        <div class="member owner" id="m-charge" data-member>
+          <button class="member-head" data-def id="def-charge"><span class="caret">▾</span><span class="name" data-kind="function">charge</span></button>
+          <div class="member-body">
+<span class="ln"><span class="kw">async</span> <span class="pn">charge(</span><span class="tok" data-kind="variable" data-def id="def-oid">orderId</span><span class="pn">, </span><span class="tok" data-kind="variable" data-target="def-amt">amount</span><span class="pn">) {</span></span>
+<span class="ln"><span class="pn">  </span><span class="kw">for</span><span class="pn"> (…</span><span class="tok" data-kind="variable" data-target="def-retries">retries</span><span class="pn">…) {</span></span>
+<span class="ln"><span class="pn">    </span><span class="kw">if</span><span class="pn"> (</span><span class="kw">await</span><span class="pn"> </span><span class="kw">this</span><span class="pn">.</span><span class="tok" data-kind="function" data-target="def-send">send</span><span class="pn">(…)) </span><span class="kw">return</span><span class="pn"> true;</span></span>
+          </div>
+        </div>
+        <div class="member" id="m-send" data-member>
+          <button class="member-head" data-def id="def-send"><span class="caret">▸</span><span class="name" data-kind="function">send</span></button>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="popover" id="popover" hidden></div>
+  <div class="jump-tip" id="jumpTip" hidden></div>
+</div>
+
+<script>
+(() => {
+  const proto = document.getElementById('proto');
+  const wires = document.getElementById('wires');
+  const popover = document.getElementById('popover');
+  const jumpTip = document.getElementById('jumpTip');
+  const KIND_LABEL = { class: 'Class', function: 'Function', variable: 'Variable / property' };
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const kindColor = k => css('--tok-' + (k === 'function' ? 'func' : k === 'variable' ? 'var' : 'class'));
+
+  let ctrl = false, pinned = null, hovered = null;
+
+  // negative, staggered delays desync each token so the wobble looks organic
+  // (each starts partway through its cycle instead of all snapping together)
+  [...proto.querySelectorAll('.tok, .member-head .name')].forEach((el, i) => { el.style.setProperty('--d', '-' + (i * 0.37).toFixed(2) + 's'); });
+
+  const anchorOf = host => host.classList.contains('tok') ? host : host.querySelector('.name');
+  const linkTarget = el => el.dataset.target ? document.getElementById(el.dataset.target) : null;
+  const kindOf = host => host.dataset.kind || (host.querySelector('[data-kind]') || host).dataset.kind || 'variable';
+
+  function clearMarks() {
+    proto.querySelectorAll('.on, .lit, .owner-lit, .lit-line').forEach(e => e.classList.remove('on', 'lit', 'owner-lit', 'lit-line'));
+    wires.querySelectorAll('.wire-path, .wire-glow, .wire-hit').forEach(e => e.remove());
+    jumpTip.hidden = true;
+  }
+
+  // Every wire flows OUT of a definition INTO the sites that use it: pairs are
+  // [definition, usage] and the arrowhead lands on the usage. Hovering a usage
+  // draws def→thisUsage; hovering a definition draws def→each of its usages.
+  function linksFor(host) {
+    const t = linkTarget(host);
+    if (t) return [[t, host]];                 // host is a usage → def(t) feeds it
+    const defId = host.dataset.def !== undefined ? host.id : (host.closest('[data-def]') || {}).id;
+    const usages = defId ? [...proto.querySelectorAll(`.tok[data-target="${defId}"]`)] : [];
+    return usages.map(u => [host, u]);         // host is a def → it feeds each usage
+  }
+
+  function litFor(active, pairs) {
+    const lit = new Set([active]);
+    pairs.forEach(([from, to]) => { lit.add(from); lit.add(to); });
+    // Top→bottom cascade: a FUNCTION endpoint keeps its whole body content lit;
+    // a variable does not light the functions around it.
+    const spreadBody = defEl => {
+      const m = defEl && defEl.closest('[data-member]');
+      if (!m) return;
+      lit.add(m); m.classList.add('lit');
+      if (m.classList.contains('owner')) m.classList.add('owner-lit');
+      m.querySelectorAll('.tok').forEach(t => lit.add(t));
+      m.querySelectorAll('.ln').forEach(l => l.classList.add('lit-line'));
+    };
+    [active, ...pairs.flat()].forEach(e => { if (kindOf(e) === 'function') spreadBody(e); });
+    return lit;
+  }
+
+  function drawWire(fromHost, toHost) {
+    const a = anchorOf(fromHost), b = anchorOf(toHost);
+    if (!a || !b) return;
+    const box = wires.getBoundingClientRect();
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const toRight = (rb.left + rb.width / 2) >= (ra.left + ra.width / 2);
+    const x1 = (toRight ? ra.right : ra.left) - box.left + (toRight ? 9 : -9);
+    const y1 = ra.top + ra.height / 2 - box.top;
+    const x2 = (toRight ? rb.left : rb.right) - box.left + (toRight ? -9 : 9);
+    const y2 = rb.top + rb.height / 2 - box.top;
+    const dx = (x2 - x1) * 0.45;
+    const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    const col = kindColor(kindOf(fromHost));
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (cls, extra) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('class', cls); p.setAttribute('stroke', col); Object.entries(extra || {}).forEach(([k, v]) => p.setAttribute(k, v)); return p; };
+    wires.append(mk('wire-glow'), mk('wire-path', { 'marker-end': 'url(#ah)' }));
+
+    // hoverable ~1cm hit-zones at each end → "jump to the other end"
+    const sign = toRight ? 1 : -1;
+    const addHit = (px, py, qx, qy, jumpHost) => {
+      const h = document.createElementNS(NS, 'path');
+      h.setAttribute('d', `M ${px} ${py} L ${qx} ${qy}`);
+      h.setAttribute('class', 'wire-hit');
+      h.addEventListener('mouseenter', e => { clearTimeout(clearT); showJump(jumpHost); moveTip(e); });
+      h.addEventListener('mousemove', moveTip);
+      h.addEventListener('mouseleave', () => { jumpTip.hidden = true; scheduleClear(hovered); });
+      h.addEventListener('click', e => { e.stopPropagation(); jumpTo(jumpHost); });
+      wires.append(h);
+    };
+    addHit(x1, y1, x1 + sign * 46, y1, toHost);   // near the source → jump to target
+    addHit(x2, y2, x2 - sign * 46, y2, fromHost); // near the target → jump to source
+  }
+
+  function render() {
+    clearMarks();
+    proto.classList.toggle('ctrl', ctrl);
+    const active = pinned || hovered;
+    proto.classList.toggle('trace', !!active);
+    if (!active) return;
+
+    const pairs = linksFor(active);
+    const lit = litFor(active, pairs);
+    lit.forEach(el => el.classList.add('lit'));
+    const endpoints = new Set([active, ...pairs.flat()]);
+    endpoints.forEach(e => {
+      anchorOf(e).classList.add('on', 'lit');
+      const n = e.closest('.node'); if (n) n.classList.add('lit');
+    });
+    pairs.forEach(([from, to]) => drawWire(from, to));
+  }
+
+  function hostFrom(el) { return el.closest('.tok') || el.closest('[data-def]'); }
+
+  // Hover-intent: without Ctrl a link needs a short dwell so brushing past a
+  // token does nothing; a longer dwell then pops the info box. Ctrl fires the
+  // link instantly, and Ctrl-click pins the info box. A small leave-grace keeps
+  // the trace from flickering during hand-offs between adjacent tokens / wires.
+  const FIRE_COLD = 240, FIRE_WARM = 80, INFO_DELAY = 620, LEAVE_GRACE = 150;
+  let fireT = null, clearT = null, infoT = null;
+
+  function scheduleFire(host) {
+    clearTimeout(clearT); clearTimeout(fireT); clearTimeout(infoT);
+    if (ctrl) { hovered = host; render(); return; }
+    const delay = (pinned || hovered) ? FIRE_WARM : FIRE_COLD;
+    fireT = setTimeout(() => { hovered = host; render(); }, delay);
+    infoT = setTimeout(() => { if (hovered === host && !pinned) showPopover(host, false); }, INFO_DELAY);
+  }
+  function scheduleClear(host) {
+    clearTimeout(fireT); clearTimeout(infoT);
+    clearT = setTimeout(() => {
+      if (hovered === host) { hovered = null; render(); }
+      if (!pinned) popover.hidden = true;
+    }, LEAVE_GRACE);
+  }
+
+  proto.querySelectorAll('.tok, .member-head .name').forEach(el => {
+    const host = hostFrom(el);
+    if (!host) return;
+    const trigger = host.classList.contains('tok') ? host : host.querySelector('.name');
+    trigger.addEventListener('mouseenter', () => scheduleFire(host));
+    trigger.addEventListener('mouseleave', () => scheduleClear(host));
+    trigger.addEventListener('click', e => { if (!ctrl) return; e.stopPropagation(); pinned = host; showPopover(host, true); render(); });
+  });
+
+  popover.addEventListener('mouseenter', () => clearTimeout(clearT));
+  popover.addEventListener('mouseleave', () => scheduleClear(hovered));
+
+  function showPopover(host, pin) {
+    const kind = kindOf(host);
+    const anchor = anchorOf(host);
+    const name = anchor.textContent.trim();
+    const pairs = linksFor(host);
+    const def = linkTarget(host) || host;
+    const defNodeEl = def.closest('.node');
+    const inNode = defNodeEl ? defNodeEl.querySelector('.node-title .name').textContent.trim() : 'this file';
+    popover.innerHTML =
+      `<div class="pk">${kind === 'function' ? 'call' : 'reference'}</div>` +
+      `<div class="pt"><span class="swatch" style="background:${kindColor(kind)}"></span>${name}</div>` +
+      `<div class="row"><span>kind</span><span>${KIND_LABEL[kind]}</span></div>` +
+      `<div class="row"><span>connects</span><span>${pairs.length} site${pairs.length === 1 ? '' : 's'}</span></div>` +
+      `<div class="row"><span>defined in</span><span>${inNode}</span></div>` +
+      (pin ? '<div class="pin">◆ pinned — click empty space to close</div>'
+           : '<div class="pin" style="color:var(--muted)">Ctrl-click to pin</div>');
+    const box = proto.getBoundingClientRect();
+    const r = anchor.getBoundingClientRect();
+    popover.hidden = false;
+    const pw = 232, ph = popover.offsetHeight;
+    let x = r.left - box.left, y = r.bottom - box.top + 8;
+    if (x + pw > proto.clientWidth - 8) x = proto.clientWidth - pw - 8;
+    if (y + ph > proto.clientHeight - 8) y = r.top - box.top - ph - 8;   // flip above
+    popover.style.left = Math.max(8, x) + 'px';
+    popover.style.top = Math.max(8, y) + 'px';
+  }
+
+  // ── "jump to" tooltip that rides the cursor over a wire's near-cm ──
+  function showJump(host) {
+    const kind = kindOf(host);
+    const name = anchorOf(host).textContent.trim();
+    jumpTip.innerHTML = `<span class="jt-arrow">↳</span>Jump to<span class="jt-swatch" style="background:${kindColor(kind)}"></span><b>${name}</b><span class="jt-kind">${kind}</span>`;
+    jumpTip.hidden = false;
+  }
+  function moveTip(e) {
+    const box = proto.getBoundingClientRect(), pad = 14;
+    const tw = jumpTip.offsetWidth, th = jumpTip.offsetHeight;
+    let x = e.clientX - box.left + pad, y = e.clientY - box.top + pad;
+    if (x + tw > proto.clientWidth - 6) x = e.clientX - box.left - tw - pad;   // flip left of cursor
+    if (y + th > proto.clientHeight - 6) y = e.clientY - box.top - th - pad;   // flip above cursor
+    jumpTip.style.left = Math.max(6, x) + 'px';
+    jumpTip.style.top = Math.max(6, y) + 'px';
+  }
+  function jumpTo(host) {
+    pinned = host; jumpTip.hidden = true; showPopover(host, true); render();
+    anchorOf(host).animate([{ filter: 'brightness(1.7)' }, { filter: 'brightness(1)' }], { duration: 520, easing: 'ease-out' });
+  }
+
+  proto.addEventListener('click', e => {
+    if (e.target.closest('.tok') || e.target.closest('.member-head .name') || e.target.closest('.popover') || e.target.closest('.toggle') || e.target.closest('.wire-hit')) return;
+    pinned = null; popover.hidden = true; jumpTip.hidden = true; render();
+  });
+
+  function setCtrl(v) { ctrl = v; document.getElementById('ctrlBtn').setAttribute('aria-pressed', v); render(); }
+  window.addEventListener('keydown', e => { if (e.key === 'Control' && !ctrl) setCtrl(true); });
+  window.addEventListener('keyup', e => { if (e.key === 'Control') setCtrl(false); });
+  document.getElementById('ctrlBtn').addEventListener('click', () => setCtrl(!ctrl));
+
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark' : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-theme', next); render();
+  });
+
+  window.addEventListener('resize', () => { if (pinned) showPopover(pinned, true); render(); });
+  render();
+})();
+</script>

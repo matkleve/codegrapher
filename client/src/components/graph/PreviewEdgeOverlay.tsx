@@ -1,100 +1,140 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphInteraction, toAnchorRect } from "@/context/GraphInteractionContext";
+import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
+import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
-function cubicPath(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): string {
-  const dx = x2 - x1;
-  const c1x = x1 + dx * 0.45;
-  const c2x = x2 - dx * 0.45;
-  return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
-}
+type RenderedEdge = {
+  spec: PreviewEdgeSpec;
+  path: string;
+  glowPath: string;
+  stroke: string;
+  hitFrom: string;
+  hitTo: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+};
 
-function findTargetAnchor(
-  handleId: string,
-  side: "left" | "right",
-): HTMLElement | null {
-  return (
-    document.querySelector<HTMLElement>(
-      `[data-flow-anchor-target="${handleId}"][data-flow-anchor="${side}"]`,
-    ) ??
-    document.querySelector<HTMLElement>(
-      `[data-flow-anchor-target="${handleId}"]`,
-    )
-  );
+function measureEdges(
+  specs: PreviewEdgeSpec[],
+  svgEl: SVGSVGElement,
+): RenderedEdge[] {
+  const box = svgEl.getBoundingClientRect();
+  const rendered: RenderedEdge[] = [];
+
+  for (const spec of specs) {
+    const toProbe = resolvePreviewAnchor(spec.to, null, box);
+    const from = resolvePreviewAnchor(spec.from, toProbe?.x ?? null, box);
+    const to = resolvePreviewAnchor(spec.to, from?.x ?? null, box);
+    if (!from || !to) continue;
+
+    const path = cubicPath(from.x, from.y, to.x, to.y);
+    rendered.push({
+      spec,
+      path,
+      glowPath: path,
+      stroke: TOKEN_EDGE_STROKE[spec.kind],
+      hitFrom: wireHitSegment(from.x, from.y, to.x, to.y, "from"),
+      hitTo: wireHitSegment(from.x, from.y, to.x, to.y, "to"),
+      fromX: from.x,
+      fromY: from.y,
+      toX: to.x,
+      toY: to.y,
+    });
+  }
+
+  return rendered;
 }
 
 export function PreviewEdgeOverlay() {
-  const { previewEdge } = useGraphInteraction();
+  const {
+    previewEdges,
+    jumpTooltip,
+    setJumpTooltip,
+    cancelHoverTimers,
+    showTokenInfo,
+  } = useGraphInteraction();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [path, setPath] = useState<string | null>(null);
-  const [stroke, setStroke] = useState("var(--token-edge-function)");
+  const [edges, setEdges] = useState<RenderedEdge[]>([]);
 
   useLayoutEffect(() => {
-    if (!previewEdge) {
-      setPath(null);
+    if (previewEdges.length === 0) {
+      setEdges([]);
       return;
     }
 
     const update = () => {
       const svgEl = svgRef.current;
-      const sourceEl = previewEdge.sourceRightAnchor;
-      // The line leaves the token chip on whichever side faces the target,
-      // and enters the target through the semicircle anchor on the facing side.
-      const chipEl = sourceEl?.parentElement ?? sourceEl;
-      const probe = findTargetAnchor(previewEdge.targetHandle, "left");
-      if (!svgEl || !chipEl?.isConnected || !probe?.isConnected) {
-        setPath(null);
-        return;
-      }
-
-      const srcRect = chipEl.getBoundingClientRect();
-      const targetLeftOfSource =
-        probe.getBoundingClientRect().left + probe.getBoundingClientRect().width / 2 <
-        srcRect.left + srcRect.width / 2;
-
-      const targetEl = findTargetAnchor(
-        previewEdge.targetHandle,
-        targetLeftOfSource ? "right" : "left",
-      );
-      if (!targetEl?.isConnected) {
-        setPath(null);
-        return;
-      }
-
-      // Path coordinates are local to the overlay svg, so subtract its
-      // viewport origin from the anchors' client rects.
-      const box = svgEl.getBoundingClientRect();
-      const tgtRect = targetEl.getBoundingClientRect();
-      const targetSide = targetEl.getAttribute("data-flow-anchor");
-
-      setStroke(TOKEN_EDGE_STROKE[previewEdge.kind]);
-      setPath(
-        cubicPath(
-          (targetLeftOfSource ? srcRect.left : srcRect.right) - box.left,
-          srcRect.top + srcRect.height / 2 - box.top,
-          (targetSide === "right" ? tgtRect.right : tgtRect.left) - box.left,
-          tgtRect.top + tgtRect.height / 2 - box.top,
-        ),
-      );
+      if (!svgEl) return;
+      setEdges(measureEdges(previewEdges, svgEl));
     };
 
-    // Re-measure every frame while the preview is active: panning, zooming,
-    // and expanding or collapsing members all shift the anchors.
     let raf = 0;
     const tick = () => {
       update();
       raf = requestAnimationFrame(tick);
     };
     tick();
-    return () => {
-      cancelAnimationFrame(raf);
-    };
-  }, [previewEdge]);
+    return () => cancelAnimationFrame(raf);
+  }, [previewEdges]);
+
+  const onHitEnter = (
+    e: React.MouseEvent,
+    spec: PreviewEdgeSpec,
+    end: "from" | "to",
+  ) => {
+    cancelHoverTimers();
+    const targetRef = end === "to" ? spec.to : spec.from;
+    const token =
+      targetRef.type === "element"
+        ? (targetRef.el.dataset.symbolName ?? "")
+        : "";
+    setJumpTooltip({
+      token,
+      kind: spec.kind,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const onHitMove = (e: React.MouseEvent) => {
+    if (!jumpTooltip) return;
+    setJumpTooltip({
+      ...jumpTooltip,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const onHitLeave = () => {
+    setJumpTooltip(null);
+  };
+
+  const onHitClick = (
+    e: React.MouseEvent,
+    spec: PreviewEdgeSpec,
+    end: "from" | "to",
+  ) => {
+    e.stopPropagation();
+    const targetRef = end === "to" ? spec.to : spec.from;
+    if (targetRef.type !== "element" || !targetRef.el) return;
+    const el = targetRef.el;
+    showTokenInfo({
+      token: el.dataset.symbolName ?? "",
+      kind: spec.kind,
+      anchor: toAnchorRect(el.getBoundingClientRect()),
+      pinned: true,
+      connectionCount: 1,
+      definedIn: "",
+    });
+    el.animate(
+      [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
+      { duration: 520, easing: "ease-out" },
+    );
+    setJumpTooltip(null);
+  };
 
   return (
     <svg
@@ -102,31 +142,51 @@ export function PreviewEdgeOverlay() {
       className="pointer-events-none absolute inset-0 z-40 overflow-visible"
       aria-hidden
     >
-      {path && (
-        <>
-          <defs>
-            <marker
-              id="preview-edge-arrow"
-              markerWidth="8"
-              markerHeight="8"
-              refX="7"
-              refY="4"
-              orient="auto"
-            >
-              <path d="M0,0 L8,4 L0,8 Z" style={{ fill: stroke }} />
-            </marker>
-          </defs>
+      <defs>
+        <marker
+          id="preview-edge-arrow"
+          markerWidth="5"
+          markerHeight="5"
+          refX="4"
+          refY="2.5"
+          orient="auto"
+        >
+          <path d="M0,0 L5,2.5 L0,5 Z" fill="context-stroke" />
+        </marker>
+      </defs>
+      {edges.map((edge) => (
+        <g key={edge.spec.id}>
           <path
-            d={path}
+            d={edge.glowPath}
             fill="none"
-            style={{ stroke }}
-            strokeWidth={1.5}
-            strokeDasharray="5 3"
-            markerEnd="url(#preview-edge-arrow)"
-            className="preview-edge-path"
+            className="preview-edge-glow"
+            style={{ stroke: edge.stroke }}
           />
-        </>
-      )}
+          <path
+            d={edge.path}
+            fill="none"
+            className="preview-edge-path"
+            style={{ stroke: edge.stroke }}
+            markerEnd="url(#preview-edge-arrow)"
+          />
+          <path
+            d={edge.hitFrom}
+            className="preview-edge-hit"
+            onMouseEnter={(e) => onHitEnter(e, edge.spec, "from")}
+            onMouseMove={onHitMove}
+            onMouseLeave={onHitLeave}
+            onClick={(e) => onHitClick(e, edge.spec, "from")}
+          />
+          <path
+            d={edge.hitTo}
+            className="preview-edge-hit"
+            onMouseEnter={(e) => onHitEnter(e, edge.spec, "to")}
+            onMouseMove={onHitMove}
+            onMouseLeave={onHitLeave}
+            onClick={(e) => onHitClick(e, edge.spec, "to")}
+          />
+        </g>
+      ))}
     </svg>
   );
 }

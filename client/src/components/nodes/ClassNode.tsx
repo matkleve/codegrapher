@@ -7,6 +7,7 @@ import {
 } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { previewTargetTop } from "@/lib/ctrlPreviewHandles";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
@@ -43,10 +44,13 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     onResizeEnd,
   } = useClassNodeController({ id, nodeData, nodeWidth, nodeHeight, bodyExpanded });
 
-  const { activeTargetHandle, previewEdge } = useGraphInteraction();
-  const classTargetActive = activeTargetHandle === previewTargetTop(id);
+  const { isHandleActive, edgeKindAtHandle } = useGraphInteraction();
+  const { nodeLit } = useTraceAppearance({ flowNodeId: id });
+  const classTargetId = previewTargetTop(id);
+  const classTargetActive = isHandleActive(classTargetId);
+  const classKind = edgeKindAtHandle(classTargetId);
   const classAnchorColor =
-    classTargetActive && previewEdge ? TOKEN_ANCHOR[previewEdge.kind] : "bg-border";
+    classTargetActive && classKind ? TOKEN_ANCHOR[classKind] : "bg-border";
 
   const title = camelToWords(nodeData.label);
   const hasProperties = nodeData.properties.length > 0;
@@ -55,11 +59,13 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   return (
     <div
       ref={cardRef}
+      data-flow-node-id={id}
       className={cn(
         "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border text-left shadow-sm",
         bodyExpanded ? "h-full bg-card" : "shrink-0 bg-accent",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+        nodeLit && "trace-node-lit",
       )}
       style={{
         width: nodeWidth,
@@ -92,6 +98,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       />
       <NodeCardHeader
         title={title}
+        symbolName={nodeData.label}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
         bodyExpanded={bodyExpanded}
         onToggleCollapsed={onToggleCollapsed}
@@ -117,6 +124,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
+                  classLabel={nodeData.label}
                 />
               ))}
             </MemberSection>
@@ -143,6 +151,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
+                  classLabel={nodeData.label}
                 />
               ))}
             </MemberSection>

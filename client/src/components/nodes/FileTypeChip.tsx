@@ -13,7 +13,7 @@ export function FileTypeChip({ filePath, className }: FileTypeChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex w-fit max-w-full shrink-0 self-start items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-none",
+        "file-type-chip inline-flex w-fit max-w-full shrink-0 self-start items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-none",
         chip.pillClass,
         className,
       )}
