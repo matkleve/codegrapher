@@ -13,7 +13,7 @@
 | `--card`, `--card-foreground` | Class node cards |
 | `--border`, `--input`, `--ring` | Borders and focus rings |
 | `--muted`, `--muted-foreground` | Secondary text |
-| `--primary` | Theme-split accent (blue light / gold dark) — **not** default interactive hover |
+| `--primary` | Periwinkle action accent (both themes) — **not** default interactive hover |
 
 ## Brand (interactive hover)
 
@@ -24,7 +24,9 @@
 | `--brand-border` | Hover border |
 | `--motion-hover-surface`, `--motion-hover-color`, `--ease` | Hover transitions |
 
-**Rule:** New clickable/draggable surfaces MUST use brand tokens via `.hoverable` or `CONTROL_INTERACTIVE_HOVER` in `client/src/lib/controlTokens.ts`. Do not route interactive hover through `--primary`.
+**Rule:** New clickable/draggable surfaces MUST use brand tokens via `.hoverable` or `INTERACTIVE_SURFACE` / `INTERACTIVE_ROW` in `client/src/lib/controlTokens.ts`. Do not route interactive hover through `--primary`.
+
+See [brand-book.md](brand-book.md) for the full accent matrix and known inconsistencies.
 
 ## Connector / preview edges
 

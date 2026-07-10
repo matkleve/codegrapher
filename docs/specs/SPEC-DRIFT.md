@@ -1,38 +1,38 @@
 # Known spec ↔ code drift
 
-**Status:** Open — requires human decision before docs or code are changed.
+**Status:** Open — one planned feature not yet in code.
 
 Last updated: 2026-07-10
 
-Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must not diverge silently. These items are flagged intentionally; do not "fix" one side without updating the other.
+Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must not diverge silently. Flag mismatches here until resolved in the same PR as the doc or code change.
 
 ---
 
-## 1. Pin trigger: Ctrl-click vs plain click
+## 1. Shift+click accumulate pins (multi-pin)
 
 | Source | Says |
 | ------ | ---- |
-| `docs/glossary.md` | "Ctrl-click or wire hit-zone click locks…" |
-| `docs/specs/system/preview-edges.md` | Action 5: "Ctrl-click token" → pin |
-| `docs/specs/system/preview-edges.interactions.supplement.md` | State machine: "Ctrl-click token / wire end" |
-| **Code** | `CodeLine.tsx` `onIdentifierClick` — no `isCtrlPreviewMode` guard; any click on an interactive token pins and opens `TokenContextBar` |
+| `docs/glossary.md`, `preview-edges.md`, interactions supplement | **Shift+click** adds a pin without clearing prior pins; plain click replaces pin set |
+| **Code** | Single `pinnedTokenKey` + `pinnedPreviewEdges`; `pinTrace` always replaces |
 
-**Decision needed:** Revert code to Ctrl-only pin (match specs + prototype), or update all specs/glossary to "click token to pin".
+**Implementation notes when building:**
+
+- Store `pinnedTokenKeys: string[]` (or set) + merged `pinnedPreviewEdges`
+- `mergeTraceLit` across all pinned keys for dim/lit paint
+- Context bar: show most recently pinned token until multi-pin UI exists
+- Shift+click an already-pinned token: toggle that pin off (recommended)
 
 ---
 
-## 2. Brand accent: gold (docs) vs cyan (code)
+## Recently resolved
 
-| Source | Says |
-| ------ | ---- |
-| `docs/design/tokens.md`, `interaction-emphasis.md`, `glossary.md` | "brand **gold**" in both themes |
-| `client/src/lib/controlTokens.ts` | Comment: "Brand-**cyan** hover" |
-| `client/src/index.css` `:root` / `.dark` | `--brand: oklch(… 220)` — sky-cyan hue in **both** themes |
-
-**Decision needed:** Revert `--brand` to gold (oklch ~86–98 hue) and keep docs, or rename docs/design tokens to "brand cyan" and treat gold as superseded.
+| Item | Resolution |
+| ---- | ---------- |
+| Brand accent gold vs cyan | Code + docs aligned on gold (`--brand` hue ~88). |
+| Pin trigger Ctrl-click vs plain click | **Plain click** pins; Ctrl is reveal-only (dims keywords, instant hover). |
 
 ---
 
 ## Resolution
 
-When a row is resolved, delete it from this file and land the matching doc + code change in one PR.
+When a row is open, delete it from this file and land the matching doc + code change in one PR.

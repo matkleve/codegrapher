@@ -1,143 +1,123 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
+import { useJumpTooltip } from "@/context/JumpTooltipContext";
 import {
   jumpTargetForWireEnd,
   jumpTargetLabel,
   resolveJumpTargetElement,
   traceKeyForJumpTarget,
 } from "@/lib/resolveJumpTarget";
-import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
+import {
+  syncWireDom,
+  updateWireGeometry,
+  type WireElements,
+} from "@/lib/previewEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
-
-type RenderedEdge = {
-  spec: PreviewEdgeSpec;
-  path: string;
-  glowPath: string;
-  stroke: string;
-  hitFrom: string;
-  hitTo: string;
-  fromX: number;
-  fromY: number;
-  toX: number;
-  toY: number;
-};
-
-function measureEdges(
-  specs: PreviewEdgeSpec[],
-  svgEl: SVGSVGElement,
-  getNode: (id: string) => Node | undefined,
-): RenderedEdge[] {
-  const box = svgEl.getBoundingClientRect();
-  const rendered: RenderedEdge[] = [];
-
-  for (const spec of specs) {
-    const { from, to } = refinePreviewEdge(spec, getNode);
-    const fromPt = resolvePreviewAnchor(from, box, "from");
-    const toPt = resolvePreviewAnchor(to, box, "to");
-    if (!fromPt || !toPt) continue;
-
-    const path = cubicPath(fromPt.x, fromPt.y, toPt.x, toPt.y, fromPt.side, toPt.side);
-    rendered.push({
-      spec,
-      path,
-      glowPath: path,
-      stroke: TOKEN_EDGE_STROKE[spec.kind],
-      hitFrom: wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from"),
-      hitTo: wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to"),
-      fromX: fromPt.x,
-      fromY: fromPt.y,
-      toX: toPt.x,
-      toY: toPt.y,
-    });
-  }
-
-  return rendered;
-}
 
 export function PreviewEdgeOverlay() {
   const {
     previewEdges,
-    jumpTooltip,
-    setJumpTooltip,
+    isWarm,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
     pinTrace,
   } = useGraphInteraction();
+  const { setJumpTooltip } = useJumpTooltip();
   const { getNode } = useReactFlow();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [edges, setEdges] = useState<RenderedEdge[]>([]);
+  const wiresRef = useRef<Map<string, WireElements>>(new Map());
+  const specsRef = useRef<PreviewEdgeSpec[]>([]);
+  const prevEdgeCountRef = useRef(0);
+
+  const bindHitHandlers = (wire: WireElements) => {
+    const spec = wire.spec;
+    const onEnter = (end: "from" | "to") => (e: MouseEvent) => {
+      cancelHoverLeaveGrace();
+      const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
+      setJumpTooltip({
+        token: jumpTargetLabel(ref, hint, getNode),
+        kind: spec.kind,
+        x: e.clientX,
+        y: e.clientY,
+      });
+    };
+    const onMove = (e: MouseEvent) => {
+      setJumpTooltip((prev) =>
+        prev ? { ...prev, x: e.clientX, y: e.clientY } : prev,
+      );
+    };
+    const onLeave = () => {
+      setJumpTooltip(null);
+      scheduleHoverLeaveGrace();
+    };
+    const onClick = (end: "from" | "to") => (e: MouseEvent) => {
+      e.stopPropagation();
+      const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
+      const el = resolveJumpTargetElement(ref, hint, getNode);
+      if (!el) return;
+      const traceKey = traceKeyForJumpTarget(el, hint);
+      if (traceKey) pinTrace(traceKey);
+      el.animate(
+        [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
+        { duration: 520, easing: "ease-out" },
+      );
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      setJumpTooltip(null);
+    };
+
+    wire.hitFrom.onmouseenter = onEnter("from");
+    wire.hitFrom.onmousemove = onMove;
+    wire.hitFrom.onmouseleave = onLeave;
+    wire.hitFrom.onclick = onClick("from");
+    wire.hitTo.onmouseenter = onEnter("to");
+    wire.hitTo.onmousemove = onMove;
+    wire.hitTo.onmouseleave = onLeave;
+    wire.hitTo.onclick = onClick("to");
+  };
 
   useLayoutEffect(() => {
-    if (previewEdges.length === 0) {
-      setEdges([]);
+    specsRef.current = previewEdges;
+    const svg = svgRef.current;
+    if (!svg || previewEdges.length === 0) {
+      for (const wire of wiresRef.current.values()) wire.group.remove();
+      wiresRef.current.clear();
+      prevEdgeCountRef.current = 0;
       return;
     }
 
-    const update = () => {
-      const svgEl = svgRef.current;
-      if (!svgEl) return;
-      setEdges(measureEdges(previewEdges, svgEl, getNode));
-    };
+    let layer = svg.querySelector<SVGGElement>("[data-preview-wires]");
+    if (!layer) {
+      layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      layer.setAttribute("data-preview-wires", "");
+      svg.append(layer);
+    }
+
+    const warm = isWarm && prevEdgeCountRef.current > 0;
+    syncWireDom(layer, previewEdges, wiresRef.current, warm);
+    prevEdgeCountRef.current = previewEdges.length;
+    for (const wire of wiresRef.current.values()) {
+      bindHitHandlers(wire);
+    }
+  }, [previewEdges, isWarm]);
+
+  useLayoutEffect(() => {
+    if (previewEdges.length === 0) return;
 
     let raf = 0;
     const tick = () => {
-      update();
+      const svg = svgRef.current;
+      if (!svg) return;
+      const box = svg.getBoundingClientRect();
+      for (const spec of specsRef.current) {
+        const wire = wiresRef.current.get(spec.id);
+        if (wire) updateWireGeometry(wire, box, getNode);
+      }
       raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [getNode, previewEdges]);
-
-  const onHitEnter = (
-    e: React.MouseEvent,
-    spec: PreviewEdgeSpec,
-    end: "from" | "to",
-  ) => {
-    cancelHoverLeaveGrace();
-    const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
-    setJumpTooltip({
-      token: jumpTargetLabel(ref, hint, getNode),
-      kind: spec.kind,
-      x: e.clientX,
-      y: e.clientY,
-    });
-  };
-
-  const onHitMove = (e: React.MouseEvent) => {
-    if (!jumpTooltip) return;
-    setJumpTooltip({
-      ...jumpTooltip,
-      x: e.clientX,
-      y: e.clientY,
-    });
-  };
-
-  const onHitLeave = () => {
-    setJumpTooltip(null);
-    scheduleHoverLeaveGrace();
-  };
-
-  const onHitClick = (
-    e: React.MouseEvent,
-    spec: PreviewEdgeSpec,
-    end: "from" | "to",
-  ) => {
-    e.stopPropagation();
-    const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
-    const el = resolveJumpTargetElement(ref, hint, getNode);
-    if (!el) return;
-    const traceKey = traceKeyForJumpTarget(el, hint);
-    if (traceKey) pinTrace(traceKey);
-    el.animate(
-      [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
-      { duration: 520, easing: "ease-out" },
-    );
-    el.scrollIntoView({ block: "nearest", inline: "nearest" });
-    setJumpTooltip(null);
-  };
+  }, [getNode, previewEdges.length]);
 
   return (
     <svg
@@ -157,39 +137,6 @@ export function PreviewEdgeOverlay() {
           <path d="M0,0 L5,2.5 L0,5 Z" fill="context-stroke" />
         </marker>
       </defs>
-      {edges.map((edge) => (
-        <g key={edge.spec.id}>
-          <path
-            d={edge.glowPath}
-            fill="none"
-            className="preview-edge-glow"
-            style={{ stroke: edge.stroke }}
-          />
-          <path
-            d={edge.path}
-            fill="none"
-            className="preview-edge-path"
-            style={{ stroke: edge.stroke }}
-            markerEnd="url(#preview-edge-arrow)"
-          />
-          <path
-            d={edge.hitFrom}
-            className="preview-edge-hit"
-            onMouseEnter={(e) => onHitEnter(e, edge.spec, "from")}
-            onMouseMove={onHitMove}
-            onMouseLeave={onHitLeave}
-            onClick={(e) => onHitClick(e, edge.spec, "from")}
-          />
-          <path
-            d={edge.hitTo}
-            className="preview-edge-hit"
-            onMouseEnter={(e) => onHitEnter(e, edge.spec, "to")}
-            onMouseMove={onHitMove}
-            onMouseLeave={onHitLeave}
-            onClick={(e) => onHitClick(e, edge.spec, "to")}
-          />
-        </g>
-      ))}
     </svg>
   );
 }

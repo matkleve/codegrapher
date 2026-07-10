@@ -19,7 +19,7 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 ```mermaid
 flowchart TB
   Base[Resting UI] --> Hover[.hoverable brand hover]
-  Base --> Ctrl[graph-ctrl-preview shimmer on indexed tokens]
+  Base --> Ctrl[graph-ctrl-preview: dim keywords + shimmer indexed tokens]
   Base --> Trace[graph-trace-active dim + lit endpoints]
   Trace --> Pin[graph-trace-pinned: pin lit + foreign hover preview]
   Hover -.->|suppressed on dim tokens during trace| Trace
@@ -31,9 +31,9 @@ flowchart TB
 | --- | ----------- | --------------- | -------- |
 | 1 | Hovers `.hoverable` control | Brand surface + border + ink | CSS `:hover` |
 | 2 | Hovers explorer row | `INTERACTIVE_ROW` | class on row |
-| 3 | Ctrl held on graph | Shimmer on indexed chips | `graph-ctrl-preview` |
+| 3 | Ctrl held on graph | Dim syntax/keywords; shimmer indexed chips | `graph-ctrl-preview` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
-| 5 | Pinned trace | Pin stays lit; other tokens preview on dwell, pin on click | `graph-trace-pinned` + merged trace lit |
+| 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates *(planned)* | `graph-trace-pinned` + merged trace lit |
 | 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `INTERACTIVE_SURFACE` |
 
 ## Trace vs brand (normative)

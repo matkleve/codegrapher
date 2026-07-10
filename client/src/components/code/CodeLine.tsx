@@ -19,7 +19,12 @@ import {
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
-import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
+import {
+  isTypeAnnotationContext,
+  semanticForCodeIdentifier,
+  semanticFromChipElement,
+  TOKEN_ANCHOR,
+} from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
@@ -81,7 +86,7 @@ export function CodeLine({
       edgeKeyRef.current = edgeKey;
 
       const entry = lookup(name);
-      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
+      const kind = semanticFromChipElement(chipEl, entry);
       const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
       if (localEdges.length > 0) {
         beginTrace(tokenKey, localEdges);
@@ -150,7 +155,7 @@ export function CodeLine({
   const onIdentifierClick = useCallback(
     (name: string, el: HTMLElement, isDefinition: boolean) => {
       const entry = lookup(name);
-      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
+      const kind = semanticFromChipElement(el, entry);
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       pinTrace(tokenKey);
       firePreview(name, `${lineNumber}`, el);
@@ -244,13 +249,21 @@ export function CodeLine({
           : null;
         const indexed = hasSymbol(token.text);
         const interactive = indexed || !!localDefId || !!localTargetId;
+        const inTypeContext = isTypeAnnotationContext(prevText);
 
         if (!interactive) {
-          return <span key={`${lineNumber}-${i}`}>{token.text}</span>;
+          return (
+            <span
+              key={`${lineNumber}-${i}`}
+              className={cn(inTypeContext && "text-[color:var(--token-edge-type)]")}
+            >
+              {token.text}
+            </span>
+          );
         }
 
         const entry = lookup(token.text);
-        const semantic = entry ? symbolKindToSemantic(entry.kind) : "variable";
+        const semantic = semanticForCodeIdentifier(entry, prevText);
         const isClassDeclName =
           indexed &&
           semantic === "class" &&

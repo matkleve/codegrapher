@@ -1,5 +1,5 @@
 /** Hover-intent timing — mirrors connectors-proto.html (no info popover timer). */
-export const FIRE_COLD_MS = 240;
+export const FIRE_COLD_MS = 150;
 export const FIRE_WARM_MS = 80;
 export const LEAVE_GRACE_MS = 150;
 

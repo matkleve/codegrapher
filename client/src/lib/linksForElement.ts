@@ -5,6 +5,7 @@ import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
+import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
 
@@ -15,6 +16,12 @@ export type DefinitionEdgeContext = {
   getNode: (id: string) => Node | undefined;
   sourceFlowId: string;
   sourceMemberId?: string;
+  /** Precomputed usage sites — avoids full graph scan on definition hover. */
+  lookupIndexedUsageSites?: (
+    token: string,
+    sourceFlowId: string,
+    sourceMemberId?: string,
+  ) => UsageSiteRecord[];
 };
 
 type UsageSite = {
@@ -114,6 +121,7 @@ export function resolveDefinitionUsageSites(
   getNode: (id: string) => Node | undefined,
   sourceFlowId: string,
   sourceMemberId?: string,
+  context?: DefinitionEdgeContext,
 ): UsageSite[] {
   const targets: UsageSite[] = [];
   const seen = new Set<string>();
@@ -149,6 +157,38 @@ export function resolveDefinitionUsageSites(
       anchor: { type: "element", el },
       liveTo: { token, flowNodeId: sourceFlowId, role: "usage" },
     });
+  }
+
+  if (!graphData && !context?.lookupIndexedUsageSites) return targets;
+
+  const indexed =
+    context?.lookupIndexedUsageSites?.(token, sourceFlowId, sourceMemberId) ??
+    [];
+
+  if (indexed.length > 0) {
+    for (const rec of indexed) {
+      const rfNode = getNode(rec.flowNodeId);
+      if (!rfNode || rfNode.type !== "class") continue;
+      const classData = rfNode.data as ClassNodeData;
+
+      add({
+        anchor: resolveUsageSiteAnchor(
+          rec.flowNodeId,
+          classData,
+          rec.memberId,
+          rec.lineNumber,
+          token,
+        ),
+        liveTo: {
+          token,
+          flowNodeId: rec.flowNodeId,
+          memberId: rec.memberId,
+          lineNumber: rec.lineNumber,
+          role: "usage",
+        },
+      });
+    }
+    return targets;
   }
 
   if (!graphData) return targets;
@@ -239,7 +279,7 @@ export function buildDefinitionPreviewEdges(
   if (local.length > 0) return local;
 
   const sites =
-    context?.graphData && context.getNode
+    context?.getNode
       ? resolveDefinitionUsageSites(
           token,
           definitionEl,
@@ -247,6 +287,7 @@ export function buildDefinitionPreviewEdges(
           context.getNode,
           context.sourceFlowId,
           context.sourceMemberId,
+          context,
         )
       : resolveUsageAnchors(token, definitionEl).map((el) => ({
           anchor: { type: "element" as const, el },
@@ -280,6 +321,7 @@ export function connectionCountForHost(
       context.getNode,
       context.sourceFlowId,
       context.sourceMemberId,
+      context,
     ).length;
   }
   return resolveUsageAnchors(symbolName, host).length;

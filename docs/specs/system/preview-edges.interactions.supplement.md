@@ -16,10 +16,11 @@ stateDiagram-v2
   HoverPending --> Tracing: dwell elapsed / Ctrl held
 
   Tracing --> Idle: leave grace elapsed (unpinned)
-  Tracing --> Pinned: Ctrl-click token / wire end
+  Tracing --> Pinned: click token / wire end
 
   Pinned --> Idle: Esc / empty canvas click / clearTokenInfo
-  Pinned --> Pinned: Ctrl-click different token (re-pin)
+  Pinned --> Pinned: click different token (replace pin set)
+  Pinned --> Pinned: Shift+click different token (accumulate pin)
 
   note right of Tracing
     traceTokenKey = hoveredTokenKey
@@ -50,13 +51,13 @@ sequenceDiagram
   participant B as beginTrace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 240ms
-  U->>H: leave A before 240ms
+  H->>T: fire in 150ms
+  U->>H: leave A before 150ms
   H->>T: cancel fire
   Note over B: no trace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 240ms
+  H->>T: fire in 150ms
   T->>B: onFire → edges + lit
   U->>H: enter token B (warm)
   H->>T: fire in 80ms
@@ -69,7 +70,7 @@ sequenceDiagram
 
 | Constant | Value | Effect |
 | -------- | ----- | ------ |
-| `FIRE_COLD_MS` | 240 | First hover dwell |
+| `FIRE_COLD_MS` | 150 | First hover dwell |
 | `FIRE_WARM_MS` | 80 | Adjacent token while warm |
 | `LEAVE_GRACE_MS` | 150 | Anti-flicker between neighbors |
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
@@ -163,7 +164,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  A[Ctrl-click function title<br/>buildSubtitle def] --> B[Fan-out edges + liveTo hints]
+  A[Click function title<br/>buildSubtitle def] --> B[Fan-out edges + liveTo hints]
   B --> C{Caller method expanded?}
   C -->|no| D[Wire ends at member handle]
   C -->|yes| E[Wire ends at usage TokenChip]
@@ -174,6 +175,18 @@ flowchart TD
 ```
 
 Implementation: `client/src/lib/computeTraceLit.ts`, `GraphInteractionContext` `revealRevision` dep.
+
+---
+
+## Modifier stack (normative)
+
+| Input | Effect |
+| ----- | ------ |
+| Hover | Dwell → preview edges (cold/warm timing) |
+| Ctrl | Instant preview; dim syntax/keywords; shimmer indexed tokens |
+| Click token / wire | Pin one trace (**replaces** existing pins) |
+| Shift+click token | **Accumulate** pin — add trace; merged lit + wires *(planned)* |
+| Esc / empty canvas | Clear all pins |
 
 ---
 
@@ -188,7 +201,8 @@ flowchart LR
   Pin --> G3[graph-trace-pinned on canvas]
   Pin --> G4[hover leave clears hoverPreviewEdges only]
   Pin --> G5[previewEdges = pinned + hover in parallel]
-  Pin --> OK[Click other token: re-pin]
+  Pin --> OK[Click: replace pin set]
+  Pin --> Acc[Shift+click: accumulate pin]
 ```
 
 | Action | Unpinned trace | Pinned trace |
@@ -197,8 +211,9 @@ flowchart LR
 | Leave hovered token | endTrace | Clear hover edges only; pinned wires stay |
 | Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` until dwell fires |
 | Expand member | Live retarget wires | Live retarget wires |
-| Click other token | Pin | Re-pin to new token |
-| Empty canvas / Esc | endTrace | clearTokenInfo |
+| Click other token | Pin | **Replace** pin set (single trace) |
+| Shift+click other token | Pin | **Accumulate** — add trace; prior pins stay lit *(planned)* |
+| Empty canvas / Esc | endTrace | clearTokenInfo (all pins) |
 
 **Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin. **`previewEdges`** exposed to the overlay is `pinnedPreviewEdges + hoverPreviewEdges` in parallel while both are active.
 
@@ -248,7 +263,7 @@ flowchart LR
   CTX --> OVL[PreviewEdgeOverlay]
 ```
 
-**Ctrl-click pin** opens docked `TokenContextBar` (not a floating popover). Wire click pins trace + scroll + flash; context bar optional per wire handler.
+**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins *(planned — see SPEC-DRIFT)*. Wire click pins trace + scroll + flash. Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
 
 ---
 

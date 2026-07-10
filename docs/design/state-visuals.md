@@ -1,7 +1,8 @@
 # State visuals
 
 **Who this is for:** anyone implementing hover, focus, selection, or disabled on shared controls.  
-**Normative contract:** [interaction-emphasis.md](../specs/system/interaction-emphasis.md).
+**Normative contract:** [interaction-emphasis.md](../specs/system/interaction-emphasis.md).  
+**Full accent matrix:** [brand-book.md](brand-book.md).
 
 ---
 

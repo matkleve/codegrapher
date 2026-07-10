@@ -36,6 +36,7 @@ import type {
   GraphCanvasProps,
 } from "@/components/graph/graphCanvasTypes";
 import { GraphInteractionProvider } from "@/context/GraphInteractionContext";
+import { JumpTooltipProvider } from "@/context/JumpTooltipContext";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { FIT_VIEW_PADDING, layoutFlowElements } from "@/lib/flowLayout";
 import { cloneFlowSnapshot } from "@/lib/graphFlowSnapshot";
@@ -559,23 +560,25 @@ export function GraphFlowInner({
             !showGrid && "hidden",
           )}
         />
-        <GraphInteractionProvider
-          graphData={graphData}
-          nodes={nodes}
-          setNodes={setNodes}
-          onLoadFile={onLoadFile}
-        >
-          <GraphFlowCanvas
+        <JumpTooltipProvider>
+          <GraphInteractionProvider
+            graphData={graphData}
             nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            onNodeContextMenu={onNodeContextMenu}
-            onPaneClick={onPaneClick}
-            onMove={onMove}
-          />
-        </GraphInteractionProvider>
+            setNodes={setNodes}
+            onLoadFile={onLoadFile}
+          >
+            <GraphFlowCanvas
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
+              onNodeContextMenu={onNodeContextMenu}
+              onPaneClick={onPaneClick}
+              onMove={onMove}
+            />
+          </GraphInteractionProvider>
+        </JumpTooltipProvider>
         {!hasGraph && !loading && (
           <div className="pointer-events-none absolute inset-0 z-[5] flex flex-col items-center justify-center gap-4 px-6 text-center">
             <div className="grid size-14 place-items-center rounded-2xl border border-border bg-card/70 text-muted-foreground shadow-[var(--node-shadow)] backdrop-blur-sm">

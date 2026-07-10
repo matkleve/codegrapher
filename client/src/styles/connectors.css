@@ -508,14 +508,24 @@
   stroke-dashoffset: 0;
   animation:
     proto-flow 700ms linear infinite,
-    preview-edge-bloom 340ms var(--ease) both;
+    preview-edge-bloom 180ms var(--ease) both;
 }
 
 .preview-edge-glow {
   stroke-linecap: round;
   stroke-width: 3.5;
   filter: blur(2px);
-  animation: preview-edge-bloom-glow 400ms var(--ease) both;
+  animation: preview-edge-bloom-glow 200ms var(--ease) both;
+}
+
+/* Warm trace — skip entrance bloom when switching between adjacent tokens. */
+.preview-edge-path.preview-edge-warm {
+  animation: proto-flow 700ms linear infinite;
+}
+
+.preview-edge-glow.preview-edge-warm {
+  animation: none;
+  opacity: 0.16;
 }
 
 .preview-edge-hit {
@@ -532,16 +542,16 @@
   opacity: 0;
   transform: translateY(-50%) scale(0);
   transition:
-    transform 260ms var(--spring),
-    opacity 200ms var(--ease);
+    transform 180ms var(--spring),
+    opacity 140ms var(--ease);
 }
 
 .flow-anchor-on {
   opacity: 1;
   transform: translateY(-50%) scale(1);
   transition:
-    transform 260ms var(--spring),
-    opacity 200ms var(--ease),
+    transform 180ms var(--spring),
+    opacity 140ms var(--ease),
     box-shadow 200ms var(--ease),
     filter 200ms var(--ease);
   background: color-mix(in oklch, currentColor 86%, white) !important;
@@ -549,6 +559,14 @@
   box-shadow:
     0 0 1.5px 0.5px color-mix(in oklch, currentColor 88%, white),
     0 0 5px 1.5px color-mix(in oklch, currentColor 42%, transparent);
+}
+
+.graph-trace-warm .flow-anchor-on {
+  transition:
+    transform 120ms var(--spring),
+    opacity 100ms var(--ease),
+    box-shadow 100ms var(--ease),
+    filter 100ms var(--ease);
 }
 
 .jump-tip {

@@ -13,6 +13,7 @@ Last updated: 2026-07-10
 | [docs/glossary.md](../glossary.md) | Canonical terminology |
 | [docs/agent-workflows/element-spec-format.md](../agent-workflows/element-spec-format.md) | Spec template |
 | [docs/design/tokens.md](../design/tokens.md) | Color/motion tokens |
+| [docs/design/brand-book.md](../design/brand-book.md) | Brand identity, accent matrix, consistency audit |
 | [docs/design/state-visuals.md](../design/state-visuals.md) | Hover/focus contract |
 | [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md) | Who owns what |
 | [SPEC-DRIFT.md](SPEC-DRIFT.md) | Open spec ↔ code mismatches (human decision) |

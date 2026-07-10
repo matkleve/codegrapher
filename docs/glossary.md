@@ -59,10 +59,13 @@
   Mouse over an indexed token without Ctrl. Preview edge fires after cold/warm dwell (see `hoverIntent.ts`).
 
 - **Ctrl reveal**  
-  Holding Ctrl: instant preview, global token shimmer, node breathe. Release Ctrl returns to calm default.
+  Holding Ctrl: instant preview, dims syntax/keywords (`graph-ctrl-preview`), shimmers indexed tokens. Does not pin. Release Ctrl returns to calm default.
 
 - **Pin**  
-  Ctrl-click or wire hit-zone click locks the token info box until click-away on empty canvas.
+  Click an interactive token or wire hit-zone to lock one trace (replaces any existing pins) and open the token info box. Clear via click-away on empty canvas or Esc when the context bar is focused.
+
+- **Shift+accumulate pin**  
+  Shift+click adds another pinned trace without clearing earlier pins. All accumulated traces stay lit with merged wires. Plain click (no Shift) replaces the whole pin set with a single trace. **Not implemented yet** — code still holds one `pinnedTokenKey`; see [SPEC-DRIFT.md](specs/SPEC-DRIFT.md).
 
 ---
 

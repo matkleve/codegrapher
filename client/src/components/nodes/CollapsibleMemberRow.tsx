@@ -58,6 +58,7 @@ export function CollapsibleMemberRow({
     beginTrace,
     isCtrlPreviewMode,
     graphData,
+    lookupIndexedUsageSites,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -85,8 +86,9 @@ export function CollapsibleMemberRow({
       getNode,
       sourceFlowId: flowNodeId,
       sourceMemberId: memberId,
+      lookupIndexedUsageSites,
     }),
-    [flowNodeId, getNode, graphData, memberId],
+    [flowNodeId, getNode, graphData, lookupIndexedUsageSites, memberId],
   );
 
   const fireDefPreview = useCallback(() => {

@@ -1,13 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useJumpTooltip } from "@/context/JumpTooltipContext";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
 const PAD = 14;
 const VIEWPORT_MARGIN = 6;
 
 export function JumpTooltip() {
-  const { jumpTooltip } = useGraphInteraction();
+  const { jumpTooltip } = useJumpTooltip();
   const tipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(
     null,

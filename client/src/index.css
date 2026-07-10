@@ -44,7 +44,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  /* Coral brand accent for interactive hover (cyan in both themes) */
+  /* Brand gold — interactive hover (both themes) */
   --color-brand: var(--brand);
   --color-brand-surface: var(--brand-surface);
   --color-brand-border: var(--brand-border);
@@ -129,10 +129,10 @@
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.46 0.17 278);
-  /* Sky-cyan hover accent — clearly interactive, not error red */
-  --brand: oklch(0.52 0.12 220);
-  --brand-surface: oklch(0.96 0.02 220);
-  --brand-border: oklch(0.86 0.05 220);
+  /* Brand gold hover accent — clearly interactive, distinct from primary periwinkle */
+  --brand: oklch(0.52 0.13 88);
+  --brand-surface: oklch(0.96 0.03 88);
+  --brand-border: oklch(0.86 0.06 88);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
   --motion-hover-surface: 320ms;
@@ -227,10 +227,10 @@ html.dark {
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
   --explorer-file-in-graph: oklch(0.72 0.12 255);
-  /* Sky-cyan hover accent on dark surfaces */
-  --brand: oklch(0.74 0.11 220);
-  --brand-surface: oklch(0.22 0.025 220);
-  --brand-border: oklch(0.38 0.06 220);
+  /* Brand gold hover accent on dark surfaces */
+  --brand: oklch(0.78 0.12 88);
+  --brand-surface: oklch(0.24 0.04 88);
+  --brand-border: oklch(0.42 0.09 88);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
   --faint: oklch(0.46 0.03 255);

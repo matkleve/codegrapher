@@ -42,9 +42,9 @@ When behavior changes, update the owning spec in the same change.
 - Interactive hover: see `docs/specs/system/interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
   `--brand-surface` / `--brand-border`, gold-per-theme, registered as Tailwind
   `brand`/`brand-surface`/`brand-border`). Route any new clickable/draggable element's
-  hover to these — not `--primary` (which is theme-split blue/gold). The raw hover
+  hover to these — not `--primary` (periwinkle action accent). The raw hover
   rules live in `index.css` (`.hoverable:hover`, section headers, graph controls); the
-  button variants share `CONTROL_INTERACTIVE_HOVER` in `lib/controlTokens.ts` (keep the
+  button variants share `INTERACTIVE_SURFACE` in `lib/controlTokens.ts` (keep the
   two in sync).
 
 ## Conventions

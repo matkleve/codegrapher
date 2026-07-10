@@ -8,16 +8,53 @@ export type TokenKind = SemanticTokenKind | "plain";
 export function symbolKindToSemantic(kind: SymbolKind): SemanticTokenKind {
   switch (kind) {
     case "interface":
+    case "type":
+      return "type";
     case "class":
       return "class";
     case "function":
     case "method":
       return "function";
-    case "type":
-      return "type";
     case "property":
       return "variable";
   }
+}
+
+const TYPE_CONTEXT_PREV = new Set([
+  ":",
+  "<",
+  "extends",
+  "implements",
+  "?",
+  "instanceof",
+]);
+
+/** Type annotations and generic bounds use blue `type` ink, not purple `class`. */
+export function isTypeAnnotationContext(prevText: string | null): boolean {
+  return TYPE_CONTEXT_PREV.has(prevText ?? "");
+}
+
+export function semanticForCodeIdentifier(
+  entry: { kind: SymbolKind } | undefined,
+  prevText: string | null,
+): SemanticTokenKind {
+  const base = entry ? symbolKindToSemantic(entry.kind) : "variable";
+  if (isTypeAnnotationContext(prevText) && base !== "function") {
+    return "type";
+  }
+  return base;
+}
+
+/** Read the semantic kind rendered on a chip (data-token-kind). */
+export function semanticFromChipElement(
+  chipEl: HTMLElement,
+  entry: { kind: SymbolKind } | undefined,
+): SemanticTokenKind {
+  const kind = chipEl.dataset.tokenKind;
+  if (kind === "class" || kind === "function" || kind === "type" || kind === "variable") {
+    return kind;
+  }
+  return entry ? symbolKindToSemantic(entry.kind) : "variable";
 }
 
 /** Resting text color per token type. */

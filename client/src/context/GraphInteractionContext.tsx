@@ -27,13 +27,17 @@ import {
 import {
   type PreviewEdgeSpec,
 } from "@/lib/previewEdgeTypes";
-import { edgeTouchesHandle } from "@/lib/resolveLiveAnchor";
 import { computeTraceLit, EMPTY_TRACE_LIT, mergeTraceLit } from "@/lib/computeTraceLit";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { useClearPinnedOnClickAway } from "@/hooks/useClearPinnedOnClickAway";
+import { clearJumpTooltip } from "@/context/JumpTooltipContext";
+import {
+  isDefinitionSignatureLine,
+} from "@/lib/linksForElement";
+import { buildUsageSiteIndex, type UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -61,13 +65,6 @@ export function toAnchorRect(rect: DOMRect): AnchorRect {
 
 export type { TokenInfoState };
 
-export type JumpTooltipState = {
-  token: string;
-  kind: SemanticTokenKind;
-  x: number;
-  y: number;
-} | null;
-
 type GraphInteractionContextValue = {
   previewEdges: PreviewEdgeSpec[];
   isHandleActive: (handle: string) => boolean;
@@ -85,8 +82,6 @@ type GraphInteractionContextValue = {
   tokenInfo: TokenInfoState;
   showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
   clearTokenInfo: () => void;
-  jumpTooltip: JumpTooltipState;
-  setJumpTooltip: (state: JumpTooltipState) => void;
   isCtrlPreviewMode: boolean;
   isTraceActive: boolean;
   isTraceLit: (traceKey: string) => boolean;
@@ -102,6 +97,11 @@ type GraphInteractionContextValue = {
   pinTrace: (tokenKey: string) => void;
   pinnedTokenKey: string | null;
   hoveredTokenKey: string | null;
+  lookupIndexedUsageSites: (
+    token: string,
+    sourceFlowId: string,
+    sourceMemberId?: string,
+  ) => UsageSiteRecord[];
 };
 
 const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
@@ -133,7 +133,6 @@ export function GraphInteractionProvider({
   const [pinnedTokenKey, setPinnedTokenKey] = useState<string | null>(null);
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
-  const [jumpTooltip, setJumpTooltip] = useState<JumpTooltipState>(null);
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
@@ -150,7 +149,7 @@ export function GraphInteractionProvider({
     setHoverPreviewEdges([]);
     setHoveredTokenKey(null);
     setIsWarm(false);
-    setJumpTooltip(null);
+    clearJumpTooltip();
   }, []);
 
   const endHoverPreview = useCallback(() => {
@@ -366,24 +365,59 @@ export function GraphInteractionProvider({
     return parts.join("|");
   }, [nodes]);
 
+  const indexedSymbolNames = useMemo(
+    () => new Set(symbols.keys()),
+    [symbols],
+  );
+
+  const usageSiteIndex = useMemo(
+    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
+    [indexedSymbolNames, nodes],
+  );
+
+  const lookupIndexedUsageSites = useCallback(
+    (token: string, sourceFlowId: string, sourceMemberId?: string) => {
+      const records = usageSiteIndex.get(token) ?? [];
+      return records.filter(
+        (rec) =>
+          !isDefinitionSignatureLine(
+            rec.line,
+            token,
+            rec.flowNodeId,
+            rec.memberId,
+            sourceFlowId,
+            sourceMemberId,
+          ),
+      );
+    },
+    [usageSiteIndex],
+  );
+
   const [domRevision, setDomRevision] = useState(0);
   useLayoutEffect(() => {
     if (!traceTokenKey) return;
     setDomRevision((r) => r + 1);
   }, [revealRevision, traceTokenKey]);
 
+  const activeHandleKinds = useMemo(() => {
+    const map = new Map<string, SemanticTokenKind>();
+    for (const edge of previewEdges) {
+      const { from, to } = refinePreviewEdge(edge, getNode);
+      if (from.type === "handle") map.set(from.handle, edge.kind);
+      if (to.type === "handle") map.set(to.handle, edge.kind);
+    }
+    return map;
+  }, [domRevision, getNode, previewEdges, revealRevision]);
+
   const isHandleActive = useCallback(
-    (handle: string) =>
-      previewEdges.some((e) => edgeTouchesHandle(e, handle, getNode)),
-    [getNode, previewEdges, revealRevision],
+    (handle: string) => activeHandleKinds.has(handle),
+    [activeHandleKinds],
   );
 
   const edgeKindAtHandle = useCallback(
-    (handle: string): SemanticTokenKind | null => {
-      const edge = previewEdges.find((e) => edgeTouchesHandle(e, handle, getNode));
-      return edge?.kind ?? null;
-    },
-    [getNode, previewEdges, revealRevision],
+    (handle: string): SemanticTokenKind | null =>
+      activeHandleKinds.get(handle) ?? null,
+    [activeHandleKinds],
   );
 
   const pinnedTraceLit = useMemo(
@@ -452,8 +486,6 @@ export function GraphInteractionProvider({
       tokenInfo,
       showTokenInfo,
       clearTokenInfo,
-      jumpTooltip,
-      setJumpTooltip,
       isCtrlPreviewMode: isCtrlActive,
       isTraceActive,
       isTraceLit,
@@ -469,6 +501,7 @@ export function GraphInteractionProvider({
       pinTrace,
       pinnedTokenKey,
       hoveredTokenKey,
+      lookupIndexedUsageSites,
     }),
     [
       previewEdges,
@@ -485,7 +518,6 @@ export function GraphInteractionProvider({
       tokenInfo,
       showTokenInfo,
       clearTokenInfo,
-      jumpTooltip,
       isCtrlActive,
       isTraceActive,
       isTraceLit,
@@ -501,6 +533,7 @@ export function GraphInteractionProvider({
       pinTrace,
       pinnedTokenKey,
       hoveredTokenKey,
+      lookupIndexedUsageSites,
     ],
   );
 

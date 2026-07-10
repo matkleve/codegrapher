@@ -37,7 +37,8 @@ export function NodeCardHeader({
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, isCtrlPreviewMode, graphData } = useGraphInteraction();
+  const { beginTrace, isCtrlPreviewMode, graphData, lookupIndexedUsageSites } =
+    useGraphInteraction();
   const { getNode } = useReactFlow();
 
   const indexed = Boolean(symbolName && hasSymbol(symbolName));
@@ -55,8 +56,9 @@ export function NodeCardHeader({
       graphData,
       getNode,
       sourceFlowId: flowNodeId,
+      lookupIndexedUsageSites,
     }),
-    [flowNodeId, getNode, graphData],
+    [flowNodeId, getNode, graphData, lookupIndexedUsageSites],
   );
 
   const fireDefPreview = useCallback(() => {
