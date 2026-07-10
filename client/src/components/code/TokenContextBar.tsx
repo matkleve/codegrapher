@@ -105,7 +105,10 @@ export function TokenContextBar() {
               size="sm"
               className="h-7 gap-1.5 text-[11px]"
               onClick={() => {
-                if (def?.flowNodeId) focusFlowNode(def.flowNodeId);
+                if (def?.flowNodeId) {
+                  clearTokenInfo();
+                  focusFlowNode(def.flowNodeId);
+                }
               }}
             >
               <Crosshair className="size-3.5" aria-hidden />
@@ -177,7 +180,10 @@ export function TokenContextBar() {
                 <button
                   type="button"
                   className={cn(INTERACTIVE_ROW_LEFT, "w-full py-1.5 text-xs", TOKEN_PILL[ref.kind])}
-                  onClick={() => focusFlowNode(ref.flowNodeId!)}
+                  onClick={() => {
+                    clearTokenInfo();
+                    focusFlowNode(ref.flowNodeId!);
+                  }}
                 >
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
                   <span className="min-w-0 truncate text-left">

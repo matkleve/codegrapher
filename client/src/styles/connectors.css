@@ -75,8 +75,8 @@
   width: fit-content;
   max-width: 100%;
   margin: 0 -2px;
-  padding: 1px 4px;
-  border-radius: 5px;
+  padding: var(--token-chip-pad-y) var(--token-chip-pad-x);
+  border-radius: var(--token-chip-radius);
   font-weight: 560;
   white-space: nowrap;
   transition:
@@ -86,6 +86,8 @@
 }
 
 .token-def-label {
+  padding: var(--token-def-label-pad-y) var(--token-def-label-pad-x);
+  border-radius: var(--token-def-label-radius);
   font-weight: 620;
 }
 
@@ -224,19 +226,23 @@
    function container becomes active. */
 .member-row {
   border: 1px solid transparent;
-  transition:
-    border-color 0.2s var(--ease),
-    background-color 0.2s var(--ease),
-    opacity 0.2s var(--ease);
 }
 
-/* Node card border/shadow settle with the prototype ease (never height —
-   a size transition feeds React Flow's ResizeObserver into a commit loop). */
+/* Node card border/shadow — no transition during trace (everything lights at once). */
 .react-flow__node.class-node-root {
   transition:
     border-color 0.2s var(--ease),
     box-shadow 0.2s var(--ease),
     opacity 0.2s var(--ease);
+}
+
+.graph-trace-active .react-flow__node.class-node-root,
+.graph-trace-active .member-row {
+  transition:
+    border-color 0s,
+    box-shadow 0s,
+    background-color 0.2s var(--ease),
+    color 0.2s var(--ease);
 }
 
 /* Resting keyword tint — prototype `.kw` (not theme primary, which reads gold/red). */
@@ -267,19 +273,10 @@
     opacity 0.2s var(--ease);
 }
 
-/* ── Trace mode: dim per-element, lit shines through (prototype .proto.trace) ── */
-/* Syntax tokens stay faint during trace — only .token-chip-lit keeps its color */
+/* ── Trace mode — prototype `.proto.trace` (per-element color only, no bg wash) ── */
 .graph-trace-active .code-kw,
 .graph-trace-active .code-pn,
-.graph-trace-active .code-comment,
-.graph-trace-active .code-string,
-.graph-trace-active .code-number,
-.graph-trace-active .member-body-wrap,
-.graph-ctrl-preview.graph-trace-active .code-kw,
-.graph-ctrl-preview.graph-trace-active .code-pn,
-.graph-ctrl-preview.graph-trace-active .code-comment,
-.graph-ctrl-preview.graph-trace-active .code-string,
-.graph-ctrl-preview.graph-trace-active .code-number {
+.graph-trace-active .member-body-wrap {
   color: var(--faint) !important;
 }
 
@@ -288,47 +285,25 @@
 .graph-trace-active .member-section-bulk,
 .graph-trace-active .node-card-title,
 .graph-trace-active .node-card-caret,
-.graph-trace-active .member-row-caret,
-.graph-trace-active .member-row-header {
+.graph-trace-active .member-row-caret {
   color: var(--faint) !important;
 }
 
+/* Unlit tokens / member names → faint; strip chip chrome (proto `.tok` in trace) */
 .graph-trace-active .token-chip:not(.token-chip-lit) .token-chip-text,
-.graph-trace-active .token-def-label:not(.token-chip-lit) {
+.graph-trace-active .token-def-label:not(.token-chip-lit),
+.graph-trace-active .member-row-label:not(.token-chip-lit) {
   color: var(--faint) !important;
   background: transparent;
   filter: none;
-}
-
-.graph-trace-active .member-row-label:not(.token-chip-lit) {
-  color: var(--faint) !important;
-}
-
-/* Trace: wash non-active member boxes toward card; only `.trace-member-lit` tints. */
-.graph-trace-active .member-row:not(.trace-member-lit) {
-  background: color-mix(in oklch, var(--muted) 24%, var(--card)) !important;
-}
-
-/* Prototype: `.member` keeps card-2; only `.member.lit` tints — never strip backgrounds. */
-.graph-trace-active .member-row:not(.trace-member-owner-lit) {
-  border-color: transparent !important;
+  box-shadow: none;
 }
 
 .graph-trace-active .react-flow__node.class-node-root {
   border-color: var(--border);
 }
 
-.graph-trace-active .class-node-root.trace-node-lit {
-  border-color: color-mix(in oklch, var(--brand) 18%, var(--border));
-  box-shadow:
-    var(--shadow, 0 12px 40px -12px rgb(0 0 0 / 0.25)),
-    0 0 0 1px color-mix(in oklch, var(--brand) 18%, transparent);
-}
-
-.graph-trace-active .class-node-root.trace-node-lit .node-card-title {
-  color: var(--foreground) !important;
-}
-
+/* Lit member — proto `.member.lit` (subtle tint, rest stay on card-2 / muted) */
 .graph-trace-active .trace-member-lit {
   background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted)) !important;
 }
@@ -337,24 +312,10 @@
   border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
 }
 
-/* Function body spread: keywords/punctuation readable (prototype .lit-line) */
+/* Active function body — proto `.lit-line` (kw/pn readable, not fully bleached) */
 .graph-trace-active .code-line.trace-lit-line .code-kw,
-.graph-trace-active .code-line.trace-lit-line .code-pn,
-.graph-trace-active .code-line.trace-lit-line .code-comment,
-.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-kw,
-.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-pn,
-.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-comment {
+.graph-trace-active .code-line.trace-lit-line .code-pn {
   color: var(--muted-foreground) !important;
-}
-
-.graph-trace-active .code-line.trace-lit-line .code-string,
-.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-string {
-  color: var(--faint) !important;
-}
-
-.graph-trace-active .code-line.trace-lit-line .code-number,
-.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-number {
-  color: var(--faint) !important;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
@@ -407,14 +368,14 @@
   stroke-dashoffset: 0;
   animation:
     proto-flow 700ms linear infinite,
-    preview-edge-bloom 340ms var(--ease) both;
+    preview-edge-bloom 120ms ease-out both;
 }
 
 .preview-edge-glow {
   stroke-linecap: round;
   stroke-width: 3.5;
   filter: blur(2px);
-  animation: preview-edge-bloom-glow 400ms var(--ease) both;
+  animation: preview-edge-bloom-glow 120ms ease-out both;
 }
 
 .preview-edge-hit {
@@ -440,8 +401,14 @@
   transform: translateY(-50%) scale(1);
   transition:
     transform 260ms var(--spring),
-    opacity 200ms var(--ease);
-  box-shadow: 0 0 7px currentColor;
+    opacity 200ms var(--ease),
+    box-shadow 200ms var(--ease),
+    filter 200ms var(--ease);
+  background: color-mix(in oklch, currentColor 86%, white) !important;
+  filter: brightness(1.14) saturate(1.08);
+  box-shadow:
+    0 0 2px 0.5px color-mix(in oklch, currentColor 88%, white),
+    0 0 7px 2px color-mix(in oklch, currentColor 48%, transparent);
 }
 
 .token-info-popover {

@@ -7,7 +7,6 @@ import {
 } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { previewTargetTop } from "@/lib/ctrlPreviewHandles";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
@@ -45,7 +44,6 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   } = useClassNodeController({ id, nodeData, nodeWidth, nodeHeight, bodyExpanded });
 
   const { isHandleActive, edgeKindAtHandle } = useGraphInteraction();
-  const { nodeLit } = useTraceAppearance({ flowNodeId: id });
   const classTargetId = previewTargetTop(id);
   const classTargetActive = isHandleActive(classTargetId);
   const classKind = edgeKindAtHandle(classTargetId);
@@ -62,10 +60,9 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       data-flow-node-id={id}
       className={cn(
         "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border text-left shadow-sm",
-        bodyExpanded ? "h-full bg-card" : "shrink-0 bg-accent",
+        bodyExpanded ? "h-full bg-card" : "shrink-0 bg-card",
         (selected || nodeData.selected) && "ring-2 ring-ring",
         nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-        nodeLit && "trace-node-lit",
       )}
       style={{
         width: nodeWidth,

@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
-import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
@@ -46,14 +45,12 @@ export function CodeLine({
   definedInLabel,
   symbolIndex,
 }: CodeLineProps) {
-  const { isCtrlActive } = useCtrlKey();
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
   const {
     graphData,
-    setPreviewEdges,
-    clearPreviewEdges,
-    setActiveTokenKey,
+    beginTrace,
+    endTrace,
     isHandleActive,
     edgeKindAtHandle,
     scheduleHoverFire,
@@ -61,6 +58,7 @@ export function CodeLine({
     showTokenInfo,
     pinTrace,
     pinnedTokenKey,
+    isCtrlPreviewMode,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -71,33 +69,28 @@ export function CodeLine({
 
   const clearHover = useCallback(() => {
     if (pinnedTokenKey) return;
-    const key = edgeKeyRef.current;
-    if (key) {
-      edgeKeyRef.current = null;
-      clearPreviewEdges();
-    }
-    setActiveTokenKey(null);
-  }, [clearPreviewEdges, pinnedTokenKey, setActiveTokenKey]);
+    edgeKeyRef.current = null;
+    endTrace();
+  }, [endTrace, pinnedTokenKey]);
 
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
-      const entry = lookup(name);
-      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-      setActiveTokenKey(tokenKey);
-
       const edgeKey = ctrlPreviewEdgeId(sourceFlowId, `${memberId}::${lineNumber}::${name}`);
       edgeKeyRef.current = edgeKey;
 
+      const entry = lookup(name);
+      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
       const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
       if (localEdges.length > 0) {
-        setPreviewEdges(localEdges);
+        beginTrace(tokenKey, localEdges);
         return;
       }
 
-      if (!hasSymbol(name)) return;
-
-      if (!entry) return;
+      if (!hasSymbol(name) || !entry) {
+        beginTrace(tokenKey, []);
+        return;
+      }
 
       const resolved = resolveVisibleTarget(
         name,
@@ -108,23 +101,20 @@ export function CodeLine({
       );
 
       if (!resolved || resolved.mode !== "graph") {
-        clearPreviewEdges();
+        beginTrace(tokenKey, []);
         return;
       }
 
-      const edge = buildUsagePreviewEdge(edgeKey, resolved, chipEl);
-      setPreviewEdges([edge]);
+      beginTrace(tokenKey, [buildUsagePreviewEdge(edgeKey, resolved, chipEl)]);
     },
     [
-      clearPreviewEdges,
+      beginTrace,
       getNode,
       graphData,
       hasSymbol,
       lookup,
       memberId,
       lineNumber,
-      setActiveTokenKey,
-      setPreviewEdges,
       sourceFlowId,
       symbols,
     ],
@@ -135,18 +125,10 @@ export function CodeLine({
       const chip = chipRefs.current.get(chipKey);
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
-
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
     },
-    [
-      clearHover,
-      firePreview,
-      lineNumber,
-      memberId,
-      scheduleHoverFire,
-      sourceFlowId,
-    ],
+    [clearHover, firePreview, lineNumber, memberId, scheduleHoverFire, sourceFlowId],
   );
 
   const onIdentifierLeave = useCallback(
@@ -159,8 +141,7 @@ export function CodeLine({
 
   const onIdentifierClick = useCallback(
     (name: string, el: HTMLElement, isDefinition: boolean) => {
-      if (!isCtrlActive) return;
-
+      if (!isCtrlPreviewMode) return;
       const entry = lookup(name);
       const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
@@ -188,8 +169,9 @@ export function CodeLine({
     [
       definedInLabel,
       filePath,
+      firePreview,
       hasSymbol,
-      isCtrlActive,
+      isCtrlPreviewMode,
       lineNumber,
       lookup,
       memberId,

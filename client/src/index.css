@@ -77,6 +77,13 @@
   --control-padding-x-md: 0.625rem;
   --control-gap-compact: 0.375rem;
   --control-gap-md: 0.375rem;
+  /* Token chips — inline code uses tight pad; def labels use control sm pad */
+  --token-chip-pad-y: 1px;
+  --token-chip-pad-x: 4px;
+  --token-def-label-pad-y: 0.125rem;
+  --token-def-label-pad-x: var(--control-padding-x-sm);
+  --token-chip-radius: 5px;
+  --token-def-label-radius: var(--radius-sm);
   --background: oklch(0.99 0.005 250);
   --foreground: oklch(0.18 0.03 260);
   --card: oklch(1 0 0);
@@ -552,8 +559,56 @@ html.dark {
 
 @import "./styles/connectors.css";
 
+/* Class/module node header — stays on card background during trace (no tint wash). */
+.node-card-header {
+  background-color: transparent;
+}
+
+/* File-type chip — brand hover on the pill only (not the node header drag surface) */
+.file-type-chip {
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease);
+}
+
+.file-type-chip:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+
+/* Node header drag grip — icon only at rest; brand surface on hover */
+.node-drag-grip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: var(--control-padding-x-sm) var(--control-padding-x-compact);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  background-color: transparent;
+  color: var(--muted-foreground);
+  transition: background-color var(--motion-hover-surface) var(--ease);
+}
+
+.node-drag-grip:hover {
+  background-color: var(--brand-surface);
+}
+
+.node-drag-grip:active {
+  cursor: grabbing;
+}
+
+.node-drag-grip svg {
+  color: currentColor;
+  stroke: currentColor;
+}
+
 /* Member row header layout (expand/collapse corners — not in proto) */
 .member-row-header {
+  background-color: transparent;
   border-left-color: transparent;
   border-right-color: transparent;
   border-top-color: transparent;
@@ -567,16 +622,16 @@ html.dark {
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-/* Brand surface only on hover — not when merely expanded/focused */
+/* Member row: expand hit-target without painting the whole bar (proto .member-head) */
+.member-row-header.hoverable:hover,
 .member-row-header.hoverable[aria-expanded="true"] {
   background-color: transparent;
   border-color: transparent;
   color: inherit;
 }
 
-.member-row-header.hoverable:hover {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
+.member-row-header.hoverable:hover .member-row-caret,
+.member-row-header.hoverable[aria-expanded="true"] .member-row-caret {
   color: var(--brand);
 }
 
@@ -586,11 +641,6 @@ html.dark {
 
 .member-row-header--expanded.hoverable:hover {
   border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-
-.member-row-header.hoverable:hover .member-row-caret,
-.member-row-header.hoverable:hover .member-row-label {
-  color: var(--brand);
 }
 
 .node-card-caret,

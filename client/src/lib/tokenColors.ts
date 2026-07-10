@@ -46,10 +46,12 @@ export const TOKEN_BG: Record<SemanticTokenKind, string> = {
 };
 
 export const TOKEN_ANCHOR: Record<SemanticTokenKind, string> = {
-  function: "bg-[color:var(--token-edge-function)]",
-  class: "bg-[color:var(--token-edge-class)]",
-  type: "bg-[color:var(--token-edge-type)]",
-  variable: "bg-[color:var(--token-edge-variable)]",
+  function:
+    "bg-[color:var(--token-edge-function)] text-[color:var(--token-edge-function)]",
+  class: "bg-[color:var(--token-edge-class)] text-[color:var(--token-edge-class)]",
+  type: "bg-[color:var(--token-edge-type)] text-[color:var(--token-edge-type)]",
+  variable:
+    "bg-[color:var(--token-edge-variable)] text-[color:var(--token-edge-variable)]",
 };
 
 /** Preview edge strokes — theme-aware via CSS variables (see index.css). */

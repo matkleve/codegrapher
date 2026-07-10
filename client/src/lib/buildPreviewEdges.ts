@@ -7,9 +7,14 @@ export function buildUsagePreviewEdge(
   target: GraphVisibleTarget,
   usageEl: HTMLElement,
 ): PreviewEdgeSpec {
+  const from =
+    target.definitionEl?.isConnected
+      ? { type: "element" as const, el: target.definitionEl }
+      : { type: "handle" as const, handle: target.targetHandle };
+
   return {
     id: edgeId,
-    from: { type: "handle", handle: target.targetHandle },
+    from,
     to: { type: "element", el: usageEl },
     kind: target.kind,
   };

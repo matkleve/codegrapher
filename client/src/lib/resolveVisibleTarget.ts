@@ -20,6 +20,8 @@ export type GraphVisibleTarget = {
   kind: SemanticTokenKind;
   memberId?: string;
   lineNumber?: number;
+  /** Prefer wiring to the visible member/class def label when present. */
+  definitionEl?: HTMLElement;
 };
 
 export type ExternalReferenceCard = {
@@ -122,6 +124,26 @@ export function isEntryInGraph(
   return Boolean(findClassGraphNode(token, entry, graphData));
 }
 
+function findMemberDefLabel(
+  flowNodeId: string,
+  memberId: string,
+  token: string,
+): HTMLElement | null {
+  const pane = document.querySelector(".graph-pane");
+  if (!pane) return null;
+  return pane.querySelector<HTMLElement>(
+    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] [data-member-id="${CSS.escape(memberId)}"] .member-row-label[data-symbol-name="${CSS.escape(token)}"]`,
+  );
+}
+
+function findClassDefLabel(flowNodeId: string, token: string): HTMLElement | null {
+  const pane = document.querySelector(".graph-pane");
+  if (!pane) return null;
+  return pane.querySelector<HTMLElement>(
+    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] .node-card-title[data-symbol-name="${CSS.escape(token)}"]`,
+  );
+}
+
 export function resolveVisibleTarget(
   token: string,
   symbols: Map<string, SymbolEntry[]>,
@@ -144,13 +166,26 @@ export function resolveVisibleTarget(
         if (!classNode) continue;
 
         const flowNodeId = toFlowId(classNode.id);
-        if (flowNodeId === sourceFlowId) continue;
-
         const classData = getClassNodeData(flowNodeId, getNode);
         if (!classData) continue;
 
         const memberId = findMemberId(methodNode, classData);
         if (!memberId) continue;
+
+        const definitionEl = findMemberDefLabel(flowNodeId, memberId, token);
+
+        if (flowNodeId === sourceFlowId) {
+          return {
+            mode: "graph",
+            level: "member",
+            flowNodeId,
+            targetHandle: previewMemberHandle(memberId),
+            definitionEl: definitionEl ?? undefined,
+            label: methodNode.label,
+            kind,
+            memberId,
+          };
+        }
 
         const bodyExpanded = !(classData.collapsed ?? false);
 
@@ -204,13 +239,26 @@ export function resolveVisibleTarget(
       if (!classNode) continue;
 
       const flowNodeId = toFlowId(classNode.id);
-      if (flowNodeId === sourceFlowId) continue;
+      const definitionEl = findClassDefLabel(flowNodeId, token);
+
+      if (flowNodeId === sourceFlowId) {
+        return {
+          mode: "graph",
+          level: "class",
+          flowNodeId,
+          targetHandle: previewTargetTop(flowNodeId),
+          definitionEl: definitionEl ?? undefined,
+          label: classNode.label,
+          kind,
+        };
+      }
 
       return {
         mode: "graph",
         level: "class",
         flowNodeId,
         targetHandle: previewTargetTop(flowNodeId),
+        definitionEl: definitionEl ?? undefined,
         label: classNode.label,
         kind,
       };

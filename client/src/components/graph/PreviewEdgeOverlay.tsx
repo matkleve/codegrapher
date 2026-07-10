@@ -1,8 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
-import { toFlowId } from "@/lib/graphIds";
-import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
@@ -56,9 +54,7 @@ export function PreviewEdgeOverlay() {
     setJumpTooltip,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
-    showTokenInfo,
     pinTrace,
-    graphData,
   } = useGraphInteraction();
   const svgRef = useRef<SVGSVGElement>(null);
   const [edges, setEdges] = useState<RenderedEdge[]>([]);
@@ -126,29 +122,13 @@ export function PreviewEdgeOverlay() {
     const targetRef = end === "to" ? spec.to : spec.from;
     if (targetRef.type !== "element" || !targetRef.el) return;
     const el = targetRef.el;
-    const flowNodeId =
-      el.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ?? "";
-    const graphNode = graphData?.nodes.find((n) => toFlowId(n.id) === flowNodeId);
     const traceKey = el.dataset.traceKey;
     if (traceKey) pinTrace(traceKey);
-    showTokenInfo(
-      makeTokenInfo({
-        token: el.dataset.symbolName ?? "",
-        kind: spec.kind,
-        pinned: true,
-        connectionCount: 1,
-        definedIn: graphNode?.label ?? "",
-        filePath: graphNode?.filePath ?? "",
-        line: 1,
-        sourceFlowId: flowNodeId,
-        sourceGraphNodeId: graphNode?.id ?? "",
-        role: el.dataset.symbolRole === "definition" ? "definition" : "usage",
-      }),
-    );
     el.animate(
       [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
       { duration: 520, easing: "ease-out" },
     );
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
     setJumpTooltip(null);
   };
 

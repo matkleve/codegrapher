@@ -1,16 +1,17 @@
 import { useCallback, useMemo, useRef } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
-import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
   connectionCountForHost,
+  type DefinitionEdgeContext,
 } from "@/lib/linksForElement";
 import {
   buildMemberSymbolIndex,
@@ -50,27 +51,23 @@ export function CollapsibleMemberRow({
   const lines = code.split("\n");
   const memberHandleId = previewMemberHandle(memberId);
   const labelRef = useRef<HTMLSpanElement>(null);
-  const { isCtrlActive } = useCtrlKey();
   const { lookup, hasSymbol } = useIndex();
   const {
     isHandleActive,
     edgeKindAtHandle,
-    setActiveTokenKey,
-    setPreviewEdges,
-    clearPreviewEdges,
-    scheduleHoverFire,
-    scheduleHoverClear,
-    showTokenInfo,
+    beginTrace,
+    endTrace,
     isCtrlPreviewMode,
-    pinTrace,
     pinnedTokenKey,
+    graphData,
   } = useGraphInteraction();
+  const { getNode } = useReactFlow();
 
   const traceName = symbolName ?? label;
   const defTokenKey = makeMemberDefKey(flowNodeId, memberId);
   const localDefId = memberDefId(memberId);
   const entry = lookup(traceName);
-  const defKind = entry ? symbolKindToSemantic(entry.kind) : symbolName ? "variable" : null;
+  const defKind = entry ? symbolKindToSemantic(entry.kind) : symbolName ? "function" : null;
   const traceable = hasSymbol(traceName) || Boolean(symbolName);
   const symbolIndex = useMemo(
     () => buildMemberSymbolIndex(memberId, code),
@@ -84,54 +81,64 @@ export function CollapsibleMemberRow({
 
   const clearDefHover = useCallback(() => {
     if (pinnedTokenKey) return;
-    clearPreviewEdges();
-    setActiveTokenKey(null);
-  }, [clearPreviewEdges, pinnedTokenKey, setActiveTokenKey]);
+    endTrace();
+  }, [endTrace, pinnedTokenKey]);
 
-  const targetActive = isHandleActive(memberHandleId);
-  const memberKind = edgeKindAtHandle(memberHandleId);
+  const defEdgeContext = useMemo<DefinitionEdgeContext>(
+    () => ({
+      graphData,
+      getNode,
+      sourceFlowId: flowNodeId,
+      sourceMemberId: memberId,
+    }),
+    [flowNodeId, getNode, graphData, memberId],
+  );
 
   const fireDefPreview = useCallback(() => {
     if (!traceable || !labelRef.current || !defKind) return;
+    beginTrace(
+      defTokenKey,
+      buildDefinitionPreviewEdges(
+        traceName,
+        defKind,
+        labelRef.current,
+        defEdgeContext,
+      ),
+    );
+  }, [beginTrace, defEdgeContext, defKind, defTokenKey, traceName, traceable]);
 
-    setActiveTokenKey(defTokenKey);
-    setPreviewEdges(buildDefinitionPreviewEdges(traceName, defKind, labelRef.current));
-  }, [defKind, defTokenKey, setActiveTokenKey, setPreviewEdges, traceName, traceable]);
+  const { onEnter: onDefEnter, onLeave: onDefLeave } = useTokenHover({
+    tokenKey: defTokenKey,
+    enabled: traceable,
+    onFire: fireDefPreview,
+    onClear: clearDefHover,
+  });
 
-  const onDefEnter = useCallback(() => {
-    if (!traceable) return;
-    scheduleHoverFire(defTokenKey, fireDefPreview, clearDefHover);
-  }, [clearDefHover, defTokenKey, fireDefPreview, scheduleHoverFire, traceable]);
+  const { onPinClick: onDefClick } = useTokenPin({
+    tokenKey: defTokenKey,
+    enabled: traceable && Boolean(defKind),
+    onFire: fireDefPreview,
+    animateEl: undefined,
+    buildPinInfo: () =>
+      makeTokenInfo({
+        token: traceName,
+        kind: defKind!,
+        connectionCount: connectionCountForHost(
+          labelRef.current!,
+          traceName,
+          defEdgeContext,
+        ),
+        definedIn: classLabel,
+        filePath,
+        line: 1,
+        sourceFlowId: flowNodeId,
+        sourceGraphNodeId: graphNodeId,
+        role: "definition",
+      }),
+  });
 
-  const onDefLeave = useCallback(() => {
-    if (!traceable) return;
-    scheduleHoverClear(defTokenKey, clearDefHover);
-  }, [clearDefHover, defTokenKey, scheduleHoverClear, traceable]);
-
-  const onDefClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!traceable || !labelRef.current || !defKind) return;
-      e.stopPropagation();
-      if (!isCtrlActive) return;
-      pinTrace(defTokenKey);
-      fireDefPreview();
-      showTokenInfo(
-        makeTokenInfo({
-          token: traceName,
-          kind: defKind,
-          pinned: true,
-          connectionCount: connectionCountForHost(labelRef.current, traceName),
-          definedIn: classLabel,
-          filePath,
-          line: 1,
-          sourceFlowId: flowNodeId,
-          sourceGraphNodeId: graphNodeId,
-          role: "definition",
-        }),
-      );
-    },
-    [classLabel, defKind, defTokenKey, filePath, fireDefPreview, flowNodeId, graphNodeId, isCtrlActive, pinTrace, showTokenInfo, traceName, traceable],
-  );
+  const targetActive = isHandleActive(memberHandleId);
+  const memberKind = edgeKindAtHandle(memberHandleId);
 
   return (
     <div
@@ -161,7 +168,7 @@ export function CollapsibleMemberRow({
         className={cn(
           "member-row-header group/member",
           INTERACTIVE_SURFACE,
-          "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-2 text-left",
+          "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-1.5 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
         aria-expanded={expanded}
@@ -195,6 +202,7 @@ export function CollapsibleMemberRow({
               ? ({ "--shimmer-delay": `${memberId.length * 0.37}s` } as React.CSSProperties)
               : undefined
           }
+          onPointerDown={(e) => e.stopPropagation()}
           onMouseEnter={onDefEnter}
           onMouseLeave={onDefLeave}
           onClick={onDefClick}
