@@ -1,7 +1,7 @@
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
 export type AnchorRef =
-  | { type: "element"; el: HTMLElement }
+  | { type: "element"; el: HTMLElement; side?: "left" | "right" }
   | { type: "handle"; handle: string };
 
 /** Re-resolved each frame while a trace is active (see docs/connections.md). */

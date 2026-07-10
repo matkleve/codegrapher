@@ -48,6 +48,7 @@ import {
   updatePinnedInfo,
   type PinnedTrace,
 } from "@/lib/pinnedTraces";
+import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
 import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -97,7 +98,6 @@ type GraphInteractionContextValue = {
   tokenInfo: TokenInfoState;
   showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
   clearTokenInfo: () => void;
-  isCtrlPreviewMode: boolean;
   isTraceActive: boolean;
   isTraceLit: (traceKey: string) => boolean;
   isTraceEndpoint: (traceKey: string) => boolean;
@@ -108,6 +108,8 @@ type GraphInteractionContextValue = {
   findReferences: (token: string) => TokenReference[];
   focusFlowNode: (flowNodeId: string) => void;
   onLoadFile: (filePath: string) => void | Promise<void>;
+  /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
+  refreshLoadTraces: () => void;
   graphData: GraphData | null;
   pinTrace: (tokenKey: string, shiftKey?: boolean) => void;
   pinnedTokenKey: string | null;
@@ -143,6 +145,8 @@ export function GraphInteractionProvider({
   onLoadFile,
 }: GraphInteractionProviderProps) {
   const { isCtrlActive } = useCtrlKey();
+  const isCtrlActiveRef = useRef(isCtrlActive);
+  isCtrlActiveRef.current = isCtrlActive;
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
 
@@ -306,7 +310,10 @@ export function GraphInteractionProvider({
         timers.fire = null;
       };
 
-      const delay = fireDelayMs(isWarm || hoveredTokenKey != null, isCtrlActive);
+      const delay = fireDelayMs(
+        isWarm || hoveredTokenKey != null,
+        isCtrlActiveRef.current,
+      );
       if (delay === 0) {
         runFire();
       } else {
@@ -325,7 +332,7 @@ export function GraphInteractionProvider({
         }, INFO_DELAY_MS);
       }
     },
-    [hoveredTokenKey, isCtrlActive, isWarm],
+    [hoveredTokenKey, isWarm],
   );
 
   const scheduleHoverClear = useCallback(
@@ -450,6 +457,70 @@ export function GraphInteractionProvider({
     }
     return parts.join("|");
   }, [nodes]);
+
+  const applyLoadTraceRebuild = useCallback(() => {
+    if (!graphData) return;
+
+    const hoverKey = hoveredTokenKeyRef.current;
+    if (hoverKey) {
+      setHoverPreviewEdges((prev) => {
+        if (!prev.some((e) => e.load)) return prev;
+        const rebuilt = rebuildTraceEdgesForKey(
+          hoverKey,
+          prev,
+          symbols,
+          graphData,
+          getNode,
+        );
+        return rebuilt ?? prev;
+      });
+    }
+
+    setPinnedTraces((prev) => {
+      let changed = false;
+      const next = prev.map((trace) => {
+        if (!trace.edges.some((e) => e.load)) return trace;
+        const rebuilt = rebuildTraceEdgesForKey(
+          trace.tokenKey,
+          trace.edges,
+          symbols,
+          graphData,
+          getNode,
+        );
+        if (!rebuilt) return trace;
+        changed = true;
+        return { ...trace, edges: rebuilt };
+      });
+      if (changed) {
+        pinnedTracesRef.current = next;
+      }
+      return changed ? next : prev;
+    });
+  }, [getNode, graphData, symbols]);
+
+  useLayoutEffect(() => {
+    const pendingLoad =
+      hoverPreviewEdges.some((e) => e.load) ||
+      pinnedTraces.some((t) => t.edges.some((e) => e.load));
+    if (!graphData || !pendingLoad) return;
+
+    let outerRaf = 0;
+    outerRaf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        applyLoadTraceRebuild();
+      });
+    });
+
+    return () => cancelAnimationFrame(outerRaf);
+  }, [
+    applyLoadTraceRebuild,
+    getNode,
+    graphData,
+    hoverPreviewEdges,
+    pinnedTraces,
+    revealRevision,
+    symbols,
+  ]);
 
   const indexedSymbolNames = useMemo(
     () => new Set(symbols.keys()),
@@ -578,7 +649,6 @@ export function GraphInteractionProvider({
       tokenInfo,
       showTokenInfo,
       clearTokenInfo,
-      isCtrlPreviewMode: isCtrlActive,
       isTraceActive,
       isTraceLit,
       isTraceEndpoint,
@@ -589,6 +659,7 @@ export function GraphInteractionProvider({
       findReferences,
       focusFlowNode,
       onLoadFile,
+      refreshLoadTraces: applyLoadTraceRebuild,
       graphData,
       pinTrace,
       pinnedTokenKey,
@@ -614,7 +685,6 @@ export function GraphInteractionProvider({
       tokenInfo,
       showTokenInfo,
       clearTokenInfo,
-      isCtrlActive,
       isTraceActive,
       isTraceLit,
       isTraceEndpoint,
@@ -625,6 +695,7 @@ export function GraphInteractionProvider({
       findReferences,
       focusFlowNode,
       onLoadFile,
+      applyLoadTraceRebuild,
       graphData,
       pinTrace,
       pinnedTokenKey,

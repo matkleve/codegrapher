@@ -58,6 +58,7 @@ import {
 import {
   applyReadingFocusToNodes,
   clearFocusFromUrl,
+  computeReadingWidth,
   findFocusTargetElement,
   normalizeReadingFocus,
   parseFocusFromUrl,
@@ -281,18 +282,42 @@ export function GraphFlowInner({
     const pane = graphPaneRef.current;
     if (!readingFocus || !pane) return;
 
-    const targetEl = findFocusTargetElement(readingFocus);
-    if (!targetEl) return;
+    setNodes((nds) => applyReadingFocusToNodes(nds, readingFocus));
 
-    scrollToReadingPosition({
-      paneEl: pane,
-      targetEl,
-      getViewport,
-      setViewport,
-      screenToFlowPosition,
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const cardEl = document.querySelector(
+          `[data-flow-node-id="${CSS.escape(readingFocus.flowNodeId)}"]`,
+        );
+        if (!(cardEl instanceof HTMLElement)) return;
+
+        const targetWidth = computeReadingWidth(pane, cardEl, getViewport);
+        setNodes((nds) =>
+          applyReadingFocusToNodes(nds, readingFocus, { width: targetWidth }),
+        );
+
+        requestAnimationFrame(() => {
+          const targetEl = findFocusTargetElement(readingFocus);
+          if (!targetEl) return;
+          scrollToReadingPosition({
+            paneEl: pane,
+            targetEl,
+            getViewport,
+            setViewport,
+            screenToFlowPosition,
+          });
+          syncGrid();
+        });
+      });
     });
-    syncGrid();
-  }, [getViewport, readingFocus, screenToFlowPosition, setViewport, syncGrid]);
+  }, [
+    getViewport,
+    readingFocus,
+    screenToFlowPosition,
+    setNodes,
+    setViewport,
+    syncGrid,
+  ]);
 
   const handleReadingFocusCapture = useCallback((e: React.MouseEvent) => {
     setReadingFocus(resolveFocusFromClick(e.target));
@@ -447,16 +472,30 @@ export function GraphFlowInner({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const pane = graphPaneRef.current;
-        const targetEl = findFocusTargetElement(urlFocus);
-        if (!pane || !targetEl) return;
-        scrollToReadingPosition({
-          paneEl: pane,
-          targetEl,
-          getViewport,
-          setViewport,
-          screenToFlowPosition,
+        const cardEl = document.querySelector(
+          `[data-flow-node-id="${CSS.escape(urlFocus.flowNodeId)}"]`,
+        );
+        if (!(pane instanceof HTMLElement) || !(cardEl instanceof HTMLElement)) {
+          return;
+        }
+
+        const targetWidth = computeReadingWidth(pane, cardEl, getViewport);
+        setNodes((nds) =>
+          applyReadingFocusToNodes(nds, urlFocus, { width: targetWidth }),
+        );
+
+        requestAnimationFrame(() => {
+          const targetEl = findFocusTargetElement(urlFocus);
+          if (!targetEl) return;
+          scrollToReadingPosition({
+            paneEl: pane,
+            targetEl,
+            getViewport,
+            setViewport,
+            screenToFlowPosition,
+          });
+          syncGrid();
         });
-        syncGrid();
       });
     });
   }, [

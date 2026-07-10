@@ -37,7 +37,7 @@ export function NodeCardHeader({
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, isCtrlPreviewMode, graphData, lookupIndexedUsageSites } =
+  const { beginTrace, graphData, lookupIndexedUsageSites } =
     useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -170,7 +170,6 @@ export function NodeCardHeader({
             className={cn(
               "node-card-title nodrag relative inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
               indexed && "token-def-label cursor-pointer",
-              indexed && isCtrlPreviewMode && "token-interactive",
               lit && "token-chip-lit",
               on && "token-chip-on",
               on && pinnedSource && "token-chip-source",

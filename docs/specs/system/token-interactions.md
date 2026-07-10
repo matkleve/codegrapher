@@ -9,7 +9,7 @@ Use cases: [design/token-interaction-use-cases.md](../../design/token-interactio
 
 ## What It Looks Like
 
-An indexed token is a **token chip** in its kind color (class gold, function
+An indexed token is a **token chip** in its kind color (class blue, function
 blue, variable indigo). Pointer gestures summon a **preview edge** (definition →
 usage), an **info box**, a **jump tip**, or a **Load connector**; the surrounding
 code **dims** so the answer stands alone. Nothing is a standing layer — release
@@ -37,14 +37,14 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
-| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token | `mode:"external"` |
-| 11 | Click the **Load** pill | `onLoadFile` → `/api/focus` pulls the definition in | load |
+| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas) | `mode:"external"` |
+| 11 | Click the **Load** pill | `onLoadFile` → `/api/focus` pulls the definition in; load stubs upgrade to in-graph wires when nodes are ready | load |
 
 ## Interaction by keyword kind
 
 | Kind | Chip color | Definition target | Usage target | Body cascade |
 | ---- | ---------- | ----------------- | ------------ | ------------ |
-| **Class** | gold | class header anchor | usage site line | node lights; no member spread |
+| **Class** | blue | class header anchor | usage site line | node lights; no member spread |
 | **Function / method** | blue | member row / expanded line | call site line | lights **its own body** (top→bottom) |
 | **Variable / property** | indigo | property row | read/write site | does **not** light enclosing functions |
 
@@ -95,7 +95,7 @@ graph-pane
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
   hovered, then a **dashed Load connector** appears; clicking it loads the
-  definition via `/api/focus`.
+  definition via `/api/focus` and swaps the stub for an in-graph preview wire.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim
   (no upward cascade); a function endpoint lights its own body.
 - [ ] Plain hover never fires without a dwell; Ctrl fires instantly.

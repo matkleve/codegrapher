@@ -1,16 +1,20 @@
 import { useLayoutEffect, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
+import { ConnectorChip } from "@/components/code/ConnectorChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { collectGraphFilePaths, isFileInGraph } from "@/lib/graphFiles";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { resolvePreviewAnchor } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
-import { cn } from "@/lib/utils";
 
-const PILL_OFFSET_PX = 52;
+const LOAD_STUB_OFFSET_PX = 72;
 
-function positionPill(
-  btn: HTMLButtonElement,
+function loadSocketSide(flip: boolean): "left" | "right" {
+  return flip ? "left" : "right";
+}
+
+function positionChip(
+  chip: HTMLElement,
   spec: PreviewEdgeSpec,
   svgBox: DOMRect,
   getNode: (id: string) => ReturnType<ReturnType<typeof useReactFlow>["getNode"]>,
@@ -18,23 +22,71 @@ function positionPill(
   const { to } = refinePreviewEdge(spec, getNode);
   const toPt = resolvePreviewAnchor(to, svgBox, "to");
   if (!toPt) {
-    btn.style.display = "none";
+    chip.style.display = "none";
     return false;
   }
-  const flip = toPt.x - PILL_OFFSET_PX < 8;
-  const x = flip ? toPt.x + PILL_OFFSET_PX : toPt.x - PILL_OFFSET_PX;
-  btn.style.display = "";
-  btn.style.left = `${x}px`;
-  btn.style.top = `${toPt.y}px`;
-  btn.classList.toggle("load-connector-pill-flip", flip);
+  const flip = toPt.x - LOAD_STUB_OFFSET_PX < 8;
+  const x = flip ? toPt.x + LOAD_STUB_OFFSET_PX : toPt.x - LOAD_STUB_OFFSET_PX;
+  chip.dataset.loadSocket = loadSocketSide(flip);
+  chip.style.display = "";
+  chip.style.left = `${x}px`;
+  chip.style.top = `${toPt.y}px`;
   return true;
 }
 
+type LoadChipProps = {
+  spec: PreviewEdgeSpec;
+  onLoad: (spec: PreviewEdgeSpec) => void;
+  onEnter: () => void;
+  chipRef: (el: HTMLSpanElement | null) => void;
+};
+
+function LoadChip({ spec, onLoad, onEnter, chipRef }: LoadChipProps) {
+  const count = spec.load?.occurrenceCount ?? 1;
+  const label = count > 1 ? `Load · ${count} files` : "Load";
+
+  return (
+    <ConnectorChip
+      ref={chipRef}
+      variant="load"
+      kind={spec.kind}
+      label={label}
+      showLeftSocket
+      showRightSocket
+      role="button"
+      tabIndex={0}
+      data-load-edge-id={spec.id}
+      data-load-socket="right"
+      className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
+      title={`Load definition (${count} definition${count === 1 ? "" : "s"} in repo)`}
+      onMouseEnter={onEnter}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onLoad(spec);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          onLoad(spec);
+        }
+      }}
+    />
+  );
+}
+
 export function LoadConnector() {
-  const { previewEdges, onLoadFile } = useGraphInteraction();
+  const {
+    previewEdges,
+    onLoadFile,
+    graphData,
+    refreshLoadTraces,
+    cancelHoverLeaveGrace,
+  } = useGraphInteraction();
   const { getNode } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
-  const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const chipsRef = useRef<Map<string, HTMLSpanElement>>(new Map());
   const specsRef = useRef<PreviewEdgeSpec[]>([]);
 
   const loadSpecs = previewEdges.filter((e) => e.load);
@@ -54,8 +106,8 @@ export function LoadConnector() {
       const box = container.getBoundingClientRect();
       const svgBox = new DOMRect(box.left, box.top, box.width, box.height);
       for (const spec of specsRef.current) {
-        const btn = buttonsRef.current.get(spec.id);
-        if (btn) positionPill(btn, spec, svgBox, getNode);
+        const chip = chipsRef.current.get(spec.id);
+        if (chip) positionChip(chip, spec, svgBox, getNode);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -64,52 +116,35 @@ export function LoadConnector() {
   }, [getNode, loadEdgeKey]);
 
   const handleLoad = (spec: PreviewEdgeSpec) => {
+    cancelHoverLeaveGrace();
     const path = spec.load?.filePath;
-    if (path) void onLoadFile(path);
+    if (!path) return;
+    const graphPaths = collectGraphFilePaths(graphData);
+    if (isFileInGraph(path, graphPaths)) {
+      refreshLoadTraces();
+      return;
+    }
+    void onLoadFile(path);
   };
-
-  if (!loadEdgeKey) {
-    return (
-      <div
-        ref={containerRef}
-        className="pointer-events-none absolute inset-0 z-[48]"
-        aria-hidden
-      />
-    );
-  }
 
   return (
     <div
       ref={containerRef}
       className="pointer-events-none absolute inset-0 z-[48] overflow-visible"
-      aria-hidden
+      aria-hidden={!loadEdgeKey}
     >
-      {loadSpecs.map((spec) => {
-        const stroke = TOKEN_EDGE_STROKE[spec.kind];
-        const count = spec.load?.occurrenceCount ?? 1;
-        return (
-          <button
-            key={spec.id}
-            ref={(el) => {
-              if (el) buttonsRef.current.set(spec.id, el);
-              else buttonsRef.current.delete(spec.id);
-            }}
-            type="button"
-            className={cn(
-              "load-connector-pill pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2",
-            )}
-            style={{ borderColor: stroke, color: stroke }}
-            title={`Load definition (${count} definition${count === 1 ? "" : "s"} in repo)`}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleLoad(spec);
-            }}
-          >
-            Load{count > 1 ? ` · ${count}` : ""}
-          </button>
-        );
-      })}
+      {loadSpecs.map((spec) => (
+        <LoadChip
+          key={spec.id}
+          spec={spec}
+          onLoad={handleLoad}
+          onEnter={cancelHoverLeaveGrace}
+          chipRef={(el) => {
+            if (el) chipsRef.current.set(spec.id, el);
+            else chipsRef.current.delete(spec.id);
+          }}
+        />
+      ))}
     </div>
   );
 }

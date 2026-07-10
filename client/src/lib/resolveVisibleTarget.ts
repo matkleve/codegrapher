@@ -4,6 +4,8 @@ import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
+import { normalizeFilePath } from "@/lib/graphFiles";
+import { graphNodeForEntry } from "@/lib/semanticLookup";
 import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
 import { findClassDefLabel, findMemberDefLabel } from "@/lib/resolveLiveAnchor";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -21,7 +23,6 @@ export type GraphVisibleTarget = {
   kind: SemanticTokenKind;
   memberId?: string;
   lineNumber?: number;
-  /** Prefer wiring to the visible member/class def label when present. */
   definitionEl?: HTMLElement;
 };
 
@@ -38,7 +39,7 @@ export type VisibleTargetResult =
   | null;
 
 function normalizePath(p: string): string {
-  return p.replace(/\\/g, "/");
+  return normalizeFilePath(p);
 }
 
 function getClassNodeData(
@@ -50,41 +51,203 @@ function getClassNodeData(
   return node.data as ClassNodeData;
 }
 
-function findMethodGraphNode(
-  token: string,
-  entry: SymbolEntry,
-  graphData: GraphData,
-): GraphNode | undefined {
-  const file = normalizePath(entry.filePath);
-  return graphData.nodes.find(
-    (n) =>
-      n.type === "method" &&
-      normalizePath(n.filePath) === file &&
-      n.label === token,
-  );
-}
-
-function findClassGraphNode(
-  token: string,
-  entry: SymbolEntry,
-  graphData: GraphData,
-): GraphNode | undefined {
-  const file = normalizePath(entry.filePath);
-  return graphData.nodes.find(
-    (n) =>
-      (n.type === "class" || n.type === "module") &&
-      normalizePath(n.filePath) === file &&
-      n.label === token,
-  );
-}
-
 function findMemberId(
   methodNode: GraphNode,
   classData: ClassNodeData,
+  token: string,
 ): string | undefined {
   const byId = classData.methods.find((m) => m.id === methodNode.id);
   if (byId) return byId.id;
-  return classData.methods.find((m) => m.label === methodNode.label)?.id;
+  const byLabel = classData.methods.find((m) => m.label === methodNode.label);
+  if (byLabel) return byLabel.id;
+  return classData.methods.find((m) => m.symbolName === token)?.id;
+}
+
+function containerGraphNode(
+  methodNode: GraphNode,
+  graphData: GraphData,
+): GraphNode | undefined {
+  if (methodNode.parent != null) {
+    return graphData.nodes.find((n) => n.id === methodNode.parent);
+  }
+  if (methodNode.type === "function") return methodNode;
+  return undefined;
+}
+
+function buildClassGraphTarget(
+  token: string,
+  kind: SemanticTokenKind,
+  flowNodeId: string,
+  classLabel: string,
+  sourceFlowId: string,
+): GraphVisibleTarget {
+  const definitionEl = findClassDefLabel(flowNodeId, token);
+  return {
+    mode: "graph",
+    level: "class",
+    flowNodeId,
+    targetHandle: previewTargetTop(flowNodeId),
+    definitionEl: definitionEl ?? undefined,
+    label: classLabel,
+    kind,
+  };
+}
+
+function buildMethodGraphTarget(
+  token: string,
+  kind: SemanticTokenKind,
+  flowNodeId: string,
+  classData: ClassNodeData,
+  memberId: string,
+  methodLabel: string,
+  sourceFlowId: string,
+): GraphVisibleTarget {
+  const definitionEl = findMemberDefLabel(flowNodeId, memberId, token);
+
+  if (flowNodeId === sourceFlowId) {
+    return {
+      mode: "graph",
+      level: "member",
+      flowNodeId,
+      targetHandle: previewMemberHandle(memberId),
+      definitionEl: definitionEl ?? undefined,
+      label: methodLabel,
+      kind,
+      memberId,
+    };
+  }
+
+  const bodyExpanded = !(classData.collapsed ?? false);
+  if (!bodyExpanded) {
+    return {
+      mode: "graph",
+      level: "class",
+      flowNodeId,
+      targetHandle: previewTargetTop(flowNodeId),
+      label: methodLabel,
+      kind,
+      memberId,
+    };
+  }
+
+  const methodExpanded = classData.expandedMethodIds.includes(memberId);
+  if (!methodExpanded) {
+    return {
+      mode: "graph",
+      level: "member",
+      flowNodeId,
+      targetHandle: previewMemberHandle(memberId),
+      label: methodLabel,
+      kind,
+      memberId,
+    };
+  }
+
+  const methodItem = classData.methods.find((m) => m.id === memberId);
+  const codeLines = methodItem?.code.split("\n") ?? [];
+  let relativeLine = 1;
+  for (let i = 0; i < codeLines.length; i++) {
+    if (new RegExp(`\\b${escapeRegExp(token)}\\b`).test(codeLines[i]!)) {
+      relativeLine = i + 1;
+      break;
+    }
+  }
+
+  return {
+    mode: "graph",
+    level: "line",
+    flowNodeId,
+    targetHandle: previewLineHandle(memberId, relativeLine),
+    label: String(relativeLine),
+    kind,
+    memberId,
+    lineNumber: relativeLine,
+  };
+}
+
+/** Scan nodes already on the canvas — does not rely on index file paths. */
+export function findDefinitionInLoadedGraph(
+  token: string,
+  graphData: GraphData,
+  getNode: (id: string) => Node | undefined,
+  sourceFlowId: string,
+  kind: SemanticTokenKind,
+): GraphVisibleTarget | null {
+  for (const node of graphData.nodes) {
+    if (node.type !== "class" && node.type !== "module" && node.type !== "function") {
+      continue;
+    }
+
+    const flowNodeId = toFlowId(node.id);
+    const classData = getClassNodeData(flowNodeId, getNode);
+    if (!classData) continue;
+
+    if (
+      (node.type === "class" || node.type === "module") &&
+      node.label === token
+    ) {
+      return buildClassGraphTarget(token, kind, flowNodeId, node.label, sourceFlowId);
+    }
+
+    const method = classData.methods.find((m) => m.symbolName === token);
+    if (!method) continue;
+
+    const methodNode = graphData.nodes.find((n) => n.id === method.id);
+    return buildMethodGraphTarget(
+      token,
+      kind,
+      flowNodeId,
+      classData,
+      method.id,
+      methodNode?.label ?? token,
+      sourceFlowId,
+    );
+  }
+
+  return null;
+}
+
+function targetFromGraphNode(
+  token: string,
+  entry: SymbolEntry,
+  graphNode: GraphNode,
+  graphData: GraphData,
+  getNode: (id: string) => Node | undefined,
+  sourceFlowId: string,
+): GraphVisibleTarget | null {
+  const kind = symbolKindToSemantic(entry.kind);
+
+  if (graphNode.type === "method" || graphNode.type === "function") {
+    const container = containerGraphNode(graphNode, graphData);
+    if (!container) return null;
+
+    const flowNodeId = toFlowId(container.id);
+    const classData = getClassNodeData(flowNodeId, getNode);
+    if (!classData) return null;
+
+    const memberId = findMemberId(graphNode, classData, token);
+    if (!memberId) return null;
+
+    return buildMethodGraphTarget(
+      token,
+      kind,
+      flowNodeId,
+      classData,
+      memberId,
+      graphNode.label,
+      sourceFlowId,
+    );
+  }
+
+  if (
+    graphNode.type === "class" ||
+    graphNode.type === "module"
+  ) {
+    const flowNodeId = toFlowId(graphNode.id);
+    return buildClassGraphTarget(token, kind, flowNodeId, graphNode.label, sourceFlowId);
+  }
+
+  return null;
 }
 
 export function buildExternalReferenceCards(
@@ -119,12 +282,25 @@ export function isEntryInGraph(
   graphData: GraphData | null,
 ): boolean {
   if (!graphData) return false;
-  if (entry.kind === "method" || entry.kind === "function") {
-    return Boolean(findMethodGraphNode(token, entry, graphData));
-  }
-  return Boolean(findClassGraphNode(token, entry, graphData));
+  return Boolean(graphNodeForEntry(entry, token, graphData));
 }
 
+function externalCardsNotYetInGraph(
+  token: string,
+  symbols: Map<string, SymbolEntry[]>,
+  graphData: GraphData | null,
+): ExternalReferenceCard[] {
+  const cards = buildExternalReferenceCards(token, symbols);
+  if (!graphData) return cards;
+
+  return cards.filter((card) => {
+    const entries = (symbols.get(token) ?? []).filter(
+      (e) => normalizePath(e.filePath) === normalizePath(card.filePath),
+    );
+    if (entries.length === 0) return true;
+    return !entries.some((e) => isEntryInGraph(token, e, graphData));
+  });
+}
 
 export function resolveVisibleTarget(
   token: string,
@@ -136,123 +312,35 @@ export function resolveVisibleTarget(
   const entries = symbols.get(token) ?? [];
   if (entries.length === 0) return null;
 
+  const defaultKind = symbolKindToSemantic(entries[0]!.kind);
+
   if (graphData) {
+    const onCanvas = findDefinitionInLoadedGraph(
+      token,
+      graphData,
+      getNode,
+      sourceFlowId,
+      defaultKind,
+    );
+    if (onCanvas) return onCanvas;
+
     for (const entry of entries) {
-      const kind = symbolKindToSemantic(entry.kind);
+      const graphNode = graphNodeForEntry(entry, token, graphData);
+      if (!graphNode) continue;
 
-      if (entry.kind === "method" || entry.kind === "function") {
-        const methodNode = findMethodGraphNode(token, entry, graphData);
-        if (!methodNode?.parent) continue;
-
-        const classNode = graphData.nodes.find((n) => n.id === methodNode.parent);
-        if (!classNode) continue;
-
-        const flowNodeId = toFlowId(classNode.id);
-        const classData = getClassNodeData(flowNodeId, getNode);
-        if (!classData) continue;
-
-        const memberId = findMemberId(methodNode, classData);
-        if (!memberId) continue;
-
-        const definitionEl = findMemberDefLabel(flowNodeId, memberId, token);
-
-        if (flowNodeId === sourceFlowId) {
-          return {
-            mode: "graph",
-            level: "member",
-            flowNodeId,
-            targetHandle: previewMemberHandle(memberId),
-            definitionEl: definitionEl ?? undefined,
-            label: methodNode.label,
-            kind,
-            memberId,
-          };
-        }
-
-        const bodyExpanded = !(classData.collapsed ?? false);
-
-        if (!bodyExpanded) {
-          return {
-            mode: "graph",
-            level: "class",
-            flowNodeId,
-            targetHandle: previewTargetTop(flowNodeId),
-            label: methodNode.label,
-            kind,
-            memberId,
-          };
-        }
-
-        const methodExpanded = classData.expandedMethodIds.includes(memberId);
-        if (!methodExpanded) {
-          return {
-            mode: "graph",
-            level: "member",
-            flowNodeId,
-            targetHandle: previewMemberHandle(memberId),
-            label: methodNode.label,
-            kind,
-            memberId,
-          };
-        }
-
-        const methodItem = classData.methods.find((m) => m.id === memberId);
-        const codeLines = methodItem?.code.split("\n") ?? [];
-        let relativeLine = 1;
-        for (let i = 0; i < codeLines.length; i++) {
-          if (new RegExp(`\\b${escapeRegExp(token)}\\b`).test(codeLines[i]!)) {
-            relativeLine = i + 1;
-            break;
-          }
-        }
-        return {
-          mode: "graph",
-          level: "line",
-          flowNodeId,
-          targetHandle: previewLineHandle(memberId, relativeLine),
-          label: String(relativeLine),
-          kind,
-          memberId,
-          lineNumber: relativeLine,
-        };
-      }
-
-      const classNode = findClassGraphNode(token, entry, graphData);
-      if (!classNode) continue;
-
-      const flowNodeId = toFlowId(classNode.id);
-      const definitionEl = findClassDefLabel(flowNodeId, token);
-
-      if (flowNodeId === sourceFlowId) {
-        return {
-          mode: "graph",
-          level: "class",
-          flowNodeId,
-          targetHandle: previewTargetTop(flowNodeId),
-          definitionEl: definitionEl ?? undefined,
-          label: classNode.label,
-          kind,
-        };
-      }
-
-      return {
-        mode: "graph",
-        level: "class",
-        flowNodeId,
-        targetHandle: previewTargetTop(flowNodeId),
-        definitionEl: definitionEl ?? undefined,
-        label: classNode.label,
-        kind,
-      };
+      const target = targetFromGraphNode(
+        token,
+        entry,
+        graphNode,
+        graphData,
+        getNode,
+        sourceFlowId,
+      );
+      if (target) return target;
     }
   }
 
-  const anyInGraph = graphData
-    ? entries.some((e) => isEntryInGraph(token, e, graphData))
-    : false;
-  if (anyInGraph) return null;
-
-  const cards = buildExternalReferenceCards(token, symbols);
+  const cards = externalCardsNotYetInGraph(token, symbols, graphData);
   if (cards.length === 0) return null;
   return { mode: "external", cards };
 }

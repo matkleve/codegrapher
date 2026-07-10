@@ -12,6 +12,7 @@ import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
 import { LoadConnector } from "@/components/graph/LoadConnector";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
+import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
@@ -37,7 +38,8 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive, isWarm, pinnedTraces } =
+  const { isCtrlActive } = useCtrlKey();
+  const { clearTokenInfo, isTraceActive, isWarm, pinnedTraces } =
     useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
@@ -49,7 +51,7 @@ export function GraphFlowCanvas({
     <div
       className={cn(
         "relative h-full w-full",
-        isCtrlPreviewMode && "graph-ctrl-preview",
+        isCtrlActive && "graph-ctrl-preview",
         isTraceActive && "graph-trace-active",
         isTraceActive && isWarm && "graph-trace-warm",
         pinnedTraces.length > 0 && "graph-trace-pinned",

@@ -1,7 +1,7 @@
 import { forwardRef, useRef, useImperativeHandle } from "react";
-import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { ConnectorChip } from "@/components/code/ConnectorChip";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
-import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
 export type TokenChipHandle = {
@@ -48,68 +48,49 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
     ref,
   ) {
     const chipRef = useRef<HTMLSpanElement>(null);
-    const leftRef = useRef<HTMLSpanElement>(null);
-    const rightRef = useRef<HTMLSpanElement>(null);
-    const { lit, on, isCtrlPreviewMode, pinnedSource, hoverPreview } = useTraceAppearance({ traceKey });
+    const { lit, on, pinnedSource, hoverPreview } = useTraceAppearance({ traceKey });
 
     useImperativeHandle(ref, () => ({
-      getRightAnchor: () => rightRef.current,
-      getLeftAnchor: () => leftRef.current,
+      getRightAnchor: () =>
+        chipRef.current?.querySelector<HTMLElement>('[data-flow-anchor="right"]') ?? null,
+      getLeftAnchor: () =>
+        chipRef.current?.querySelector<HTMLElement>('[data-flow-anchor="left"]') ?? null,
       getChipElement: () => chipRef.current,
     }));
 
-    const anchorColor = TOKEN_ANCHOR[semantic];
-    const endpoint = on;
     const isDefinition = symbolRole === "definition" || !!localDefId;
-    const showIncoming = endpoint && !isDefinition;
-    const showOutgoing = endpoint && isDefinition;
+    const showIncoming = on && !isDefinition;
+    const showOutgoing = on && isDefinition;
 
     return (
-      <span
+      <ConnectorChip
         ref={chipRef}
+        variant="inline"
+        kind={semantic}
+        label={text}
+        active={on}
+        showLeftSocket={showIncoming}
+        showRightSocket={showOutgoing}
+        shimmerDelay={shimmerDelay}
         role={role}
         tabIndex={tabIndex}
         data-symbol-name={text}
         data-symbol-role={symbolRole}
         data-trace-key={traceKey}
-        data-token-kind={semantic}
         {...(localDefId ? { "data-local-def-id": localDefId } : {})}
         {...(localTargetId ? { "data-local-target-id": localTargetId } : {})}
-        style={{ "--shimmer-delay": shimmerDelay } as React.CSSProperties}
         className={cn(
-          "token-chip",
           interactive && "cursor-pointer",
-          interactive && isCtrlPreviewMode && "token-interactive",
           lit && "token-chip-lit",
-          endpoint && "token-chip-on",
-          endpoint && pinnedSource && "token-chip-source",
-          endpoint && hoverPreview && "token-chip-hover-preview",
+          on && pinnedSource && "token-chip-source",
+          on && hoverPreview && "token-chip-hover-preview",
         )}
+        textClassName="token-chip-text"
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
         onKeyDown={onKeyDown}
-      >
-        <FlowAnchor
-          ref={leftRef}
-          side="left"
-          colorClass={anchorColor}
-          visible={showIncoming}
-          highlighted={showIncoming}
-          size="chip"
-        />
-        <span className="token-chip-text token-shimmer-target relative z-[1]" data-text={text}>
-          {text}
-        </span>
-        <FlowAnchor
-          ref={rightRef}
-          side="right"
-          colorClass={anchorColor}
-          visible={showOutgoing}
-          highlighted={showOutgoing}
-          size="chip"
-        />
-      </span>
+      />
     );
   },
 );

@@ -16,7 +16,6 @@ export function useTraceAppearance({
     isTraceMemberLit,
     isTraceOwnerLit,
     isTraceLineLit,
-    isCtrlPreviewMode,
     isTraceActive,
     isPinnedTokenKey,
     hoveredTokenKey,
@@ -30,7 +29,6 @@ export function useTraceAppearance({
     !isPinnedTokenKey(traceKey);
 
   return {
-    isCtrlPreviewMode,
     isTraceActive,
     lit: traceKey ? isTraceLit(traceKey) : false,
     on: traceKey ? isTraceEndpoint(traceKey) : false,

@@ -338,6 +338,8 @@ export function computeTraceLit(
   const activeUsageMember = memberIdFromUsageKey(activeTokenKey);
   if (activeUsageMember) {
     state.ownerLitMemberIds.add(activeUsageMember);
+    state.litMemberIds.add(activeUsageMember);
+    state.litLineMemberIds.add(activeUsageMember);
     const flowId = flowNodeIdFromMemberId(activeUsageMember);
     if (flowId) state.litFlowNodeIds.add(flowId);
   }

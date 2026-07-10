@@ -20,7 +20,8 @@ function normalizePath(p: string): string {
   return p.replace(/\\/g, "/");
 }
 
-function graphNodeForEntry(
+/** Match a symbol index entry to a graph node (file + kind + label). */
+export function graphNodeForEntry(
   entry: SymbolEntry,
   token: string,
   graphData: GraphData,
@@ -28,7 +29,11 @@ function graphNodeForEntry(
   const file = normalizePath(entry.filePath);
   for (const node of graphData.nodes) {
     if (normalizePath(node.filePath) !== file) continue;
-    if (entry.kind === "method" && node.type === "method" && node.label === token) {
+    if (
+      (entry.kind === "method" || entry.kind === "function") &&
+      node.type === "method" &&
+      node.label === token
+    ) {
       return node;
     }
     if (
@@ -58,7 +63,7 @@ function graphNodeForEntry(
   return undefined;
 }
 
-function flowIdForGraphNode(node: GraphNode, graphData: GraphData): string {
+export function flowIdForGraphNode(node: GraphNode, graphData: GraphData): string {
   if (node.type === "method" || (node.type === "function" && node.parent)) {
     const parent = graphData.nodes.find((n) => n.id === node.parent);
     if (parent && (parent.type === "class" || parent.type === "module")) {

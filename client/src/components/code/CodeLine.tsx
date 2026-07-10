@@ -398,7 +398,7 @@ export function CodeLine({
           return (
             <span
               key={`${lineNumber}-${i}`}
-              className={cn(inTypeContext && "text-[color:var(--token-edge-function)]")}
+              className={cn(inTypeContext && "text-[color:var(--token-edge-type)]")}
             >
               {token.text}
             </span>

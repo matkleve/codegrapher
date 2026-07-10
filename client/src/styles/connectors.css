@@ -146,8 +146,8 @@
 
 .token-chip.token-chip-on,
 .token-def-label.token-chip-on {
-  background: color-mix(in oklch, currentColor 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, currentColor 76%, transparent);
+  background: color-mix(in oklch, var(--token-edge-function) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-function) 76%, transparent);
   filter: brightness(1.16) saturate(1.12);
 }
 
@@ -205,6 +205,9 @@
 .graph-ctrl-preview .member-row-caret,
 .graph-ctrl-preview .file-type-chip {
   color: var(--faint-ctrl) !important;
+  transition:
+    color 0s,
+    opacity 0s;
 }
 
 .graph-ctrl-preview .react-flow__node.class-node-root {
@@ -228,8 +231,8 @@
   animation: graph-edge-breathe 4.6s ease-in-out infinite alternate;
 }
 
-.graph-ctrl-preview .token-chip.token-interactive,
-.graph-ctrl-preview .token-def-label.token-interactive {
+.graph-ctrl-preview .token-chip.cursor-pointer,
+.graph-ctrl-preview .token-def-label.cursor-pointer {
   background: transparent;
   box-shadow: none;
 }
@@ -263,8 +266,8 @@
   filter: brightness(1.06);
 }
 
-.graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
-.graph-ctrl-preview .token-def-label.token-interactive {
+.graph-ctrl-preview .token-chip.cursor-pointer .token-chip-text,
+.graph-ctrl-preview .token-def-label.cursor-pointer {
   filter: brightness(1.06);
 }
 
@@ -274,8 +277,8 @@
   animation: none;
 }
 
-.graph-trace-active .token-chip.token-interactive .token-chip-text,
-.graph-trace-active .token-def-label.token-interactive {
+.graph-trace-active .token-chip.cursor-pointer .token-chip-text,
+.graph-trace-active .token-def-label.cursor-pointer {
   background-image: none;
   -webkit-text-fill-color: currentColor;
   animation: none;
@@ -378,8 +381,9 @@
   border-color: var(--border);
 }
 
-/* Lit member — proto `.member.lit` (subtle tint, rest stay on card-2 / muted) */
-.graph-trace-active .trace-member-lit {
+/* Lit member — proto `.member.lit` (function-blue container tint) */
+.graph-trace-active .trace-member-lit,
+.graph-trace-active .trace-member-owner-lit {
   background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted)) !important;
 }
 
@@ -389,7 +393,7 @@
 }
 
 /* Unlit member shells — slight wash only (proto dims ink, not container opacity) */
-.graph-trace-active .member-row:not(.trace-member-lit) {
+.graph-trace-active .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
   background: color-mix(in oklch, var(--card) 38%, var(--muted)) !important;
 }
 
@@ -495,8 +499,8 @@
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-pinned .token-chip.token-interactive:not(.token-chip-lit),
-.graph-trace-pinned .token-def-label.token-interactive:not(.token-chip-lit) {
+.graph-trace-pinned .token-chip.cursor-pointer:not(.token-chip-lit),
+.graph-trace-pinned .token-def-label.cursor-pointer:not(.token-chip-lit) {
   cursor: pointer;
 }
 
@@ -525,51 +529,49 @@
 
 .preview-edge-path.preview-edge-load {
   stroke-dasharray: 6 4;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
-.load-connector-pill {
-  z-index: 46;
-  border-radius: 999px;
-  border-width: 1.5px;
-  border-style: dashed;
+/* Shared connector chip shell (inline tokens + overlay Load) */
+.connector-chip-text {
+  display: block;
+  line-height: 1;
+  -webkit-text-fill-color: currentColor;
+}
+
+.connector-chip--inline .connector-chip-text {
+  font-size: inherit;
+}
+
+.connector-chip--load {
+  padding: var(--connector-chip-load-pad-y) var(--connector-chip-load-pad-x);
+  border-radius: var(--connector-chip-load-radius);
   background: var(--card);
-  padding: 2px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.4;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+  border: 1px dashed color-mix(in oklch, var(--token-edge-function) 55%, var(--border));
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--border) 80%, transparent);
+  filter: none;
   cursor: pointer;
-  transition:
-    background-color 0.15s var(--ease),
-    filter 0.15s var(--ease);
+  z-index: 46;
 }
 
-.load-connector-pill:hover {
-  background: var(--brand-surface);
-  filter: brightness(1.05);
+/* Load stub — only the socket facing the usage token */
+.connector-chip--load[data-load-socket="right"] [data-flow-anchor="left"],
+.connector-chip--load:not([data-load-socket]) [data-flow-anchor="left"] {
+  display: none;
 }
 
-/* Inline code — one function-blue ink for every token kind (rest, hover, trace) */
-.code-line .token-chip {
+.connector-chip--load[data-load-socket="left"] [data-flow-anchor="right"] {
+  display: none;
+}
+
+.connector-chip--load .connector-chip-text {
+  font-size: var(--connector-chip-load-font-size);
+  font-weight: 560;
   color: var(--token-edge-function);
 }
 
-.code-line .token-chip .token-chip-text {
-  color: inherit;
-  -webkit-text-fill-color: currentColor;
-}
-
-.code-line .token-chip.token-chip-on {
-  background: color-mix(in oklch, var(--token-edge-function) 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-function) 76%, transparent);
-}
-
-.graph-trace-active .code-line .token-chip.token-chip-lit .token-chip-text,
-.graph-trace-active .code-line .token-chip.token-chip-on .token-chip-text,
-.graph-trace-pinned .code-line .token-chip.token-chip-on.token-chip-source .token-chip-text {
-  color: var(--token-edge-function) !important;
-  -webkit-text-fill-color: currentColor;
+.connector-chip--load:hover {
+  background: var(--brand-surface);
 }
 
 .preview-edge-glow.preview-edge-warm {
@@ -603,11 +605,11 @@
     opacity 140ms var(--ease),
     box-shadow 200ms var(--ease),
     filter 200ms var(--ease);
-  background: color-mix(in oklch, currentColor 86%, white) !important;
+  background: color-mix(in oklch, var(--token-edge-function) 86%, white) !important;
   filter: brightness(1.14) saturate(1.08);
   box-shadow:
-    0 0 1.5px 0.5px color-mix(in oklch, currentColor 88%, white),
-    0 0 5px 1.5px color-mix(in oklch, currentColor 42%, transparent);
+    0 0 1.5px 0.5px color-mix(in oklch, var(--token-edge-function) 88%, white),
+    0 0 5px 1.5px color-mix(in oklch, var(--token-edge-function) 42%, transparent);
 }
 
 .graph-trace-warm .flow-anchor-on {

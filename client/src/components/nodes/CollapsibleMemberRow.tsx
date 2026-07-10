@@ -56,7 +56,6 @@ export function CollapsibleMemberRow({
     isHandleActive,
     edgeKindAtHandle,
     beginTrace,
-    isCtrlPreviewMode,
     graphData,
     lookupIndexedUsageSites,
   } = useGraphInteraction();
@@ -210,7 +209,6 @@ export function CollapsibleMemberRow({
           className={cn(
             "member-row-label nodrag relative inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-medium text-foreground",
             traceable && "token-def-label cursor-pointer",
-            traceable && isCtrlPreviewMode && "token-interactive",
             lit && "token-chip-lit",
             on && "token-chip-on",
             on && pinnedSource && "token-chip-source",

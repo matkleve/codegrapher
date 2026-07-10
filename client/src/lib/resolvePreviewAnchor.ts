@@ -64,6 +64,7 @@ export function resolvePreviewAnchor(
 
   if (ref.type === "element") {
     if (!ref.el.isConnected) return null;
+    const side = ref.side ?? sideForEndpoint(role);
     return elementAnchor(ref.el, side, svgBox);
   }
 
@@ -115,6 +116,16 @@ export function cubicPath(
   }
 
   return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
+}
+
+/** Short horizontal/vertical stub — straight segment, no arc bulge. */
+export function straightPath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): string {
+  return `M ${x1} ${y1} L ${x2} ${y2}`;
 }
 
 /** Short segment along wire end for hit-testing (~1cm). */

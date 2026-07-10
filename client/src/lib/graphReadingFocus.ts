@@ -5,6 +5,9 @@ import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 const FOCUS_PARAM = "focus";
 const FOCUS_SEP = "|";
 const READING_TOP_PADDING = 24;
+/** Horizontal inset from the graph pane edge when sizing for reading. */
+const READING_SIDE_PADDING = 48;
+const READING_MIN_NODE_WIDTH = 400;
 
 export type ReadingFocus = {
   flowNodeId: string;
@@ -74,9 +77,52 @@ export function normalizeReadingFocus(
   return { flowNodeId: focus.flowNodeId };
 }
 
+function commitClassDimensions(
+  node: Node,
+  data: ClassNodeData,
+  width: number,
+  height: number,
+): Node {
+  return {
+    ...node,
+    width,
+    height,
+    style: { ...node.style, width, height },
+    data: { ...data, width, height },
+  };
+}
+
+/** Unwrapped intrinsic width of the rendered card (off-screen clone, no layout flash). */
+export function measureClassNaturalWidth(cardEl: HTMLElement): number {
+  const clone = cardEl.cloneNode(true) as HTMLElement;
+  clone.style.cssText =
+    "position:fixed;left:-99999px;top:0;width:max-content;min-width:0;visibility:hidden;pointer-events:none;height:auto;";
+  document.body.appendChild(clone);
+  const measured = Math.ceil(clone.getBoundingClientRect().width);
+  clone.remove();
+  return measured;
+}
+
+/** Reading width: up to viewport minus padding, but not wider than content needs. */
+export function computeReadingWidth(
+  paneEl: HTMLElement,
+  cardEl: HTMLElement,
+  getViewport: () => { zoom: number },
+): number {
+  const { zoom } = getViewport();
+  const paneWidth = paneEl.getBoundingClientRect().width;
+  const maxViewportWidth = (paneWidth - READING_SIDE_PADDING * 2) / zoom;
+  const contentWidth = measureClassNaturalWidth(cardEl);
+  return Math.max(
+    READING_MIN_NODE_WIDTH,
+    Math.min(maxViewportWidth, contentWidth),
+  );
+}
+
 export function applyReadingFocusToNodes(
   nodes: Node[],
   focus: ReadingFocus,
+  opts?: { width?: number },
 ): Node[] {
   return nodes.map((n) => {
     const data = n.data as ClassNodeData;
@@ -110,12 +156,16 @@ export function applyReadingFocusToNodes(
     }
 
     const merged: ClassNodeData = { ...data, ...patch };
+    const width =
+      opts?.width ??
+      (typeof n.width === "number" ? n.width : (data.width ?? READING_MIN_NODE_WIDTH));
     const height = computeClassNodeHeight(merged);
-    return {
-      ...n,
-      selected: true,
-      data: { ...merged, height },
-    };
+    return commitClassDimensions(
+      { ...n, selected: true },
+      merged,
+      width,
+      height,
+    );
   });
 }
 

@@ -2,6 +2,7 @@ import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
   cubicPath,
   resolvePreviewAnchor,
+  straightPath,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -65,23 +66,40 @@ export function updateWireGeometry(
 ): boolean {
   const spec = wire.spec;
   if (spec.load) {
-    const toRef = refinePreviewEdge(spec, getNode).to;
-    const toPt = resolvePreviewAnchor(toRef, svgBox, "to");
-    if (!toPt) {
+    const loadEl = document.querySelector<HTMLElement>(
+      `[data-load-edge-id="${CSS.escape(spec.id)}"]`,
+    );
+    const { to } = refinePreviewEdge(spec, getNode);
+    const toPt = resolvePreviewAnchor(to, svgBox, "to");
+    if (!loadEl?.isConnected || !toPt) {
       wire.group.style.display = "none";
       return false;
     }
-    const pillOffset = 52;
-    const fromX = toPt.x - pillOffset;
-    const fromY = toPt.y;
-    const toX = toPt.x;
-    const toY = toPt.y;
+
+    const fromSide =
+      (loadEl.dataset.loadSocket as "left" | "right" | undefined) ?? "right";
+    const fromPt = resolvePreviewAnchor(
+      { type: "element", el: loadEl, side: fromSide },
+      svgBox,
+      "from",
+    );
+    if (!fromPt) {
+      wire.group.style.display = "none";
+      return false;
+    }
+
     wire.group.style.display = "";
-    const pathD = cubicPath(fromX, fromY, toX, toY, "right", "left");
+    const pathD = straightPath(fromPt.x, fromPt.y, toPt.x, toPt.y);
     wire.path.setAttribute("d", pathD);
     wire.glow.setAttribute("d", pathD);
-    wire.hitFrom.setAttribute("d", "");
-    wire.hitTo.setAttribute("d", "");
+    wire.hitFrom.setAttribute(
+      "d",
+      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from"),
+    );
+    wire.hitTo.setAttribute(
+      "d",
+      wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to"),
+    );
     return true;
   }
 
@@ -131,6 +149,13 @@ export function syncWireDom(
 
   for (const spec of specs) {
     let wire = wires.get(spec.id);
+    const hadLoad = wire?.spec.load != null;
+    const hasLoad = spec.load != null;
+    if (wire && hadLoad !== hasLoad) {
+      wire.group.remove();
+      wires.delete(spec.id);
+      wire = undefined;
+    }
     if (!wire) {
       wire = createWireGroup(spec, warm);
       wires.set(spec.id, wire);
@@ -138,6 +163,13 @@ export function syncWireDom(
     } else {
       wire.spec = spec;
       setWireWarm(wire, warm);
+      if (hasLoad) {
+        wire.path.classList.add("preview-edge-load");
+        wire.path.removeAttribute("marker-end");
+      } else {
+        wire.path.classList.remove("preview-edge-load");
+        wire.path.setAttribute("marker-end", "url(#preview-edge-arrow)");
+      }
     }
   }
 
