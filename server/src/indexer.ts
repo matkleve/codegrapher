@@ -13,7 +13,8 @@ export type SymbolKind =
   | "function"
   | "method"
   | "interface"
-  | "type";
+  | "type"
+  | "property";
 
 export type SymbolEntry = {
   filePath: string;
@@ -219,6 +220,9 @@ function indexSourceFile(
     if (exported || injectable) {
       for (const method of cls.getMethods()) {
         addSymbol(index, method.getName(), filePath, "method", method.getStartLineNumber());
+      }
+      for (const prop of cls.getProperties()) {
+        addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber());
       }
     }
   }

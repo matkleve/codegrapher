@@ -3,8 +3,21 @@ import { camelToWords } from "@/lib/camelToWords";
 export type ClassMemberItem = {
   id: string;
   label: string;
+  /** Raw identifier for symbol index / trace (before camelToWords display label). */
+  symbolName?: string;
   code: string;
 };
+
+/** Field/property identifier from a member chunk, if any. */
+export function inferSymbolName(code: string): string | null {
+  const trimmed = code.trim();
+  if (/^constructor\s*\(/.test(trimmed)) return null;
+
+  const field = trimmed.match(
+    /(?:public|private|protected|readonly|static|\s)+(\w+)\s*(?:[=:]|;)/,
+  );
+  return field?.[1] ?? null;
+}
 
 type MethodLike = { id: string; label: string; code: string };
 
@@ -108,6 +121,7 @@ export function buildClassProperties(
     items.push({
       id: `${graphNodeId}:prop:${items.length}:${label.replace(/\s+/g, "_")}`,
       label,
+      symbolName: inferSymbolName(chunk) ?? undefined,
       code: chunk,
     });
   }

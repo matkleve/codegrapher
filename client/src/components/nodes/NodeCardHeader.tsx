@@ -4,18 +4,21 @@ import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { INTERACTIVE_BORDER_BTN, INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
-import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
-import { buildDefinitionFanOutEdges } from "@/lib/buildPreviewEdges";
-import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
+import { buildDefinitionPreviewEdges, connectionCountForHost } from "@/lib/linksForElement";
 import { symbolKindToSemantic } from "@/lib/tokenColors";
+import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
 import { cn } from "@/lib/utils";
 
 type NodeCardHeaderProps = {
   title: string;
   symbolName?: string;
+  filePath: string;
+  flowNodeId: string;
+  graphNodeId: string;
   chip?: ReactNode;
   bodyExpanded: boolean;
   onToggleCollapsed: () => void;
@@ -24,12 +27,15 @@ type NodeCardHeaderProps = {
 export function NodeCardHeader({
   title,
   symbolName,
+  filePath,
+  flowNodeId,
+  graphNodeId,
   chip,
   bodyExpanded,
   onToggleCollapsed,
 }: NodeCardHeaderProps) {
-  const titleRef = useRef<HTMLParagraphElement>(null);
-  const { isCtrlHeld } = useCtrlKey();
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const { isCtrlActive } = useCtrlKey();
   const { lookup, hasSymbol } = useIndex();
   const {
     setActiveTokenKey,
@@ -37,9 +43,10 @@ export function NodeCardHeader({
     clearPreviewEdges,
     scheduleHoverFire,
     scheduleHoverClear,
-    scheduleInfoOpen,
     showTokenInfo,
     isCtrlPreviewMode,
+    pinTrace,
+    pinnedTokenKey,
   } = useGraphInteraction();
 
   const indexed = Boolean(symbolName && hasSymbol(symbolName));
@@ -49,42 +56,27 @@ export function NodeCardHeader({
   const { lit, on } = useTraceAppearance({ traceKey: indexed ? defTokenKey : undefined });
 
   const clearDefHover = useCallback(() => {
+    if (pinnedTokenKey) return;
     clearPreviewEdges();
     setActiveTokenKey(null);
-  }, [clearPreviewEdges, setActiveTokenKey]);
+  }, [clearPreviewEdges, pinnedTokenKey, setActiveTokenKey]);
 
   const fireDefPreview = useCallback(() => {
     if (!symbolName || !indexed || !titleRef.current) return;
-    const entry = lookup(symbolName);
-    if (!entry) return;
+    const symEntry = lookup(symbolName);
+    if (!symEntry) return;
 
     setActiveTokenKey(defTokenKey);
-    const kind = symbolKindToSemantic(entry.kind);
-    const usages = resolveUsageAnchors(symbolName, titleRef.current);
+    const kind = symbolKindToSemantic(symEntry.kind);
     setPreviewEdges(
-      buildDefinitionFanOutEdges(symbolName, kind, titleRef.current, usages),
+      buildDefinitionPreviewEdges(symbolName, kind, titleRef.current),
     );
   }, [defTokenKey, indexed, lookup, setActiveTokenKey, setPreviewEdges, symbolName]);
-
-  const openDefInfo = useCallback(() => {
-    if (!symbolName || !indexed || !titleRef.current) return;
-    const entry = lookup(symbolName);
-    if (!entry) return;
-    showTokenInfo({
-      token: symbolName,
-      kind: symbolKindToSemantic(entry.kind),
-      anchor: toAnchorRect(titleRef.current.getBoundingClientRect()),
-      pinned: false,
-      connectionCount: resolveUsageAnchors(symbolName).length,
-      definedIn: symbolName,
-    });
-  }, [indexed, lookup, showTokenInfo, symbolName]);
 
   const onTitleEnter = useCallback(() => {
     if (!indexed) return;
     scheduleHoverFire(defTokenKey, fireDefPreview, clearDefHover);
-    scheduleInfoOpen(defTokenKey, openDefInfo);
-  }, [defTokenKey, fireDefPreview, indexed, openDefInfo, scheduleHoverFire, scheduleInfoOpen]);
+  }, [clearDefHover, defTokenKey, fireDefPreview, indexed, scheduleHoverFire]);
 
   const onTitleLeave = useCallback(() => {
     if (!indexed) return;
@@ -95,19 +87,27 @@ export function NodeCardHeader({
     (e: React.MouseEvent) => {
       if (!indexed || !symbolName || !titleRef.current) return;
       e.stopPropagation();
-      if (!isCtrlHeld) return;
-      const entry = lookup(symbolName);
-      if (!entry) return;
-      showTokenInfo({
-        token: symbolName,
-        kind: symbolKindToSemantic(entry.kind),
-        anchor: toAnchorRect(titleRef.current.getBoundingClientRect()),
-        pinned: true,
-        connectionCount: resolveUsageAnchors(symbolName).length,
-        definedIn: symbolName,
-      });
+      if (!isCtrlActive) return;
+      const symEntry = lookup(symbolName);
+      if (!symEntry) return;
+      pinTrace(defTokenKey);
+      fireDefPreview();
+      showTokenInfo(
+        makeTokenInfo({
+          token: symbolName,
+          kind: symbolKindToSemantic(symEntry.kind),
+          pinned: true,
+          connectionCount: connectionCountForHost(titleRef.current, symbolName),
+          definedIn: symbolName,
+          filePath,
+          line: symEntry.line,
+          sourceFlowId: flowNodeId,
+          sourceGraphNodeId: graphNodeId,
+          role: "definition",
+        }),
+      );
     },
-    [indexed, isCtrlHeld, lookup, showTokenInfo, symbolName],
+    [defTokenKey, filePath, fireDefPreview, flowNodeId, graphNodeId, indexed, isCtrlActive, lookup, pinTrace, showTokenInfo, symbolName],
   );
 
   return (
@@ -145,30 +145,32 @@ export function NodeCardHeader({
             >
               <ExpandChevron expanded={bodyExpanded} />
             </button>
-            <p
-              ref={titleRef}
-              data-symbol-name={indexed ? symbolName : undefined}
-              data-symbol-role={indexed ? "definition" : undefined}
-              data-trace-key={indexed ? defTokenKey : undefined}
-              data-token-kind={indexed ? defKind ?? undefined : undefined}
-              className={cn(
-                "node-card-title min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-bold",
-                indexed && "token-def-label cursor-pointer",
-                indexed && isCtrlPreviewMode && "token-interactive",
-                lit && "token-chip-lit",
-                on && "token-chip-on",
-              )}
-              style={
-                indexed
-                  ? ({ "--shimmer-delay": "0s" } as React.CSSProperties)
-                  : undefined
-              }
-              onMouseEnter={onTitleEnter}
-              onMouseLeave={onTitleLeave}
-              onClick={onTitleClick}
-            >
-              {title}
-            </p>
+            <span className="min-w-0 flex-1">
+              <span
+                ref={titleRef}
+                data-symbol-name={indexed ? symbolName : undefined}
+                data-symbol-role={indexed ? "definition" : undefined}
+                data-trace-key={indexed ? defTokenKey : undefined}
+                data-token-kind={indexed ? defKind ?? undefined : undefined}
+                className={cn(
+                  "node-card-title inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
+                  indexed && "token-def-label cursor-pointer",
+                  indexed && isCtrlPreviewMode && "token-interactive",
+                  lit && "token-chip-lit",
+                  on && "token-chip-on",
+                )}
+                style={
+                  indexed
+                    ? ({ "--shimmer-delay": "0s" } as React.CSSProperties)
+                    : undefined
+                }
+                onMouseEnter={onTitleEnter}
+                onMouseLeave={onTitleLeave}
+                onClick={onTitleClick}
+              >
+                {title}
+              </span>
+            </span>
           </div>
         </div>
       </div>

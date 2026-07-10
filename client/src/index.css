@@ -111,9 +111,10 @@
   --token-class: oklch(0.48 0.14 250);
   --token-function: oklch(0.62 0.08 245);
   --token-type: oklch(0.52 0.13 165);
-  --token-edge-function: oklch(0.62 0.08 245);
-  --token-edge-class: #ca8a04;
+  --token-edge-function: #2563eb;
+  --token-edge-class: #b8860b;
   --token-edge-type: #16a34a;
+  --token-edge-variable: #6366f1;
   --code-string: #b45309;
   --code-number: #c2410c;
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
@@ -130,8 +131,16 @@
   --motion-hover-color: 380ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  /* Dimmed / unconnected text — a clear mid gray, not near-white on light bg. */
-  --faint: oklch(0.58 0.018 258);
+  /* Two dimming levels: --faint = hover/trace (prototype value); --faint-ctrl =
+     Ctrl "search" mode, bleached harder toward the background so revealed
+     clickables pop. */
+  --faint: oklch(0.68 0.02 258);
+  --faint-ctrl: oklch(0.8 0.014 258);
+  /* Ctrl-shimmer glint highlight. The prototype is dark-first and blows the
+     streak toward #fff; on a light background that reads as the word turning
+     white, so light theme darkens the streak instead (same "light through
+     glass" travel, always visible). */
+  --glint-hi: oklch(0.28 0.03 258);
 }
 
 @layer base {
@@ -198,9 +207,10 @@ html.dark {
   --token-class: var(--primary);
   --token-function: oklch(0.75 0.07 245);
   --token-type: oklch(0.7 0.12 165);
-  --token-edge-function: oklch(0.75 0.07 245);
+  --token-edge-function: #60a5fa;
   --token-edge-class: #facc15;
   --token-edge-type: #4ade80;
+  --token-edge-variable: #a5b4fc;
   --code-string: oklch(0.92 0.08 85 / 90%);
   --code-number: oklch(0.85 0.11 55 / 90%);
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
@@ -214,6 +224,8 @@ html.dark {
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
   --faint: oklch(0.46 0.03 255);
+  --faint-ctrl: oklch(0.34 0.03 255);
+  --glint-hi: #ffffff;
 }
 
 .graph-canvas-grid {
@@ -236,6 +248,42 @@ html.dark {
 .react-flow__edge.path-highlight .react-flow__edge-path {
   stroke: var(--ring) !important;
   stroke-width: 3px !important;
+}
+
+/* Sidebar resize handle (Notion-style edge drag) */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  z-index: 50;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background-color: transparent;
+  transition: background-color var(--motion-hover-surface) var(--ease);
+}
+
+.sidebar-resize-handle:hover::after,
+.sidebar-resize-handle--active::after,
+.sidebar-resizing .sidebar-resize-handle::after {
+  background-color: var(--brand);
+}
+
+.sidebar-resizing,
+.sidebar-resizing * {
+  cursor: col-resize !important;
 }
 
 .graph-pane {

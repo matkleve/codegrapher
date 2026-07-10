@@ -9,24 +9,30 @@ import {
 } from "react";
 
 type CtrlKeyContextValue = {
-  isCtrlHeld: boolean;
+  /** Physical Control key or UI toggle — mirrors prototype `ctrl` flag. */
+  isCtrlActive: boolean;
+  toggleCtrlForced: () => void;
 };
 
-const CtrlKeyContext = createContext<CtrlKeyContextValue>({ isCtrlHeld: false });
+const CtrlKeyContext = createContext<CtrlKeyContextValue>({
+  isCtrlActive: false,
+  toggleCtrlForced: () => {},
+});
 
 export function CtrlKeyProvider({ children }: { children: ReactNode }) {
-  const [isCtrlHeld, setIsCtrlHeld] = useState(false);
+  const [physicalHeld, setPhysicalHeld] = useState(false);
+  const [forcedOn, setForcedOn] = useState(false);
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Control") setIsCtrlHeld(true);
+    if (e.key === "Control") setPhysicalHeld(true);
   }, []);
 
   const onKeyUp = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Control") setIsCtrlHeld(false);
+    if (e.key === "Control") setPhysicalHeld(false);
   }, []);
 
   const onBlur = useCallback(() => {
-    setIsCtrlHeld(false);
+    setPhysicalHeld(false);
   }, []);
 
   useEffect(() => {
@@ -40,7 +46,16 @@ export function CtrlKeyProvider({ children }: { children: ReactNode }) {
     };
   }, [onBlur, onKeyDown, onKeyUp]);
 
-  const value = useMemo(() => ({ isCtrlHeld }), [isCtrlHeld]);
+  const toggleCtrlForced = useCallback(() => {
+    setForcedOn((prev) => !prev);
+  }, []);
+
+  const isCtrlActive = physicalHeld || forcedOn;
+
+  const value = useMemo(
+    () => ({ isCtrlActive, toggleCtrlForced }),
+    [isCtrlActive, toggleCtrlForced],
+  );
 
   return <CtrlKeyContext.Provider value={value}>{children}</CtrlKeyContext.Provider>;
 }

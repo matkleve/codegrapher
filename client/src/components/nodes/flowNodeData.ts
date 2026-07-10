@@ -3,6 +3,8 @@ import type { Edge, Node } from "@xyflow/react";
 export type MemberItem = {
   id: string;
   label: string;
+  /** Raw symbol name for index lookup and trace wiring. */
+  symbolName?: string;
   code: string;
 };
 

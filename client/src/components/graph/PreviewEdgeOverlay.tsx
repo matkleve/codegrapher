@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { useGraphInteraction, toAnchorRect } from "@/context/GraphInteractionContext";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
+import { toFlowId } from "@/lib/graphIds";
+import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
@@ -25,12 +27,11 @@ function measureEdges(
   const rendered: RenderedEdge[] = [];
 
   for (const spec of specs) {
-    const toProbe = resolvePreviewAnchor(spec.to, null, box);
-    const from = resolvePreviewAnchor(spec.from, toProbe?.x ?? null, box);
-    const to = resolvePreviewAnchor(spec.to, from?.x ?? null, box);
+    const from = resolvePreviewAnchor(spec.from, box, "from");
+    const to = resolvePreviewAnchor(spec.to, box, "to");
     if (!from || !to) continue;
 
-    const path = cubicPath(from.x, from.y, to.x, to.y);
+    const path = cubicPath(from.x, from.y, to.x, to.y, from.side, to.side);
     rendered.push({
       spec,
       path,
@@ -56,6 +57,8 @@ export function PreviewEdgeOverlay() {
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
     showTokenInfo,
+    pinTrace,
+    graphData,
   } = useGraphInteraction();
   const svgRef = useRef<SVGSVGElement>(null);
   const [edges, setEdges] = useState<RenderedEdge[]>([]);
@@ -123,14 +126,25 @@ export function PreviewEdgeOverlay() {
     const targetRef = end === "to" ? spec.to : spec.from;
     if (targetRef.type !== "element" || !targetRef.el) return;
     const el = targetRef.el;
-    showTokenInfo({
-      token: el.dataset.symbolName ?? "",
-      kind: spec.kind,
-      anchor: toAnchorRect(el.getBoundingClientRect()),
-      pinned: true,
-      connectionCount: 1,
-      definedIn: "",
-    });
+    const flowNodeId =
+      el.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ?? "";
+    const graphNode = graphData?.nodes.find((n) => toFlowId(n.id) === flowNodeId);
+    const traceKey = el.dataset.traceKey;
+    if (traceKey) pinTrace(traceKey);
+    showTokenInfo(
+      makeTokenInfo({
+        token: el.dataset.symbolName ?? "",
+        kind: spec.kind,
+        pinned: true,
+        connectionCount: 1,
+        definedIn: graphNode?.label ?? "",
+        filePath: graphNode?.filePath ?? "",
+        line: 1,
+        sourceFlowId: flowNodeId,
+        sourceGraphNodeId: graphNode?.id ?? "",
+        role: el.dataset.symbolRole === "definition" ? "definition" : "usage",
+      }),
+    );
     el.animate(
       [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
       { duration: 520, easing: "ease-out" },

@@ -1,15 +1,26 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
-import { useGraphInteraction, toAnchorRect } from "@/context/GraphInteractionContext";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
+import {
+  buildLocalPreviewEdges,
+  connectionCountForHost,
+  resolveLocalTargetId,
+} from "@/lib/linksForElement";
+import {
+  defSiteFor,
+  type MemberSymbolIndex,
+  usageTargetFor,
+} from "@/lib/localSymbolLinks";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
@@ -22,6 +33,7 @@ type CodeLineProps = {
   sourceGraphNodeId: string;
   filePath: string;
   definedInLabel: string;
+  symbolIndex: MemberSymbolIndex;
 };
 
 export function CodeLine({
@@ -29,11 +41,12 @@ export function CodeLine({
   lineNumber,
   memberId,
   sourceFlowId,
-  sourceGraphNodeId: _sourceGraphNodeId,
-  filePath: _filePath,
+  sourceGraphNodeId,
+  filePath,
   definedInLabel,
+  symbolIndex,
 }: CodeLineProps) {
-  const { isCtrlHeld } = useCtrlKey();
+  const { isCtrlActive } = useCtrlKey();
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
   const {
@@ -45,35 +58,46 @@ export function CodeLine({
     edgeKindAtHandle,
     scheduleHoverFire,
     scheduleHoverClear,
-    scheduleInfoOpen,
     showTokenInfo,
+    pinTrace,
+    pinnedTokenKey,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
   const edgeKeyRef = useRef<string | null>(null);
   const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
 
+  const tokens = useMemo(() => tokenizeLine(line), [line]);
+
   const clearHover = useCallback(() => {
+    if (pinnedTokenKey) return;
     const key = edgeKeyRef.current;
     if (key) {
       edgeKeyRef.current = null;
       clearPreviewEdges();
     }
     setActiveTokenKey(null);
-  }, [clearPreviewEdges, setActiveTokenKey]);
+  }, [clearPreviewEdges, pinnedTokenKey, setActiveTokenKey]);
 
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
-      if (!hasSymbol(name)) return;
-
       const entry = lookup(name);
-      if (!entry) return;
-
+      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       setActiveTokenKey(tokenKey);
 
-      const edgeKey = ctrlPreviewEdgeId(sourceFlowId, name);
+      const edgeKey = ctrlPreviewEdgeId(sourceFlowId, `${memberId}::${lineNumber}::${name}`);
       edgeKeyRef.current = edgeKey;
+
+      const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
+      if (localEdges.length > 0) {
+        setPreviewEdges(localEdges);
+        return;
+      }
+
+      if (!hasSymbol(name)) return;
+
+      if (!entry) return;
 
       const resolved = resolveVisibleTarget(
         name,
@@ -84,8 +108,6 @@ export function CodeLine({
       );
 
       if (!resolved || resolved.mode !== "graph") {
-        // Target class isn't loaded — keep the token lit + its socket dot,
-        // but there's nothing in the graph to wire to.
         clearPreviewEdges();
         return;
       }
@@ -99,6 +121,8 @@ export function CodeLine({
       graphData,
       hasSymbol,
       lookup,
+      memberId,
+      lineNumber,
       setActiveTokenKey,
       setPreviewEdges,
       sourceFlowId,
@@ -106,46 +130,21 @@ export function CodeLine({
     ],
   );
 
-  const openInfo = useCallback(
-    (name: string, chipEl: HTMLElement) => {
-      const entry = lookup(name);
-      if (!entry) return;
-      const kind = symbolKindToSemantic(entry.kind);
-      const refs = (symbols.get(name) ?? []).length;
-      showTokenInfo({
-        token: name,
-        kind,
-        anchor: toAnchorRect(chipEl.getBoundingClientRect()),
-        pinned: false,
-        connectionCount: refs,
-        definedIn: definedInLabel,
-      });
-    },
-    [definedInLabel, lookup, showTokenInfo, symbols],
-  );
-
   const onIdentifierEnter = useCallback(
     (name: string, chipKey: string) => {
-      if (!hasSymbol(name)) return;
-
       const chip = chipRefs.current.get(chipKey);
-      const chipEl = chip?.getRightAnchor()?.parentElement;
+      const chipEl = chip?.getChipElement();
       if (!chipEl) return;
 
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
-
       scheduleHoverFire(tokenKey, () => firePreview(name, chipKey, chipEl), clearHover);
-      scheduleInfoOpen(tokenKey, () => openInfo(name, chipEl));
     },
     [
       clearHover,
       firePreview,
-      hasSymbol,
       lineNumber,
       memberId,
-      openInfo,
       scheduleHoverFire,
-      scheduleInfoOpen,
       sourceFlowId,
     ],
   );
@@ -159,24 +158,48 @@ export function CodeLine({
   );
 
   const onIdentifierClick = useCallback(
-    (name: string, el: HTMLElement) => {
-      if (!hasSymbol(name) || !isCtrlHeld) return;
+    (name: string, el: HTMLElement, isDefinition: boolean) => {
+      if (!isCtrlActive) return;
 
       const entry = lookup(name);
-      if (!entry) return;
-      showTokenInfo({
-        token: name,
-        kind: symbolKindToSemantic(entry.kind),
-        anchor: toAnchorRect(el.getBoundingClientRect()),
-        pinned: true,
-        connectionCount: (symbols.get(name) ?? []).length,
-        definedIn: definedInLabel,
-      });
+      const kind = entry ? symbolKindToSemantic(entry.kind) : "variable";
+      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      pinTrace(tokenKey);
+      firePreview(name, `${lineNumber}`, el);
+      showTokenInfo(
+        makeTokenInfo({
+          token: name,
+          kind,
+          pinned: true,
+          connectionCount: connectionCountForHost(el, hasSymbol(name) ? name : undefined),
+          definedIn: definedInLabel,
+          filePath,
+          line: lineNumber,
+          sourceFlowId,
+          sourceGraphNodeId,
+          role: isDefinition ? "definition" : "usage",
+        }),
+      );
+      el.animate(
+        [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
+        { duration: 520, easing: "ease-out" },
+      );
     },
-    [definedInLabel, hasSymbol, isCtrlHeld, lookup, showTokenInfo, symbols],
+    [
+      definedInLabel,
+      filePath,
+      hasSymbol,
+      isCtrlActive,
+      lineNumber,
+      lookup,
+      memberId,
+      pinTrace,
+      showTokenInfo,
+      sourceFlowId,
+      sourceGraphNodeId,
+    ],
   );
 
-  const tokens = tokenizeLine(line);
   const lineTargetId = previewLineHandle(memberId, lineNumber);
   const lineTargetActive = isHandleActive(lineTargetId);
   const lineKind = edgeKindAtHandle(lineTargetId);
@@ -198,15 +221,7 @@ export function CodeLine({
         side="left"
         targetId={lineTargetId}
         size="node"
-        visible
-        highlighted={lineTargetActive}
-        colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
-      />
-      <FlowAnchor
-        side="right"
-        targetId={lineTargetId}
-        size="node"
-        visible
+        visible={lineTargetActive}
         highlighted={lineTargetActive}
         colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
       />
@@ -228,13 +243,20 @@ export function CodeLine({
           );
         }
 
-        const entry = lookup(token.text);
-        const semantic = entry ? symbolKindToSemantic(entry.kind) : null;
-        if (!semantic) {
+        const rawLocalTarget = usageTargetFor(symbolIndex, lineNumber, i);
+        const localDefId = defSiteFor(symbolIndex, lineNumber, i);
+        const localTargetId = rawLocalTarget
+          ? resolveLocalTargetId(rawLocalTarget, sourceFlowId)
+          : null;
+        const indexed = hasSymbol(token.text);
+        const interactive = indexed || !!localDefId || !!localTargetId;
+
+        if (!interactive) {
           return <span key={`${lineNumber}-${i}`}>{token.text}</span>;
         }
 
-        const indexed = hasSymbol(token.text);
+        const entry = lookup(token.text);
+        const semantic = entry ? symbolKindToSemantic(entry.kind) : "variable";
         const chipKey = `${lineNumber}-${i}`;
         const tokenKey = makeUsageTokenKey(
           sourceFlowId,
@@ -253,20 +275,22 @@ export function CodeLine({
             text={token.text}
             semantic={semantic}
             traceKey={tokenKey}
-            interactive={indexed}
+            interactive={interactive}
+            localDefId={localDefId}
+            localTargetId={localTargetId ?? undefined}
+            symbolRole={localDefId ? "definition" : "usage"}
             shimmerDelay={`${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
-            role={indexed ? "button" : undefined}
-            tabIndex={indexed ? 0 : undefined}
+            role="button"
+            tabIndex={0}
             onMouseEnter={() => onIdentifierEnter(token.text, chipKey)}
             onMouseLeave={() => onIdentifierLeave(token.text)}
             onClick={(e) => {
-              if (!indexed) return;
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget);
+              onIdentifierClick(token.text, e.currentTarget, !!localDefId);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && indexed) {
-                onIdentifierClick(token.text, e.currentTarget);
+              if (e.key === "Enter") {
+                onIdentifierClick(token.text, e.currentTarget, !!localDefId);
               }
             }}
           />

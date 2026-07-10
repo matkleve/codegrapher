@@ -225,6 +225,7 @@ export function graphToFlow(
 
       const methods = methodsForClassNode(rawMethods).map((m) => ({
         ...m,
+        symbolName: m.label,
         label: camelToWords(m.label),
       }));
 

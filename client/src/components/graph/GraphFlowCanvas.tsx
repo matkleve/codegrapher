@@ -6,7 +6,7 @@ import {
   type useEdgesState,
   type useNodesState,
 } from "@xyflow/react";
-import { TokenInfoPopover } from "@/components/code/TokenInfoPopover";
+import { TokenContextBar } from "@/components/code/TokenContextBar";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
@@ -37,14 +37,13 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo, dismissTransient, isCtrlPreviewMode, isTraceActive } =
+  const { clearTokenInfo, isCtrlPreviewMode, isTraceActive } =
     useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
     clearTokenInfo();
-    dismissTransient();
     onPaneClick();
-  }, [clearTokenInfo, dismissTransient, onPaneClick]);
+  }, [clearTokenInfo, onPaneClick]);
 
   return (
     <div
@@ -83,7 +82,7 @@ export function GraphFlowCanvas({
       </ReactFlow>
       <GraphPinchZoomBoost />
       <TokenReferencesDropdown />
-      <TokenInfoPopover />
+      <TokenContextBar />
       <JumpTooltip />
     </div>
   );

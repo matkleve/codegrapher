@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchFileGraph, fetchFocus } from "@/api";
 import FileExplorer from "@/components/FileExplorer";
+import { ResizableSidebar } from "@/components/ResizableSidebar";
 import GraphCanvas, { type GraphCanvasHandle } from "@/components/GraphCanvas";
 import { CtrlKeyProvider } from "@/context/CtrlKeyContext";
 import { IndexProvider, useIndex } from "@/context/IndexContext";
@@ -94,11 +95,13 @@ function AppContent() {
   return (
     <CtrlKeyProvider>
       <div className="flex h-screen overflow-hidden bg-background text-foreground">
-        <FileExplorer
-          onFileClick={handleFileClick}
-          treeDisabled={loading}
-          graphFilePaths={graphFilePaths}
-        />
+        <ResizableSidebar>
+          <FileExplorer
+            onFileClick={handleFileClick}
+            treeDisabled={loading}
+            graphFilePaths={graphFilePaths}
+          />
+        </ResizableSidebar>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {error && (

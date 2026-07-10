@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { CtrlToggle } from "@/components/ui/CtrlToggle";
 import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
@@ -390,6 +391,7 @@ export function GraphFlowInner({
             Next graph
             <ChevronRight data-icon="inline-end" />
           </Button>
+          <CtrlToggle />
           <ThemeToggle />
         </div>
         {loading && (

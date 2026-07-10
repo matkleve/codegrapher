@@ -40,7 +40,8 @@ export type SymbolKind =
   | "function"
   | "method"
   | "interface"
-  | "type";
+  | "type"
+  | "property";
 
 export type SymbolEntry = {
   filePath: string;

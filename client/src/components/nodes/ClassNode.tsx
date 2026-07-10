@@ -99,6 +99,9 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       <NodeCardHeader
         title={title}
         symbolName={nodeData.label}
+        filePath={nodeData.filePath}
+        flowNodeId={id}
+        graphNodeId={nodeData.graphNodeId}
         chip={<FileTypeChip filePath={nodeData.filePath} />}
         bodyExpanded={bodyExpanded}
         onToggleCollapsed={onToggleCollapsed}
@@ -118,6 +121,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   key={p.id}
                   memberId={p.id}
                   label={p.label}
+                  symbolName={p.symbolName}
                   code={p.code}
                   expanded={nodeData.expandedPropertyIds.includes(p.id)}
                   onToggle={onToggleProperty}
@@ -145,6 +149,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   key={m.id}
                   memberId={m.id}
                   label={m.label}
+                  symbolName={m.symbolName}
                   code={m.code}
                   expanded={nodeData.expandedMethodIds.includes(m.id)}
                   onToggle={onToggleMethod}

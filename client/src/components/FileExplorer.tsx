@@ -1,4 +1,4 @@
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,6 +8,7 @@ import { RecentFilesSection } from "@/components/explorer/RecentFilesSection";
 import { RecentFoldersDropdown } from "@/components/explorer/RecentFoldersDropdown";
 import { EXPLORER_X_PAD } from "@/components/explorer/explorerRowStyles";
 import { useFolderExplorer } from "@/components/explorer/useFolderExplorer";
+import { useSidebarLayout } from "@/context/SidebarLayoutContext";
 import { cn } from "@/lib/utils";
 
 interface FileExplorerProps {
@@ -44,11 +45,23 @@ export default function FileExplorer({
     handleRecentFolderSelect,
     handleClearRecentFolders,
   } = useFolderExplorer(onFileClick);
+  const { toggleCollapsed } = useSidebarLayout();
 
   return (
-    <aside className="pointer-events-auto flex h-full w-80 shrink-0 flex-col overflow-visible border-r border-border bg-sidebar text-sidebar-foreground">
+    <aside className="pointer-events-auto flex h-full min-w-0 flex-1 flex-col overflow-visible">
       <div className="pointer-events-auto relative z-30 flex shrink-0 flex-col gap-2 overflow-visible p-3">
         <div className="flex gap-2 overflow-visible">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            title="Sidebar einklappen"
+            aria-label="Sidebar einklappen"
+            className="size-[var(--control-height-lg)] shrink-0"
+          >
+            <PanelLeftClose data-icon="inline-start" />
+          </Button>
           <div
             className="pointer-events-auto relative z-[100] shrink-0"
             onMouseEnter={() => setRecentFoldersOpen(true)}

@@ -28,3 +28,17 @@ export function buildDefinitionFanOutEdges(
     kind,
   }));
 }
+
+export function buildElementPreviewEdge(
+  edgeId: string,
+  fromEl: HTMLElement,
+  toEl: HTMLElement,
+  kind: SemanticTokenKind,
+): PreviewEdgeSpec {
+  return {
+    id: edgeId,
+    from: { type: "element", el: fromEl },
+    to: { type: "element", el: toEl },
+    kind,
+  };
+}

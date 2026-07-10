@@ -20,7 +20,6 @@ import {
   clearHoverTimers,
   emptyHoverTimers,
   fireDelayMs,
-  INFO_DELAY_MS,
   LEAVE_GRACE_MS,
   type HoverIntentTimers,
 } from "@/lib/hoverIntent";
@@ -29,6 +28,7 @@ import {
   type PreviewEdgeSpec,
 } from "@/lib/previewEdgeTypes";
 import { computeTraceLit } from "@/lib/computeTraceLit";
+import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { GraphData } from "@/types";
@@ -56,14 +56,7 @@ export function toAnchorRect(rect: DOMRect): AnchorRect {
   };
 }
 
-export type TokenInfoState = {
-  token: string;
-  kind: SemanticTokenKind;
-  anchor: AnchorRect;
-  pinned: boolean;
-  connectionCount: number;
-  definedIn: string;
-} | null;
+export type { TokenInfoState };
 
 export type TokenDropdownState = {
   token: string;
@@ -93,7 +86,6 @@ type GraphInteractionContextValue = {
   isWarm: boolean;
   scheduleHoverFire: (tokenKey: string, onFire: () => void, onClear: () => void) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
-  scheduleInfoOpen: (tokenKey: string, onOpen: () => void) => void;
   scheduleHoverLeaveGrace: () => void;
   cancelHoverLeaveGrace: () => void;
   cancelHoverTimers: () => void;
@@ -118,6 +110,10 @@ type GraphInteractionContextValue = {
   onLoadFile: (filePath: string) => void | Promise<void>;
   graphData: GraphData | null;
   dismissTransient: () => void;
+  pinTrace: (tokenKey: string) => void;
+  unpinTrace: () => void;
+  pinnedTokenKey: string | null;
+  traceTokenKey: string | null;
 };
 
 const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
@@ -139,7 +135,7 @@ export function GraphInteractionProvider({
   setNodes,
   onLoadFile,
 }: GraphInteractionProviderProps) {
-  const { isCtrlHeld } = useCtrlKey();
+  const { isCtrlActive } = useCtrlKey();
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
   const [previewEdges, setPreviewEdgesState] = useState<PreviewEdgeSpec[]>([]);
@@ -147,6 +143,7 @@ export function GraphInteractionProvider({
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
   const [jumpTooltip, setJumpTooltip] = useState<JumpTooltipState>(null);
+  const [pinnedTokenKey, setPinnedTokenKey] = useState<string | null>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
@@ -163,6 +160,16 @@ export function GraphInteractionProvider({
     setJumpTooltip(null);
   }, []);
 
+  const unpinTrace = useCallback(() => {
+    setPinnedTokenKey(null);
+  }, []);
+
+  const pinTrace = useCallback((tokenKey: string) => {
+    setPinnedTokenKey(tokenKey);
+    setActiveTokenKey(tokenKey);
+    setIsWarm(true);
+  }, []);
+
   const dismissTransient = useCallback(() => {
     clearPreviewEdges();
     setActiveTokenKey(null);
@@ -172,7 +179,11 @@ export function GraphInteractionProvider({
 
   const clearTokenInfo = useCallback(() => {
     setTokenInfo(null);
-  }, []);
+    unpinTrace();
+    clearPreviewEdges();
+    setActiveTokenKey(null);
+    resetHoverIntent();
+  }, [clearPreviewEdges, resetHoverIntent, unpinTrace]);
 
   const unpinTokenInfo = useCallback(() => {
     setTokenInfo((prev) => (prev ? { ...prev, pinned: false } : null));
@@ -189,6 +200,13 @@ export function GraphInteractionProvider({
     clearHoverTimers(hoverTimersRef.current);
   }, []);
 
+  const resetHoverIntent = useCallback(() => {
+    cancelHoverTimers();
+    pendingFireRef.current = null;
+    hoveredTokenKeyRef.current = null;
+    hoverClearRef.current = null;
+  }, [cancelHoverTimers]);
+
   const scheduleHoverFire = useCallback(
     (tokenKey: string, onFire: () => void, onClear: () => void) => {
       const timers = hoverTimersRef.current;
@@ -202,26 +220,29 @@ export function GraphInteractionProvider({
       pendingFireRef.current = { tokenKey, onFire };
       hoverClearRef.current = { tokenKey, onClear };
 
-      const delay = fireDelayMs(isWarm || activeTokenKey != null, isCtrlHeld);
-      if (delay === 0) {
+      const runFire = () => {
         hoveredTokenKeyRef.current = tokenKey;
         setIsWarm(true);
         onFire();
+        pendingFireRef.current = null;
+        timers.fire = null;
+      };
+
+      const delay = fireDelayMs(isWarm || activeTokenKey != null, isCtrlActive);
+      if (delay === 0) {
+        runFire();
         return;
       }
 
-      timers.fire = setTimeout(() => {
-        hoveredTokenKeyRef.current = tokenKey;
-        setIsWarm(true);
-        onFire();
-        timers.fire = null;
-      }, delay);
+      timers.fire = setTimeout(runFire, delay);
     },
-    [activeTokenKey, isCtrlHeld, isWarm],
+    [activeTokenKey, isCtrlActive, isWarm],
   );
 
   const scheduleHoverClear = useCallback(
     (tokenKey: string, onClear: () => void) => {
+      if (pinnedTokenKey) return;
+
       const timers = hoverTimersRef.current;
       clearTimeout(timers.fire ?? undefined);
       clearTimeout(timers.info ?? undefined);
@@ -239,7 +260,7 @@ export function GraphInteractionProvider({
         timers.clear = null;
       }, LEAVE_GRACE_MS);
     },
-    [tokenInfo?.pinned],
+    [pinnedTokenKey, tokenInfo?.pinned],
   );
 
   const cancelHoverLeaveGrace = useCallback(() => {
@@ -254,36 +275,23 @@ export function GraphInteractionProvider({
   }, [scheduleHoverClear]);
 
   useEffect(() => {
-    if (!isCtrlHeld) return;
+    if (!isCtrlActive) return;
+
+    const timers = hoverTimersRef.current;
+    if (!timers.fire) return;
+
     const pending = pendingFireRef.current;
     if (!pending) return;
 
-    const timers = hoverTimersRef.current;
-    clearTimeout(timers.fire ?? undefined);
-    clearTimeout(timers.info ?? undefined);
+    clearTimeout(timers.fire);
     timers.fire = null;
     timers.info = null;
 
     hoveredTokenKeyRef.current = pending.tokenKey;
     setIsWarm(true);
     pending.onFire();
-  }, [isCtrlHeld]);
-
-  const scheduleInfoOpen = useCallback(
-    (tokenKey: string, onOpen: () => void) => {
-      const timers = hoverTimersRef.current;
-      clearTimeout(timers.info ?? undefined);
-      if (isCtrlHeld) return;
-
-      timers.info = setTimeout(() => {
-        if (hoveredTokenKeyRef.current === tokenKey && !tokenInfo?.pinned) {
-          onOpen();
-        }
-        timers.info = null;
-      }, INFO_DELAY_MS);
-    },
-    [isCtrlHeld, tokenInfo?.pinned],
-  );
+    pendingFireRef.current = null;
+  }, [isCtrlActive]);
 
   const setPreviewEdges = useCallback((edges: PreviewEdgeSpec[]) => {
     setPreviewEdgesState(edges);
@@ -291,8 +299,8 @@ export function GraphInteractionProvider({
   }, []);
 
   useEffect(() => {
-    if (!isCtrlHeld) setTokenDropdown(null);
-  }, [isCtrlHeld]);
+    if (!isCtrlActive) setTokenDropdown(null);
+  }, [isCtrlActive]);
 
   const isHandleActive = useCallback(
     (handle: string) => previewEdges.some((e) => edgeTouchesHandle(e, handle)),
@@ -342,12 +350,13 @@ export function GraphInteractionProvider({
     [clearPreviewEdges, getNode, nodes, setCenter, setNodes],
   );
 
-  const isCtrlPreviewMode = isCtrlHeld;
-  const isTraceActive = activeTokenKey != null;
+  const isCtrlPreviewMode = isCtrlActive;
+  const traceTokenKey = pinnedTokenKey ?? activeTokenKey;
+  const isTraceActive = traceTokenKey != null;
 
   const traceLit = useMemo(
-    () => computeTraceLit(activeTokenKey, previewEdges),
-    [activeTokenKey, previewEdges],
+    () => computeTraceLit(traceTokenKey, previewEdges),
+    [traceTokenKey, previewEdges],
   );
 
   const isTraceLit = useCallback(
@@ -387,7 +396,6 @@ export function GraphInteractionProvider({
       isWarm,
       scheduleHoverFire,
       scheduleHoverClear,
-      scheduleInfoOpen,
       scheduleHoverLeaveGrace,
       cancelHoverLeaveGrace,
       cancelHoverTimers,
@@ -412,6 +420,10 @@ export function GraphInteractionProvider({
       onLoadFile,
       graphData,
       dismissTransient,
+      pinTrace,
+      unpinTrace,
+      pinnedTokenKey,
+      traceTokenKey,
     }),
     [
       previewEdges,
@@ -423,7 +435,6 @@ export function GraphInteractionProvider({
       isWarm,
       scheduleHoverFire,
       scheduleHoverClear,
-      scheduleInfoOpen,
       scheduleHoverLeaveGrace,
       cancelHoverLeaveGrace,
       cancelHoverTimers,
@@ -446,6 +457,10 @@ export function GraphInteractionProvider({
       onLoadFile,
       graphData,
       dismissTransient,
+      pinTrace,
+      unpinTrace,
+      pinnedTokenKey,
+      traceTokenKey,
     ],
   );
 

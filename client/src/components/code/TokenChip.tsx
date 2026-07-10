@@ -15,6 +15,8 @@ type TokenChipProps = {
   semantic: SemanticTokenKind;
   traceKey?: string;
   interactive: boolean;
+  localDefId?: string;
+  localTargetId?: string;
   shimmerDelay?: string;
   symbolRole?: "usage" | "definition";
   onMouseEnter?: () => void;
@@ -32,6 +34,8 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
       semantic,
       traceKey,
       interactive,
+      localDefId,
+      localTargetId,
       shimmerDelay = "0s",
       symbolRole = "usage",
       onMouseEnter,
@@ -56,6 +60,9 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
 
     const anchorColor = TOKEN_ANCHOR[semantic];
     const endpoint = on;
+    const isDefinition = symbolRole === "definition" || !!localDefId;
+    const showIncoming = endpoint && !isDefinition;
+    const showOutgoing = endpoint && isDefinition;
 
     return (
       <span
@@ -66,6 +73,8 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         data-symbol-role={symbolRole}
         data-trace-key={traceKey}
         data-token-kind={semantic}
+        {...(localDefId ? { "data-local-def-id": localDefId } : {})}
+        {...(localTargetId ? { "data-local-target-id": localTargetId } : {})}
         style={{ "--shimmer-delay": shimmerDelay } as React.CSSProperties}
         className={cn(
           "token-chip",
@@ -83,8 +92,8 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
           ref={leftRef}
           side="left"
           colorClass={anchorColor}
-          visible={endpoint}
-          highlighted={endpoint}
+          visible={showIncoming}
+          highlighted={showIncoming}
           size="chip"
         />
         <span className="token-chip-text relative z-[1]">{text}</span>
@@ -92,8 +101,8 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
           ref={rightRef}
           side="right"
           colorClass={anchorColor}
-          visible={endpoint}
-          highlighted={endpoint}
+          visible={showOutgoing}
+          highlighted={showOutgoing}
           size="chip"
         />
       </span>

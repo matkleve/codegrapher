@@ -71,16 +71,16 @@
 .token-chip,
 .token-def-label {
   position: relative;
-  display: inline;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   margin: 0 -2px;
   padding: 1px 4px;
   border-radius: 5px;
   font-weight: 560;
   white-space: nowrap;
-  box-shadow: inset 0 0 0 1px transparent;
   transition:
     background-color 0.22s var(--ease),
-    box-shadow 0.22s var(--ease),
     color 0.28s var(--ease),
     filter 0.22s var(--ease);
 }
@@ -101,6 +101,10 @@
   color: var(--token-edge-type);
 }
 
+.token-chip[data-token-kind="variable"] .token-chip-text {
+  color: var(--token-edge-variable);
+}
+
 .token-def-label[data-token-kind="class"] {
   color: var(--token-edge-class);
 }
@@ -113,10 +117,23 @@
   color: var(--token-edge-type);
 }
 
+.token-def-label[data-token-kind="variable"] {
+  color: var(--token-edge-variable);
+}
+
+/* Resting text-fill. The Ctrl shimmer sets `-webkit-text-fill-color: transparent`
+   + `background-clip: text`; when Ctrl is released Chromium keeps the transparent
+   fill (stale paint) until a reflow, so glyphs read as white until you click away.
+   An explicit concrete value here forces the cascade to repaint immediately. */
+.token-chip-text,
+.token-def-label {
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}
+
 .token-chip.token-chip-on,
 .token-def-label.token-chip-on {
   background: color-mix(in oklch, currentColor 15%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 52%, transparent);
   filter: brightness(1.16) saturate(1.12);
 }
 
@@ -132,7 +149,7 @@
 .graph-ctrl-preview .node-card-caret,
 .graph-ctrl-preview .member-row-caret,
 .graph-ctrl-preview .file-type-chip {
-  color: var(--faint) !important;
+  color: var(--faint-ctrl) !important;
 }
 
 .graph-ctrl-preview .react-flow__node.class-node-root {
@@ -162,7 +179,7 @@
     100deg,
     currentColor 0%,
     currentColor 43%,
-    color-mix(in oklch, currentColor 48%, #fff) 50%,
+    color-mix(in oklch, currentColor 48%, var(--glint-hi)) 50%,
     currentColor 57%,
     currentColor 100%
   );
@@ -176,14 +193,85 @@
   filter: brightness(1.06);
 }
 
-/* ── Trace mode: dim per-element, lit shines through ── */
+/* Trace + Ctrl: trace focus wins — no shimmer (transparent text-fill reads as
+   white) and no extra bleach via --faint-ctrl on top of --faint. */
+.graph-trace-active .token-chip.token-interactive .token-chip-text,
+.graph-trace-active .token-def-label.token-interactive {
+  background-image: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+  filter: none;
+}
+
+.graph-ctrl-preview.graph-trace-active .code-kw,
+.graph-ctrl-preview.graph-trace-active .code-pn,
+.graph-ctrl-preview.graph-trace-active .code-comment,
+.graph-ctrl-preview.graph-trace-active .code-string,
+.graph-ctrl-preview.graph-trace-active .code-number,
+.graph-ctrl-preview.graph-trace-active .member-body-wrap,
+.graph-ctrl-preview.graph-trace-active .member-section-label,
+.graph-ctrl-preview.graph-trace-active .member-section-bulk,
+.graph-ctrl-preview.graph-trace-active .node-card-caret,
+.graph-ctrl-preview.graph-trace-active .member-row-caret,
+.graph-ctrl-preview.graph-trace-active .file-type-chip {
+  color: var(--faint) !important;
+}
+
+/* Member container keeps a permanent transparent 1px border (like `.member` in
+   the prototype) so the `owner-lit` border-color has width to render when a
+   function container becomes active. */
+.member-row {
+  border: 1px solid transparent;
+  transition:
+    border-color 0.2s var(--ease),
+    background-color 0.2s var(--ease),
+    opacity 0.2s var(--ease);
+}
+
+/* Node card border/shadow settle with the prototype ease (never height —
+   a size transition feeds React Flow's ResizeObserver into a commit loop). */
+.react-flow__node.class-node-root {
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease),
+    opacity 0.2s var(--ease);
+}
+
+/* Dim/undim of non-clickable code + labels fades with the prototype ease
+   instead of snapping (mirrors `.kw`/`.pn`/`.section-label` transitions). */
+.code-kw,
+.code-pn,
+.code-comment,
+.code-string,
+.code-number,
+.member-body-wrap,
+.member-section-label,
+.member-section-bulk,
+.node-card-caret,
+.member-row-caret,
+.node-card-title,
+.file-type-chip {
+  transition:
+    color 0.2s var(--ease),
+    opacity 0.2s var(--ease);
+}
+
+/* ── Trace mode: dim per-element, lit shines through (prototype .proto.trace) ── */
+/* Syntax tokens stay faint during trace — only .token-chip-lit keeps its color */
 .graph-trace-active .code-kw,
 .graph-trace-active .code-pn,
 .graph-trace-active .code-comment,
 .graph-trace-active .code-string,
 .graph-trace-active .code-number,
-.graph-trace-active .member-body-wrap {
-  color: var(--faint);
+.graph-trace-active .member-body-wrap,
+.graph-ctrl-preview.graph-trace-active .code-kw,
+.graph-ctrl-preview.graph-trace-active .code-pn,
+.graph-ctrl-preview.graph-trace-active .code-comment,
+.graph-ctrl-preview.graph-trace-active .code-string,
+.graph-ctrl-preview.graph-trace-active .code-number {
+  color: var(--faint) !important;
 }
 
 .graph-trace-active .file-type-chip,
@@ -191,15 +279,25 @@
 .graph-trace-active .member-section-bulk,
 .graph-trace-active .node-card-title,
 .graph-trace-active .node-card-caret,
-.graph-trace-active .member-row-caret {
+.graph-trace-active .member-row-caret,
+.graph-trace-active .member-row-header {
   color: var(--faint) !important;
 }
 
 .graph-trace-active .token-chip:not(.token-chip-lit) .token-chip-text,
 .graph-trace-active .token-def-label:not(.token-chip-lit) {
-  color: var(--faint);
-  box-shadow: inset 0 0 0 1px transparent;
+  color: var(--faint) !important;
   background: transparent;
+  filter: none;
+}
+
+.graph-trace-active .member-row-label:not(.token-chip-lit) {
+  color: var(--faint) !important;
+}
+
+/* Prototype: `.member` keeps card-2; only `.member.lit` tints — never strip backgrounds. */
+.graph-trace-active .member-row:not(.trace-member-owner-lit) {
+  border-color: transparent !important;
 }
 
 .graph-trace-active .react-flow__node.class-node-root {
@@ -218,40 +316,63 @@
 }
 
 .graph-trace-active .trace-member-lit {
-  background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted));
+  background: color-mix(in oklch, var(--token-edge-function) 6%, var(--muted)) !important;
 }
 
 .graph-trace-active .trace-member-owner-lit {
   border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
 }
 
+/* Function body spread: keywords/punctuation readable (prototype .lit-line) */
 .graph-trace-active .code-line.trace-lit-line .code-kw,
 .graph-trace-active .code-line.trace-lit-line .code-pn,
-.graph-trace-active .code-line.trace-lit-line .code-comment {
-  color: var(--muted);
+.graph-trace-active .code-line.trace-lit-line .code-comment,
+.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-kw,
+.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-pn,
+.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-comment {
+  color: var(--muted-foreground) !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line .code-string {
-  color: var(--code-string);
+.graph-trace-active .code-line.trace-lit-line .code-string,
+.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-string {
+  color: var(--faint) !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line .code-number {
-  color: var(--code-number);
+.graph-trace-active .code-line.trace-lit-line .code-number,
+.graph-ctrl-preview.graph-trace-active .code-line.trace-lit-line .code-number {
+  color: var(--faint) !important;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
-  color: var(--token-edge-class);
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"],
+.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
+.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
+  color: var(--token-edge-class) !important;
+  -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
-  color: var(--token-edge-function);
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"],
+.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
+.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
-  color: var(--token-edge-type);
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"],
+.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
+.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
+  color: var(--token-edge-type) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"],
+.graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
+.graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
+  color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
 }
 
 /* ── Preview wires — `.wire-path` / `.wire-glow` / `.wire-hit` ── */
@@ -317,7 +438,21 @@
   }
 
   .flow-anchor-off,
-  .flow-anchor-on {
+  .flow-anchor-on,
+  .member-row,
+  .react-flow__node.class-node-root,
+  .code-kw,
+  .code-pn,
+  .code-comment,
+  .code-string,
+  .code-number,
+  .member-body-wrap,
+  .member-section-label,
+  .member-section-bulk,
+  .node-card-caret,
+  .member-row-caret,
+  .node-card-title,
+  .file-type-chip {
     transition-duration: 0.01ms !important;
   }
 }
