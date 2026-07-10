@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Code2, Crosshair, X } from "lucide-react";
+import { Code2, Crosshair, X } from "lucide-react";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Button } from "@/components/ui/button";
+import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { openFileInEditor } from "@/api";
 import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
@@ -121,10 +122,7 @@ export function TokenContextBar() {
               onClick={() => setExpanded((v) => !v)}
             >
               {connectionCount} connection{connectionCount === 1 ? "" : "s"}
-              <ChevronDown
-                className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
-                aria-hidden
-              />
+              <ExpandChevron expanded={expanded} className="text-muted-foreground" />
             </Button>
           ) : null}
 

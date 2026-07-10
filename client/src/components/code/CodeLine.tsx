@@ -231,7 +231,7 @@ export function CodeLine({
             <span
               key={`${lineNumber}-${i}`}
               className={cn(
-                token.kind === "keyword" && "code-kw text-primary/80",
+                token.kind === "keyword" && "code-kw",
                 (token.kind === "operator" || token.kind === "other") && "code-pn",
                 token.kind === "comment" && "code-comment text-muted-foreground",
                 token.kind === "string" && "code-string text-[color:var(--code-string)]",

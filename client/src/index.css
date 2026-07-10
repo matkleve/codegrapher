@@ -554,10 +554,30 @@ html.dark {
 
 /* Member row header layout (expand/collapse corners — not in proto) */
 .member-row-header {
-  border-radius: 0;
   border-left-color: transparent;
   border-right-color: transparent;
   border-top-color: transparent;
+}
+
+.member-row-header--collapsed {
+  border-radius: var(--radius-md);
+}
+
+.member-row-header--expanded {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+/* Brand surface only on hover — not when merely expanded/focused */
+.member-row-header.hoverable[aria-expanded="true"] {
+  background-color: transparent;
+  border-color: transparent;
+  color: inherit;
+}
+
+.member-row-header.hoverable:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
 }
 
 .member-row-header--collapsed.hoverable:hover {
@@ -568,11 +588,21 @@ html.dark {
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
+.member-row-header.hoverable:hover .member-row-caret,
+.member-row-header.hoverable:hover .member-row-label {
+  color: var(--brand);
+}
+
 .node-card-caret,
 .member-row-caret,
 .member-section-label,
 .member-section-bulk {
   transition: color var(--motion-hover-color) var(--ease);
+}
+
+/* Unicode carets sit low in the em-box — optical center against label text */
+.expand-chevron {
+  translate: 0 -0.06em;
 }
 
 @keyframes node-fade-in {

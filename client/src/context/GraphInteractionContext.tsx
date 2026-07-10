@@ -177,6 +177,17 @@ export function GraphInteractionProvider({
     if (tokenInfo && !tokenInfo.pinned) setTokenInfo(null);
   }, [clearPreviewEdges, tokenInfo]);
 
+  const cancelHoverTimers = useCallback(() => {
+    clearHoverTimers(hoverTimersRef.current);
+  }, []);
+
+  const resetHoverIntent = useCallback(() => {
+    cancelHoverTimers();
+    pendingFireRef.current = null;
+    hoveredTokenKeyRef.current = null;
+    hoverClearRef.current = null;
+  }, [cancelHoverTimers]);
+
   const clearTokenInfo = useCallback(() => {
     setTokenInfo(null);
     unpinTrace();
@@ -195,17 +206,6 @@ export function GraphInteractionProvider({
     },
     [],
   );
-
-  const cancelHoverTimers = useCallback(() => {
-    clearHoverTimers(hoverTimersRef.current);
-  }, []);
-
-  const resetHoverIntent = useCallback(() => {
-    cancelHoverTimers();
-    pendingFireRef.current = null;
-    hoveredTokenKeyRef.current = null;
-    hoverClearRef.current = null;
-  }, [cancelHoverTimers]);
 
   const scheduleHoverFire = useCallback(
     (tokenKey: string, onFire: () => void, onClear: () => void) => {

@@ -19,6 +19,7 @@ import {
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeMemberDefKey } from "@/lib/traceKeys";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -159,9 +160,11 @@ export function CollapsibleMemberRow({
         type="button"
         className={cn(
           "member-row-header group/member",
+          INTERACTIVE_SURFACE,
           "flex w-full cursor-pointer items-center gap-2 border-x-0 border-t-0 px-2 py-2 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
+        aria-expanded={expanded}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();

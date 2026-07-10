@@ -239,6 +239,15 @@
     opacity 0.2s var(--ease);
 }
 
+/* Resting keyword tint — prototype `.kw` (not theme primary, which reads gold/red). */
+.code-kw {
+  color: color-mix(in oklch, var(--brand) 62%, var(--foreground));
+}
+
+.code-pn {
+  color: var(--muted-foreground);
+}
+
 /* Dim/undim of non-clickable code + labels fades with the prototype ease
    instead of snapping (mirrors `.kw`/`.pn`/`.section-label` transitions). */
 .code-kw,
@@ -293,6 +302,11 @@
 
 .graph-trace-active .member-row-label:not(.token-chip-lit) {
   color: var(--faint) !important;
+}
+
+/* Trace: wash non-active member boxes toward card; only `.trace-member-lit` tints. */
+.graph-trace-active .member-row:not(.trace-member-lit) {
+  background: color-mix(in oklch, var(--muted) 24%, var(--card)) !important;
 }
 
 /* Prototype: `.member` keeps card-2; only `.member.lit` tints — never strip backgrounds. */
@@ -372,6 +386,16 @@
 .graph-ctrl-preview.graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
 .graph-ctrl-preview.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
   color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Function body spread: only wire endpoints keep semantic color */
+.graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit:not(.token-chip-on) .token-chip-text,
+.graph-ctrl-preview.graph-trace-active
+  .code-line.trace-lit-line
+  .token-chip.token-chip-lit:not(.token-chip-on)
+  .token-chip-text {
+  color: var(--muted-foreground) !important;
   -webkit-text-fill-color: currentColor;
 }
 

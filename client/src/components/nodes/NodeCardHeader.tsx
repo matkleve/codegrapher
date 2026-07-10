@@ -133,7 +133,7 @@ export function NodeCardHeader({
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className={`node-card-caret ${INTERACTIVE_BORDER_BTN} nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)]`}
+              className={`node-card-caret group/caret ${INTERACTIVE_BORDER_BTN} nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)]`}
               title={bodyExpanded ? "Collapse" : "Expand"}
               aria-label={bodyExpanded ? "Collapse" : "Expand"}
               aria-expanded={bodyExpanded}
@@ -143,7 +143,7 @@ export function NodeCardHeader({
                 onToggleCollapsed();
               }}
             >
-              <ExpandChevron expanded={bodyExpanded} />
+              <ExpandChevron expanded={bodyExpanded} groupHoverFlip="caret" />
             </button>
             <span className="min-w-0 flex-1">
               <span

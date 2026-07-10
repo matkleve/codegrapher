@@ -201,7 +201,6 @@ function spreadFunctionMember(
 ): void {
   state.litMemberIds.add(memberId);
   state.litLineMemberIds.add(memberId);
-  addMemberTokenKeys(memberId, state.litTokenKeys);
 
   const usageMember = memberIdFromUsageKey(activeTokenKey);
   if (usageMember === memberId) {
@@ -210,19 +209,6 @@ function spreadFunctionMember(
 
   const flowId = flowNodeIdFromMemberId(memberId);
   if (flowId) state.litFlowNodeIds.add(flowId);
-}
-
-function addMemberTokenKeys(memberId: string, litTokenKeys: Set<string>): void {
-  const root = document.querySelector<HTMLElement>(
-    `[data-member-id="${CSS.escape(memberId)}"]`,
-  );
-  if (!root) return;
-  root
-    .querySelectorAll<HTMLElement>("[data-trace-key], [data-local-def-id], [data-local-target-id]")
-    .forEach((el) => {
-      const key = traceKeyFromElement(el);
-      if (key) litTokenKeys.add(key);
-    });
 }
 
 function spreadFunctionBodiesFromLit(
