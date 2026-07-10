@@ -1,10 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  clampSidebarDragWidth,
   clampSidebarWidth,
+  isSidebarCollapseWarning,
   loadStoredSidebarCollapsed,
   loadStoredSidebarWidth,
   saveStoredSidebarCollapsed,
   saveStoredSidebarWidth,
+  shouldSidebarCollapseOnRelease,
   SIDEBAR_DEFAULT_WIDTH,
 } from "@/lib/sidebarLayout";
 
@@ -12,6 +15,7 @@ export type ResizableSidebarState = {
   width: number;
   collapsed: boolean;
   isResizing: boolean;
+  collapseWarning: boolean;
   toggleCollapsed: () => void;
   onResizeMouseDown: (event: React.MouseEvent) => void;
   onResizeDoubleClick: () => void;
@@ -49,14 +53,26 @@ export function useResizableSidebar(): ResizableSidebarState {
 
     const onMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
-      const next = clampSidebarWidth(startWidth + delta);
+      const next = clampSidebarDragWidth(startWidth + delta);
       widthRef.current = next;
       setWidth(next);
     };
 
     const onUp = () => {
       setIsResizing(false);
-      saveStoredSidebarWidth(widthRef.current);
+      const releasedWidth = widthRef.current;
+      if (shouldSidebarCollapseOnRelease(releasedWidth)) {
+        const restoreWidth = clampSidebarWidth(startWidth);
+        widthRef.current = restoreWidth;
+        setWidth(restoreWidth);
+        setCollapsed(true);
+        saveStoredSidebarCollapsed(true);
+      } else {
+        const snapped = clampSidebarWidth(releasedWidth);
+        widthRef.current = snapped;
+        setWidth(snapped);
+        saveStoredSidebarWidth(snapped);
+      }
       document.body.style.cursor = "";
       document.body.style.removeProperty("user-select");
       window.removeEventListener("mousemove", onMove);
@@ -73,6 +89,7 @@ export function useResizableSidebar(): ResizableSidebarState {
     width,
     collapsed,
     isResizing,
+    collapseWarning: isResizing && isSidebarCollapseWarning(width),
     toggleCollapsed,
     onResizeMouseDown,
     onResizeDoubleClick,

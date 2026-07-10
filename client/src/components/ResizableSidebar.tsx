@@ -1,4 +1,4 @@
-import { PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { SidebarLayoutProvider, useSidebarLayout } from "@/context/SidebarLayoutContext";
@@ -10,6 +10,7 @@ function ResizableSidebarInner({ children }: { children: ReactNode }) {
     width,
     collapsed,
     isResizing,
+    collapseWarning,
     toggleCollapsed,
     onResizeMouseDown,
     onResizeDoubleClick,
@@ -21,6 +22,7 @@ function ResizableSidebarInner({ children }: { children: ReactNode }) {
         "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar text-sidebar-foreground",
         !isResizing && "transition-[width] duration-200 ease-out",
         isResizing && "sidebar-resizing",
+        collapseWarning && "sidebar-collapse-warning",
       )}
       style={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : width }}
     >
@@ -40,7 +42,23 @@ function ResizableSidebarInner({ children }: { children: ReactNode }) {
         </div>
       ) : (
         <>
-          {children}
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col",
+              collapseWarning && "sidebar-collapse-warning__content",
+            )}
+          >
+            {children}
+          </div>
+          {collapseWarning ? (
+            <div
+              className="sidebar-collapse-warning__overlay"
+              aria-hidden
+            >
+              <PanelLeftClose data-icon className="size-5 shrink-0" />
+              <span className="sidebar-collapse-warning__label">Loslassen zum Einklappen</span>
+            </div>
+          ) : null}
           <div
             role="separator"
             aria-orientation="vertical"

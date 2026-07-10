@@ -5,9 +5,26 @@ export const SIDEBAR_DEFAULT_WIDTH = 320;
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 480;
 export const SIDEBAR_COLLAPSED_WIDTH = 48;
+/** Below this width while dragging, show the collapse warning overlay. */
+export const SIDEBAR_COLLAPSE_WARN_WIDTH = 160;
+/** Release below this width (after drag) to collapse the sidebar. */
+export const SIDEBAR_COLLAPSE_THRESHOLD = 120;
 
 function clampWidth(width: number): number {
   return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
+}
+
+/** During drag, allow narrowing past min width down to collapsed rail width. */
+export function clampSidebarDragWidth(width: number): number {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_COLLAPSED_WIDTH, width));
+}
+
+export function isSidebarCollapseWarning(width: number): boolean {
+  return width < SIDEBAR_COLLAPSE_WARN_WIDTH;
+}
+
+export function shouldSidebarCollapseOnRelease(width: number): boolean {
+  return width < SIDEBAR_COLLAPSE_THRESHOLD;
 }
 
 export function loadStoredSidebarWidth(): number {

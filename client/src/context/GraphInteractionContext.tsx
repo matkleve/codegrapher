@@ -127,7 +127,7 @@ export function GraphInteractionProvider({
   const { symbols } = useIndex();
   const { setCenter, getNode } = useReactFlow();
 
-  const [previewEdges, setPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
+  const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
   const [pinnedPreviewEdges, setPinnedPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
   const [pinnedTokenKey, setPinnedTokenKey] = useState<string | null>(null);
@@ -147,18 +147,17 @@ export function GraphInteractionProvider({
   );
 
   const endTrace = useCallback(() => {
-    setPreviewEdges([]);
+    setHoverPreviewEdges([]);
     setHoveredTokenKey(null);
     setIsWarm(false);
     setJumpTooltip(null);
   }, []);
 
   const endHoverPreview = useCallback(() => {
-    const pinned = pinnedTokenKeyRef.current;
-    if (pinned != null) {
+    if (pinnedTokenKeyRef.current != null) {
       hoveredTokenKeyRef.current = null;
       setHoveredTokenKey(null);
-      setPreviewEdges(pinnedPreviewEdgesRef.current);
+      setHoverPreviewEdges([]);
       return;
     }
     endTrace();
@@ -166,12 +165,19 @@ export function GraphInteractionProvider({
 
   const beginTrace = useCallback((tokenKey: string, edges: PreviewEdgeSpec[]) => {
     setHoveredTokenKey(tokenKey);
-    setPreviewEdges(edges);
     setIsWarm(true);
-    if (pinnedTokenKeyRef.current === tokenKey) {
+    const pinned = pinnedTokenKeyRef.current;
+    if (pinned === tokenKey) {
       pinnedPreviewEdgesRef.current = edges;
       setPinnedPreviewEdges(edges);
+      setHoverPreviewEdges([]);
+      return;
     }
+    if (pinned != null) {
+      setHoverPreviewEdges(edges);
+      return;
+    }
+    setHoverPreviewEdges(edges);
   }, []);
 
   const resetHoverIntent = useCallback(() => {
@@ -253,7 +259,7 @@ export function GraphInteractionProvider({
           const pinned = pinnedTokenKeyRef.current;
           if (pinned != null) {
             setHoveredTokenKey(null);
-            setPreviewEdges(pinnedPreviewEdgesRef.current);
+            setHoverPreviewEdges([]);
           } else {
             setIsWarm(false);
           }
@@ -328,6 +334,26 @@ export function GraphInteractionProvider({
   const traceTokenKey = pinnedTokenKey ?? hoveredTokenKey;
   const isTraceActive = pinnedTokenKey != null || hoveredTokenKey != null;
 
+  const previewEdges = useMemo(() => {
+    const hasParallelHover =
+      pinnedTokenKey != null &&
+      hoveredTokenKey != null &&
+      hoveredTokenKey !== pinnedTokenKey &&
+      hoverPreviewEdges.length > 0;
+
+    if (pinnedTokenKey != null && pinnedPreviewEdges.length > 0) {
+      return hasParallelHover
+        ? [...pinnedPreviewEdges, ...hoverPreviewEdges]
+        : pinnedPreviewEdges;
+    }
+    return hoverPreviewEdges;
+  }, [
+    hoverPreviewEdges,
+    hoveredTokenKey,
+    pinnedPreviewEdges,
+    pinnedTokenKey,
+  ]);
+
   const revealRevision = useMemo(() => {
     const parts: string[] = [];
     for (const node of nodes) {
@@ -370,13 +396,13 @@ export function GraphInteractionProvider({
 
   const hoverTraceLit = useMemo(() => {
     if (!hoveredTokenKey || hoveredTokenKey === pinnedTokenKey) return EMPTY_TRACE_LIT;
-    return computeTraceLit(hoveredTokenKey, previewEdges, getNode);
+    return computeTraceLit(hoveredTokenKey, hoverPreviewEdges, getNode);
   }, [
     domRevision,
     getNode,
+    hoverPreviewEdges,
     hoveredTokenKey,
     pinnedTokenKey,
-    previewEdges,
     revealRevision,
   ]);
 

@@ -50,7 +50,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
     const chipRef = useRef<HTMLSpanElement>(null);
     const leftRef = useRef<HTMLSpanElement>(null);
     const rightRef = useRef<HTMLSpanElement>(null);
-    const { lit, on, isCtrlPreviewMode } = useTraceAppearance({ traceKey });
+    const { lit, on, isCtrlPreviewMode, pinnedSource, hoverPreview } = useTraceAppearance({ traceKey });
 
     useImperativeHandle(ref, () => ({
       getRightAnchor: () => rightRef.current,
@@ -82,6 +82,8 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
           interactive && isCtrlPreviewMode && "token-interactive",
           lit && "token-chip-lit",
           endpoint && "token-chip-on",
+          endpoint && pinnedSource && "token-chip-source",
+          endpoint && hoverPreview && "token-chip-hover-preview",
         )}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

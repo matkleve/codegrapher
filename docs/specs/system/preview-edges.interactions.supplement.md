@@ -184,21 +184,21 @@ flowchart LR
   Pin[pinnedTokenKey set] --> G1[scheduleHoverFire: any indexed key]
   Pin --> G2[beginTrace: updates ephemeral previewEdges]
   Pin --> G3[graph-trace-pinned on canvas]
-  Pin --> G4[pinnedPreviewEdges restored on hover leave]
-  Pin --> G5[computeTraceLit: merge pinned + hover]
+  Pin --> G4[hover leave clears hoverPreviewEdges only]
+  Pin --> G5[previewEdges = pinned + hover in parallel]
   Pin --> OK[Click other token: re-pin]
 ```
 
 | Action | Unpinned trace | Pinned trace |
 | ------ | -------------- | ------------ |
 | Hover other token | Switch after dwell | **Ephemeral preview** (pin unchanged) |
-| Leave hovered token | endTrace | Restore `pinnedPreviewEdges`; pin lit persists |
+| Leave hovered token | endTrace | Clear hover edges only; pinned wires stay |
 | Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` until dwell fires |
 | Expand member | Live retarget wires | Live retarget wires |
 | Click other token | Pin | Re-pin to new token |
 | Empty canvas / Esc | endTrace | clearTokenInfo |
 
-**Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin; `previewEdges` follow the active hover preview and restore to pinned edges on leave.
+**Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin. **`previewEdges`** exposed to the overlay is `pinnedPreviewEdges + hoverPreviewEdges` in parallel while both are active.
 
 ---
 
@@ -222,9 +222,9 @@ flowchart TB
 | Ctrl + trace | no shimmer on lit (trace wins) | faint | no tint |
 | Pinned | pinned trace lit + optional hover preview | faint until dwell | no tint |
 
-**Sockets (`FlowAnchor`):** bloom on endpoints only (`token-chip-on`); soft glow via `currentColor` + tight box-shadow (not oversized blur).
+**Active chips (`token-chip-on`):** inset `0.5px` ring at ~76% semantic `currentColor`; pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use brand inset ring.
 
-**Active chips:** no inset border on `token-chip-on` (prototype-aligned).
+**Sockets (`FlowAnchor`):** bloom on endpoints only (`token-chip-on`); soft glow via `currentColor` + tight box-shadow (not oversized blur).
 
 ---
 

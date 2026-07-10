@@ -72,7 +72,7 @@ export function CollapsibleMemberRow({
     [memberId, code],
   );
 
-  const { lit, on, memberLit, ownerLit } = useTraceAppearance({
+  const { lit, on, memberLit, ownerLit, pinnedSource, hoverPreview } = useTraceAppearance({
     traceKey: traceable ? defTokenKey : undefined,
     memberId,
   });
@@ -191,6 +191,8 @@ export function CollapsibleMemberRow({
             traceable && isCtrlPreviewMode && "token-interactive",
             lit && "token-chip-lit",
             on && "token-chip-on",
+            on && pinnedSource && "token-chip-source",
+            on && hoverPreview && "token-chip-hover-preview",
           )}
           style={
             traceable

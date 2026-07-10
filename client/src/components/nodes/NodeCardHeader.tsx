@@ -44,7 +44,7 @@ export function NodeCardHeader({
   const defTokenKey = symbolName ? makeClassDefKey(symbolName) : "";
   const entry = symbolName ? lookup(symbolName) : null;
   const defKind = entry ? symbolKindToSemantic(entry.kind) : null;
-  const { lit, on } = useTraceAppearance({
+  const { lit, on, pinnedSource, hoverPreview } = useTraceAppearance({
     traceKey: indexed ? defTokenKey : undefined,
   });
 
@@ -156,6 +156,8 @@ export function NodeCardHeader({
               indexed && isCtrlPreviewMode && "token-interactive",
               lit && "token-chip-lit",
               on && "token-chip-on",
+              on && pinnedSource && "token-chip-source",
+              on && hoverPreview && "token-chip-hover-preview",
             )}
             style={
               indexed

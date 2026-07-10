@@ -297,6 +297,53 @@ html.dark {
   cursor: col-resize !important;
 }
 
+/* Sidebar drag-to-collapse warning (narrow past min width) */
+.sidebar-collapse-warning {
+  border-right-color: var(--brand-border);
+  box-shadow: inset -3px 0 0 var(--brand);
+}
+
+.sidebar-collapse-warning__content {
+  opacity: 0.35;
+  filter: saturate(0.6);
+  pointer-events: none;
+  transition: opacity 120ms var(--ease), filter 120ms var(--ease);
+}
+
+.sidebar-collapse-warning__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  text-align: center;
+  color: var(--brand);
+  background: color-mix(in oklch, var(--brand-surface) 72%, transparent);
+  pointer-events: none;
+  animation: sidebar-collapse-warning-pulse 900ms ease-in-out infinite;
+}
+
+.sidebar-collapse-warning__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+@keyframes sidebar-collapse-warning-pulse {
+  0%,
+  100% {
+    opacity: 0.88;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .graph-pane {
   pointer-events: auto;
   touch-action: none;

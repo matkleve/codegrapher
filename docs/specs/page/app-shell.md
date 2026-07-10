@@ -23,7 +23,7 @@ Split pane with folder path input, file tree, recent files. Right side is React 
 | 3 | Drags file to canvas | Merge graph | `/api/focus` |
 | 4 | Clicks Browse for folder | Native OS dialog | `POST /api/browse-folder` — **never headless** |
 | 5 | Toggles theme | Persist `localStorage["codegrapher:theme"]` | `ThemeToggle` |
-| 6 | Resizes sidebar divider | Update sidebar width | `useResizableSidebar` |
+| 6 | Resizes sidebar divider | Update sidebar width; below warn width shows collapse hint; release below threshold collapses | `useResizableSidebar` |
 
 ## Component Hierarchy
 
@@ -55,7 +55,7 @@ App
 | State | Storage |
 | ----- | ------- |
 | Theme | `localStorage` |
-| Sidebar width | layout context |
+| Sidebar width / collapsed | layout context + `localStorage` |
 | Open folder path | explorer state |
 
 ## File Map
@@ -71,6 +71,7 @@ App
 - [ ] Tree click and canvas drop follow different API contracts (replace vs merge)
 - [ ] Providers wrap canvas so tokens share one interaction context
 - [ ] Theme toggle applies `.dark` on root element
+- [ ] Dragging sidebar narrower than warn width shows collapse overlay; release below threshold collapses to rail
 - [ ] Browse-folder button is not auto-clicked in headless testing
 - [ ] Empty canvas copy instructs click or drag to start
 

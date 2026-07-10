@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -13,7 +14,15 @@ import {
   type Node,
   type OnMove,
 } from "@xyflow/react";
-import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2, Waypoints } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  FileText,
+  Grid3x3,
+  Maximize2,
+  Waypoints,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -46,6 +55,16 @@ import {
   saveShowGrid,
   syncGridToViewport,
 } from "@/lib/graphGrid";
+import {
+  applyReadingFocusToNodes,
+  clearFocusFromUrl,
+  findFocusTargetElement,
+  parseFocusFromUrl,
+  readingFocusKey,
+  resolveReadingFocus,
+  scrollToReadingPosition,
+  writeFocusToUrl,
+} from "@/lib/graphReadingFocus";
 import { cn } from "@/lib/utils";
 import type { GraphData } from "@/types";
 
@@ -65,6 +84,8 @@ export function GraphFlowInner({
   canvasRef,
 }: GraphFlowInnerProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const graphPaneRef = useRef<HTMLDivElement>(null);
+  const urlFocusAppliedRef = useRef(false);
   const historyBackRef = useRef<FlowSnapshot[]>([]);
   const historyForwardRef = useRef<FlowSnapshot[]>([]);
   const prevGraphKeyRef = useRef(-1);
@@ -107,7 +128,8 @@ export function GraphFlowInner({
     [],
   );
 
-  const { fitView, setViewport, getViewport, setCenter } = useReactFlow();
+  const { fitView, setViewport, getViewport, setCenter, screenToFlowPosition } =
+    useReactFlow();
 
   pathFromIdRef.current = pathFromId;
 
@@ -240,6 +262,24 @@ export function GraphFlowInner({
     });
   };
 
+  const focusReadingView = useCallback(() => {
+    const focus = resolveReadingFocus(nodes);
+    const pane = graphPaneRef.current;
+    if (!focus || !pane) return;
+
+    const targetEl = findFocusTargetElement(focus);
+    if (!targetEl) return;
+
+    scrollToReadingPosition({
+      paneEl: pane,
+      targetEl,
+      getViewport,
+      setViewport,
+      screenToFlowPosition,
+    });
+    syncGrid();
+  }, [getViewport, nodes, screenToFlowPosition, setViewport, syncGrid]);
+
   const centerView = () => {
     if (nodes.length > 0) {
       const vp = getViewport();
@@ -351,6 +391,54 @@ export function GraphFlowInner({
     if (!pathFromIdRef.current) setPathInfo(null);
   }, []);
 
+  const focusKey = useMemo(() => readingFocusKey(nodes), [nodes]);
+  const hasReadingFocus = focusKey.length > 0;
+
+  useEffect(() => {
+    if (!focusKey) {
+      clearFocusFromUrl();
+      return;
+    }
+    const focus = resolveReadingFocus(nodes);
+    if (focus) writeFocusToUrl(focus);
+  }, [focusKey, nodes]);
+
+  useEffect(() => {
+    urlFocusAppliedRef.current = false;
+  }, [graphResetKey]);
+
+  useEffect(() => {
+    if (nodes.length === 0 || urlFocusAppliedRef.current) return;
+    const urlFocus = parseFocusFromUrl();
+    if (!urlFocus) return;
+    if (!nodes.some((n) => n.id === urlFocus.flowNodeId)) return;
+
+    urlFocusAppliedRef.current = true;
+    setNodes((nds) => applyReadingFocusToNodes(nds, urlFocus));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const pane = graphPaneRef.current;
+        const targetEl = findFocusTargetElement(urlFocus);
+        if (!pane || !targetEl) return;
+        scrollToReadingPosition({
+          paneEl: pane,
+          targetEl,
+          getViewport,
+          setViewport,
+          screenToFlowPosition,
+        });
+        syncGrid();
+      });
+    });
+  }, [
+    getViewport,
+    nodes,
+    screenToFlowPosition,
+    setNodes,
+    setViewport,
+    syncGrid,
+  ]);
+
   const visibleNodes =
     graphData?.nodes.filter((n) => n.type !== "file" && n.label?.trim()) ?? [];
   const hasGraph = nodes.length > 0 || visibleNodes.length > 0;
@@ -365,13 +453,19 @@ export function GraphFlowInner({
     <div className="pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-foreground">Graph</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span
+              aria-hidden
+              className="size-2 shrink-0 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]"
+            />
+            Graph
+          </h2>
           <p className="text-xs text-muted-foreground">{GRAPH_SUBTITLE}</p>
         </div>
-        <div className="pointer-events-auto flex shrink-0 items-center gap-2">
+        <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             disabled={!canGoBack}
             onClick={handleLastGraph}
@@ -383,7 +477,7 @@ export function GraphFlowInner({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             disabled={!canGoForward}
             onClick={handleNextGraph}
@@ -419,6 +513,7 @@ export function GraphFlowInner({
       )}
 
       <div
+        ref={graphPaneRef}
         className="graph-pane relative min-h-0 flex-1 bg-background"
         onDragOver={(e) => {
           e.preventDefault();
@@ -466,9 +561,15 @@ export function GraphFlowInner({
           />
         </GraphInteractionProvider>
         {!hasGraph && !loading && (
-          <p className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-6 text-center text-lg text-muted-foreground">
-            {emptyMessage}
-          </p>
+          <div className="pointer-events-none absolute inset-0 z-[5] flex flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="grid size-14 place-items-center rounded-2xl border border-border bg-card/70 text-muted-foreground shadow-[var(--node-shadow)] backdrop-blur-sm">
+              <Waypoints className="size-6" strokeWidth={1.5} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-base font-medium text-foreground">{emptyTitle}</p>
+              <p className="max-w-xs text-sm text-muted-foreground">{emptyHint}</p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -514,6 +615,18 @@ export function GraphFlowInner({
           onClick={toggleGrid}
         >
           <Grid3x3 />
+        </GraphMapControlButton>
+        <GraphMapControlButton
+          flashKey="reading"
+          activeFlashKey={mapControlFlash}
+          onFlash={flashMapControl}
+          variant="secondary"
+          disabled={!hasReadingFocus}
+          title="Focus selection for reading"
+          aria-label="Focus selection for reading"
+          onClick={focusReadingView}
+        >
+          <FileText />
         </GraphMapControlButton>
         <GraphMapControlButton
           flashKey="center"

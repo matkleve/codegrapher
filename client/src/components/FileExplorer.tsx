@@ -94,6 +94,7 @@ export default function FileExplorer({
             onKeyDown={(e) => e.key === "Enter" && handleOpen()}
             placeholder="/absolute/path/to/project"
             disabled={disabled || opening}
+            title={folderPath || undefined}
             className="min-w-0 flex-1 font-mono text-[length:var(--font-size-xs)]"
           />
         </div>
