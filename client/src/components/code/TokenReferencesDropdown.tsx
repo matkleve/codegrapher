@@ -6,6 +6,7 @@ import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { openFileInEditor } from "@/api";
+import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
 import { TOKEN_PILL } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
@@ -69,10 +70,7 @@ export function TokenReferencesDropdown() {
               <li key={`graph-${ref.filePath}-${ref.line}-${idx}`}>
                 <button
                   type="button"
-                  className={cn(
-                    "hoverable control-row-compact flex w-full items-center border border-transparent py-1.5 text-left",
-                    TOKEN_PILL[ref.kind],
-                  )}
+                  className={cn(INTERACTIVE_ROW_LEFT, "py-1.5", TOKEN_PILL[ref.kind])}
                   onClick={() => focusFlowNode(ref.flowNodeId!)}
                 >
                   <VscodeFileIcon icon="file-type-typescript-official" size={14} />
@@ -98,10 +96,7 @@ export function TokenReferencesDropdown() {
               <li key={`idx-${ref.filePath}-${ref.line}-${idx}`}>
                 <button
                   type="button"
-                  className={cn(
-                    "hoverable control-row-compact flex w-full items-center border border-transparent py-1.5 text-left",
-                    TOKEN_PILL[ref.kind],
-                  )}
+                  className={cn(INTERACTIVE_ROW_LEFT, "py-1.5", TOKEN_PILL[ref.kind])}
                   onClick={() => {
                     void onLoadFile(ref.filePath);
                     setTokenDropdown(null);

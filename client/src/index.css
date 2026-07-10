@@ -120,10 +120,14 @@
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.48 0.14 250);
-  /* Gold hover accent — deeper gold so it reads on the light background */
-  --brand: oklch(0.62 0.13 74);
-  --brand-surface: color-mix(in oklch, var(--brand) 12%, var(--secondary));
-  --brand-border: color-mix(in oklch, var(--brand) 42%, var(--border));
+  /* Gold hover accent — yellow-gold text, whisper-light surface */
+  --brand: oklch(0.62 0.11 98);
+  --brand-surface: oklch(0.992 0.012 98);
+  --brand-border: oklch(0.93 0.028 98);
+  --interactive-toggle-bg: var(--surface-active);
+  --interactive-toggle-border: var(--surface-active-border);
+  --motion-hover-surface: 320ms;
+  --motion-hover-color: 380ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --faint: oklch(0.68 0.02 258);
@@ -202,10 +206,12 @@ html.dark {
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
   --explorer-file-in-graph: oklch(0.72 0.11 235);
-  /* Gold hover accent — bright gold for the dark background */
-  --brand: oklch(0.82 0.14 86);
-  --brand-surface: color-mix(in oklch, var(--brand) 14%, var(--secondary));
-  --brand-border: color-mix(in oklch, var(--brand) 45%, var(--border));
+  /* Gold hover accent — soft yellow-gold on dark surfaces */
+  --brand: oklch(0.88 0.12 96);
+  --brand-surface: oklch(0.22 0.022 96);
+  --brand-border: oklch(0.36 0.05 96);
+  --interactive-toggle-bg: var(--surface-active);
+  --interactive-toggle-border: var(--surface-active-border);
   --faint: oklch(0.46 0.03 255);
 }
 
@@ -263,28 +269,78 @@ html.dark {
   height: var(--icon-size-sm);
 }
 
-/* Unified interactive hover (explorer file row) */
+/* ── Interactive surface system (single source — see lib/controlTokens.ts) ── */
 .hoverable {
   transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease;
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease),
+    box-shadow var(--motion-hover-surface) var(--ease);
   border: 1px solid transparent;
 }
 
-.hoverable:hover {
+.hoverable svg,
+.hoverable [data-icon] {
+  transition:
+    color var(--motion-hover-color) var(--ease),
+    stroke var(--motion-hover-color) var(--ease);
+}
+
+.hoverable:hover,
+.hoverable[aria-expanded="true"] {
   background-color: var(--brand-surface);
   border-color: var(--brand-border);
   color: var(--brand);
 }
 
 .hoverable:hover svg,
-.hoverable:hover [data-icon] {
+.hoverable:hover [data-icon],
+.hoverable[aria-expanded="true"] svg,
+.hoverable[aria-expanded="true"] [data-icon] {
   color: var(--brand);
   stroke: var(--brand);
 }
 
-/* Section headers: muted at rest, same hover as file rows */
+/* Border-only controls: transparent at rest; brand only on :hover */
+.interactive-border-only {
+  background-color: transparent;
+  border-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+.interactive-border-only svg,
+.interactive-border-only [data-icon] {
+  color: var(--muted-foreground);
+  stroke: var(--muted-foreground);
+}
+
+.interactive-border-only:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+
+.interactive-border-only[aria-expanded="true"] {
+  background-color: transparent;
+  border-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+.interactive-border-only[aria-expanded="true"]:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+
+.interactive-border-only:hover svg,
+.interactive-border-only:hover [data-icon],
+.interactive-border-only[aria-expanded="true"]:hover svg,
+.interactive-border-only[aria-expanded="true"]:hover [data-icon] {
+  color: var(--brand);
+  stroke: var(--brand);
+}
+
+/* Section headers: muted children at rest, brand on hover/expanded */
 .bg-sidebar button.explorer-section-header {
   border-color: transparent;
   background-color: transparent;
@@ -295,54 +351,56 @@ html.dark {
 .bg-sidebar button.explorer-section-header [data-icon],
 .bg-sidebar button.explorer-section-header span {
   color: var(--muted-foreground);
+  transition: color var(--motion-hover-color) var(--ease);
 }
 
+.bg-sidebar button.explorer-section-header:hover span,
+.bg-sidebar button.explorer-section-header[aria-expanded="true"] span,
 .bg-sidebar button.explorer-section-header:hover svg,
+.bg-sidebar button.explorer-section-header[aria-expanded="true"] svg,
 .bg-sidebar button.explorer-section-header:hover [data-icon],
-.bg-sidebar button.explorer-section-header:hover span {
+.bg-sidebar button.explorer-section-header[aria-expanded="true"] [data-icon] {
   color: var(--brand);
 }
 
 [data-graph-control] .graph-map-control-btn {
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    box-shadow 180ms ease;
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease),
+    box-shadow var(--motion-hover-surface) var(--ease);
 }
 
-[data-graph-control] .graph-map-control-btn--active {
-  border-color: var(--surface-active-border);
-  background-color: var(--surface-active);
+[data-graph-control] .graph-map-control-btn svg {
+  transition:
+    color var(--motion-hover-color) var(--ease),
+    stroke var(--motion-hover-color) var(--ease);
+}
+
+.interactive-toggle--active,
+.graph-map-control-btn--active {
+  border-color: var(--interactive-toggle-border);
+  background-color: var(--interactive-toggle-bg);
   color: var(--foreground);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 28%, transparent);
 }
 
-[data-graph-control] .graph-map-control-btn--active svg {
+.interactive-toggle--active svg,
+.graph-map-control-btn--active svg {
   color: var(--foreground);
   stroke: var(--foreground);
 }
 
-[data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) {
-  border-color: var(--brand-border);
-  background-color: var(--brand-surface);
-  color: var(--brand);
-  box-shadow: none;
-}
-
-[data-graph-control] .graph-map-control-btn:hover:not(.graph-map-control-btn--active) svg {
-  color: var(--brand);
-  stroke: var(--brand);
-}
-
-[data-graph-control] .graph-map-control-btn--active:hover {
+[data-graph-control] .graph-map-control-btn.interactive-toggle--active:hover,
+[data-graph-control] .graph-map-control-btn.graph-map-control-btn--active:hover {
   border-color: var(--border);
   background-color: var(--secondary);
   color: var(--primary);
   box-shadow: none;
 }
 
-[data-graph-control] .graph-map-control-btn--active:hover svg {
+[data-graph-control] .graph-map-control-btn.interactive-toggle--active:hover svg,
+[data-graph-control] .graph-map-control-btn.graph-map-control-btn--active:hover svg {
   color: var(--primary);
   stroke: var(--primary);
 }
@@ -403,15 +461,15 @@ html.dark {
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--chart-2) 45%, transparent);
   z-index: 10 !important;
   transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    box-shadow var(--motion-hover-surface) var(--ease);
 }
 
 .class-node-root .react-flow__resize-control.handle.class-node-resizer-handle:hover {
-  background: var(--primary) !important;
+  background: var(--brand) !important;
   border-color: var(--background) !important;
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent);
+  box-shadow: 0 0 0 1px var(--brand-border) !important;
 }
 
 /* Only bottom-right handle — hide full-box resize lines */
@@ -506,14 +564,34 @@ html.dark {
   }
 }
 
-/* ── Interactive token chip (mirrors .tok in connectors-proto.html) ── */
+/* ── Interactive token chip — 1:1 with `.tok` in connectors-proto.html.
+   Padding is compensated by negative margin so a clickable token occupies the
+   same space as a plain word and toggling state never reflows the line. ── */
 .token-chip {
+  position: relative;
+  display: inline;
+  margin: 0 -2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 560;
+  white-space: nowrap;
   box-shadow: inset 0 0 0 1px transparent;
   transition:
-    background-color 220ms var(--ease),
-    box-shadow 220ms var(--ease),
-    color 280ms var(--ease),
-    filter 220ms var(--ease);
+    background-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease),
+    color 0.28s var(--ease),
+    filter 0.22s var(--ease);
+}
+
+.token-def-label {
+  transition: color var(--motion-hover-color) var(--ease);
+}
+
+.node-card-caret,
+.member-row-caret,
+.member-section-label,
+.member-section-bulk {
+  transition: color var(--motion-hover-color) var(--ease);
 }
 
 .token-chip[data-token-kind="class"] .token-chip-text {
@@ -540,16 +618,94 @@ html.dark {
   color: var(--token-edge-type);
 }
 
-.token-chip.token-chip-on,
+.token-chip.token-chip-on {
+  background: color-mix(in oklch, currentColor 13%, transparent);
+  box-shadow: none;
+  filter: brightness(1.1) saturate(1.1);
+}
+
+/* Active endpoint: the word shimmers with a travelling specular glint. */
+.token-chip.token-chip-on .token-chip-text {
+  background-image: linear-gradient(
+    100deg,
+    currentColor 0%,
+    currentColor 40%,
+    color-mix(in oklch, currentColor 42%, #fff) 50%,
+    currentColor 60%,
+    currentColor 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: proto-glint 1.9s var(--ease) infinite;
+  animation-delay: var(--shimmer-delay, 0s);
+}
+
+/* Definition labels: container carries the surface — see .group/member rules below */
 .token-def-label.token-chip-on {
-  background: color-mix(in oklch, currentColor 15%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 52%, transparent);
-  filter: brightness(1.16) saturate(1.12);
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+/* Member row header: full-bleed brand on hover / active endpoint (body stays muted) */
+.member-row-header {
+  border-radius: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: transparent;
+}
+
+.member-row-header.hoverable:hover,
+.member-row-header:has(.token-def-label.token-chip-on) {
+  background-color: var(--brand-surface);
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.member-row .member-row-label,
+.member-row .token-def-label,
+.member-row .member-row-caret {
+  transition:
+    color var(--motion-hover-color) var(--ease),
+    stroke var(--motion-hover-color) var(--ease);
+}
+
+.member-row-header.hoverable:hover .member-row-label,
+.member-row-header.hoverable:hover .token-def-label,
+.member-row-header:has(.token-def-label.token-chip-on) .member-row-label,
+.member-row-header:has(.token-def-label.token-chip-on) .token-def-label,
+.graph-trace-active .member-row-header.hoverable:hover .member-row-label,
+.graph-trace-active .member-row-header.hoverable:hover .token-def-label[data-token-kind],
+.graph-trace-active .member-row-header:has(.token-def-label.token-chip-on) .token-def-label[data-token-kind] {
+  color: var(--brand);
+}
+
+.member-row-header.hoverable:hover .member-row-caret,
+.member-row-header:has(.token-def-label.token-chip-on) .member-row-caret,
+.graph-ctrl-preview .member-row-header.hoverable:hover .member-row-caret {
+  color: var(--brand);
+  stroke: var(--brand);
+}
+
+.graph-ctrl-preview .member-row-header.hoverable:hover .member-row-label,
+.graph-ctrl-preview .member-row-header.hoverable:hover .token-def-label {
+  color: var(--brand) !important;
+  -webkit-text-fill-color: var(--brand);
+  background-image: none;
+  filter: none;
 }
 
 /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
 .graph-ctrl-preview .code-kw,
 .graph-ctrl-preview .code-pn,
+.graph-ctrl-preview .code-comment,
+.graph-ctrl-preview .code-string,
+.graph-ctrl-preview .code-number,
 .graph-ctrl-preview .member-body-wrap,
 .graph-ctrl-preview .member-section-label,
 .graph-ctrl-preview .member-section-bulk,
@@ -557,7 +713,7 @@ html.dark {
 .graph-ctrl-preview .member-row-caret,
 .graph-ctrl-preview .file-type-chip {
   color: var(--faint) !important;
-  transition: color 200ms var(--ease);
+  transition: color var(--motion-hover-color) var(--ease);
 }
 
 .graph-ctrl-preview .react-flow__node.class-node-root {
@@ -598,6 +754,9 @@ html.dark {
 /* ── Trace mode: dim per-element, lit shines through ── */
 .graph-trace-active .code-kw,
 .graph-trace-active .code-pn,
+.graph-trace-active .code-comment,
+.graph-trace-active .code-string,
+.graph-trace-active .code-number,
 .graph-trace-active .member-body-wrap {
   color: var(--faint);
 }
@@ -641,9 +800,22 @@ html.dark {
   border-color: color-mix(in oklch, var(--token-edge-function) 38%, transparent);
 }
 
+.graph-trace-active .member-row.trace-member-lit .member-row-header:has(.token-def-label.token-chip-on) {
+  background-color: var(--brand-surface);
+}
+
 .graph-trace-active .code-line.trace-lit-line .code-kw,
-.graph-trace-active .code-line.trace-lit-line .code-pn {
+.graph-trace-active .code-line.trace-lit-line .code-pn,
+.graph-trace-active .code-line.trace-lit-line .code-comment {
   color: var(--muted);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-string {
+  color: var(--code-string);
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-number {
+  color: var(--code-number);
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
@@ -720,6 +892,7 @@ html.dark {
   .preview-edge-glow,
   .graph-ctrl-preview .token-chip.token-interactive .token-chip-text,
   .graph-ctrl-preview .token-def-label.token-interactive,
+  .token-chip.token-chip-on .token-chip-text,
   .graph-ctrl-preview .react-flow__node.class-node-root::after {
     animation: none !important;
   }

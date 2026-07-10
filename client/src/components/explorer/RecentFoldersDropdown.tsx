@@ -1,6 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Separator } from "@/components/ui/separator";
+import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
 import { folderDisplayName } from "@/lib/recentFolders";
 
 type RecentFoldersDropdownProps = {
@@ -30,7 +31,7 @@ export function RecentFoldersDropdown({
             <li key={path}>
               <button
                 type="button"
-                className="hoverable control-row-compact w-full cursor-pointer border border-transparent py-2 text-left text-[length:var(--font-size-sm)]"
+                className={`${INTERACTIVE_ROW_LEFT} py-2 text-[length:var(--font-size-sm)]`}
                 onClick={() => onSelect(path)}
               >
                 <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
@@ -42,7 +43,7 @@ export function RecentFoldersDropdown({
         <Separator className="my-2" />
         <button
           type="button"
-          className="hoverable control-row-compact flex w-full cursor-pointer items-center justify-center border border-transparent py-2 text-muted-foreground"
+          className={`${INTERACTIVE_ROW_LEFT} justify-center py-2 text-muted-foreground`}
           onClick={(e) => {
             e.stopPropagation();
             onClear();

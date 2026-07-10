@@ -3,7 +3,7 @@ import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
-import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphInteraction, toAnchorRect } from "@/context/GraphInteractionContext";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
@@ -40,9 +40,6 @@ export function CodeLine({
     graphData,
     setPreviewEdges,
     clearPreviewEdges,
-    setReferenceCards,
-    scheduleHideReferenceCards,
-    cancelHideReferenceCards,
     setActiveTokenKey,
     isHandleActive,
     edgeKindAtHandle,
@@ -62,13 +59,8 @@ export function CodeLine({
       edgeKeyRef.current = null;
       clearPreviewEdges();
     }
-    scheduleHideReferenceCards();
     setActiveTokenKey(null);
-  }, [
-    clearPreviewEdges,
-    scheduleHideReferenceCards,
-    setActiveTokenKey,
-  ]);
+  }, [clearPreviewEdges, setActiveTokenKey]);
 
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
@@ -77,7 +69,6 @@ export function CodeLine({
       const entry = lookup(name);
       if (!entry) return;
 
-      cancelHideReferenceCards();
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
       setActiveTokenKey(tokenKey);
 
@@ -92,28 +83,17 @@ export function CodeLine({
         sourceFlowId,
       );
 
-      if (!resolved) {
+      if (!resolved || resolved.mode !== "graph") {
+        // Target class isn't loaded — keep the token lit + its socket dot,
+        // but there's nothing in the graph to wire to.
         clearPreviewEdges();
-        setActiveTokenKey(null);
         return;
       }
 
-      if (resolved.mode === "graph") {
-        setReferenceCards(null);
-        const edge = buildUsagePreviewEdge(edgeKey, resolved, chipEl);
-        setPreviewEdges([edge]);
-        return;
-      }
-
-      clearPreviewEdges();
-      setReferenceCards({
-        token: name,
-        anchor: toAnchorRect(chipEl.getBoundingClientRect()),
-        cards: resolved.cards,
-      });
+      const edge = buildUsagePreviewEdge(edgeKey, resolved, chipEl);
+      setPreviewEdges([edge]);
     },
     [
-      cancelHideReferenceCards,
       clearPreviewEdges,
       getNode,
       graphData,
@@ -121,7 +101,6 @@ export function CodeLine({
       lookup,
       setActiveTokenKey,
       setPreviewEdges,
-      setReferenceCards,
       sourceFlowId,
       symbols,
     ],
@@ -238,9 +217,9 @@ export function CodeLine({
               className={cn(
                 token.kind === "keyword" && "code-kw text-primary/80",
                 (token.kind === "operator" || token.kind === "other") && "code-pn",
-                token.kind === "comment" && "text-muted-foreground",
-                token.kind === "string" && "text-[color:var(--code-string)]",
-                token.kind === "number" && "text-[color:var(--code-number)]",
+                token.kind === "comment" && "code-comment text-muted-foreground",
+                token.kind === "string" && "code-string text-[color:var(--code-string)]",
+                token.kind === "number" && "code-number text-[color:var(--code-number)]",
               )}
             >
               {token.text}

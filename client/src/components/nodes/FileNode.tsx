@@ -2,6 +2,7 @@ import { memo } from "react";
 import { GripHorizontal } from "lucide-react";
 import { type NodeProps } from "@xyflow/react";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { cn } from "@/lib/utils";
 import type { FileNodeData } from "@/components/nodes/flowNodeData";
 
@@ -13,7 +14,7 @@ function FileNodeComponent({ data, selected }: NodeProps) {
       <div
         className={cn(
           NODE_DRAG_HANDLE,
-          "flex cursor-grab touch-none items-center justify-center rounded px-3 py-0.5 text-muted-foreground hover:bg-muted active:cursor-grabbing",
+          `${INTERACTIVE_SURFACE} flex cursor-grab touch-none items-center justify-center rounded px-3 py-0.5 text-muted-foreground active:cursor-grabbing`,
         )}
         title="Drag to move"
         aria-label="Drag to move"

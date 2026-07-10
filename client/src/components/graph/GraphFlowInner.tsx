@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, Crosshair, Grid3x3, Maximize2 } from "lucide
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -503,7 +504,7 @@ export function GraphFlowInner({
           activeFlashKey={mapControlFlash}
           onFlash={flashMapControl}
           variant="secondary"
-          className={showGrid ? "graph-map-control-btn--active" : undefined}
+          className={showGrid ? INTERACTIVE_TOGGLE_ACTIVE : undefined}
           title={showGrid ? "Hide grid" : "Show grid"}
           aria-label={showGrid ? "Hide grid" : "Show grid"}
           aria-pressed={showGrid}

@@ -30,7 +30,6 @@ import {
 } from "@/lib/previewEdgeTypes";
 import { computeTraceLit } from "@/lib/computeTraceLit";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
-import type { ExternalReferenceCard } from "@/lib/resolveVisibleTarget";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import type { GraphData } from "@/types";
 
@@ -56,12 +55,6 @@ export function toAnchorRect(rect: DOMRect): AnchorRect {
     height: rect.height,
   };
 }
-
-export type ReferenceCardsState = {
-  token: string;
-  anchor: AnchorRect;
-  cards: ExternalReferenceCard[];
-} | null;
 
 export type TokenInfoState = {
   token: string;
@@ -116,10 +109,6 @@ type GraphInteractionContextValue = {
   isTraceOwnerLit: (memberId: string) => boolean;
   isTraceLineLit: (memberId: string) => boolean;
   isTraceNodeLit: (flowNodeId: string) => boolean;
-  referenceCards: ReferenceCardsState;
-  setReferenceCards: (state: ReferenceCardsState) => void;
-  scheduleHideReferenceCards: () => void;
-  cancelHideReferenceCards: () => void;
   tokenDropdown: TokenDropdownState;
   setTokenDropdown: (state: TokenDropdownState) => void;
   findReferences: (token: string) => TokenReference[];
@@ -156,9 +145,7 @@ export function GraphInteractionProvider({
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
   const [jumpTooltip, setJumpTooltip] = useState<JumpTooltipState>(null);
-  const [referenceCards, setReferenceCards] = useState<ReferenceCardsState>(null);
   const [tokenDropdown, setTokenDropdown] = useState<TokenDropdownState>(null);
-  const hideCardsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
 
@@ -281,22 +268,6 @@ export function GraphInteractionProvider({
     [previewEdges],
   );
 
-  const scheduleHideReferenceCards = useCallback(() => {
-    if (hideCardsTimerRef.current) clearTimeout(hideCardsTimerRef.current);
-    hideCardsTimerRef.current = setTimeout(() => {
-      setReferenceCards(null);
-      setActiveTokenKey(null);
-      hideCardsTimerRef.current = null;
-    }, LEAVE_GRACE_MS);
-  }, []);
-
-  const cancelHideReferenceCards = useCallback(() => {
-    if (hideCardsTimerRef.current) {
-      clearTimeout(hideCardsTimerRef.current);
-      hideCardsTimerRef.current = null;
-    }
-  }, []);
-
   const findReferences = useCallback(
     (token: string) => findSemanticReferences(token, symbols, graphData),
     [graphData, symbols],
@@ -393,10 +364,6 @@ export function GraphInteractionProvider({
       isTraceOwnerLit,
       isTraceLineLit,
       isTraceNodeLit,
-      referenceCards,
-      setReferenceCards,
-      scheduleHideReferenceCards,
-      cancelHideReferenceCards,
       tokenDropdown,
       setTokenDropdown,
       findReferences,
@@ -430,9 +397,6 @@ export function GraphInteractionProvider({
       isTraceOwnerLit,
       isTraceLineLit,
       isTraceNodeLit,
-      referenceCards,
-      scheduleHideReferenceCards,
-      cancelHideReferenceCards,
       tokenDropdown,
       findReferences,
       focusFlowNode,

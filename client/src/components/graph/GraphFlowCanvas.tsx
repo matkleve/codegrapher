@@ -7,7 +7,6 @@ import {
   type useNodesState,
 } from "@xyflow/react";
 import { TokenInfoPopover } from "@/components/code/TokenInfoPopover";
-import { TokenReferenceCards } from "@/components/code/TokenReferenceCards";
 import { TokenReferencesDropdown } from "@/components/code/TokenReferencesDropdown";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
@@ -84,7 +83,6 @@ export function GraphFlowCanvas({
       </ReactFlow>
       <GraphPinchZoomBoost />
       <TokenReferencesDropdown />
-      <TokenReferenceCards />
       <TokenInfoPopover />
       <JumpTooltip />
     </div>

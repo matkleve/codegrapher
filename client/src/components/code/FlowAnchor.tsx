@@ -5,11 +5,11 @@ export type FlowAnchorSide = "left" | "right";
 
 type FlowAnchorSize = "chip" | "card" | "node";
 
-/** Semicircle: width = radius, height = diameter (2× radius). */
-const SEMICIRCLE: Record<FlowAnchorSize, { width: number; height: number }> = {
-  chip: { width: 5, height: 10 },
-  card: { width: 6, height: 12 },
-  node: { width: 5, height: 10 },
+/** Round dot, mirrors the prototype's `.tok::before/::after` (6px circle, 3px gap). */
+const DOT: Record<FlowAnchorSize, { diameter: number; offset: number }> = {
+  chip: { diameter: 6, offset: 9 },
+  card: { diameter: 7, offset: 10 },
+  node: { diameter: 6, offset: 9 },
 };
 
 type FlowAnchorProps = {
@@ -21,11 +21,6 @@ type FlowAnchorProps = {
   size?: FlowAnchorSize;
   className?: string;
 };
-
-function semicircleRadius(side: FlowAnchorSide, width: number): string {
-  const r = `${width}px`;
-  return side === "left" ? `${r} 0 0 ${r}` : `0 ${r} ${r} 0`;
-}
 
 export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
   function FlowAnchor(
@@ -40,11 +35,8 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
     },
     ref,
   ) {
-    const { width, height } = SEMICIRCLE[size];
-
-    const show =
-      visible &&
-      (size === "chip" ? highlighted : highlighted || size === "node");
+    const { diameter, offset } = DOT[size];
+    const show = visible && highlighted;
 
     return (
       <span
@@ -53,13 +45,12 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
         data-flow-anchor={side}
         {...(targetId ? { "data-flow-anchor-target": targetId } : {})}
         style={{
-          width,
-          height,
-          borderRadius: semicircleRadius(side, width),
-          ...(side === "left" ? { left: -width } : { right: -width }),
+          width: diameter,
+          height: diameter,
+          ...(side === "left" ? { left: -offset } : { right: -offset }),
         }}
         className={cn(
-          "flow-anchor pointer-events-none absolute top-1/2 block shrink-0 -translate-y-1/2",
+          "flow-anchor pointer-events-none absolute top-1/2 block shrink-0 rounded-full",
           show ? "flow-anchor-on" : "flow-anchor-off",
           colorClass,
           className,

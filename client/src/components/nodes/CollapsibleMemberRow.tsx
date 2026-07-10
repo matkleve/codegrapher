@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
@@ -139,7 +140,7 @@ export function CollapsibleMemberRow({
     <div
       data-member-id={memberId}
       className={cn(
-        "group/member hoverable nodrag relative overflow-visible rounded-md border border-transparent bg-muted p-2",
+        "member-row nodrag relative overflow-visible rounded-md bg-muted",
         memberLit && "trace-member-lit",
         ownerLit && "trace-member-owner-lit",
       )}
@@ -168,14 +169,22 @@ export function CollapsibleMemberRow({
       />
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center gap-2 text-left"
+        className={cn(
+          "member-row-header group/member",
+          INTERACTIVE_SURFACE,
+          "control-row-compact flex w-full cursor-pointer items-center gap-2 rounded-none border-x-0 border-t-0 text-left",
+        )}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onToggle(memberId);
         }}
       >
-        <ExpandChevron expanded={expanded} className="member-row-caret text-muted-foreground" />
+        <ExpandChevron
+          expanded={expanded}
+          groupHoverFlip="member"
+          className="member-row-caret text-muted-foreground"
+        />
         <span
           ref={labelRef}
           data-symbol-name={indexed ? label : undefined}
@@ -183,7 +192,7 @@ export function CollapsibleMemberRow({
           data-trace-key={indexed ? defTokenKey : undefined}
           data-token-kind={indexed ? defKind ?? undefined : undefined}
           className={cn(
-            "min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-medium",
+            "member-row-label min-w-0 flex-1 truncate text-[length:var(--font-size-sm)] font-medium text-foreground",
             indexed && "token-def-label cursor-pointer",
             indexed && isCtrlPreviewMode && "token-interactive",
             lit && "token-chip-lit",
@@ -202,7 +211,7 @@ export function CollapsibleMemberRow({
         </span>
       </button>
       {expanded && code.trim() ? (
-        <div className="member-body-wrap nodrag mt-1.5 ml-5 overflow-visible text-muted-foreground">
+        <div className="member-body-wrap nodrag overflow-visible px-2 pb-2 pl-5 pt-1.5 text-muted-foreground">
           <div className="flex flex-col gap-0.5">
             {lines.map((line, i) => (
               <CodeLine

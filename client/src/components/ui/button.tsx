@@ -1,14 +1,11 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import {
-  CONTROL_INTERACTIVE_EXPANDED,
-  CONTROL_INTERACTIVE_HOVER,
-} from "@/lib/controlTokens"
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens"
 import { cn } from "@/lib/utils"
 
 const interactiveStates =
-  "transition-[background-color,border-color,color,box-shadow] duration-150 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:transition-colors [&_svg]:duration-150"
+  "transition-[background-color,border-color,color,box-shadow] duration-300 ease-[var(--ease)] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:transition-[color,stroke] [&_svg]:duration-300 [&_svg]:ease-[var(--ease)]"
 
 const buttonVariants = cva(
   cn(
@@ -27,19 +24,16 @@ const buttonVariants = cva(
         ),
         outline: cn(
           "border-border bg-background text-foreground",
-          CONTROL_INTERACTIVE_HOVER,
-          CONTROL_INTERACTIVE_EXPANDED,
+          INTERACTIVE_SURFACE,
           "dark:border-border dark:bg-secondary dark:text-secondary-foreground",
         ),
         secondary: cn(
           "border-border bg-secondary text-secondary-foreground",
-          CONTROL_INTERACTIVE_HOVER,
-          CONTROL_INTERACTIVE_EXPANDED,
+          INTERACTIVE_SURFACE,
         ),
         ghost: cn(
           "border-transparent bg-transparent text-foreground",
-          CONTROL_INTERACTIVE_HOVER,
-          CONTROL_INTERACTIVE_EXPANDED,
+          INTERACTIVE_SURFACE,
         ),
         destructive:
           "border-transparent bg-destructive/10 text-destructive hover:border-destructive/50 hover:bg-destructive/20 hover:text-destructive focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",

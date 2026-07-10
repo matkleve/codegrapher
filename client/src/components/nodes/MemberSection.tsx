@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
+import { INTERACTIVE_ROW_NODRAG } from "@/lib/controlTokens";
 
 type MemberSectionProps = {
   label: string;
@@ -24,7 +25,7 @@ export function MemberSection({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="hoverable control-row-compact nodrag flex min-w-0 flex-1 cursor-pointer items-center border border-transparent text-left"
+          className={`${INTERACTIVE_ROW_NODRAG} min-w-0 flex-1`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
@@ -36,7 +37,7 @@ export function MemberSection({
         </button>
         <button
           type="button"
-          className="member-section-bulk hoverable control-row-compact nodrag shrink-0 cursor-pointer border border-transparent text-muted-foreground"
+          className={`member-section-bulk ${INTERACTIVE_ROW_NODRAG} shrink-0 text-muted-foreground`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();

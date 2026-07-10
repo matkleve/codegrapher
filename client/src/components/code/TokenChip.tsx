@@ -68,7 +68,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         data-token-kind={semantic}
         style={{ "--shimmer-delay": shimmerDelay } as React.CSSProperties}
         className={cn(
-          "token-chip relative inline-flex items-center overflow-visible rounded-[5px] px-1 py-0 text-[11px] align-baseline leading-none",
+          "token-chip",
           interactive && "cursor-pointer",
           interactive && isCtrlPreviewMode && "token-interactive",
           lit && "token-chip-lit",

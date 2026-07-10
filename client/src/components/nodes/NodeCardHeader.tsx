@@ -2,6 +2,7 @@ import { useCallback, useRef, type ReactNode } from "react";
 import { GripVertical } from "lucide-react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
+import { INTERACTIVE_BORDER_BTN, INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { toAnchorRect, useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
@@ -119,7 +120,7 @@ export function NodeCardHeader({
       <div
         className={cn(
           NODE_DRAG_HANDLE,
-          "hoverable flex w-full cursor-grab gap-2 rounded-md border border-transparent px-2 py-2 text-left active:cursor-grabbing",
+          `${INTERACTIVE_SURFACE} flex w-full cursor-grab gap-2 rounded-md px-2 py-2 text-left active:cursor-grabbing`,
         )}
         title="Drag to move"
       >
@@ -132,7 +133,7 @@ export function NodeCardHeader({
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className="node-card-caret hoverable nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-transparent text-foreground"
+              className={`node-card-caret ${INTERACTIVE_BORDER_BTN} nodrag flex size-[var(--control-height-compact)] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)]`}
               title={bodyExpanded ? "Collapse" : "Expand"}
               aria-label={bodyExpanded ? "Collapse" : "Expand"}
               aria-expanded={bodyExpanded}

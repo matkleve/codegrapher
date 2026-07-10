@@ -1,5 +1,6 @@
 import { useCallback, type ComponentProps, type MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { cn } from "@/lib/utils";
 
 type GraphMapControlButtonProps = ComponentProps<typeof Button> & {
@@ -29,6 +30,7 @@ export function GraphMapControlButton({
       type="button"
       size="icon"
       className={cn(
+        INTERACTIVE_SURFACE,
         "graph-map-control-btn",
         activeFlashKey === flashKey && "graph-map-control-btn--flash",
         className,
