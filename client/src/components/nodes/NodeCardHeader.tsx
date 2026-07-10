@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, type MouseEvent, type ReactNode } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { GripVertical } from "lucide-react";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
-import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
@@ -111,34 +110,38 @@ export function NodeCardHeader({
     },
   });
 
+  const onHeaderClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest(".file-type-chip, .node-card-title")) return;
+      e.stopPropagation();
+      onToggleCollapsed();
+    },
+    [onToggleCollapsed],
+  );
+
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={cn(
-        "node-card-header flex overflow-hidden",
-        bodyExpanded ? "rounded-t-lg border-b border-border" : "rounded-lg",
+        NODE_DRAG_HANDLE,
+        "node-card-header flex cursor-grab overflow-hidden border-b border-border active:cursor-grabbing",
+        bodyExpanded ? "rounded-t-lg" : "rounded-lg",
       )}
+      title="Drag to move — click to expand/collapse"
+      aria-expanded={bodyExpanded}
+      aria-label={bodyExpanded ? "Collapse class" : "Expand class"}
+      onClick={onHeaderClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleCollapsed();
+        }
+      }}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-2">
         {chip}
-        <button
-          type="button"
-          className={cn(
-            "node-card-header-row",
-            INTERACTIVE_SURFACE,
-            "nodrag flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left",
-            bodyExpanded
-              ? "node-card-header-row--expanded"
-              : "node-card-header-row--collapsed",
-          )}
-          title={bodyExpanded ? "Collapse" : "Expand"}
-          aria-label={bodyExpanded ? "Collapse" : "Expand"}
-          aria-expanded={bodyExpanded}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCollapsed();
-          }}
-        >
+        <div className="flex min-w-0 items-center gap-2">
           <ExpandChevron
             expanded={bodyExpanded}
             headerHoverPreview
@@ -169,17 +172,13 @@ export function NodeCardHeader({
           >
             {title}
           </span>
-        </button>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center self-stretch py-2 pr-2">
-        <button
-          type="button"
-          className={cn("node-drag-grip", NODE_DRAG_HANDLE)}
-          aria-label="Drag to move"
-          title="Drag to move"
-        >
-          <GripVertical className="size-4" aria-hidden />
-        </button>
+      <div
+        className="node-drag-grip flex shrink-0 items-center self-stretch py-2 pr-2"
+        aria-hidden
+      >
+        <GripVertical className="size-4" />
       </div>
     </div>
   );

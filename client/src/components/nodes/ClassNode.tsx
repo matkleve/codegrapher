@@ -59,16 +59,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
       ref={cardRef}
       data-flow-node-id={id}
       className={cn(
-        "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border text-left shadow-sm",
-        bodyExpanded ? "h-full bg-card" : "shrink-0 bg-card",
-        (selected || nodeData.selected) && "ring-2 ring-ring",
-        nodeData.pathHighlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+        "class-node-root relative flex flex-col overflow-visible rounded-lg border border-border/40 text-left shadow-sm",
+        bodyExpanded ? "h-full bg-card" : "h-full shrink-0 bg-card",
+        (selected || nodeData.selected) && "ring-1 ring-ring/50",
+        nodeData.pathHighlighted && "ring-1 ring-ring ring-offset-1 ring-offset-background",
       )}
       style={{
         width: nodeWidth,
-        ...(bodyExpanded
-          ? { height: nodeHeight }
-          : { minHeight: CLASS_NODE_MIN_HEIGHT }),
+        height: nodeHeight ?? CLASS_NODE_MIN_HEIGHT,
       }}
     >
       <Handle

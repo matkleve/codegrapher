@@ -79,9 +79,8 @@ export function useClassNodeResize({
     el.style.height = prevHeight;
 
     if (!bodyExpanded) {
-      const headerHeight = Math.max(CLASS_NODE_MIN_HEIGHT, measured);
-      if (nodeHeight != null && Math.abs(headerHeight - nodeHeight) <= 1) return;
-      commitNode({}, { width: nodeWidth, height: headerHeight }, { keepPreference: true });
+      if (nodeHeight != null && Math.abs(measured - nodeHeight) <= 1) return;
+      commitNode({}, { width: nodeWidth, height: measured }, { keepPreference: true });
       return;
     }
 

@@ -602,37 +602,26 @@ html.dark {
 
 @import "./styles/connectors.css";
 
-/* Class/module node header — stays on card background during trace (no tint wash). */
+/* Class/module node header — drag surface, expand/collapse, separator at bottom. */
 .node-card-header {
   background-color: transparent;
 }
 
-.node-card-header-row {
-  border-radius: var(--radius-sm);
-}
-
-.node-card-header-row.hoverable:hover,
-.node-card-header-row.hoverable[aria-expanded="true"] {
-  background-color: transparent;
-  border-color: transparent;
-  color: inherit;
-}
-
-.node-card-header-row.hoverable:hover .node-card-caret,
-.node-card-header-row.hoverable[aria-expanded="true"] .node-card-caret {
+.node-card-header:hover .node-card-caret,
+.node-card-header[aria-expanded="true"] .node-card-caret {
   color: var(--brand);
 }
 
-.node-card-header-row .expand-chevron-icon {
+.node-card-header .expand-chevron-icon {
   transition: transform 380ms var(--ease);
 }
 
-.node-card-header-row[aria-expanded="false"]:hover:not(:has(.node-card-title:hover))
+.node-card-header[aria-expanded="false"]:hover:not(:has(.node-card-title:hover))
   .expand-chevron-icon {
   transform: rotate(90deg);
 }
 
-.node-card-header-row[aria-expanded="true"]:hover:not(:has(.node-card-title:hover))
+.node-card-header[aria-expanded="true"]:hover:not(:has(.node-card-title:hover))
   .expand-chevron-icon {
   transform: rotate(-90deg);
 }

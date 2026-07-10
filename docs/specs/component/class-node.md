@@ -18,9 +18,9 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Member 
 
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
-| 1 | Clicks class header row (not title token) | Toggle body collapsed | `onToggleCollapsed` |
+| 1 | Clicks header (not chip or title token) | Toggle body collapsed | `onToggleCollapsed` on header |
 | 2 | Clicks indexed title | Pin definition trace | `useTokenPin` |
-| 3 | Drags grip | Move node | `node-drag-handle` on grip |
+| 3 | Drags header | Move node | `node-drag-handle` on header root |
 | 4 | Clicks member row | Expand/collapse inline source | `onToggleMethod` / `onToggleProperty` |
 | 5 | Clicks section header | Bulk expand/collapse section | `onToggleMethodsSection` |
 | 6 | Drags resize control | Live snap height to content | `useClassNodeResize` |

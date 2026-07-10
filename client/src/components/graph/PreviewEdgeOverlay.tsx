@@ -2,6 +2,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
+import {
+  jumpTargetForWireEnd,
+  jumpTargetLabel,
+  resolveJumpTargetElement,
+  traceKeyForJumpTarget,
+} from "@/lib/resolveJumpTarget";
 import { cubicPath, resolvePreviewAnchor, wireHitSegment } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
@@ -91,13 +97,9 @@ export function PreviewEdgeOverlay() {
     end: "from" | "to",
   ) => {
     cancelHoverLeaveGrace();
-    const targetRef = end === "to" ? spec.to : spec.from;
-    const token =
-      targetRef.type === "element"
-        ? (targetRef.el.dataset.symbolName ?? "")
-        : "";
+    const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
     setJumpTooltip({
-      token,
+      token: jumpTargetLabel(ref, hint, getNode),
       kind: spec.kind,
       x: e.clientX,
       y: e.clientY,
@@ -124,10 +126,10 @@ export function PreviewEdgeOverlay() {
     end: "from" | "to",
   ) => {
     e.stopPropagation();
-    const targetRef = end === "to" ? spec.to : spec.from;
-    if (targetRef.type !== "element" || !targetRef.el) return;
-    const el = targetRef.el;
-    const traceKey = el.dataset.traceKey;
+    const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
+    const el = resolveJumpTargetElement(ref, hint, getNode);
+    if (!el) return;
+    const traceKey = traceKeyForJumpTarget(el, hint);
     if (traceKey) pinTrace(traceKey);
     el.animate(
       [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],

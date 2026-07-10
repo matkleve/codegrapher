@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import {
-  CLASS_NODE_MIN_HEIGHT,
   layoutPreferenceFromData,
 } from "@/lib/classNodeLayout";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -44,10 +43,7 @@ export function useClassNodeCommit(
           const prev = n.data as ClassNodeData;
           const nextData = { ...prev, ...nextPatch };
           const w = size?.width ?? nextData.width ?? nodeWidth;
-          let h = size?.height ?? nextData.height;
-          if (nextData.collapsed && typeof h === "number") {
-            h = Math.max(CLASS_NODE_MIN_HEIGHT, h);
-          }
+          const h = size?.height ?? nextData.height;
           return {
             ...n,
             width: w,
