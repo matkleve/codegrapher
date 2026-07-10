@@ -25,9 +25,9 @@ import {
   type HoverIntentTimers,
 } from "@/lib/hoverIntent";
 import {
-  edgeTouchesHandle,
   type PreviewEdgeSpec,
 } from "@/lib/previewEdgeTypes";
+import { edgeTouchesHandle } from "@/lib/resolveLiveAnchor";
 import { computeTraceLit } from "@/lib/computeTraceLit";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
@@ -37,7 +37,7 @@ import { useClearPinnedOnClickAway } from "@/hooks/useClearPinnedOnClickAway";
 import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
-export { edgeTouchesHandle } from "@/lib/previewEdgeTypes";
+export { edgeTouchesHandle } from "@/lib/resolveLiveAnchor";
 
 export type AnchorRect = {
   left: number;
@@ -274,19 +274,6 @@ export function GraphInteractionProvider({
     pendingFireRef.current = null;
   }, [isCtrlActive]);
 
-  const isHandleActive = useCallback(
-    (handle: string) => previewEdges.some((e) => edgeTouchesHandle(e, handle)),
-    [previewEdges],
-  );
-
-  const edgeKindAtHandle = useCallback(
-    (handle: string): SemanticTokenKind | null => {
-      const edge = previewEdges.find((e) => edgeTouchesHandle(e, handle));
-      return edge?.kind ?? null;
-    },
-    [previewEdges],
-  );
-
   const findReferences = useCallback(
     (token: string) => findSemanticReferences(token, symbols, graphData),
     [graphData, symbols],
@@ -342,6 +329,20 @@ export function GraphInteractionProvider({
     if (!traceTokenKey) return;
     setDomRevision((r) => r + 1);
   }, [revealRevision, traceTokenKey]);
+
+  const isHandleActive = useCallback(
+    (handle: string) =>
+      previewEdges.some((e) => edgeTouchesHandle(e, handle, getNode)),
+    [getNode, previewEdges, revealRevision],
+  );
+
+  const edgeKindAtHandle = useCallback(
+    (handle: string): SemanticTokenKind | null => {
+      const edge = previewEdges.find((e) => edgeTouchesHandle(e, handle, getNode));
+      return edge?.kind ?? null;
+    },
+    [getNode, previewEdges, revealRevision],
+  );
 
   const traceLit = useMemo(
     () => computeTraceLit(traceTokenKey, previewEdges, getNode),

@@ -157,6 +157,22 @@ function resolveHint(
   );
 }
 
+/** True when `handle` is the current (refined) endpoint — not the stale static anchor. */
+export function edgeTouchesHandle(
+  edge: PreviewEdgeSpec,
+  handle: string,
+  getNode: (id: string) => Node | undefined,
+): boolean {
+  const { from, to } =
+    edge.liveFrom || edge.liveTo
+      ? refinePreviewEdge(edge, getNode)
+      : { from: edge.from, to: edge.to };
+  return (
+    (from.type === "handle" && from.handle === handle) ||
+    (to.type === "handle" && to.handle === handle)
+  );
+}
+
 /** Re-resolve edge anchors each frame so wires track expand/collapse. */
 export function refinePreviewEdge(
   spec: PreviewEdgeSpec,
