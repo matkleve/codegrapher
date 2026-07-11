@@ -182,6 +182,16 @@ export function CollapsibleMemberRow({
   const targetActive = isHandleActive(memberHandleId);
   const memberKind = edgeKindAtHandle(memberHandleId);
 
+  const onReadingFocusDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      cancelHoverLeaveGrace();
+      focusReadingMember(flowNodeId, memberId);
+    },
+    [cancelHoverLeaveGrace, focusReadingMember, flowNodeId, memberId],
+  );
+
   return (
     <div
       data-member-id={memberId}
@@ -190,6 +200,7 @@ export function CollapsibleMemberRow({
         memberLit && "trace-member-lit",
         ownerLit && "trace-member-owner-lit",
       )}
+      onDoubleClick={onReadingFocusDoubleClick}
     >
       <Handle
         type="target"
@@ -222,12 +233,6 @@ export function CollapsibleMemberRow({
           e.stopPropagation();
           cancelHoverLeaveGrace();
           onToggle(memberId);
-        }}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          cancelHoverLeaveGrace();
-          focusReadingMember(flowNodeId, memberId);
         }}
       >
         <ExpandChevron
