@@ -54,13 +54,27 @@ export function GraphFlowCanvas({
     [onMove],
   );
 
+  // Node drag/resize moves the anchor DOM but does not fire onMove (viewport
+  // only). Without this, wires freeze during a node drag and stay stale after
+  // drop. Position/dimension changes kick the wire engine's settle loop so
+  // wires track the node — the same signal path viewport moves already use.
+  const handleNodesChange: typeof onNodesChange = useCallback(
+    (changes) => {
+      if (changes.some((c) => c.type === "position" || c.type === "dimensions")) {
+        notifyWireTransform();
+      }
+      onNodesChange(changes);
+    },
+    [onNodesChange],
+  );
+
   return (
     <div className="relative h-full w-full">
       <ReactFlow
         className="graph-flow-container"
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={flowNodeTypes}
         onNodeClick={onNodeClick}

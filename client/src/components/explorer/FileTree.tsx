@@ -1,14 +1,14 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { fetchTree } from "@/api";
-import { Button } from "@/components/ui/button";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
+import {
+  EXPLORER_FILE_ROW,
+  EXPLORER_FOLDER_ROW,
+} from "@/components/explorer/explorerRowStyles";
 import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { isFileInGraph } from "@/lib/graphFiles";
-import {
-  TREE_FOLDER_ROW,
-  TREE_ROW,
-} from "@/components/explorer/explorerRowStyles";
 import { cn } from "@/lib/utils";
 import type { TreeEntry } from "@/types";
 
@@ -40,10 +40,24 @@ export function FileTreeItem({
   const fileIcon = getFileIcon(name);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      draggable={true}
+    <InteractiveListRow
+      as="div"
+      density="compact"
+      mono
+      title={name}
+      disabled={disabled}
+      draggable={!disabled}
+      className={cn(
+        EXPLORER_FILE_ROW,
+        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
+      )}
+      leading={
+        fileIcon.vscodeIcon ? (
+          <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
+        ) : (
+          <Codicon name={fileIcon.codicon!} className={cn("shrink-0", fileIcon.colorClass)} />
+        )
+      }
       onDragStart={(e) => {
         e.stopPropagation();
         e.dataTransfer.setData(DRAG_FILEPATH_KEY, filePath);
@@ -54,27 +68,7 @@ export function FileTreeItem({
         e.stopPropagation();
         if (!disabled) onFileClick(filePath);
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !disabled) {
-          e.stopPropagation();
-          onFileClick(filePath);
-        }
-      }}
-      className={cn(
-        TREE_ROW,
-        "active:cursor-grabbing",
-        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
-        !inGraph && "text-foreground",
-        disabled && "pointer-events-none cursor-not-allowed opacity-50",
-      )}
-    >
-      {fileIcon.vscodeIcon ? (
-        <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
-      ) : (
-        <Codicon name={fileIcon.codicon!} className={cn("shrink-0", fileIcon.colorClass)} />
-      )}
-      <span className="truncate">{name}</span>
-    </div>
+    />
   );
 }
 
@@ -116,21 +110,28 @@ export function TreeNode({
     const folderIcon = getFolderIcon(open);
     return (
       <div className="flex flex-col gap-0.5">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={toggleFolder}
+        <InteractiveListRow
+          density="compact"
+          title={entry.name}
           disabled={disabled}
-          className={TREE_FOLDER_ROW}
-        >
-          <Codicon
-            name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
-            className="shrink-0 text-muted-foreground"
-          />
-          <Codicon name={folderIcon.codicon} className={cn("shrink-0", folderIcon.colorClass)} />
-          <span className="truncate leading-none">{entry.name}</span>
-          {loading && <span className="text-xs text-muted-foreground">…</span>}
-        </Button>
+          aria-expanded={open}
+          className={cn(EXPLORER_FOLDER_ROW, "py-0 font-medium")}
+          leading={
+            <>
+              <Codicon
+                name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
+                className="shrink-0 text-muted-foreground"
+              />
+              <Codicon name={folderIcon.codicon} className={cn("shrink-0", folderIcon.colorClass)} />
+            </>
+          }
+          trailing={
+            loading ? (
+              <span className="control-row-text-secondary">…</span>
+            ) : null
+          }
+          onClick={toggleFolder}
+        />
         {open && (
           <ExplorerTreeGuide>
             {children?.map((child) => (

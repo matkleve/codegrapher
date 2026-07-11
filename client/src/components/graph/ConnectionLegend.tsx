@@ -203,7 +203,7 @@ export function ConnectionLegend() {
                 <li key={item.kind}>
                   <InteractiveListRow
                     interactive
-                    density="plain"
+                    density="compact"
                     contentTone={visible ? "default" : "muted"}
                     title={CONNECTION_KIND_LABEL[item.kind]}
                     aria-pressed={visible}

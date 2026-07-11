@@ -8,7 +8,7 @@ On-demand dashed SVG connections between indexed symbols. Summoned by hovering t
 
 ## What It Looks Like
 
-Semantic-color dashed curves (function blue, class blue, …) with animated dash flow toward the arrowhead. Endpoint sockets bloom (`--spring`). Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
+Semantic-color dashed curves (function blue, class blue, …) with animated dash flow toward the arrowhead. Endpoint sockets pop in (`--spring`) with a crisp semantic ring — no brightness bloom. Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
 
 ## Where It Lives
 

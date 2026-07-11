@@ -1,10 +1,11 @@
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { Codicon } from "@/lib/fileIcons";
 import { ExplorerTreeGuide, FileTreeItem } from "@/components/explorer/FileTree";
-import { TREE_SECTION_ROW } from "@/components/explorer/explorerRowStyles";
+import { EXPLORER_SECTION_ROW } from "@/components/explorer/explorerRowStyles";
 import { fileDisplayName } from "@/lib/recentFiles";
 import { isFileInGraph } from "@/lib/graphFiles";
+import { cn } from "@/lib/utils";
 
 type RecentFilesSectionProps = {
   files: string[];
@@ -26,17 +27,21 @@ export function RecentFilesSection({
 
   return (
     <section className="pointer-events-auto relative shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onToggle}
-        className={TREE_SECTION_ROW}
+      <InteractiveListRow
+        density="compact"
+        title="Recent"
+        contentTone="muted"
         aria-expanded={open}
-      >
-        <Codicon name={open ? "codicon-chevron-down" : "codicon-chevron-right"} className="shrink-0" />
-        <span className="truncate leading-none">Recent</span>
-        <span className="ml-auto shrink-0 leading-none">{files.length}</span>
-      </Button>
+        className={cn(EXPLORER_SECTION_ROW, "py-0 font-medium")}
+        leading={
+          <Codicon
+            name={open ? "codicon-chevron-down" : "codicon-chevron-right"}
+            className="shrink-0"
+          />
+        }
+        trailing={<span className="control-row-text-secondary">{files.length}</span>}
+        onClick={onToggle}
+      />
       {open && (
         <ExplorerTreeGuide>
           {files.map((path) => (

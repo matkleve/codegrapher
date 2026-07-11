@@ -332,18 +332,51 @@
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-active .member-row-header:hover + .member-body-wrap,
-.graph-pane.graph-ctrl-preview .graph-trace-active .member-row-header:hover + .member-body-wrap {
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap,
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap {
   background-color: var(--surface-neutral-strong) !important;
   color: var(--muted-foreground) !important;
 }
 
-.graph-trace-active .member-row-header:hover + .member-body-wrap .code-line,
-.graph-trace-active .member-row-header:hover + .member-body-wrap .code-kw,
-.graph-trace-active .member-row-header:hover + .member-body-wrap .code-pn,
-.graph-trace-active .member-row-header:hover + .member-body-wrap .token-chip .token-chip-text {
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-line,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-kw,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-pn,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .token-chip .token-chip-text {
   color: var(--muted-foreground) !important;
   -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-active .member-row-header.hoverable:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
 }
 
 .graph-trace-active .hoverable:hover,
@@ -356,10 +389,33 @@
   background-color: var(--brand-surface);
 }
 
-.graph-trace-active .member-row.trace-member-lit .member-row-header:hover,
-.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover {
+.graph-trace-active .member-row.trace-member-lit .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)),
+.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) {
   background-color: var(--brand-surface) !important;
   border-color: var(--brand-border) !important;
+  box-shadow: none;
+}
+
+.graph-trace-active .member-row.trace-member-lit .member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+),
+.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
   box-shadow: none;
 }
 
@@ -368,40 +424,27 @@
 .graph-trace-active .hoverable:hover .node-card-caret,
 .graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-label,
 .graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-bulk,
-.graph-trace-active .member-row-header:hover .member-row-caret,
-.graph-trace-active .member-row-header:hover .member-row-label,
-.graph-trace-active .member-row-header:hover .member-row-label .token-shimmer-target,
-.graph-trace-pinned .member-row-label.token-def-label:hover:not(.token-chip-lit),
-.graph-trace-pinned .node-card-title:hover:not(.token-chip-lit),
-.graph-trace-pinned .token-chip.interactive:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-caret,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label .token-shimmer-target,
 .graph-trace-active .hoverable:hover svg,
 .graph-trace-active .hoverable:hover [data-icon] {
   color: var(--brand) !important;
   stroke: var(--brand);
   -webkit-text-fill-color: currentColor;
   background-image: none;
-}
-
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview):not(.graph-trace-pinned)
-  .member-row-label.token-def-label:hover:not(.token-chip-lit),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview):not(.graph-trace-pinned)
-  .node-card-title:hover:not(.token-chip-lit),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview):not(.graph-trace-pinned)
-  .token-chip.interactive:hover:not(.token-chip-lit)
-  .token-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview):not(.graph-trace-pinned)
-  .member-signature-tags
-  .token-chip.member-sig-token-chip:hover:not(.token-chip-lit)
-  .token-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview):not(.graph-trace-pinned)
-  .member-signature-tags
-  .token-chip.member-sig-type-chip:hover:not(.token-chip-lit)
-  .token-chip-text {
-  color: var(--faint) !important;
-  font-weight: 600;
-  filter: none;
-  background: transparent;
-  -webkit-text-fill-color: currentColor;
 }
 
 .graph-trace-pinned .token-chip.cursor-pointer:not(.token-chip-lit),

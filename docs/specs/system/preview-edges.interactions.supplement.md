@@ -158,7 +158,19 @@ sequenceDiagram
 
 **Normative:** When a pinned/hovering **definition fan-out** wire retargets to a usage chip (member body was collapsed at pin time, expanded after), the call-site `TokenChip` MUST receive `token-chip-lit` and `token-chip-on` — not only a line-handle socket.
 
-`computeTraceLit` MUST use the same `refinePreviewEdge` path as the overlay and MUST re-run when `revealRevision` changes (member/class expand state).
+`computeTraceLit` MUST use the same `refinePreviewEdge` path as the overlay and MUST
+re-run on **both** triggers:
+
+1. `revealRevision` — React expand/collapse state (`expandedMethodIds`).
+2. `registryRevision` — the element registry's rAF-coalesced change signal
+   (`subscribeRegistry` / `useElementRegistryRevision`).
+
+Both are required. `revealRevision` bumps **during render**, before the newly revealed
+token chips mount and register, so on its own `computeTraceLit` resolves against the
+*pre-commit* DOM and lights nothing — the wire self-heals only because the overlay
+re-resolves every rAF, but lit has no such loop. `registryRevision` fires **after** the
+chips mount and register, driving the recompute that actually finds them. Removing the
+registry dependency reintroduces the "wire retargets but keywords don't light" bug.
 
 ### Def title → open callee (acceptance path)
 
@@ -174,7 +186,28 @@ flowchart TD
   E --> H[Chip lit + socket on + wire on chip anchor]
 ```
 
-Implementation: `client/src/lib/computeTraceLit.ts` (lit sets), `client/src/lib/traceLitController.ts` (imperative DOM classes), `GraphInteractionContext` `revealRevision` dep.
+Implementation: `client/src/lib/computeTraceLit.ts` (lit sets), `client/src/lib/traceLitController.ts` (imperative DOM classes), `client/src/lib/elementRegistry.ts` (`subscribeRegistry` post-mount signal), `GraphInteractionContext` `revealRevision` + `registryRevision` deps.
+
+---
+
+## Wire engine — re-measure triggers (normative)
+
+`wireEngine.ts` is **not** a per-frame loop. It idles until a signal starts it, runs an
+rAF measure loop while activity continues, then **auto-stops `SETTLE_MS` (100ms) after
+the last signal** with one final tick. Wires therefore track motion smoothly but cost
+nothing at rest. Every source of geometry change MUST reach it, or wires go stale:
+
+| Trigger | Path | Covers |
+| ------- | ---- | ------ |
+| Preview/structural specs change | overlay effect → `engine.tickOnce()` | new/removed wires (`beginTrace`) |
+| Viewport pan/zoom | `onMove` / `onMoveEnd` → `notifyWireTransform` | canvas transform |
+| Node drag / resize | `onNodesChange` (`position`/`dimensions`) → `notifyWireTransform` | moving or resizing a card |
+| Reveal (expand/collapse) | `revealRevision` → lit recompute → lit effect → `notifyWireTransform`; also emits a `dimensions` change | anchor host moves as the card grows |
+| Trace-host mount/unmount | `registryRevision` → lit recompute → lit effect → `notifyWireTransform` | chip appears/disappears |
+
+**Regression guard:** a node is `nodesDraggable`, so `onNodesChange` MUST notify the wire
+engine on `position`/`dimensions` changes — otherwise wires freeze mid-drag and stay stale
+after drop (only viewport moves would recover them).
 
 ---
 
@@ -240,9 +273,9 @@ flowchart TB
 | Ctrl + trace | shimmer stays on for every indexed token (Ctrl always wins) | faint + shimmer | no tint |
 | Pinned | pinned trace lit + optional hover preview | faint until dwell (or immediately if Ctrl held) | no tint |
 
-**Active chips (`token-chip-on`):** semantic tint fill (`color-mix` ~12% `--token-edge-*` into `--background`), **no inset ring**; pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use `--brand-surface` fill.
+**Active chips (`token-chip-on`):** semantic tint fill (`color-mix` ~12% `--token-edge-*` into `--background`), **no inset ring**; idle `:hover` on `.cursor-pointer` chips uses the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
 
-**Sockets (`FlowAnchor`):** bloom on endpoints only (`token-chip-on`); soft glow via `currentColor` + tight box-shadow (not oversized blur).
+**Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur.
 
 ---
 

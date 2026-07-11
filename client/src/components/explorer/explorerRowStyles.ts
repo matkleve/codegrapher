@@ -1,14 +1,7 @@
-import {
-  INTERACTIVE_ROW,
-  INTERACTIVE_ROW_LEFT,
-} from "@/lib/controlTokens";
+/** Explorer row class hooks — styling lives on InteractiveListRow + index.css sidebar rules. */
 
-/** Shared VS Code–like explorer row density classes. */
+export const EXPLORER_FILE_ROW = "explorer-file-row";
 
-export const EXPLORER_X_PAD = "px-2";
+export const EXPLORER_FOLDER_ROW = "explorer-folder-row";
 
-export const TREE_ROW = `${INTERACTIVE_ROW} explorer-file-row font-mono`;
-
-export const TREE_FOLDER_ROW = `${INTERACTIVE_ROW_LEFT} explorer-folder-row py-0 font-medium disabled:cursor-not-allowed`;
-
-export const TREE_SECTION_ROW = `${INTERACTIVE_ROW_LEFT} explorer-section-header py-0 font-medium`;
+export const EXPLORER_SECTION_ROW = "explorer-section-header";

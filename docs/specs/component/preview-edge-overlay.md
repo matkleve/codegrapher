@@ -6,7 +6,7 @@ DOM/SVG layer above the React Flow canvas that measures anchor elements each fra
 
 ## What It Looks Like
 
-Full-pane SVG with dashed paths, glowing endpoint sockets, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). No React Flow `<Edge>` elements for preview.
+Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). No React Flow `<Edge>` elements for preview.
 
 ## Where It Lives
 

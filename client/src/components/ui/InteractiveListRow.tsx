@@ -1,4 +1,10 @@
-import type { ReactNode } from "react";
+import type {
+  DragEventHandler,
+  KeyboardEventHandler,
+  MouseEventHandler,
+  PointerEventHandler,
+  ReactNode,
+} from "react";
 import { buttonVariants } from "@/components/ui/button";
 import {
   INTERACTIVE_ROW_DOUBLE,
@@ -18,9 +24,10 @@ export type InteractiveListRowProps = {
   trailing?: ReactNode;
   /** Visual outline badge (Jump, Load, …) — row click handles the action */
   actionLabel?: string;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
+  onPointerDown?: PointerEventHandler<HTMLButtonElement | HTMLDivElement>;
   className?: string;
-  /** `comfortable` = two-line menu row; `compact` = single-line explorer density; `plain` = simple label */
+  /** `comfortable` = two-line menu row; `compact` | `plain` = single-line row height */
   density?: "comfortable" | "compact" | "plain";
   /** Muted hover, no button — legend rows, labels */
   interactive?: boolean;
@@ -30,7 +37,15 @@ export type InteractiveListRowProps = {
   contentTone?: "default" | "muted";
   /** `neutral` = grey hover (legend toggles); default brand hover for menus */
   hoverStyle?: "brand" | "neutral";
+  /** Explorer file paths */
+  mono?: boolean;
+  disabled?: boolean;
+  /** `div` supports drag (file tree); default `button` */
+  as?: "button" | "div";
+  draggable?: boolean;
+  onDragStart?: DragEventHandler<HTMLDivElement>;
   "aria-pressed"?: boolean;
+  "aria-expanded"?: boolean;
 };
 
 export function SemanticConnectionDot({
@@ -56,6 +71,7 @@ export function InteractiveListRowText({
   density = "comfortable",
   tone = "default",
   contentTone = "default",
+  mono = false,
 }: {
   title: string;
   subtitle?: string;
@@ -63,34 +79,25 @@ export function InteractiveListRowText({
   density?: "comfortable" | "compact" | "plain";
   tone?: "default" | "passive";
   contentTone?: "default" | "muted";
+  mono?: boolean;
 }) {
-  if (density === "plain") {
-    return (
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-left text-xs",
-          contentTone === "muted"
-            ? "font-normal text-muted-foreground"
-            : "font-medium text-foreground",
-          tone === "passive" && contentTone !== "muted" && "text-muted-foreground",
-        )}
-      >
-        {title}
-      </span>
-    );
-  }
+  const monoClass = mono ? "font-mono" : undefined;
 
-  if (density === "compact") {
+  if (density === "plain" || density === "compact") {
     return (
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-left text-xs text-foreground",
+          "min-w-0 flex-1 truncate text-left",
+          contentTone === "muted" || tone === "passive"
+            ? "control-row-text-secondary"
+            : "control-row-text-primary",
+          monoClass,
           align === "right" && "text-right",
         )}
       >
         {title}
-        {subtitle ? (
-          <span className="text-muted-foreground"> · {subtitle}</span>
+        {density === "compact" && subtitle ? (
+          <span className="control-row-text-secondary"> · {subtitle}</span>
         ) : null}
       </span>
     );
@@ -101,18 +108,24 @@ export function InteractiveListRowText({
       className={cn(
         "min-w-0 flex-1",
         align === "right" ? "text-right" : "text-left",
+        monoClass,
       )}
     >
-      <span className="control-row-text-title block truncate text-foreground">
-        {title}
-      </span>
+      <span className="control-row-text-title block truncate">{title}</span>
       {subtitle ? (
-        <span className="control-row-text-subtitle block truncate">
-          {subtitle}
-        </span>
+        <span className="control-row-text-subtitle block truncate">{subtitle}</span>
       ) : null}
     </span>
   );
+}
+
+function compactRowClass(
+  density: InteractiveListRowProps["density"],
+  hoverStyle: InteractiveListRowProps["hoverStyle"],
+): string {
+  if (density === "comfortable") return INTERACTIVE_ROW_DOUBLE;
+  if (hoverStyle === "neutral") return INTERACTIVE_ROW_NEUTRAL_LEFT;
+  return cn(INTERACTIVE_ROW_LEFT, "control-row-compact");
 }
 
 export function InteractiveListRow({
@@ -122,27 +135,30 @@ export function InteractiveListRow({
   trailing,
   actionLabel,
   onClick,
+  onPointerDown,
   className,
   density = "comfortable",
   interactive = true,
   tone = "default",
   contentTone = "default",
   hoverStyle = "brand",
+  mono = false,
+  disabled = false,
+  as = "button",
+  draggable = false,
+  onDragStart,
   "aria-pressed": ariaPressed,
+  "aria-expanded": ariaExpanded,
 }: InteractiveListRowProps) {
   const rowClass = interactive
     ? tone === "passive"
       ? INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT
-      : density === "comfortable"
-        ? INTERACTIVE_ROW_DOUBLE
-        : hoverStyle === "neutral"
-          ? INTERACTIVE_ROW_NEUTRAL_LEFT
-          : cn(INTERACTIVE_ROW_LEFT, density === "compact" && "control-row-compact")
+      : compactRowClass(density, hoverStyle)
     : tone === "passive"
       ? cn(INTERACTIVE_ROW_PASSIVE_LEFT, "cursor-default")
       : cn(
           INTERACTIVE_ROW_STATIC_LEFT,
-          density !== "plain" && density === "compact" && "control-row-compact",
+          density !== "comfortable" && "control-row-compact",
         );
 
   const trailingNode =
@@ -167,6 +183,7 @@ export function InteractiveListRow({
         density={density}
         tone={tone}
         contentTone={contentTone}
+        mono={mono}
       />
       {trailingNode ? (
         <span className="ml-1 flex shrink-0 items-center">{trailingNode}</span>
@@ -174,18 +191,55 @@ export function InteractiveListRow({
     </>
   );
 
+  const sharedClass = cn(
+    rowClass,
+    "text-foreground",
+    disabled && "pointer-events-none cursor-not-allowed opacity-50",
+    className,
+  );
+
   if (!interactive) {
+    return <div className={sharedClass}>{rowBody}</div>;
+  }
+
+  if (as === "div") {
+    const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (e) => {
+      if (disabled || !onClick) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+      }
+    };
+
     return (
-      <div className={cn(rowClass, "text-foreground", className)}>{rowBody}</div>
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        className={cn(sharedClass, draggable && "active:cursor-grabbing")}
+        onClick={disabled ? undefined : onClick}
+        onPointerDown={onPointerDown}
+        onKeyDown={onKeyDown}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        aria-pressed={ariaPressed}
+        aria-expanded={ariaExpanded}
+        aria-disabled={disabled || undefined}
+      >
+        {rowBody}
+      </div>
     );
   }
 
   return (
     <button
       type="button"
-      className={cn(rowClass, "text-foreground", className)}
-      onClick={onClick}
+      className={sharedClass}
+      onClick={disabled ? undefined : onClick}
+      onPointerDown={onPointerDown}
+      disabled={disabled}
       aria-pressed={ariaPressed}
+      aria-expanded={ariaExpanded}
     >
       {rowBody}
     </button>

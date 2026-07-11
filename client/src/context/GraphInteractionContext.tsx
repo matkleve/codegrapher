@@ -57,6 +57,7 @@ import {
 } from "@/lib/pinnedTraces";
 import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
+import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
 import { notifyWireTransform } from "@/lib/wireEngine";
 import {
   buildStructuralEdges,
@@ -193,6 +194,9 @@ export function GraphInteractionProvider({
   isCtrlActiveRef.current = isCtrlActive;
   const { symbols, references } = useIndex();
   const { setCenter, getNode } = useReactFlow();
+  // Recompute trace-lit when the mounted-trace-host set changes (a member or
+  // class expanding/collapsing), so newly revealed tokens light up.
+  const registryRevision = useElementRegistryRevision();
 
   const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
   const [pinnedTraces, setPinnedTraces] = useState<PinnedTrace[]>([]);
@@ -766,7 +770,7 @@ export function GraphInteractionProvider({
       );
     }
     return lit;
-  }, [getNode, pinnedTraces, revealRevision]);
+  }, [getNode, pinnedTraces, revealRevision, registryRevision]);
 
   const hoverTraceLit = useMemo(() => {
     if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
@@ -780,6 +784,7 @@ export function GraphInteractionProvider({
     hoveredTokenKey,
     pinnedTraces,
     revealRevision,
+    registryRevision,
   ]);
 
   const traceLit = useMemo(

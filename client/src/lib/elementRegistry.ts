@@ -4,6 +4,35 @@ const localTargetIds = new Map<string, HTMLElement>();
 const handles = new Map<string, HTMLElement>();
 const memberIds = new Map<string, HTMLElement>();
 
+// The set of mounted trace hosts changes when members/classes expand or collapse.
+// Trace-lit is computed from that set, so consumers subscribe here and recompute
+// when it changes. Notifications are rAF-coalesced so a burst of chip mounts (one
+// member expanding renders many tokens) triggers a single recompute next frame.
+let revision = 0;
+const listeners = new Set<() => void>();
+let notifyScheduled = false;
+
+function scheduleRegistryNotify(): void {
+  if (notifyScheduled) return;
+  notifyScheduled = true;
+  requestAnimationFrame(() => {
+    notifyScheduled = false;
+    revision += 1;
+    for (const listener of listeners) listener();
+  });
+}
+
+export function subscribeRegistry(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getRegistryRevision(): number {
+  return revision;
+}
+
 function handleKey(targetId: string, side: "left" | "right"): string {
   return `${targetId}::${side}`;
 }
@@ -23,6 +52,8 @@ export function registerTraceHost(el: HTMLElement): void {
   if (memberId) {
     memberIds.set(memberId, el);
   }
+
+  if (traceKey || memberId) scheduleRegistryNotify();
 }
 
 /** Register a FlowAnchor dot for handle-based wire endpoints. */
@@ -50,6 +81,7 @@ export function unregisterElement(el: HTMLElement): void {
   for (const [key, host] of memberIds) {
     if (host === el) memberIds.delete(key);
   }
+  scheduleRegistryNotify();
 }
 
 export function getByTraceKey(key: string): HTMLElement | null {

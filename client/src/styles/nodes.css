@@ -112,9 +112,51 @@
   border-color: var(--brand-border) !important;
 }
 
-.member-row-header:hover .member-row-caret,
-.member-row-header:hover .member-row-label,
-.member-row-header:hover .member-row-label .token-shimmer-target {
+/* Indexed token hover — chip lights up; header chrome stays flat (see interaction-emphasis.md §3) */
+.member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: inherit;
+}
+
+.member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) .member-row-caret {
+  color: var(--muted-foreground) !important;
+}
+
+.member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+  .member-row-label,
+.member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+  .member-row-label
+  .token-shimmer-target {
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Indexed chip hover — semantic fill in tokens-chips.css; header chrome keeps brand below */
+
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-caret,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label .token-shimmer-target {
   color: var(--brand) !important;
   -webkit-text-fill-color: currentColor;
 }
@@ -142,11 +184,19 @@
   transition: transform var(--motion-hover-color) var(--ease);
 }
 
-.member-row-header[aria-expanded="false"]:hover .expand-chevron-icon {
+.member-row-header[aria-expanded="false"]:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .expand-chevron-icon {
   transform: rotate(90deg);
 }
 
-.member-row-header[aria-expanded="true"]:hover .expand-chevron-icon {
+.member-row-header[aria-expanded="true"]:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .expand-chevron-icon {
   transform: rotate(-90deg);
 }
 
@@ -157,21 +207,53 @@
     color var(--motion-dim) var(--ease);
 }
 
-.member-row-header:hover + .member-body-wrap {
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap {
   background-color: var(--surface-neutral-strong);
   color: var(--muted-foreground) !important;
 }
 
-.member-row-header:hover + .member-body-wrap .code-line,
-.member-row-header:hover + .member-body-wrap .code-kw,
-.member-row-header:hover + .member-body-wrap .code-pn,
-.member-row-header:hover + .member-body-wrap .code-comment,
-.member-row-header:hover + .member-body-wrap .code-string,
-.member-row-header:hover + .member-body-wrap .code-number {
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-line,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-kw,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-pn,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-comment,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-string,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-number {
   color: var(--muted-foreground) !important;
 }
 
-.member-row-header:hover + .member-body-wrap .token-chip .token-chip-text {
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .token-chip .token-chip-text {
   color: var(--muted-foreground) !important;
   -webkit-text-fill-color: currentColor;
 }

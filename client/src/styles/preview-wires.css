@@ -136,21 +136,19 @@
   transition:
     transform 180ms var(--spring),
     opacity 140ms var(--ease),
-    box-shadow 200ms var(--ease),
-    filter 200ms var(--ease);
-  background: color-mix(in oklch, var(--token-edge-function) 86%, white) !important;
-  filter: brightness(1.14) saturate(1.08);
+    box-shadow 200ms var(--ease);
+  /* Fill from TOKEN_ANCHOR colorClass — crisp rings, no bloom/brightness */
+  filter: none;
   box-shadow:
-    0 0 1.5px 0.5px color-mix(in oklch, var(--token-edge-function) 88%, white),
-    0 0 5px 1.5px color-mix(in oklch, var(--token-edge-function) 42%, transparent);
+    0 0 0 1px currentColor,
+    0 0 0 3px color-mix(in oklch, currentColor 24%, transparent);
 }
 
 .graph-trace-warm .flow-anchor-on {
   transition:
     transform 120ms var(--spring),
     opacity 100ms var(--ease),
-    box-shadow 100ms var(--ease),
-    filter 100ms var(--ease);
+    box-shadow 100ms var(--ease);
 }
 
 .jump-tip {

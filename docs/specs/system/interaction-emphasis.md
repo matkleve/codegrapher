@@ -2,11 +2,11 @@
 
 ## What It Is
 
-Cross-app contract for pointer hover on clickable surfaces: **brand gold** in both themes, shared between CSS and `controlTokens.ts`. Preview-trace mode adds dim/lit rules that override pass-over hover on non-lit tokens.
+Cross-app contract for pointer hover on clickable surfaces: **brand gold** in both themes for **app chrome** (`.hoverable`, row expand, explorer). **Indexed token chips** keep semantic kind color as the through-line — hover and trace deepen the same symbol identity (fill wash), never swap to gold. Preview-trace mode adds dim/lit rules on non-hovered chips.
 
 ## What It Looks Like
 
-Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, dim indexed tokens stay `--faint` on pass-over; only **lit** endpoints get semantic color + socket glow. **Pinned** trace keeps the pin lit; hovering another indexed token still runs the normal dwell preview (chip-on + wires) without changing the pin until click.
+Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, dim indexed tokens stay `--faint` on pass-over; only **lit** endpoints get semantic color + crisp socket ring. **Pinned** trace keeps the pin lit; hovering another indexed token still runs the normal dwell preview (chip-on + wires) without changing the pin until click.
 
 ## Where It Lives
 
@@ -34,18 +34,18 @@ flowchart TB
 | 3 | Ctrl held on graph | Dim syntax/keywords; shimmer indexed chips | `graph-ctrl-preview` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
 | 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates *(planned)* | `graph-trace-pinned` + merged trace lit |
-| 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `INTERACTIVE_SURFACE` |
+| 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `.member-row-header.hoverable` |
 
 ## Trace vs brand (normative)
 
 | Surface | Trace active, not lit | Trace lit endpoint | Pinned + foreign token |
 | ------- | --------------------- | ------------------ | ---------------------- |
-| Token chip text | `--faint` | semantic `--token-edge-*` | `--faint`, no hover lift |
-| Token background | transparent | `token-chip-on` tint, **no inset border** | transparent |
+| Token chip text | `--faint` | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
+| Token background | transparent | `token-chip-on` semantic fill, **no border** | same semantic fill on hover |
 | Node card header | card white | card white | card white |
 | Member row (lit) | `--member-row-trace-lit-bg` + inset function-blue border | `trace-member-lit` | per trace lit set |
 | Member row (dim, trace on) | `bg-muted` at rest; trace dims non-lit rows | no lit class | non-lit rows while trace active |
-| FlowAnchor socket | hidden | soft glow `currentColor` | hidden unless endpoint |
+| FlowAnchor socket | hidden | semantic fill + crisp ring | hidden unless endpoint |
 
 Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`trace-modes.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
 
@@ -57,17 +57,17 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`
 | --- | ---- | -------------------- | ------------------------------ | --------------------------- | ---------------- |
 | 1 | **Idle** | all rows: `bg-muted` (blue-grey) | param pills: `--member-sig-bg-in`; return: neutral | transparent | semantic ink |
 | 2 | **Row header hover** | `--brand-surface` bg + `--brand-border` border; title + caret → `--brand` | unchanged | `--muted-foreground` on code (`--surface-neutral-strong` fill) | unchanged |
-| 3 | **Label/chip hover** (not header chrome) | unchanged unless pointer is on header | unchanged | — | brand gold ink on hovered chip/label |
+| 3 | **Label/chip hover** (not header chrome) | unchanged unless pointer is on header | unchanged | — | semantic ink + semantic fill wash (same as `token-chip-on`) |
 | 4 | **Ctrl held** (`graph-ctrl-preview`) | trace dim mix (`foreground` 3% → `card`); lit rows unchanged | param/return pills → same neutral dim mix; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
 | 5 | **Trace active, row not lit** | trace dim mix on non-lit rows | bg transparent; text → `--faint` | text → `--faint` | non-lit chips → `--faint` |
 | 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | pill bg transparent; lit signature chips → same `token-chip-lit` + `token-chip-on` as body | lit lines → `trace-lit-line` | `token-chip-lit` + `token-chip-on` fill |
 | 7 | **Trace active, owner row** (`trace-member-owner-lit`) | same as lit row 6 | same as lit | same as lit | same as lit |
-| 8 | **Pinned** (`graph-trace-pinned`) | pinned trace stays lit (row 6/7); foreign hover → ephemeral preview | pinned source keeps semantic ink on hover | — | pin source: `token-chip-source`; foreign preview: `--brand-surface` fill |
+| 8 | **Pinned** (`graph-trace-pinned`) | pinned trace stays lit (row 6/7); foreign hover → ephemeral preview | pinned source keeps semantic ink on hover | — | pin source: `token-chip-source`; foreign preview: same semantic fill as `token-chip-on` |
 | 9 | **Ctrl + trace** | Ctrl shimmer wins on indexed chips; row fills unchanged from 5–7 | indexed sig types stay semantic under Ctrl | `--faint` body text | shimmer + lit semantic ink |
 
 **Cascade rule** (from [token-interactions.md](token-interactions.md)): tracing a **function** endpoint spreads `trace-member-lit` to that member's whole body; class/type/variable endpoints do not spread body fill.
 
-**Regression guard:** member rows use `bg-muted` at rest — never `--primary` or `color-mix` into `--card` for method fills (oklch hue snaps red). Param pills use `--member-sig-bg-in` mixed into `--background`. Member header uses `.hoverable` for brand chrome on `:hover` only. Signature **indexed** param/type symbols use the same `TokenChip` shell as body tokens; TS primitives (`string`, `void`, …) stay plain type ink — not chips. Ctrl shimmer applies only to interactive indexed chips (`.cursor-pointer`), never primitives or syntax.
+**Regression guard:** member rows use `bg-muted` at rest — never `--primary` or `color-mix` into `--card` for method fills (oklch hue snaps red). Param pills use `--member-sig-bg-in` mixed into `--background`. Member header uses `.hoverable` for brand chrome on `:hover` only. **Token chips never use brand gold** — hover fill matches `token-chip-on` semantic wash. Signature **indexed** param/type symbols use the same `TokenChip` shell as body tokens; TS primitives (`string`, `void`, …) stay plain type ink — not chips. Ctrl shimmer applies only to interactive indexed chips (`.cursor-pointer`), never primitives or syntax.
 
 ## Component Hierarchy
 
@@ -98,6 +98,7 @@ index.css (.hoverable)
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state
+- [ ] Token chip hover and `token-chip-on` use the same semantic fill — no brand gold, no border/box-shadow on the chip shell
 - [ ] `controlTokens.ts` and `index.css` stay in sync
 
 ## References

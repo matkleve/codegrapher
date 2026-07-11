@@ -12,6 +12,8 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 
 | Item | Resolution |
 | ---- | ---------- |
+| Wires froze during node drag/resize | `onNodesChange` was passed raw, so dragging/resizing a card (nodes are `nodesDraggable`) never nudged the wire engine — wires stayed stale until the next viewport move. `GraphFlowCanvas` now notifies the engine on `position`/`dimensions` changes, completing the re-measure trigger set (documented in `preview-edges.interactions.supplement.md`). |
+| Reveal re-lit only the wire, not the keywords | `computeTraceLit` recomputed on `revealRevision` (which bumps during render, before revealed chips mount), so it resolved against stale DOM and lit nothing while the wire's rAF loop self-healed. Made the element registry observable (`subscribeRegistry`, rAF-coalesced) and added `registryRevision` to the lit memos, so lit recomputes after chips mount. Fulfils the `preview-edges.md` AC "expand callee: usage TokenChip gets lit/on (not wire-only)". |
 | Load pill removed; dropdown is sole load surface | Deleted `LoadConnector` (floating "Load · N" pill) + its stub wire; `buildHoverLoadMenu` now shows for N=1 too, so `TokenConnectionMenu` handles all loads. Added **Load all · N** to the menu. Supersedes the older "Load connector" row below. `token-interactions.md` updated. |
 | Static-walk scope indexing | `scopeAtStep` now selects by source line number and walks the whole body from line 1; per-step values are correct at any trace start line. Regression test added (`staticWalk.test.ts`). |
 | Value-flow pulse was degenerate | Pulse resolves the callee via `resolveVisibleTarget` and travels line→callee (returns → node header); unresolved steps emit no pulse instead of a self-edge. |
