@@ -22,6 +22,7 @@ type TokenChipProps = {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   onClick?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   tabIndex?: number;
   role?: string;
@@ -42,6 +43,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
       onMouseEnter,
       onMouseLeave,
       onClick,
+      onContextMenu,
       onKeyDown,
       tabIndex,
       role,
@@ -82,6 +84,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
+        onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
       />
     );

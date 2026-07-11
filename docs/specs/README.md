@@ -2,7 +2,7 @@
 
 Authoritative contracts for codegrapher behavior, interaction, and ownership.
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ---
 
@@ -54,7 +54,8 @@ Split strategy: see [element-spec-format.md](../agent-workflows/element-spec-for
 - **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md)
 - **Keyword interactions:** [system/token-interactions.md](system/token-interactions.md) · use cases: [design/token-interaction-use-cases.md](../design/token-interaction-use-cases.md)
 - **Symbol index:** [service/parser-index.md](service/parser-index.md)
-- **Connection taxonomy (design, not yet implemented):** [system/connection-taxonomy.md](system/connection-taxonomy.md)
+- **Connection taxonomy (design, not yet implemented):** [system/connection-taxonomy.md](system/connection-taxonomy.md) · [per-kind AC](system/connection-taxonomy.acceptance-criteria.md)
+- **Execution simulator (design, not yet implemented):** [system/execution-simulator.md](system/execution-simulator.md)
 
 ---
 

@@ -84,6 +84,10 @@ Connection kinds
 
 ## Acceptance Criteria
 
+Per-kind checklists and build-status markers: [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md).
+
+Summary (see child doc for full AC per kind):
+
 - [ ] Usage and transitive edges remain purely on-demand (hover/Ctrl/pin) — no regression to `preview-edges.md`
 - [ ] Inheritance and composition edges render without requiring a hover, once both endpoint classes are loaded on canvas
 - [ ] Inheritance uses a hollow-triangle arrowhead and solid line; implementation uses the same arrowhead with a dotted line; the two are visually distinguishable from each other and from usage edges
@@ -94,11 +98,15 @@ Connection kinds
 - [ ] Module-import wires are hidden by default and only appear when `visibleEdgeKinds` includes them
 - [ ] A legend or per-edge tooltip lets a user identify what a given line style/arrowhead means without consulting this spec
 
+## Child specs
+
+- Per-kind acceptance criteria: [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md)
+
 ## Open questions
 
 - Does introducing always-on structural edges need an amendment to the on-demand rule in [system/README.md](README.md), or should it stay scoped as a named, deliberate exception (current framing)?
-- Do transitive edges compute eagerly for the whole visible graph, or only fan out from the currently hovered/pinned token (consistent with the existing `usageSiteIndex` precompute pattern)?
-- Should override badges link to the parent definition (mini preview edge on click) or stay static text?
+- Do transitive edges compute eagerly for the whole visible graph, or only fan out from the currently hovered/pinned token (consistent with the existing `usageSiteIndex` precompute pattern)? **Resolved:** on-demand from active token only — see [acceptance-criteria child](connection-taxonomy.acceptance-criteria.md) §2 Transitive.
+- Should override badges link to the parent definition (mini preview edge on click) or stay static text? **Resolved:** click summons ephemeral wire — see [acceptance-criteria child](connection-taxonomy.acceptance-criteria.md) §5 Override.
 
 ## References
 

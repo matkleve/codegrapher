@@ -37,9 +37,11 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
-| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas); **TokenConnectionMenu** lists loadable classes/files anchored below the chip (directional connection dot per row: right for usage→definition, left for definition→caller) | `mode:"external"` |
-| 11 | Click the **Load** pill | N=1: load immediately; N>1: open **LoadTargetPicker** (search when >6 files). **callSite** direction loads a caller file | load |
-| 12 | Click a row in **TokenConnectionMenu** | Merge focus neighborhood for that file via `GET /api/focus?depth=1` | `onLoadFile` |
+| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load** pill (N=1) or **TokenConnectionMenu** (N>1 off-canvas load rows) + footer hint; right-click opens full menu | `mode:"external"` |
+| 11 | Click the **Load** pill | N=1: load immediately; N>1: open picker (same rows as hover menu) | load |
+| 12 | Click a row in **TokenConnectionMenu** | Jump (on canvas), Load (off canvas), or Open in editor (context footer) | `onLoadFile` / `focusFlowNode` |
+| 13 | **Right-click** indexed token | **TokenConnectionMenu** (context variant): On canvas (Jump) + Off canvas (Load) + Open in editor footer — **does not pin** | context menu |
+| 14 | **Click** token | Pin trace + **TokenContextBar** (unchanged; coexists with right-click menu) | `pinnedTraces` |
 
 ## Interaction by keyword kind
 
@@ -98,8 +100,12 @@ graph-pane
 - [ ] Given an active wire, when the pointer enters its first ~cm, then a
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
-  hovered, then a **dashed Load connector** appears and **TokenConnectionMenu**
-  lists off-canvas load targets (only when external targets exist).
+  hovered with **one** off-canvas target, then only the **Load** pill appears (no hover dropdown).
+- [ ] Given **two or more** off-canvas load targets, when hovered, then
+  **TokenConnectionMenu** (hover variant) lists load rows and shows a right-click hint footer.
+- [ ] Given an indexed token, when **right-clicked**, then the context
+  **TokenConnectionMenu** shows on-canvas Jump rows and off-canvas Load rows without pinning.
+- [ ] Given a token, when **left-clicked**, then pin behavior is unchanged (coexists with right-click menu).
 - [ ] Given multiple off-graph definitions, when Load is clicked, then
   **LoadTargetPicker** opens (search when >6 files); N=1 loads immediately.
 - [ ] After load, the stub upgrades to an in-graph preview wire when the

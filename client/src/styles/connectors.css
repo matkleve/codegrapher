@@ -202,8 +202,17 @@
 .graph-pane.graph-ctrl-preview .member-row-caret,
 .graph-pane.graph-ctrl-preview .file-type-chip,
 .graph-pane.graph-ctrl-preview .member-row-label:not(.cursor-pointer),
-.graph-pane.graph-ctrl-preview .node-card-title:not(.cursor-pointer) {
+.graph-pane.graph-ctrl-preview .node-card-title:not(.cursor-pointer),
+.graph-pane.graph-ctrl-preview .member-sig-kind-icon,
+.graph-pane.graph-ctrl-preview .member-sig-sep,
+.graph-pane.graph-ctrl-preview .member-sig-colon,
+.graph-pane.graph-ctrl-preview .member-sig-param-name,
+.graph-pane.graph-ctrl-preview .member-sig-type--primitive {
   color: var(--faint-ctrl) !important;
+}
+
+.graph-pane.graph-ctrl-preview .member-sig-value:has(.member-sig-type--primitive) {
+  background: transparent !important;
 }
 
 .graph-pane.graph-ctrl-preview .code-line {

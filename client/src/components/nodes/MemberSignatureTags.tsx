@@ -66,7 +66,11 @@ export function MemberSignatureTags({
                   <span className="member-sig-colon" aria-hidden>
                     :
                   </span>
-                  <MemberSignatureTypeLabel type={param.type} variant="in" />
+                  <MemberSignatureTypeLabel
+                    type={param.type}
+                    variant="in"
+                    shimmerDelay={`-${((memberId.length + index + 1) * 0.37).toFixed(2)}s`}
+                  />
                 </>
               ) : null}
             </span>
@@ -81,7 +85,11 @@ export function MemberSignatureTags({
               <ArrowUpFromLine size={SIG_ICON_SIZE} strokeWidth={SIG_ICON_STROKE} aria-hidden />
             </span>
             <span className="member-sig-value member-sig-value--out">
-              <MemberSignatureTypeLabel type={returnType} variant="out" />
+              <MemberSignatureTypeLabel
+                type={returnType}
+                variant="out"
+                shimmerDelay={`-${((memberId.length + params.length + 1) * 0.37).toFixed(2)}s`}
+              />
             </span>
           </span>
         </>

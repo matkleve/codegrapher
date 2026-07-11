@@ -13,9 +13,10 @@ import { symbolKindToSemantic } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
 import {
-  buildConnectionMenuState,
+  buildHoverLoadMenu,
   loadTargetsFromCallSiteRefs,
 } from "@/lib/connectionMenu";
+import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { cn } from "@/lib/utils";
 
 type NodeCardHeaderProps = {
@@ -78,7 +79,7 @@ export function NodeCardHeader({
       ),
     );
     const sites = lookupOffCanvasCallSiteFiles(symbolName);
-    const menuState = buildConnectionMenuState(
+    const menuState = buildHoverLoadMenu(
       symbolName,
       kind,
       "definition",
@@ -152,6 +153,26 @@ export function NodeCardHeader({
     },
   });
 
+  const openContextMenu = useTokenContextMenu({
+    filePath,
+    sourceFlowId: flowNodeId,
+  });
+
+  const onTitleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!symbolName || !indexed || !titleRef.current || !defKind) return;
+      const symEntry = lookup(symbolName);
+      openContextMenu(e, {
+        token: symbolName,
+        kind: defKind,
+        role: "definition",
+        chipEl: titleRef.current,
+        editorLine: symEntry?.line ?? 1,
+      });
+    },
+    [defKind, indexed, lookup, openContextMenu, symbolName],
+  );
+
   const onHeaderClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       if ((e.target as HTMLElement).closest(".file-type-chip, .node-card-title")) return;
@@ -209,6 +230,7 @@ export function NodeCardHeader({
             onPointerDown={(e) => e.stopPropagation()}
             onMouseEnter={onTitleEnter}
             onMouseLeave={onTitleLeave}
+            onContextMenu={onTitleContextMenu}
             onClick={onTitleClick}
           >
             {indexed && defKind ? (

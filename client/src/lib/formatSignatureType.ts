@@ -1,5 +1,40 @@
 const DEFAULT_MAX_LEN = 28;
 
+const TS_PRIMITIVE_TYPES = new Set([
+  "any",
+  "bigint",
+  "boolean",
+  "never",
+  "null",
+  "number",
+  "object",
+  "string",
+  "symbol",
+  "undefined",
+  "unknown",
+  "void",
+]);
+
+export function isPrimitiveTypeName(name: string): boolean {
+  return TS_PRIMITIVE_TYPES.has(name);
+}
+
+function identifiersInType(type: string): string[] {
+  return [...type.matchAll(/\b[A-Za-z_$][\w$]*\b/g)].map((match) => match[0]);
+}
+
+/** True when the type names a project symbol (class, interface, enum, …), not a TS primitive. */
+export function isIndexedSignatureType(
+  type: string,
+  hasSymbol: (name: string) => boolean,
+): boolean {
+  const trimmed = type.trim();
+  if (!trimmed) return false;
+  return identifiersInType(trimmed).some(
+    (id) => !isPrimitiveTypeName(id) && hasSymbol(id),
+  );
+}
+
 export function signatureTypeLines(type: string): string[] {
   if (!type.includes(" | ")) return [type];
   return type

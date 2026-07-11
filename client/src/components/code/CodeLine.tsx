@@ -7,10 +7,11 @@ import { commitTokenPin } from "@/hooks/useTokenTrace";
 import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import {
-  buildConnectionMenuState,
+  buildHoverLoadMenu,
   loadTargetsFromExternalCards,
   loadTargetsFromCallSiteRefs,
 } from "@/lib/connectionMenu";
+import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
@@ -112,7 +113,7 @@ export function CodeLine({
       chipEl: HTMLElement,
       cards: Parameters<typeof loadTargetsFromExternalCards>[0],
     ) => {
-      const menuState = buildConnectionMenuState(
+      const menuState = buildHoverLoadMenu(
         name,
         kind,
         "usage",
@@ -267,7 +268,7 @@ export function CodeLine({
   const showDefLoadMenu = useCallback(
     (name: string, kind: ReturnType<typeof semanticFromChipElement>, chipEl: HTMLElement) => {
       const sites = lookupOffCanvasCallSiteFiles(name);
-      const menuState = buildConnectionMenuState(
+      const menuState = buildHoverLoadMenu(
         name,
         kind,
         "definition",
@@ -333,6 +334,12 @@ export function CodeLine({
     () => makeMemberDefKey(sourceFlowId, memberId),
     [memberId, sourceFlowId],
   );
+
+  const openContextMenu = useTokenContextMenu({
+    filePath,
+    sourceFlowId,
+    sourceMemberId: memberId,
+  });
 
   // `memberFanOut` is true only for the occurrence of the member/class's own
   // name on its signature line — the same symbol the member-row label traces.
@@ -607,6 +614,15 @@ export function CodeLine({
             onClick={(e) => {
               e.stopPropagation();
               onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut, e);
+            }}
+            onContextMenu={(e) => {
+              openContextMenu(e, {
+                token: token.text,
+                kind: semantic,
+                role: isDefinition ? "definition" : "usage",
+                chipEl: e.currentTarget,
+                editorLine: lineNumber,
+              });
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

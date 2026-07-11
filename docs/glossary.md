@@ -51,6 +51,12 @@
 - **Structural edge**  
   A connection kind (inheritance, implementation, composition/DI) that renders **persistently** once both endpoints are loaded, unlike preview edges — a deliberate, named exception to the on-demand rule. Not yet implemented.
 
+- **Trace session**  
+  An opt-in step-through simulation walk through a method body, showing scope and value changes statement-by-statement. Not yet implemented. Spec: [execution-simulator.md](specs/system/execution-simulator.md).
+
+- **Static walk**  
+  The MVP execution engine for trace sessions: AST/lexical statement stepping without running user code. See [execution-simulator.md](specs/system/execution-simulator.md).
+
 - **Anchor**  
   DOM target for an edge endpoint. Resolved per node expansion level: class header → member row → exact source line. IDs from `client/src/lib/ctrlPreviewHandles.ts`.
 

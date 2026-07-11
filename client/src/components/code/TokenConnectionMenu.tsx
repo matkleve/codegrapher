@@ -1,19 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search } from "lucide-react";
+import { Code2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { LoadTargetRow } from "@/components/graph/LoadTargetRow";
+import { ConnectionMenuRow } from "@/components/graph/ConnectionMenuRow";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
+import { openFileInEditor } from "@/api";
 import {
-  connectionMenuDotSide,
+  type ConnectionMenuRow as ConnectionMenuRowData,
   type TokenConnectionMenuState,
 } from "@/lib/connectionMenu";
-import {
-  filterLoadTargets,
-  LOAD_PICKER_SEARCH_THRESHOLD,
-  sortLoadTargets,
-} from "@/lib/loadTargets";
+import { LOAD_PICKER_SEARCH_THRESHOLD } from "@/lib/loadTargets";
 import { cn } from "@/lib/utils";
 
 const MENU_WIDTH_PX = 300;
@@ -49,6 +46,16 @@ function useMenuPosition(
   }, [anchor.x, anchor.y, panelRef, setPosition]);
 }
 
+function rowMatchesQuery(row: ConnectionMenuRowData, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    row.primaryLabel.toLowerCase().includes(q) ||
+    row.secondaryLabel.toLowerCase().includes(q) ||
+    row.filePath.toLowerCase().includes(q)
+  );
+}
+
 function TokenConnectionMenuPanel({
   menu,
   onClose,
@@ -57,23 +64,28 @@ function TokenConnectionMenuPanel({
   onClose: () => void;
 }) {
   const loadTarget = useLoadTargetAction();
-  const { cancelHoverLeaveGrace, scheduleHoverLeaveGrace } = useGraphInteraction();
+  const { cancelHoverLeaveGrace, scheduleHoverLeaveGrace, focusFlowNode, focusReadingMember } =
+    useGraphInteraction();
   const panelRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<{ left: number; top: number } | null>(
     null,
   );
 
-  const sorted = useMemo(
-    () => sortLoadTargets(menu.targets, menu.contextFilePath),
-    [menu.contextFilePath, menu.targets],
+  const allRows = useMemo(
+    () => menu.sections.flatMap((s) => s.rows),
+    [menu.sections],
   );
-  const filtered = useMemo(
-    () => filterLoadTargets(sorted, query),
-    [query, sorted],
-  );
-  const showSearch = menu.targets.length > LOAD_PICKER_SEARCH_THRESHOLD;
-  const dotSide = connectionMenuDotSide(menu.role);
+  const showSearch = allRows.length > LOAD_PICKER_SEARCH_THRESHOLD;
+
+  const filteredSections = useMemo(() => {
+    return menu.sections
+      .map((section) => ({
+        ...section,
+        rows: section.rows.filter((row) => rowMatchesQuery(row, query)),
+      }))
+      .filter((section) => section.rows.length > 0);
+  }, [menu.sections, query]);
 
   useMenuPosition(panelRef, menu.anchor, setPosition);
 
@@ -85,15 +97,37 @@ function TokenConnectionMenuPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const handleRowAction = (row: ConnectionMenuRowData) => {
+    if (row.action === "jump" && row.flowNodeId) {
+      if (row.memberId) {
+        focusReadingMember(row.flowNodeId, row.memberId);
+      } else {
+        focusFlowNode(row.flowNodeId);
+      }
+    } else if (row.action === "load" && row.filePath) {
+      loadTarget(row.filePath);
+    } else if (row.action === "openEditor") {
+      void openFileInEditor(row.filePath, row.line);
+    }
+    onClose();
+  };
+
+  const subtitle =
+    menu.variant === "context"
+      ? "All connections"
+      : menu.role === "usage"
+        ? "Choose a definition to load"
+        : "Choose a caller file to load";
+
   return createPortal(
     <div
       ref={panelRef}
       data-token-connection-menu
       role="menu"
-      aria-label={`Load ${menu.token}`}
+      aria-label={`Connections for ${menu.token}`}
       className={cn(
         "pointer-events-auto fixed z-[62] overflow-hidden rounded-xl border border-border bg-card/98 shadow-lg backdrop-blur-sm",
-        menu.targets.length === 1 ? "min-w-48" : "",
+        allRows.length === 1 ? "min-w-48" : "",
       )}
       style={{
         width: MENU_WIDTH_PX,
@@ -102,15 +136,11 @@ function TokenConnectionMenuPanel({
         visibility: position ? "visible" : "hidden",
       }}
       onMouseEnter={cancelHoverLeaveGrace}
-      onMouseLeave={scheduleHoverLeaveGrace}
+      onMouseLeave={menu.variant === "hover" ? scheduleHoverLeaveGrace : undefined}
     >
       <div className="border-b border-border px-3 py-2">
         <p className="font-mono text-xs font-semibold text-foreground">{menu.token}</p>
-        <p className="text-[10px] text-muted-foreground">
-          {menu.role === "usage"
-            ? "Choose a definition to load"
-            : "Choose a caller file to load"}
-        </p>
+        <p className="text-[10px] text-muted-foreground">{subtitle}</p>
       </div>
 
       {showSearch ? (
@@ -122,43 +152,74 @@ function TokenConnectionMenuPanel({
             />
             <Input
               type="search"
-              placeholder="Filter files…"
+              placeholder="Filter connections…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="h-7 pl-8 text-xs"
-              autoFocus
+              autoFocus={menu.variant === "context"}
             />
           </div>
         </div>
       ) : null}
 
-      <ul
+      <div
         className={cn(
           "overflow-y-auto px-1 py-1",
-          menu.targets.length > 6 ? "max-h-48" : "",
+          allRows.length > 6 ? "max-h-48" : "",
         )}
       >
-        {filtered.length === 0 ? (
-          <li className="px-2 py-3 text-center text-xs text-muted-foreground">
-            No matching files
-          </li>
+        {filteredSections.length === 0 ? (
+          <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+            No matching connections
+          </p>
         ) : (
-          filtered.map((item) => (
-            <li key={`${item.filePath}:${item.line}`}>
-              <LoadTargetRow
-                item={item}
-                token={menu.token}
-                kind={menu.kind}
-                dotSide={dotSide}
-                onSelect={() => {
-                  loadTarget(item.filePath);
-                  onClose();
-                }}
-              />
-            </li>
+          filteredSections.map((section) => (
+            <div key={section.id} className="mb-1 last:mb-0">
+              {menu.variant === "context" && menu.sections.length > 1 ? (
+                <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {section.title}
+                </p>
+              ) : null}
+              <ul>
+                {section.rows.map((row) => (
+                  <li key={row.id}>
+                    <ConnectionMenuRow
+                      row={row}
+                      role={menu.role}
+                      onSelect={() => handleRowAction(row)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))
         )}
-      </ul>
+      </div>
+
+      {menu.showRightClickHint ? (
+        <p className="border-t border-border px-3 py-2 text-center text-[10px] text-muted-foreground">
+          Right-click for all connections · jump · open in editor
+        </p>
+      ) : null}
+
+      {menu.variant === "context" && menu.editorTarget ? (
+        <div className="border-t border-border px-2 py-1.5">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground hover:bg-muted"
+            onClick={() => {
+              void openFileInEditor(
+                menu.editorTarget!.filePath,
+                menu.editorTarget!.line,
+              );
+              onClose();
+            }}
+          >
+            <Code2 className="size-3.5 shrink-0" aria-hidden />
+            Open in editor
+          </button>
+        </div>
+      ) : null}
     </div>,
     document.body,
   );

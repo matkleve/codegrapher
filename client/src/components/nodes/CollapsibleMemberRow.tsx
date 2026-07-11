@@ -22,9 +22,10 @@ import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeMemberDefKey } from "@/lib/traceKeys";
 import {
-  buildConnectionMenuState,
+  buildHoverLoadMenu,
   loadTargetsFromCallSiteRefs,
 } from "@/lib/connectionMenu";
+import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import { cn } from "@/lib/utils";
@@ -127,7 +128,7 @@ export function CollapsibleMemberRow({
       ),
     );
     const sites = lookupOffCanvasCallSiteFiles(traceName);
-    const menuState = buildConnectionMenuState(
+    const menuState = buildHoverLoadMenu(
       traceName,
       defKind,
       "definition",
@@ -208,6 +209,26 @@ export function CollapsibleMemberRow({
   const targetActive = isHandleActive(memberHandleId);
   const memberKind = edgeKindAtHandle(memberHandleId);
 
+  const openContextMenu = useTokenContextMenu({
+    filePath,
+    sourceFlowId: flowNodeId,
+    sourceMemberId: memberId,
+  });
+
+  const onDefContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!traceable || !labelRef.current || !defKind) return;
+      openContextMenu(e, {
+        token: traceName,
+        kind: defKind,
+        role: "definition",
+        chipEl: labelRef.current,
+        editorLine: 1,
+      });
+    },
+    [defKind, openContextMenu, traceName, traceable],
+  );
+
   const onReadingFocusDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -284,6 +305,7 @@ export function CollapsibleMemberRow({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseEnter={onDefEnter}
           onMouseLeave={onDefLeave}
+          onContextMenu={onDefContextMenu}
           onClick={onDefClick}
         >
           {traceable && defKind ? (

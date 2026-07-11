@@ -9,7 +9,8 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, anchors, pin lock, live retarget
 - [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim modes
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
-- [connection-taxonomy](connection-taxonomy.md) — **design spec, not yet implemented.** Connection kinds beyond usage (inheritance, composition, transitive reach, …) and their visual language
+- [connection-taxonomy](connection-taxonomy.md) — **design spec, not yet implemented.** Connection kinds beyond usage (inheritance, composition, transitive reach, …) and their visual language · [per-kind AC](connection-taxonomy.acceptance-criteria.md)
+- [execution-simulator](execution-simulator.md) — **design spec, not yet implemented.** Step-through static walk, variable panel, playback controls
 
 ## Rules
 
