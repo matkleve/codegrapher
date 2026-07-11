@@ -210,6 +210,70 @@
 }
 
 /* Source line gutter + row hover (member body) */
+.code-line-gutter-wrap {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.sim-gutter-marker {
+  display: flex;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 2px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-surface) var(--ease);
+}
+
+.group\/code-line:hover .sim-gutter-marker,
+.sim-gutter-marker--start,
+.sim-gutter-marker--end,
+.sim-gutter-marker--current {
+  opacity: 1;
+}
+
+.sim-gutter-marker__icon {
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.sim-gutter-marker--start {
+  color: var(--token-edge-function, var(--brand));
+}
+
+.sim-gutter-marker--end {
+  color: color-mix(in oklch, var(--destructive) 85%, var(--muted-foreground));
+}
+
+.sim-gutter-marker--current {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.sim-gutter-marker--in-range {
+  opacity: 0.45;
+}
+
+.sim-gutter-marker--disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.code-line--sim-range {
+  background: color-mix(in oklch, var(--brand) 4%, transparent);
+}
+
 .code-line {
   display: flex;
   align-items: baseline;

@@ -79,7 +79,7 @@ type GraphInteractionContextValue = {
     onFire: () => void,
     onClear: () => void,
     onInfo?: () => void,
-    options?: { instant?: boolean },
+    options?: { instant?: boolean; traceHost?: HTMLElement | null },
   ) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleHoverLeaveGrace: () => void;
@@ -99,7 +99,7 @@ type GraphInteractionContextValue = {
   /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
   refreshLoadTraces: () => void;
   graphData: GraphData | null;
-  pinTrace: (tokenKey: string, shiftKey?: boolean) => void;
+  pinTrace: (tokenKey: string, shiftKey?: boolean, traceHost?: HTMLElement | null) => void;
   pinnedTokenKey: string | null;
   pinnedTraces: PinnedTrace[];
   activePinKey: string | null;

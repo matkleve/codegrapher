@@ -124,7 +124,7 @@ Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColor
 
 Preview **binding** wires (initializer → local/param) reuse `--token-edge-variable` with a dotted overlay style (`preview-edge-path--binding`) — not a separate `--edge-*` hue. See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
 
-Preview **control-flow** wires (`switch`/`if` → branch) use a dedicated hue, `--edge-control-flow`, with a dash-dot overlay style (`preview-edge-branch`) — unlike binding/usage, they don't reuse a token-kind color, since the anchors are keywords/conditions rather than a specific symbol kind. See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Control flow.
+Preview **control-flow** wires (`switch`/`if` → branch) use a dedicated hue, `--edge-control-flow`, with a dash-dot overlay style (`preview-edge-branch`) — unlike binding/usage, they don't reuse a token-kind color, since the anchors are keywords/conditions rather than a specific symbol kind. **Binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Control flow.
 
 ### Trace dimming
 

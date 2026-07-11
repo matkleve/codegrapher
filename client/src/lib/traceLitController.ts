@@ -1,6 +1,10 @@
 import type { TraceLitState } from "@/lib/computeTraceLit";
 import { allLocalDefElements } from "@/lib/localDefElements";
 import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
+import {
+  memberDefSiblingHosts,
+  resolveMemberDefEndpoint,
+} from "@/lib/memberDefAnchor";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
 const CHIP_LIT = "token-chip-lit";
@@ -203,14 +207,46 @@ export function applyTraceLit(
   clearPrevious();
 
   for (const key of state.litTokenKeys) {
+    const memberSiblings = memberDefSiblingHosts(key);
+    if (memberSiblings) {
+      for (const host of memberSiblings) track(host, [CHIP_LIT]);
+      continue;
+    }
     const host = chipHostForTraceKey(key);
     if (host) track(host, [CHIP_LIT]);
   }
 
   const processedDefIds = new Set<string>();
   const processedHosts = new Set<HTMLElement>();
+  const processedMemberDefKeys = new Set<string>();
 
   for (const key of state.endpointTokenKeys) {
+    const memberSiblings = memberDefSiblingHosts(key);
+    if (memberSiblings) {
+      if (processedMemberDefKeys.has(key)) continue;
+      processedMemberDefKeys.add(key);
+
+      const primary = resolveMemberDefEndpoint(key);
+      for (const litHost of memberSiblings) {
+        if (
+          primary !== null &&
+          litHost !== primary &&
+          litHost.classList.contains("member-row-label")
+        ) {
+          continue;
+        }
+        const isSibling = primary !== null ? litHost !== primary : true;
+        applyEndpointHost(
+          litHost,
+          isSibling,
+          pinnedTokenKeys,
+          hoveredTokenKey,
+          state.endpointPortSide,
+        );
+      }
+      continue;
+    }
+
     const host = chipHostForTraceKey(key);
     if (!host) continue;
 

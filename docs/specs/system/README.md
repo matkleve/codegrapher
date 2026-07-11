@@ -11,6 +11,7 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
 - [connection-taxonomy](connection-taxonomy.md) — connection kinds (usage, binding, control flow, structural, transitive, …) and visual language · [per-kind AC](connection-taxonomy.acceptance-criteria.md)
 - [execution-simulator](execution-simulator.md) — **Option A static walk implemented** (step-into/out deferred) · variable panel, playback controls
+- [execution-simulator.interactions.supplement](execution-simulator.interactions.supplement.md) — interaction index · [modes](execution-simulator.modes.supplement.md) · [surfaces](execution-simulator.surfaces.supplement.md) · [AC](execution-simulator.interactions.acceptance-criteria.md)
 
 ## Rules
 

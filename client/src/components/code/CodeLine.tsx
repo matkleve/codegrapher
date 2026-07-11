@@ -14,6 +14,7 @@ import {
 } from "@/lib/connectionMenu";
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useSimulationOptional } from "@/context/SimulationContext";
+import { SimGutterControl } from "@/components/simulation/SimGutterControl";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import {
@@ -74,6 +75,7 @@ type CodeLineProps = {
   methodCode?: string;
   methodName?: string;
   signatureLine?: string;
+  methodStartLine?: number;
 };
 
 export function CodeLine({
@@ -90,6 +92,7 @@ export function CodeLine({
   methodCode,
   methodName,
   signatureLine,
+  methodStartLine,
 }: CodeLineProps) {
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
@@ -441,8 +444,8 @@ export function CodeLine({
     sourceFlowId,
     sourceMemberId: memberId,
     simulation:
-      methodCode && methodName && signatureLine
-        ? { methodName, code: methodCode, signatureLine }
+      methodCode && methodName && signatureLine && methodStartLine != null
+        ? { methodName, code: methodCode, signatureLine, methodStartLine }
         : undefined,
   });
 
@@ -477,7 +480,7 @@ export function CodeLine({
             ...buildUsagePinInfo(name, chipEl, isDefinition),
             pinned: false,
           }),
-        instant ? { instant: true } : undefined,
+        instant ? { instant: true, traceHost: chipEl } : { traceHost: chipEl },
       );
     },
     [
@@ -562,17 +565,33 @@ export function CodeLine({
     sim?.simActive &&
     sim.session?.memberId === memberId &&
     sim.session.steps[sim.session.currentIndex]?.lineNumber === lineNumber;
+  const inSimRange = sim?.isLineInSimRange(memberId, lineNumber) ?? false;
 
   return (
     <div
       className={cn(
         "code-line group/code-line",
         isSimCurrent && "code-line--sim-current",
+        inSimRange && !isSimCurrent && "code-line--sim-range",
       )}
     >
-      <span className="code-line-gutter" aria-hidden>
-        {lineNumber}
-      </span>
+      <div className="code-line-gutter-wrap">
+        {methodCode && methodName && signatureLine && methodStartLine != null ? (
+          <SimGutterControl
+            memberId={memberId}
+            lineNumber={lineNumber}
+            flowNodeId={sourceFlowId}
+            filePath={filePath}
+            methodCode={methodCode}
+            methodName={methodName}
+            signatureLine={signatureLine}
+            methodStartLine={methodStartLine}
+          />
+        ) : null}
+        <span className="code-line-gutter" aria-hidden>
+          {lineNumber}
+        </span>
+      </div>
       <div className="code-line-body relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed">
         <Handle
           type="target"

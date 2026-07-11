@@ -12,7 +12,13 @@ import {
   type PinnedTrace,
 } from "@/lib/pinnedTraces";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import type { TokenInfoState } from "@/lib/tokenContextInfo";
+import {
+  clearTraceAnchorHost,
+  lockTraceAnchorPreference,
+  setTraceAnchorHost,
+  traceAnchorState,
+  unlockTraceAnchorPreference,
+} from "@/lib/memberDefAnchor";
 
 /** Caps memory use; deep back-tracking beyond this isn't a realistic use case. */
 const PIN_HISTORY_LIMIT = 20;
@@ -64,6 +70,8 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     setHoveredTokenKey(null);
     setIsWarm(false);
     setConnectionMenu(null);
+    clearTraceAnchorHost();
+    unlockTraceAnchorPreference();
     clearJumpTooltip();
   }, []);
 
@@ -137,6 +145,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     setActivePinKeyState(null);
     setTokenInfo(null);
     endTrace();
+    unlockTraceAnchorPreference();
     resetHoverIntent();
   }, [endTrace, pushPinHistory, resetHoverIntent]);
 
@@ -153,17 +162,20 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     setActivePinKeyState(snapshot.activePinKey);
     setTokenInfo(snapshot.tokenInfo);
     if (snapshot.activePinKey) {
+      lockTraceAnchorPreference();
       setHoveredTokenKey(snapshot.activePinKey);
       setIsWarm(true);
     } else {
+      unlockTraceAnchorPreference();
       endTrace();
     }
   }, [endTrace, resetHoverIntent]);
 
   const pinTrace = useCallback(
-    (tokenKey: string, shiftKey = false) => {
+    (tokenKey: string, shiftKey = false, traceHost?: HTMLElement | null) => {
       pushPinHistory();
       resetHoverIntent();
+      if (traceHost) setTraceAnchorHost(traceHost);
       const mode = shiftKey
         ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
           ? "toggle"
@@ -179,9 +191,11 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       setPinnedTraces(traces);
       setActivePinKeyState(activeKey);
       if (activeKey) {
+        lockTraceAnchorPreference();
         setHoveredTokenKey(activeKey);
         setIsWarm(true);
       } else {
+        unlockTraceAnchorPreference();
         setTokenInfo(null);
         endTrace();
       }
@@ -240,6 +254,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       activePinKey,
       hoveredTokenKey,
       hoveredTokenKeyRef,
+      traceAnchorState,
       pinnedTracesRef,
       isWarm,
       tokenInfo,
@@ -273,6 +288,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       activePinKey,
       hoveredTokenKey,
       hoveredTokenKeyRef,
+      traceAnchorState,
       isWarm,
       tokenInfo,
       connectionMenu,

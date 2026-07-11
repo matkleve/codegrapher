@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_TRACE_LIT } from "@/lib/computeTraceLit";
 import { registerTraceHost } from "@/lib/elementRegistry";
+import { setTraceAnchorHost } from "@/lib/memberDefAnchor";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 
 describe("applyTraceLit", () => {
@@ -80,7 +81,7 @@ describe("applyTraceLit", () => {
     pane.remove();
   });
 
-  it("applies chip-on to member row label for def trace keys", () => {
+  it("lights the hovered host for member def trace keys shared by title and signature", () => {
     const pane = document.createElement("div");
     pane.className = "graph-pane";
     pane.innerHTML = `
@@ -91,8 +92,10 @@ describe("applyTraceLit", () => {
           data-token-kind="function">
           <span data-flow-anchor="right" class="flow-anchor-off bg-border"></span>
         </span>
-        <div class="code-line">
-          <span class="token-chip" data-trace-key="flow-1::def::member-1">buildSubtitle</span>
+        <div class="member-body-wrap">
+          <div class="code-line">
+            <span class="token-chip" data-trace-key="flow-1::def::member-1">buildSubtitle</span>
+          </div>
         </div>
       </div>
     `;
@@ -103,19 +106,43 @@ describe("applyTraceLit", () => {
     registerTraceHost(label);
     registerTraceHost(bodyChip);
 
+    setTraceAnchorHost(bodyChip);
     applyTraceLit(
       {
         ...EMPTY_TRACE_LIT,
         litTokenKeys: new Set(["flow-1::def::member-1"]),
         endpointTokenKeys: new Set(["flow-1::def::member-1"]),
       },
-      { pinnedTokenKeys: new Set(), hoveredTokenKey: "flow-1::def::member-1" },
+      {
+        pinnedTokenKeys: new Set(),
+        hoveredTokenKey: "flow-1::def::member-1",
+      },
+    );
+
+    expect(bodyChip.classList.contains("token-chip-on")).toBe(true);
+    expect(bodyChip.classList.contains("token-chip-endpoint-sibling")).toBe(false);
+    expect(label.classList.contains("token-chip-lit")).toBe(true);
+    expect(label.classList.contains("token-chip-on")).toBe(false);
+    expect(label.classList.contains("token-chip-endpoint-sibling")).toBe(false);
+
+    clearTraceLit();
+
+    setTraceAnchorHost(label);
+    applyTraceLit(
+      {
+        ...EMPTY_TRACE_LIT,
+        litTokenKeys: new Set(["flow-1::def::member-1"]),
+        endpointTokenKeys: new Set(["flow-1::def::member-1"]),
+      },
+      {
+        pinnedTokenKeys: new Set(),
+        hoveredTokenKey: "flow-1::def::member-1",
+      },
     );
 
     expect(label.classList.contains("token-chip-on")).toBe(true);
-    expect(bodyChip.classList.contains("token-chip-on")).toBe(false);
-    const socket = label.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
-    expect(socket.classList.contains("flow-anchor-on")).toBe(true);
+    expect(label.classList.contains("token-chip-endpoint-sibling")).toBe(false);
+    expect(bodyChip.classList.contains("token-chip-endpoint-sibling")).toBe(true);
 
     clearTraceLit();
     pane.remove();

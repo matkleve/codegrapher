@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
+  clearTraceAnchorHost,
+  setTraceAnchorHost,
+} from "@/lib/memberDefAnchor";
+import {
   clearHoverTimers,
   emptyHoverTimers,
   fireDelayMs,
@@ -52,6 +56,7 @@ export function useHoverIntentTimers({
     pendingFireRef.current = null;
     hoveredTokenKeyRef.current = null;
     hoverClearRef.current = null;
+    clearTraceAnchorHost();
   }, []);
 
   const scheduleHoverFire = useCallback(
@@ -60,7 +65,7 @@ export function useHoverIntentTimers({
       onFire: () => void,
       onClear: () => void,
       onInfo?: () => void,
-      options?: { instant?: boolean },
+      options?: { instant?: boolean; traceHost?: HTMLElement | null },
     ) => {
       const timers = hoverTimersRef.current;
       clearTimeout(timers.clear ?? undefined);
@@ -75,6 +80,7 @@ export function useHoverIntentTimers({
 
       const runFire = () => {
         hoveredTokenKeyRef.current = tokenKey;
+        setTraceAnchorHost(options?.traceHost ?? null);
         setHoveredTokenKey(tokenKey);
         setIsWarm(true);
         onFire();

@@ -56,7 +56,7 @@ Split strategy: see [element-spec-format.md](../agent-workflows/element-spec-for
 - **Graph chrome:** [component/graph-chrome.md](component/graph-chrome.md) — legend, connection menu, path highlight
 - **Symbol index:** [service/parser-index.md](service/parser-index.md)
 - **Connection taxonomy:** [system/connection-taxonomy.md](system/connection-taxonomy.md) — usage, binding, control flow, inheritance, composition, transitive reach, … · [per-kind AC](system/connection-taxonomy.acceptance-criteria.md)
-- **Execution simulator (Option A static walk — MVP implemented):** [system/execution-simulator.md](system/execution-simulator.md) · engine: `client/src/lib/staticWalk/`, orchestration: `SimulationContext`
+- **Execution simulator (Option A static walk — MVP implemented):** [system/execution-simulator.md](system/execution-simulator.md) · [interactions index](system/execution-simulator.interactions.supplement.md) · engine: `client/src/lib/staticWalk/`, orchestration: `SimulationContext`
 
 ---
 

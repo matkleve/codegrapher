@@ -105,7 +105,11 @@ export function CollapsibleMemberRow({
     () => (showSignatureTags ? parseMethodSignature(code) : null),
     [code, showSignatureTags],
   );
-  const signatureLine = code.split("\n")[0] ?? label;
+  // The parser can prefix a method's `code` with blank/trivia lines, so the
+  // first non-blank line is the real signature. A blank signatureLine gates out
+  // SimGutterControl and breaks param extraction (extractParamNames).
+  const signatureLine =
+    code.split("\n").find((l) => l.trim().length > 0) ?? label;
   const overrideInfo = useMemo(
     () =>
       symbolName && graphData
@@ -208,6 +212,7 @@ export function CollapsibleMemberRow({
     enabled: traceable,
     onFire: fireDefPreview,
     onClear: () => {},
+    traceHost: () => labelRef.current,
     buildTransientInfo: () => {
       const info = buildDefPinInfo();
       const { pinned: _p, ...rest } = info;
@@ -233,7 +238,7 @@ export function CollapsibleMemberRow({
     filePath,
     sourceFlowId: flowNodeId,
     sourceMemberId: memberId,
-    simulation: { methodName: traceName, code, signatureLine },
+    simulation: { methodName: traceName, code, signatureLine, methodStartLine: startLine },
   });
 
   const onDefContextMenu = useCallback(
@@ -361,8 +366,8 @@ export function CollapsibleMemberRow({
               />
             </>
           ) : null}
-          <span className="token-shimmer-target" data-text={label}>
-            {label}
+          <span className="token-shimmer-target" data-text={traceName}>
+            {traceName}
           </span>
         </span>
         {methodSignature ? (
@@ -429,6 +434,7 @@ export function CollapsibleMemberRow({
                 methodCode={code}
                 methodName={traceName}
                 signatureLine={signatureLine}
+                methodStartLine={startLine}
               />
             ))}
           </div>

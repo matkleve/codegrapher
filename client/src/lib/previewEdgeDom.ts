@@ -68,9 +68,11 @@ export function createWireGroup(
   const stroke =
     spec.connectionKind === "branch"
       ? "var(--edge-control-flow)"
-      : spec.hop != null && spec.hop >= 2
-        ? "var(--edge-transitive)"
-        : TOKEN_EDGE_STROKE[spec.kind];
+      : spec.connectionKind === "binding"
+        ? "var(--edge-binding)"
+        : spec.hop != null && spec.hop >= 2
+          ? "var(--edge-transitive)"
+          : TOKEN_EDGE_STROKE[spec.kind];
   glow.style.stroke = stroke;
   path.style.stroke = stroke;
 

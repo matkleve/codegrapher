@@ -1,19 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import {
   clearElementRegistry,
   getByTraceKey,
   registerTraceHost,
 } from "@/lib/elementRegistry";
+import { clearTraceAnchorHost, setTraceAnchorHost } from "@/lib/memberDefAnchor";
 
 describe("getByTraceKey", () => {
-  it("prefers member row label over signature-line chip for def keys", () => {
+  afterEach(() => {
+    clearElementRegistry();
+    clearTraceAnchorHost();
+    document.body.innerHTML = "";
+  });
+
+  it("resolves member def keys to the active body chip when hovered", () => {
     const pane = document.createElement("div");
     pane.className = "graph-pane";
     pane.innerHTML = `
       <div data-member-id="member-1">
         <span class="member-row-label token-def-label" data-trace-key="flow-1::def::member-1"></span>
-        <div class="code-line">
-          <span class="token-chip" data-trace-key="flow-1::def::member-1">buildSubtitle</span>
+        <div class="member-body-wrap">
+          <div class="code-line">
+            <span class="token-chip" data-trace-key="flow-1::def::member-1">buildSubtitle</span>
+          </div>
         </div>
       </div>
     `;
@@ -24,9 +33,10 @@ describe("getByTraceKey", () => {
     registerTraceHost(label);
     registerTraceHost(bodyChip);
 
-    expect(getByTraceKey("flow-1::def::member-1")).toBe(label);
+    setTraceAnchorHost(bodyChip);
+    expect(getByTraceKey("flow-1::def::member-1")).toBe(bodyChip);
 
-    clearElementRegistry();
-    pane.remove();
+    setTraceAnchorHost(label);
+    expect(getByTraceKey("flow-1::def::member-1")).toBe(label);
   });
 });

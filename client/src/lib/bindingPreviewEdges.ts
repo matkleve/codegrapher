@@ -1,3 +1,4 @@
+import { liveFromDefEl, liveToFromUsageEl } from "@/lib/buildPreviewEdges";
 import {
   bindingDefForInit,
   bindingInitFor,
@@ -48,6 +49,15 @@ export function buildBindingPreviewEdges(
 
   if (!fromEl || !toEl || fromEl === toEl) return [];
 
+  const resolvedDefId =
+    defId ?? bindingDefForInit(symbolIndex, lineNumber, tokenIndex) ?? toEl.dataset.localDefId;
+  const bindingName = resolvedDefId?.split("::").at(-2) ?? "";
+  const initToken =
+    fromEl.dataset.symbolName ??
+    (defId ? bindingInitFor(symbolIndex, defId)?.token : undefined) ??
+    "";
+  const liveFrom = liveToFromUsageEl(initToken, fromEl);
+
   return [
     {
       id: `${edgeIdPrefix}-binding`,
@@ -55,6 +65,8 @@ export function buildBindingPreviewEdges(
       to: { type: "element", el: toEl },
       kind: "variable",
       connectionKind: "binding",
+      ...(liveFrom ? { liveFrom } : {}),
+      liveTo: liveFromDefEl(bindingName || initToken, toEl, flowNodeId, memberId),
     },
   ];
 }

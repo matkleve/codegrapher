@@ -71,4 +71,63 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(edges[0]?.from.type).toBe("element");
     expect(edges[0]?.to.type).toBe("element");
   });
+
+  it("skips control-flow wires when a local lexical trace is primary on a condition token", () => {
+    const IF_MEMBER = "fn:file:check";
+    const IF_FLOW = "flow:file:check.ts";
+    const IF_START = 1;
+    const IF_CODE = `export function check(addr: string | null) {
+  if (!addr) {
+    return null;
+  }
+}`;
+    const index = buildMemberSymbolIndex(IF_MEMBER, IF_CODE, IF_START);
+    const cfIndex = buildControlFlowIndex(IF_MEMBER, IF_CODE, IF_START);
+    const addrDefId = `local-def::${IF_MEMBER}::param::addr::${IF_START}`;
+
+    const ifLine = IF_CODE.split("\n")[1]!;
+    const addrCondIdx = tokenizeLine(ifLine).tokens.findIndex((t) => t.text === "addr");
+
+    const pane = document.querySelector(".graph-pane")!;
+
+    const def = document.createElement("span");
+    def.dataset.localDefId = addrDefId;
+    def.dataset.traceKey = makeUsageTokenKey(IF_FLOW, IF_MEMBER, IF_START, 0, "addr");
+    registerTraceHost(def);
+    pane.appendChild(def);
+
+    const use = document.createElement("span");
+    use.dataset.localTargetId = addrDefId;
+    use.dataset.traceKey = makeUsageTokenKey(
+      IF_FLOW,
+      IF_MEMBER,
+      IF_START + 1,
+      addrCondIdx,
+      "addr",
+    );
+    registerTraceHost(use);
+    pane.appendChild(use);
+
+    const condEdges = assembleCodeLinePreviewEdges({
+      name: "addr",
+      chipEl: use,
+      kind: "variable",
+      tokenIndex: addrCondIdx,
+      edgeKey: "test-addr-cond",
+      symbolIndex: index,
+      controlFlowIndex: cfIndex,
+      sourceFlowId: IF_FLOW,
+      memberId: IF_MEMBER,
+      lineNumber: IF_START + 1,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () => undefined,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    expect(condEdges.some((e) => e.connectionKind === "branch")).toBe(false);
+    expect(condEdges.length).toBeGreaterThanOrEqual(1);
+  });
 });

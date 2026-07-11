@@ -6,13 +6,13 @@
 
 ## What It Looks Like
 
-User right-clicks a line in an expanded method → **Start trace here**. A pre-flight panel collects parameter/local initial values. Playback toolbar appears (step forward/back, play/pause, speed, scrub bar). Current line highlights; variable table in a right-side panel updates each step. Value pulses travel along preview-edge wires on argument/return steps. Mode chrome is visually distinct from calm-default hover trace (dedicated toolbar border, `graph-sim-active` on root).
+User sets trace bounds via **gutter markers** (▶ start, ■ stop here) or right-click → **Start trace here** / **Set as end point**. A pre-flight panel (future: **Inputs** tab) collects parameter initial values. Playback toolbar appears (step forward/back, play/pause, speed, scrub bar). Current line highlights with a gutter program-counter arrow. The right **Simulation** rail has tabs — **Run** (expandable step ledger per statement), **Inputs** (upfront variables), **Paths** (saved trace setups). Value pulses travel along preview-edge wires on argument/return steps. Mode chrome is visually distinct from calm-default hover trace (dedicated toolbar border, `graph-sim-active` on root). Full workspace contract: [workspace supplement](execution-simulator.workspace.supplement.md).
 
 ## Where It Lives
 
-- **Entry:** context menu on `CodeLine` and collapsed `CollapsibleMemberRow` header
+- **Entry:** gutter markers on `CodeLine`, context menu on `CodeLine` and collapsed `CollapsibleMemberRow` header
 - **Orchestration:** `SimulationContext` (`SimulationProvider` in `GraphFlowInner`)
-- **UI:** `SimulationPanel` (right rail), `SimulationToolbar` (bottom of graph pane), reuse `PreviewEdgeOverlay` for value-flow pulses
+- **UI:** `SimulationPanel` (tabbed right rail — Run / Inputs / Paths), `SimulationToolbar` (bottom transport), `SimGutterControl`, reuse `PreviewEdgeOverlay` for value-flow pulses
 - **Engine:** `client/src/lib/staticWalk/` (new) — statement list + scope snapshots from method `code` string
 
 ## Actions
@@ -98,9 +98,12 @@ trace that starts mid-method still maps each step to the correct statement.
 
 - Right rail vs bottom drawer for variable panel on narrow viewports?
 - Should sim panel replace `TokenContextBar` or coexist (spec: coexist — bar hidden while sim active)?
+- Preflight modal vs Inputs tab only — see [workspace supplement](execution-simulator.workspace.supplement.md)
 
 ## Child specs
 
+- **Interactions (index):** [execution-simulator.interactions.supplement.md](execution-simulator.interactions.supplement.md) · [modes](execution-simulator.modes.supplement.md) · [surfaces](execution-simulator.surfaces.supplement.md) · [AC](execution-simulator.interactions.acceptance-criteria.md)
+- Workspace (gutter, tabs, ledger, paths): [execution-simulator.workspace.supplement.md](execution-simulator.workspace.supplement.md)
 - Engine options B/C: [execution-simulator.engine-options.supplement.md](execution-simulator.engine-options.supplement.md)
 
 ## References

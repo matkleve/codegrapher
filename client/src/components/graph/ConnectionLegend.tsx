@@ -30,7 +30,7 @@ const LEGEND_ITEMS: LegendItem[] = [
     pathClass:
       "preview-edge-path preview-edge-binding preview-edge-warm connection-legend-swatch--flow",
     arrowhead: "filled",
-    stroke: "var(--token-edge-variable)",
+    stroke: "var(--edge-binding)",
   },
   {
     kind: "branch",

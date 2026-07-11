@@ -45,7 +45,7 @@ Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-
 Connection kinds
 ├── Preview (on-demand, hover-gated — existing contract, unchanged)
 │   ├── Usage            — dashed, token-kind color, open arrow (def → usage)
-│   ├── Binding          — dotted, variable color, open arrow (initializer → binding)
+│   ├── Binding          — dotted, `--edge-binding` hue, open arrow (initializer → binding)
 │   ├── Control flow      — dash-dot, dedicated green hue, filled arrow (condition → branch)
 │   └── Transitive        — dashed, stepped opacity, same color family as Usage
 ├── Structural (persistent once both ends loaded — new, deliberate exception)
@@ -63,7 +63,7 @@ Connection kinds
 | Kind | Direction | Persistent? | Path geometry | Reuses token-kind color? |
 | ---- | --------- | ----------- | ------------- | ------------------------- |
 | Usage | definition → usage | No (hover-gated) | cubic | Yes |
-| Binding | initializer → binding | No (hover-gated) | cubic | Yes — always `variable` |
+| Binding | initializer → binding | No (hover-gated) | cubic | No — dedicated hue (`--edge-binding`), dotted |
 | Control flow | condition/keyword → branch | No (hover-gated) | **orthogonal** | No — dedicated hue (`--edge-control-flow`) |
 | Transitive | definition → N-hop usage | No (hover-gated) | cubic | Yes, decayed opacity |
 | Inheritance | child → parent | **Yes** | No — dedicated hue |

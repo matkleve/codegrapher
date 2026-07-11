@@ -4,6 +4,7 @@ import { escapeRegExp } from "@/lib/graphPaneDom";
 import type { AnchorRef, LiveAnchorHint } from "@/lib/previewEdgeTypes";
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
+import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
 import { parseUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
@@ -82,6 +83,30 @@ export function resolveDefinitionUsageSites(
     seen.add(dedupe);
     targets.push(site);
   };
+
+  // Signature-type usages (return/param type annotations) render as sig-type
+  // chips keyed `…::sig-type::<token>`, not body-line chips, so the line scans
+  // below never reach them. Resolve them straight from the DOM so tracing a
+  // type/class lights every signature that uses it. Always runs (before the
+  // indexed early-return). resolveHint keys off `liveTo.traceKey`.
+  const pane = document.querySelector<HTMLElement>(".graph-pane");
+  if (pane) {
+    for (const el of pane.querySelectorAll<HTMLElement>(
+      `[data-trace-key$="::sig-type::${token}"]`,
+    )) {
+      const traceKey = el.dataset.traceKey;
+      if (!traceKey) continue;
+      const flowNodeId =
+        el.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ??
+        sourceFlowId;
+      const memberId = el.closest<HTMLElement>("[data-member-id]")?.dataset
+        .memberId;
+      add({
+        anchor: { type: "element", el },
+        liveTo: { token, flowNodeId, memberId, role: "usage", traceKey },
+      });
+    }
+  }
 
   const indexed =
     context?.lookupIndexedUsageSites?.(token, sourceFlowId, sourceMemberId) ??
@@ -162,7 +187,7 @@ export function resolveDefinitionUsageSites(
     for (const method of classData.methods) {
       const lines = method.code.split("\n");
       for (let i = 0; i < lines.length; i++) {
-        const lineNumber = i + 1;
+        const lineNumber = fileLineFromSnippetIndex(method.startLine ?? 1, i);
         const line = lines[i] ?? "";
         if (!tokenRe.test(line)) continue;
         if (

@@ -13,6 +13,17 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | 1 | **Simulation step-into / step-over** | Spec'd in `execution-simulator.md` AC; not implemented | **A)** Build next (loop-aware walk + callee descent) · **B)** Demote AC to deferred and hide menu items until built |
 | 2 | **Path highlight scope** | Shortest path over React Flow structural edges only | **A)** Keep (module/DI graph) · **B)** Extend to include usage preview relationships (much harder) |
 
+## Simulation interaction UX (spec'd 2026-07-11)
+
+| Item | Status |
+| ---- | ------ |
+| Disarm / Clear setup / Stop and clear / Esc when armed | **Implemented** — `disarmTrace`, `SimTraceBanner`, Esc handler |
+| Implicit end range shade + panel label | **Implemented** — `simTraceBounds.ts`, `traceRangeLabel` |
+| Context menu `methodStartLine` | **Implemented** — `CodeLine.tsx` |
+| Saved paths `methodStartLine` | **Implemented** — new saves; legacy paths alert on Run |
+| Gutter ▶/■ hidden during active run | **Implemented** — `lineGutterRole` |
+| Hover trace during sim | **Coexists** (by design) — see interactions index |
+
 **Resolved in this pass (no further action):** Load stub wires **stay** alongside `TokenConnectionMenu` (dashed = elsewhere; menu = load action). Floating Load pill stays removed.
 
 ---
@@ -21,6 +32,7 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 
 | Item | Resolution |
 | ---- | ---------- |
+| Debugger gutter never rendered; sim produced 0 steps | Two bugs made the simulator workspace non-functional. (1) `signatureLine = code.split("\n")[0]` was blank (the parser prefixes method `code` with trivia lines), gating out `SimGutterControl` and breaking `extractParamNames` — now the first **non-blank** line. (2) The static-walk engine is **code-relative** but the gutter/anchors are **file-absolute**, so `buildStepList` received file lines as indices → empty walk — `buildSession` now converts via a new `SimAnchor.methodStartLine`. Verified live: 3-step walk, PC on the correct file lines (27→28→29), ledger reads/writes/calculated correct. Convention recorded in `execution-simulator.workspace.supplement.md`. |
 | Glossary stale (indexed = class/method only; structural/sim "not implemented") | Updated `docs/glossary.md` — scoped index, structural edges, static walk, Load stub, TokenConnectionMenu |
 | `system/README.md` stale ("not yet implemented", structural rendering undecided) | Updated to reflect shipped taxonomy + static walk; structural layer in `PreviewEdgeOverlay` |
 | `preview-edges.philosophy.supplement.md` "properties/locals inert" | Rewrote indexed vs interactive table; moved variables/properties to shipped |

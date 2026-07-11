@@ -1,9 +1,10 @@
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
 import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
-import { buildLocalPreviewEdges } from "@/lib/localDefLinks";
+import { buildLocalPreviewEdges, canonicalLocalDefHost } from "@/lib/localDefLinks";
 import { bindingDefForInit, type MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
+import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
@@ -51,7 +52,7 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     cascadeEdges,
   } = ctx;
 
-  const bindingEdges = Number.isFinite(tokenIndex)
+  let bindingEdges = Number.isFinite(tokenIndex)
     ? buildBindingPreviewEdges(
         chipEl,
         symbolIndex,
@@ -63,6 +64,22 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       )
     : [];
 
+  const canonicalDef = canonicalLocalDefHost(chipEl);
+  if (canonicalDef && canonicalDef !== chipEl) {
+    const defBinding = buildBindingPreviewEdges(
+      canonicalDef,
+      symbolIndex,
+      sourceFlowId,
+      memberId,
+      lineNumber,
+      tokenIndex,
+      edgeKey,
+    );
+    if (defBinding.length > 0 && bindingEdges.length === 0) {
+      bindingEdges = defBinding;
+    }
+  }
+
   if (
     bindingEdges.length > 0 &&
     Number.isFinite(tokenIndex) &&
@@ -71,19 +88,29 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     return [...bindingEdges, ...cascadeEdges];
   }
 
-  const controlFlowEdges = Number.isFinite(tokenIndex)
-    ? buildControlFlowPreviewEdges(
-        chipEl,
-        controlFlowIndex,
-        sourceFlowId,
-        memberId,
-        lineNumber,
-        tokenIndex,
-        edgeKey,
-      )
-    : [];
-
   const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
+
+  const skipControlFlow =
+    localEdges.length > 0 &&
+    Number.isFinite(tokenIndex) &&
+    (() => {
+      const anchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, tokenIndex);
+      return anchor != null && anchor.role !== "head";
+    })();
+
+  const controlFlowEdges =
+    Number.isFinite(tokenIndex) && !skipControlFlow
+      ? buildControlFlowPreviewEdges(
+          chipEl,
+          controlFlowIndex,
+          sourceFlowId,
+          memberId,
+          lineNumber,
+          tokenIndex,
+          edgeKey,
+        )
+      : [];
+
   if (
     localEdges.length > 0 ||
     bindingEdges.length > 0 ||

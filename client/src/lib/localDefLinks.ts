@@ -6,6 +6,18 @@ import { graphPane } from "@/lib/graphPaneDom";
 
 export type LinkPair = { from: HTMLElement; to: HTMLElement };
 
+/** Declaration chip for a scoped local — from either a def or usage host. */
+export function canonicalLocalDefHost(host: HTMLElement): HTMLElement | null {
+  const pane = graphPane();
+  if (!pane) return null;
+
+  const targetId = host.dataset.localTargetId;
+  if (targetId) return findLocalDefElement(pane, targetId);
+
+  if (host.dataset.localDefId) return host;
+  return null;
+}
+
 /**
  * Prototype `linksFor(host)` — def→usage pairs anchored on DOM elements.
  * Usage hosts carry `data-local-target-id`; definition hosts carry `data-local-def-id`.
@@ -64,7 +76,8 @@ export function buildLocalPreviewEdges(
   kind: SemanticTokenKind,
   edgeIdPrefix: string,
 ): PreviewEdgeSpec[] {
-  return linksForElement(host).map((pair, index) =>
+  const defHost = canonicalLocalDefHost(host) ?? host;
+  return linksForElement(defHost).map((pair, index) =>
     buildElementPreviewEdge(`${edgeIdPrefix}-${index}`, pair.from, pair.to, kind),
   );
 }

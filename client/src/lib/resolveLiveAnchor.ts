@@ -8,6 +8,11 @@ import {
   getByMemberId,
   getByTraceKey,
 } from "@/lib/elementRegistry";
+import {
+  memberDefSiblingHosts,
+  resolveMemberDefEndpoint,
+} from "@/lib/memberDefAnchor";
+import { makeMemberDefKey } from "@/lib/traceKeys";
 import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
 import { makeUsageTokenKey, parseControlFlowKey, parseUsageTokenKey } from "@/lib/traceKeys";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -146,6 +151,12 @@ export function resolveDefinitionSiteAnchor(
   getNode: (id: string) => Node | undefined,
 ): AnchorRef {
   if (memberId) {
+    const defKey = makeMemberDefKey(flowNodeId, memberId);
+    if (memberDefSiblingHosts(defKey)) {
+      const endpoint = resolveMemberDefEndpoint(defKey);
+      if (endpoint?.isConnected) return { type: "element", el: endpoint };
+    }
+
     const label = findMemberDefLabel(flowNodeId, memberId, token);
     if (label?.isConnected) return { type: "element", el: label };
 

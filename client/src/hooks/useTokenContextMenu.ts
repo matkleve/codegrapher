@@ -20,6 +20,7 @@ type SimulationAnchorArgs = {
   methodName: string;
   code: string;
   signatureLine: string;
+  methodStartLine: number;
 };
 
 type UseTokenContextMenuArgs = {
@@ -80,6 +81,8 @@ export function useTokenContextMenu({
           methodName: simulation.methodName,
           code: simulation.code,
           signatureLine: simulation.signatureLine,
+          methodStartLine: simulation.methodStartLine,
+          filePath,
           startLine: lineNumber,
         };
         showConnectionMenu({
@@ -93,7 +96,7 @@ export function useTokenContextMenu({
             {
               id: "sim-end",
               label: "Set as end point",
-              onSelect: () => sim.requestEndHere(lineNumber),
+              onSelect: () => sim.requestEndHere(lineNumber, sourceMemberId),
             },
             {
               id: "sim-run",

@@ -8,6 +8,7 @@ type UseTokenHoverArgs = {
   onFire: () => void;
   onClear: () => void;
   buildTransientInfo?: () => Omit<TokenInfoState & object, "pinned">;
+  traceHost?: () => HTMLElement | null;
 };
 
 /** Prototype scheduleFire / scheduleClear for one token host. */
@@ -17,6 +18,7 @@ export function useTokenHover({
   onFire,
   onClear,
   buildTransientInfo,
+  traceHost,
 }: UseTokenHoverArgs) {
   const { scheduleHoverFire, scheduleHoverClear, endHoverPreview, showTokenInfo } =
     useGraphInteraction();
@@ -31,7 +33,9 @@ export function useTokenHover({
     const onInfo = buildTransientInfo
       ? () => showTokenInfo({ ...buildTransientInfo(), pinned: false })
       : undefined;
-    scheduleHoverFire(tokenKey, onFire, clearHover, onInfo);
+    scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, {
+      traceHost: traceHost?.() ?? undefined,
+    });
   }, [
     buildTransientInfo,
     clearHover,
@@ -40,6 +44,7 @@ export function useTokenHover({
     scheduleHoverFire,
     showTokenInfo,
     tokenKey,
+    traceHost,
   ]);
 
   const onLeave = useCallback(() => {
@@ -52,7 +57,10 @@ export function useTokenHover({
     const onInfo = buildTransientInfo
       ? () => showTokenInfo({ ...buildTransientInfo(), pinned: false })
       : undefined;
-    scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, { instant: true });
+    scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, {
+      instant: true,
+      traceHost: traceHost?.() ?? undefined,
+    });
   }, [
     buildTransientInfo,
     clearHover,
@@ -61,6 +69,7 @@ export function useTokenHover({
     scheduleHoverFire,
     showTokenInfo,
     tokenKey,
+    traceHost,
   ]);
 
   const onBlur = onLeave;
@@ -87,7 +96,7 @@ export function commitTokenPin({
   event,
   shiftKey = false,
 }: {
-  pinTrace: (tokenKey: string, shiftKey?: boolean) => void;
+  pinTrace: (tokenKey: string, shiftKey?: boolean, traceHost?: HTMLElement | null) => void;
   showTokenInfo: (
     info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean },
   ) => void;
@@ -99,10 +108,10 @@ export function commitTokenPin({
   shiftKey?: boolean;
 }) {
   event?.stopPropagation();
-  pinTrace(tokenKey, shiftKey);
+  const el = animateEl ?? (event?.currentTarget as HTMLElement | undefined);
+  pinTrace(tokenKey, shiftKey, el ?? null);
   onFire();
   showTokenInfo({ ...buildPinInfo(), pinned: true });
-  const el = animateEl ?? (event?.currentTarget as HTMLElement | undefined);
   el?.animate(
     [{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }],
     { duration: 520, easing: "ease-out" },

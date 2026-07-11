@@ -67,7 +67,10 @@
   A connection kind (inheritance, implementation, composition/DI, module import) that renders **persistently** once both endpoints are loaded (import wires are legend-toggle-gated), unlike preview edges — a deliberate, named exception to the on-demand rule. Rendered in `PreviewEdgeOverlay`'s structural layer. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
 
 - **Trace session / static walk**  
-  Opt-in step-through simulation of a method body (statement highlight, variable panel, playback toolbar). **Option A static walk** is implemented — AST/lexical stepping without running user code. Step-into/out is spec'd but not yet built. Spec: [execution-simulator.md](specs/system/execution-simulator.md).
+  Opt-in step-through simulation of a method body (gutter anchors, statement highlight, tabbed simulation panel, playback toolbar). **Option A static walk** is implemented — AST/lexical stepping without running user code. Step-into/out is spec'd but not yet built. Spec: [execution-simulator.md](specs/system/execution-simulator.md) · interactions: [index](specs/system/execution-simulator.interactions.supplement.md) · [modes](specs/system/execution-simulator.modes.supplement.md) · workspace: [execution-simulator.workspace.supplement.md](specs/system/execution-simulator.workspace.supplement.md).
+
+- **Sim trace path**  
+  A saved, named setup: method identity, start/end line anchors, and upfront input values. Runnable from the Simulation panel **Paths** tab without re-arming the gutter. Persisted in `localStorage` for MVP.
 
 - **Anchor**  
   DOM target for an edge endpoint. Resolved per node expansion level: class header → member row → exact source line. IDs from `client/src/lib/ctrlPreviewHandles.ts`.

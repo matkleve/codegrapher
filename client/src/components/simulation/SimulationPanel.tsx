@@ -1,9 +1,21 @@
 import { PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PinTab } from "@/components/ui/PinTab";
+import { SimInputsForm } from "@/components/simulation/SimInputsForm";
+import { SimPathsList } from "@/components/simulation/SimPathsList";
+import { SimStepLedger } from "@/components/simulation/SimStepLedger";
+import { SimTraceBanner } from "@/components/simulation/SimTraceBanner";
 import { useSimulation } from "@/context/SimulationContext";
+import type { SimPanelTab } from "@/lib/staticWalk/types";
 import { useResizableSimPanel } from "@/hooks/useResizableSimPanel";
 import { cn } from "@/lib/utils";
+
+const TABS: { id: SimPanelTab; label: string }[] = [
+  { id: "run", label: "Run" },
+  { id: "inputs", label: "Inputs" },
+  { id: "paths", label: "Paths" },
+];
 
 export function SimulationPreflight() {
   const {
@@ -56,14 +68,58 @@ export function SimulationPreflight() {
   );
 }
 
+function SimPanelTabBody({ tab }: { tab: SimPanelTab }) {
+  const { simActive, session, currentScope } = useSimulation();
+
+  if (tab === "inputs") return <SimInputsForm />;
+  if (tab === "paths") return <SimPathsList />;
+  if (!simActive || !session) {
+    return (
+      <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+        <p>Step through a method line-by-line and inspect each statement.</p>
+        <ol className="list-decimal space-y-1 pl-4">
+          <li>Expand a method body</li>
+          <li>
+            <span className="font-medium text-foreground">Alt+click</span> gutter ▶ start ·{" "}
+            <span className="font-medium text-foreground">click</span> ■ stop ·{" "}
+            <span className="font-medium text-foreground">Shift+click</span> run
+          </li>
+          <li>Or right-click a token → Start trace / Set end / Run</li>
+          <li>Set inputs and start a run</li>
+        </ol>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div>
+        <p className="mb-1 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+          At step
+        </p>
+        <table className="w-full text-2xs">
+          <tbody>
+            {[...currentScope.entries()].slice(0, 6).map(([name, val]) => (
+              <tr key={name}>
+                <td className="py-0.5 font-mono">{name}</td>
+                <td className="py-0.5 font-mono text-muted-foreground">{val.display}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <SimStepLedger />
+    </div>
+  );
+}
+
 export function SimulationPanel() {
-  const { simActive, panelOpen, setPanelOpen, session, currentScope } = useSimulation();
+  const { panelOpen, setPanelOpen, startAnchor, session, panelTab, setPanelTab } =
+    useSimulation();
   const { width, isResizing, collapseWarning, onResizeMouseDown, onResizeDoubleClick } =
     useResizableSimPanel(() => setPanelOpen(false));
 
   if (!panelOpen) return null;
-
-  const step = session?.steps[session.currentIndex];
 
   return (
     <aside
@@ -102,7 +158,7 @@ export function SimulationPanel() {
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">Simulation</h3>
             <p className="truncate text-xs text-muted-foreground">
-              {session?.methodName ?? "Not running"}
+              {session?.methodName ?? startAnchor?.methodName ?? "No trace armed"}
             </p>
           </div>
           <Button
@@ -116,46 +172,19 @@ export function SimulationPanel() {
             <PanelRightClose />
           </Button>
         </div>
+        <SimTraceBanner />
+        <div className="flex gap-1 border-b border-border px-2 py-1.5">
+          {TABS.map((tab) => (
+            <PinTab
+              key={tab.id}
+              label={tab.label}
+              active={panelTab === tab.id}
+              onClick={() => setPanelTab(tab.id)}
+            />
+          ))}
+        </div>
         <div className="min-h-0 flex-1 overflow-auto p-3">
-          {!simActive || !session ? (
-            <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-              <p>Step through a method line-by-line and watch variables update.</p>
-              <ol className="list-decimal space-y-1 pl-4">
-                <li>Expand a method body</li>
-                <li>Right-click a line</li>
-                <li>
-                  Choose <span className="font-medium text-foreground">Start trace here</span>
-                </li>
-              </ol>
-            </div>
-          ) : (
-            <>
-              <p className="mb-2 text-xs font-medium text-muted-foreground">
-                Line {step?.lineNumber ?? session.startLine}
-              </p>
-              {step ? (
-                <pre className="mb-3 whitespace-pre-wrap rounded bg-muted px-2 py-1 font-mono text-xs">
-                  {step.text.trim()}
-                </pre>
-              ) : null}
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="pb-1 font-medium">Name</th>
-                    <th className="pb-1 font-medium">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...currentScope.entries()].map(([name, val]) => (
-                    <tr key={name}>
-                      <td className="py-0.5 font-mono">{name}</td>
-                      <td className="py-0.5 font-mono text-muted-foreground">{val.display}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
+          <SimPanelTabBody tab={panelTab} />
         </div>
       </div>
     </aside>

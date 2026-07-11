@@ -10,12 +10,23 @@ import {
 } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { buildStepList } from "@/lib/staticWalk/buildStepList";
+import { buildStepDetail } from "@/lib/staticWalk/buildStepDetail";
 import { extractParamNames, scopeAtStep } from "@/lib/staticWalk/scopeAtStep";
 import { previewLineHandle, previewTargetTop } from "@/lib/ctrlPreviewHandles";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { AnchorRef } from "@/lib/previewEdgeTypes";
+import {
+  defaultPathLabel,
+  deleteSimTracePath,
+  duplicateSimTracePath,
+  loadSimTracePaths,
+  saveSimTracePath,
+  type SimTracePath,
+} from "@/lib/simTracePaths";
+import { effectiveEndFileLine, isFileLineInTraceRange } from "@/lib/simTraceBounds";
 import type {
   PlaybackSpeed,
+  SimPanelTab,
   SimSession,
   SimStep,
   SimValue,
@@ -23,20 +34,28 @@ import type {
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 
-type SimAnchor = {
+export type SimAnchor = {
   flowNodeId: string;
   memberId: string;
   methodName: string;
   code: string;
   signatureLine: string;
+  filePath: string;
+  /** File-absolute line of `code`'s first line (parser method start). */
+  methodStartLine: number;
+  /** File-absolute line the trace starts on (gutter/context click). */
   startLine: number;
   endLine?: number;
 };
+
+type LineAnchor = { memberId: string; line: number };
 
 type SimulationContextValue = {
   simActive: boolean;
   panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
+  panelTab: SimPanelTab;
+  setPanelTab: (tab: SimPanelTab) => void;
   session: SimSession | null;
   playbackSpeed: PlaybackSpeed;
   setPlaybackSpeed: (speed: PlaybackSpeed) => void;
@@ -45,18 +64,40 @@ type SimulationContextValue = {
   preflightInputs: Record<string, string>;
   setPreflightInput: (name: string, value: string) => void;
   startAnchor: SimAnchor | null;
-  endAnchor: { line: number } | null;
+  endAnchor: LineAnchor | null;
+  savedPaths: SimTracePath[];
+  ledgerExpanded: Set<number>;
+  toggleLedgerRow: (index: number) => void;
   requestStartHere: (anchor: SimAnchor) => void;
-  requestEndHere: (line: number) => void;
+  armStartHere: (anchor: SimAnchor) => void;
+  toggleEndHere: (line: number, memberId: string) => void;
+  gutterRunRange: (endLine: number, memberId: string) => void;
+  requestEndHere: (line: number, memberId: string) => void;
   runStartToEnd: (anchor: SimAnchor) => void;
   confirmPreflight: () => void;
   cancelPreflight: () => void;
+  applyInputs: () => void;
+  saveCurrentPath: (label?: string) => void;
+  runSavedPath: (path: SimTracePath) => void;
+  removeSavedPath: (id: string) => void;
+  duplicateSavedPath: (id: string) => void;
+  loadPathDraft: (path: SimTracePath) => void;
+  refreshSavedPaths: () => void;
   stepForward: () => void;
   stepBack: () => void;
   togglePlay: () => void;
   scrubTo: (index: number) => void;
   exitSimulation: () => void;
+  disarmTrace: () => void;
+  stopAndClear: () => void;
+  effectiveEndLine: number | null;
+  traceRangeLabel: (startLine: number, endLine: number, implicitEnd: boolean) => string;
   currentScope: Map<string, SimValue>;
+  isLineInSimRange: (memberId: string, lineNumber: number) => boolean;
+  lineGutterRole: (
+    memberId: string,
+    lineNumber: number,
+  ) => "start" | "end" | "current" | null;
 };
 
 const SimulationContext = createContext<SimulationContextValue | null>(null);
@@ -68,16 +109,33 @@ function buildSession(
   inputs: Record<string, string>,
   endLine: number,
 ): SimSession {
-  const parsed = buildStepList(anchor.code, anchor.startLine, endLine);
+  // The static-walk engine works in *code-relative* line numbers (1 = first
+  // line of `code`), but the gutter, CodeLine, and preview handles use
+  // *file-absolute* lines. Convert at this boundary: feed code-relative lines
+  // to the engine, emit file-absolute lines to the UI. `methodStartLine` is the
+  // file line of `code`'s first line, so file = rel + base - 1.
+  const base = anchor.methodStartLine;
+  const toRel = (fileLine: number): number => fileLine - base + 1;
+  const toFile = (relLine: number): number => relLine + base - 1;
+
+  const parsed = buildStepList(anchor.code, toRel(anchor.startLine), toRel(endLine));
   const paramNames = extractParamNames(anchor.signatureLine);
   const steps: SimStep[] = parsed.map((stmt) => ({
-    lineNumber: stmt.lineNumber,
+    lineNumber: toFile(stmt.lineNumber),
     text: stmt.text,
     kind: stmt.kind,
     scopeSnapshot: scopeAtStep(anchor.code, stmt.lineNumber, inputs, paramNames),
+    detail: buildStepDetail(
+      anchor.code,
+      stmt.lineNumber,
+      stmt.text,
+      stmt.kind,
+      inputs,
+      paramNames,
+    ),
     edgePulse:
       stmt.kind === "call" || stmt.kind === "return"
-        ? { fromLine: stmt.lineNumber, token: stmt.text.match(/(\w+)\s*\(/)?.[1] }
+        ? { fromLine: toFile(stmt.lineNumber), token: stmt.text.match(/(\w+)\s*\(/)?.[1] }
         : undefined,
   }));
 
@@ -85,6 +143,7 @@ function buildSession(
     flowNodeId: anchor.flowNodeId,
     memberId: anchor.memberId,
     methodName: anchor.methodName,
+    filePath: anchor.filePath,
     startLine: anchor.startLine,
     endLine,
     inputs,
@@ -93,20 +152,39 @@ function buildSession(
   };
 }
 
+function initPreflightInputs(
+  signatureLine: string,
+  prev: Record<string, string>,
+): Record<string, string> {
+  const params = extractParamNames(signatureLine);
+  const next = { ...prev };
+  for (const p of params) {
+    if (!(p in next)) next[p] = "";
+  }
+  return next;
+}
+
 export function SimulationProvider({ children }: { children: ReactNode }) {
   const { setPulseEdges, graphData } = useGraphInteraction();
   const { symbols } = useIndex();
   const { getNode } = useReactFlow();
   const [simActive, setSimActive] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [panelTab, setPanelTab] = useState<SimPanelTab>("run");
   const [session, setSession] = useState<SimSession | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
   const [playing, setPlaying] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [preflightInputs, setPreflightInputs] = useState<Record<string, string>>({});
   const [startAnchor, setStartAnchor] = useState<SimAnchor | null>(null);
-  const [endAnchor, setEndAnchor] = useState<{ line: number } | null>(null);
+  const [endAnchor, setEndAnchor] = useState<LineAnchor | null>(null);
+  const [savedPaths, setSavedPaths] = useState<SimTracePath[]>(() => loadSimTracePaths());
+  const [ledgerExpanded, setLedgerExpanded] = useState<Set<number>>(() => new Set());
   const playLoopRef = useRef(0);
+
+  const refreshSavedPaths = useCallback(() => {
+    setSavedPaths(loadSimTracePaths());
+  }, []);
 
   useEffect(() => {
     if (!session || !simActive) {
@@ -118,11 +196,6 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       setPulseEdges([]);
       return;
     }
-    // Value-flow pulse travels from the current call/return line to the callee
-    // it targets: calls pulse to the resolved on-canvas definition; returns
-    // (and calls whose callee is off-canvas) pulse out to the owning node
-    // header. If nothing resolves there is no path, so emit no pulse rather
-    // than a degenerate self-edge.
     const from: AnchorRef = {
       type: "handle",
       handle: previewLineHandle(session.memberId, step.lineNumber),
@@ -165,42 +238,80 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     return () => document.documentElement.classList.remove("graph-sim-active");
   }, [simActive]);
 
+  useEffect(() => {
+    if (simActive) setPanelTab("run");
+  }, [simActive]);
+
   const exitSimulation = useCallback(() => {
     setPlaying(false);
     setSimActive(false);
     setSession(null);
     setPreflightOpen(false);
-    setStartAnchor(null);
-    setEndAnchor(null);
+    setLedgerExpanded(new Set());
     setPulseEdges([]);
     window.clearInterval(playLoopRef.current);
   }, [setPulseEdges]);
 
+  const disarmTrace = useCallback(() => {
+    exitSimulation();
+    setStartAnchor(null);
+    setEndAnchor(null);
+  }, [exitSimulation]);
+
+  const stopAndClear = useCallback(() => {
+    disarmTrace();
+  }, [disarmTrace]);
+
   const activateSession = useCallback(
-    (anchor: SimAnchor, inputs: Record<string, string>) => {
-      const endLine = endAnchor?.line ?? anchor.code.split("\n").length;
+    (anchor: SimAnchor, inputs: Record<string, string>, end?: LineAnchor | null) => {
+      const endLine =
+        end?.memberId === anchor.memberId
+          ? end.line
+          : endAnchor?.memberId === anchor.memberId
+            ? endAnchor.line
+            : effectiveEndFileLine(anchor, null);
       const next = buildSession(anchor, inputs, endLine);
       setSession(next);
       setSimActive(true);
       setPanelOpen(true);
+      setPanelTab("run");
       setPreflightOpen(false);
+      setLedgerExpanded(new Set([0]));
     },
     [endAnchor],
   );
 
-  const requestStartHere = useCallback((anchor: SimAnchor) => {
+  const armStartHere = useCallback((anchor: SimAnchor) => {
     setStartAnchor(anchor);
+    setEndAnchor((prev) => (prev && prev.memberId !== anchor.memberId ? null : prev));
     setPanelOpen(true);
-    const params = extractParamNames(anchor.signatureLine);
-    const defaults: Record<string, string> = {};
-    for (const p of params) defaults[p] = "";
-    setPreflightInputs(defaults);
-    setPreflightOpen(true);
+    setPanelTab("inputs");
+    setPreflightInputs((prev) => initPreflightInputs(anchor.signatureLine, prev));
   }, []);
 
-  const requestEndHere = useCallback((line: number) => {
-    setEndAnchor({ line });
+  const requestStartHere = useCallback((anchor: SimAnchor) => {
+    armStartHere(anchor);
+    setPreflightOpen(true);
+  }, [armStartHere]);
+
+  const toggleEndHere = useCallback((line: number, memberId: string) => {
+    setEndAnchor((prev) =>
+      prev?.line === line && prev.memberId === memberId ? null : { line, memberId },
+    );
   }, []);
+
+  const requestEndHere = useCallback((line: number, memberId: string) => {
+    setEndAnchor({ line, memberId });
+  }, []);
+
+  const gutterRunRange = useCallback(
+    (endLine: number, memberId: string) => {
+      if (!startAnchor || startAnchor.memberId !== memberId) return;
+      setEndAnchor({ line: endLine, memberId });
+      setPreflightOpen(true);
+    },
+    [startAnchor],
+  );
 
   const runStartToEnd = useCallback(
     (anchor: SimAnchor) => {
@@ -217,6 +328,129 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
   const cancelPreflight = useCallback(() => {
     setPreflightOpen(false);
+  }, []);
+
+  const applyInputs = useCallback(() => {
+    if (!startAnchor) return;
+    if (simActive && session) {
+      const endLine = session.endLine;
+      const prevIndex = session.currentIndex;
+      const next = buildSession(startAnchor, preflightInputs, endLine);
+      next.currentIndex = Math.min(prevIndex, Math.max(next.steps.length - 1, 0));
+      setSession(next);
+      return;
+    }
+    setPanelTab("inputs");
+  }, [preflightInputs, session, simActive, startAnchor]);
+
+  const saveCurrentPath = useCallback(
+    (label?: string) => {
+      if (!startAnchor) return;
+      const explicitEnd =
+        endAnchor?.memberId === startAnchor.memberId ? endAnchor : null;
+      saveSimTracePath({
+        label:
+          label ??
+          defaultPathLabel(
+            startAnchor.methodName,
+            startAnchor.startLine,
+            effectiveEndFileLine(startAnchor, explicitEnd),
+          ),
+        flowNodeId: startAnchor.flowNodeId,
+        memberId: startAnchor.memberId,
+        methodName: startAnchor.methodName,
+        filePath: startAnchor.filePath,
+        code: startAnchor.code,
+        signatureLine: startAnchor.signatureLine,
+        methodStartLine: startAnchor.methodStartLine,
+        startLine: startAnchor.startLine,
+        endLine: explicitEnd?.line,
+        inputs: { ...preflightInputs },
+      });
+      refreshSavedPaths();
+      setPanelTab("paths");
+    },
+    [endAnchor, preflightInputs, refreshSavedPaths, startAnchor],
+  );
+
+  const runSavedPath = useCallback(
+    (path: SimTracePath) => {
+      if (!getNode(path.flowNodeId)) {
+        window.alert(`${path.methodName}: node is not on the canvas. Load the file first.`);
+        return;
+      }
+      if (path.methodStartLine == null || Number.isNaN(path.methodStartLine)) {
+        window.alert(
+          `${path.label}: saved path is missing method metadata — re-save from the canvas.`,
+        );
+        return;
+      }
+      const anchor: SimAnchor = {
+        flowNodeId: path.flowNodeId,
+        memberId: path.memberId,
+        methodName: path.methodName,
+        code: path.code,
+        signatureLine: path.signatureLine,
+        filePath: path.filePath,
+        methodStartLine: path.methodStartLine,
+        startLine: path.startLine,
+      };
+      setStartAnchor(anchor);
+      setPreflightInputs(path.inputs);
+      if (path.endLine != null) {
+        setEndAnchor({ memberId: path.memberId, line: path.endLine });
+      }
+      activateSession(
+        anchor,
+        path.inputs,
+        path.endLine != null ? { memberId: path.memberId, line: path.endLine } : null,
+      );
+    },
+    [activateSession, getNode],
+  );
+
+  const loadPathDraft = useCallback((path: SimTracePath) => {
+    setStartAnchor({
+      flowNodeId: path.flowNodeId,
+      memberId: path.memberId,
+      methodName: path.methodName,
+      code: path.code,
+      signatureLine: path.signatureLine,
+      filePath: path.filePath,
+      methodStartLine: path.methodStartLine,
+      startLine: path.startLine,
+    });
+    setPreflightInputs(path.inputs);
+    if (path.endLine != null) {
+      setEndAnchor({ memberId: path.memberId, line: path.endLine });
+    }
+    setPanelTab("inputs");
+    setPanelOpen(true);
+  }, []);
+
+  const removeSavedPath = useCallback(
+    (id: string) => {
+      deleteSimTracePath(id);
+      refreshSavedPaths();
+    },
+    [refreshSavedPaths],
+  );
+
+  const duplicateSavedPath = useCallback(
+    (id: string) => {
+      duplicateSimTracePath(id);
+      refreshSavedPaths();
+    },
+    [refreshSavedPaths],
+  );
+
+  const toggleLedgerRow = useCallback((index: number) => {
+    setLedgerExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   }, []);
 
   const scrubTo = useCallback((index: number) => {
@@ -252,9 +486,6 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       window.clearInterval(playLoopRef.current);
       return;
     }
-
-    // The static walk is a finite statement list (no loop expansion), so play
-    // just advances one recorded step per tick and stops at the last one.
     playLoopRef.current = window.setInterval(() => {
       setSession((prev) => {
         if (!prev || prev.currentIndex >= prev.steps.length - 1) {
@@ -264,28 +495,76 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         return { ...prev, currentIndex: prev.currentIndex + 1 };
       });
     }, PLAY_INTERVAL_MS / playbackSpeed);
-
     return () => window.clearInterval(playLoopRef.current);
   }, [playing, playbackSpeed, session]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && simActive) exitSimulation();
+      if (e.key !== "Escape") return;
+      if (simActive) {
+        exitSimulation();
+        return;
+      }
+      if (startAnchor) disarmTrace();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [exitSimulation, simActive]);
+  }, [disarmTrace, exitSimulation, simActive, startAnchor]);
 
   const currentScope = useMemo(() => {
     if (!session) return new Map<string, SimValue>();
     return session.steps[session.currentIndex]?.scopeSnapshot ?? new Map();
   }, [session]);
 
+  const isLineInSimRange = useCallback(
+    (memberId: string, lineNumber: number) => {
+      if (!startAnchor) return false;
+      return isFileLineInTraceRange(startAnchor, endAnchor, memberId, lineNumber);
+    },
+    [endAnchor, startAnchor],
+  );
+
+  const effectiveEndLine = useMemo(() => {
+    if (!startAnchor) return null;
+    return effectiveEndFileLine(startAnchor, endAnchor);
+  }, [endAnchor, startAnchor]);
+
+  const traceRangeLabel = useCallback(
+    (startLine: number, endLine: number, implicitEnd: boolean) =>
+      startLine === endLine
+        ? `L${startLine}`
+        : `L${startLine}→L${endLine}${implicitEnd ? " (method end)" : ""}`,
+    [],
+  );
+
+  const lineGutterRole = useCallback(
+    (memberId: string, lineNumber: number): "start" | "end" | "current" | null => {
+      if (
+        simActive &&
+        session?.memberId === memberId &&
+        session.steps[session.currentIndex]?.lineNumber === lineNumber
+      ) {
+        return "current";
+      }
+      if (simActive) return null;
+      if (startAnchor?.memberId === memberId && startAnchor.startLine === lineNumber) {
+        return "start";
+      }
+      if (endAnchor?.memberId === memberId && endAnchor.line === lineNumber) {
+        return "end";
+      }
+      return null;
+    },
+    [endAnchor, session, simActive, startAnchor],
+  );
+
   const value = useMemo(
     () => ({
       simActive,
       panelOpen,
       setPanelOpen,
+      panelTab,
+      setPanelTab,
       session,
       playbackSpeed,
       setPlaybackSpeed,
@@ -296,21 +575,41 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         setPreflightInputs((prev) => ({ ...prev, [name]: value })),
       startAnchor,
       endAnchor,
+      savedPaths,
+      ledgerExpanded,
+      toggleLedgerRow,
       requestStartHere,
+      armStartHere,
+      toggleEndHere,
+      gutterRunRange,
       requestEndHere,
       runStartToEnd,
       confirmPreflight,
       cancelPreflight,
+      applyInputs,
+      saveCurrentPath,
+      runSavedPath,
+      removeSavedPath,
+      duplicateSavedPath,
+      loadPathDraft,
+      refreshSavedPaths,
       stepForward,
       stepBack,
       togglePlay,
       scrubTo,
       exitSimulation,
+      disarmTrace,
+      stopAndClear,
+      effectiveEndLine,
+      traceRangeLabel,
       currentScope,
+      isLineInSimRange,
+      lineGutterRole,
     }),
     [
       simActive,
       panelOpen,
+      panelTab,
       session,
       playbackSpeed,
       playing,
@@ -318,17 +617,36 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       preflightInputs,
       startAnchor,
       endAnchor,
+      savedPaths,
+      ledgerExpanded,
+      toggleLedgerRow,
       requestStartHere,
+      armStartHere,
+      toggleEndHere,
+      gutterRunRange,
       requestEndHere,
       runStartToEnd,
       confirmPreflight,
       cancelPreflight,
+      applyInputs,
+      saveCurrentPath,
+      runSavedPath,
+      removeSavedPath,
+      duplicateSavedPath,
+      loadPathDraft,
+      refreshSavedPaths,
       stepForward,
       stepBack,
       togglePlay,
       scrubTo,
       exitSimulation,
+      disarmTrace,
+      stopAndClear,
+      effectiveEndLine,
+      traceRangeLabel,
       currentScope,
+      isLineInSimRange,
+      lineGutterRole,
     ],
   );
 
