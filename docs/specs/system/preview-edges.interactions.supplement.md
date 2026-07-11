@@ -113,6 +113,7 @@ flowchart TB
 | Single `case`/`default`/`else`/`else if` branch | `buildControlFlowPreviewEdges` | 1 wire back to the `switch`/`if` keyword |
 | Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
 | Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
+| Property in a `a.b.c` chain | `buildReceiverCascadeEdges` (merged with the property's own edges, if any) | Own edge (0 or 1) + 1 per resolvable receiver leftward in the chain |
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
 
@@ -168,6 +169,33 @@ flowchart TD
 **Direction:** always condition/keyword → branch, never branch → condition, even when the wire was summoned by hovering a single branch (only the *set* of drawn wires is filtered, not the direction).
 
 **Known v1 limitations:** ternary (`cond ? a : b`) is not indexed; a `switch`/`if` header whose discriminant/condition is on a different line than the keyword is not indexed (single-line headers only).
+
+---
+
+## Member-access cascade (property chains)
+
+A property reached through a chain (`country` in `context.country`) is meaningful only together with the path used to reach it. Hovering the tail property therefore cascades **leftward** to its receiver(s); hovering a receiver on its own never cascades forward.
+
+```mermaid
+flowchart LR
+  subgraph hover_country ["Hover country"]
+    Ctx1["context<br/>(receiver)"] -.->|cascaded usage wire| Ctx1
+    Country["country<br/>(property, hovered)"] -->|own wire, if resolvable| Def["Address.country<br/>(if indexed)"]
+    Ctx1 -->|own wire| ParamDef["context param def"]
+  end
+
+  subgraph hover_context ["Hover context alone"]
+    Ctx2["context"] -->|only its own wire| ParamDef2["context param def"]
+  end
+```
+
+**Tokenization:** `country` is interactive (rendered as a `TokenChip`, not plain text) whenever it is itself indexed/local **or** at least one receiver in its `a.b.c` chain resolves (`memberAccessReceiverIndices` + `isLinkableIdentifier` in `CodeLine.tsx`). This lets a property whose own type isn't in the symbol index still be hovered meaningfully — hovering it draws the receiver's wire even when the property itself has no definition to link to.
+
+**Cascade direction is one-way:** `memberAccessReceiverIndices(tokens, i)` walks left from the hovered token through consecutive `identifier "." identifier` pairs; it never looks right. Hovering `context` in `context.country` MUST NOT light up or wire `country` — only hovering `country` cascades back to `context`.
+
+**Compound trace on property hover:** `buildReceiverCascadeEdges` resolves each receiver exactly as if it had been hovered on its own — local/param fan-out first (`buildLocalPreviewEdges`), then indexed usage (`resolveVisibleTarget`, graph-mode only; no Load-stub menu is triggered for a cascaded receiver, to avoid a second `TokenConnectionMenu` fighting the primary hover's). These are merged into the property's own edge list before the single `beginTrace` call, same pattern as the binding and control-flow merges above. For a longer chain (`a.b.c`), every receiver leftward (`b`, then `a`) is included, not just the immediate one.
+
+**Normative — not a new kind:** the cascaded wires are whatever kind the receiver would draw on its own (almost always Usage); this is an interaction pattern, not a new `ConnectionKind`. It reuses the Usage legend toggle.
 
 ---
 
@@ -301,7 +329,7 @@ after drop (only viewport moves would recover them).
 | Hover | Dwell → preview edges (cold/warm timing) |
 | Ctrl | Instant preview; dim syntax/keywords; shimmer indexed tokens |
 | Click token / wire | Pin one trace (**replaces** existing pins) |
-| Shift+click token | **Accumulate** pin — add trace; merged lit + wires *(planned)* |
+| Shift+click token | **Accumulate** pin — add trace; merged lit + wires; toggle off if already pinned |
 | Esc / empty canvas | Clear all pins |
 | Expand class/member header during pin | Pin + wires **stay**; anchors retarget via `revealRevision` |
 
@@ -309,11 +337,11 @@ after drop (only viewport moves would recover them).
 
 ## Pin lock
 
-While `pinnedTokenKey` is set, the **pinned trace stays lit** (context bar, pinned endpoints, pinned wires after hover ends). **Foreign token hover** still runs the normal dwell → `beginTrace` preview (chip-on, wires, lit chain) but does **not** change the pin until the user **clicks** the new token.
+While `pinnedTraces.length > 0`, the **pinned trace(s) stay lit** (context bar, pinned endpoints, pinned wires after hover ends). **Foreign token hover** still runs the normal dwell → `beginTrace` preview (chip-on, wires, lit chain) but does **not** change the pin until the user **clicks** the new token.
 
 ```mermaid
 flowchart LR
-  Pin[pinnedTokenKey set] --> G1[scheduleHoverFire: any indexed key]
+  Pin[pinnedTraces non-empty] --> G1[scheduleHoverFire: any indexed key]
   Pin --> G2[beginTrace: updates ephemeral previewEdges]
   Pin --> G3[graph-trace-pinned on canvas]
   Pin --> G4[hover leave clears hoverPreviewEdges only]
@@ -329,7 +357,7 @@ flowchart LR
 | Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` until dwell fires |
 | Expand member | Live retarget wires | Live retarget wires |
 | Click other token | Pin | **Replace** pin set (single trace) |
-| Shift+click other token | Pin | **Accumulate** — add trace; prior pins stay lit *(planned)* |
+| Shift+click other token | Pin | **Accumulate** — add trace; prior pins stay lit; toggle off if duplicate |
 | Empty canvas / Esc | endTrace | clearTokenInfo (all pins) |
 
 **Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin. **`previewEdges`** exposed to the overlay is `pinnedPreviewEdges + hoverPreviewEdges` in parallel while both are active.
@@ -345,7 +373,7 @@ flowchart TB
   subgraph classes [Canvas classes]
     C[graph-ctrl-preview] -->|Ctrl held| Shimmer[indexed token glint]
     T[graph-trace-active] -->|traceTokenKey set| Dim[dim non-lit tokens color-only]
-    P[graph-trace-pinned] -->|pinnedTokenKey set| Pin[pinned trace + ephemeral hover preview]
+    P[graph-trace-pinned] -->|pinnedTraces non-empty| Pin[pinned trace + ephemeral hover preview]
   end
 ```
 
@@ -358,7 +386,9 @@ flowchart TB
 
 **Active chips (`token-chip-on`):** semantic tint fill (`--token-surface-*` — `color-mix(in srgb, …)` of `--token-edge-*` into white / `--background`), **no inset ring**; idle `:hover` and `:focus-visible` on `.cursor-pointer` chips use the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
 
-**Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur.
+**Local-def siblings** (signature param chip + in-body param def sharing one `localDefId`): every sibling in the trace gets `token-chip-on` + a socket; only the hovered/pinned host keeps full semantic ink/fill. Others get `token-chip-endpoint-sibling` — same chip-on shell and dot ring, desaturated via `--muted-foreground` / `--muted` mixes.
+
+**Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur. Sibling endpoints use `flow-anchor-endpoint-sibling` (grey dot, same ring geometry).
 
 ---
 
@@ -380,7 +410,7 @@ flowchart LR
   CTX --> OVL[PreviewEdgeOverlay]
 ```
 
-**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins *(planned — see SPEC-DRIFT)*. Wire click pins trace + scroll + flash. Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
+**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins (Shift+click an already-pinned token toggles it off). Wire click pins trace + scroll + flash. Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
 
 ---
 
@@ -389,10 +419,12 @@ flowchart LR
 ```mermaid
 flowchart LR
   Hover[Hover indexed usage] --> R{resolveVisibleTarget}
-  R -->|in graph| Edge[preview edge]
-  R -->|external only| Card[reference card → /api/focus]
-  R -->|same graph file not loaded| Card
+  R -->|in graph| Edge[solid preview edge]
+  R -->|external| Stub[dashed Load stub + TokenConnectionMenu]
+  R -->|def fan-out off-canvas| Stub2[callsite Load stub beside def]
 ```
+
+Off-graph targets draw a **dashed Load stub** (locality signal) and open **TokenConnectionMenu** for the load/jump action. The floating Load pill was removed; the menu is the sole load **action** surface.
 
 ---
 
@@ -404,7 +436,10 @@ flowchart LR
 | `useTokenTrace.ts` | Per-host hover + pin hooks |
 | `hoverIntent.ts` | Dwell constants |
 | `buildPreviewEdges.ts` | Edge specs + live hints |
-| `linksForElement.ts` | Def fan-out + usage sites |
+| `localDefLinks.ts` | Def fan-out + usage site pairs (`linksForElement`) |
+| `buildDefinitionPreviewEdges.ts` | Definition fan-out + off-canvas Load stubs |
+| `bindingPreviewEdges.ts` | Initializer → binding wires |
+| `controlFlowPreviewEdges.ts` | Branch fan-out / back-wire |
 | `resolveVisibleTarget.ts` | Usage → def target |
 | `resolveLiveAnchor.ts` | Per-frame anchor refine |
 | `computeTraceLit.ts` | Lit / endpoint sets |

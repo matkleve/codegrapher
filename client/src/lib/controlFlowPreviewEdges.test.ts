@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildControlFlowPreviewEdges } from "@/lib/linksForElement";
+import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
 import { buildControlFlowIndex, controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import { makeControlFlowKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";

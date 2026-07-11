@@ -1,43 +1,20 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { useJumpTooltip } from "@/context/JumpTooltipContext";
+import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 
-const PAD = 14;
-const VIEWPORT_MARGIN = 6;
+const CURSOR_PAD = 14;
 
 export function JumpTooltip() {
   const { jumpTooltip } = useJumpTooltip();
   const tipRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(
-    null,
+
+  const position = useViewportAnchoredPosition(
+    tipRef,
+    jumpTooltip ? { x: jumpTooltip.x, y: jumpTooltip.y } : null,
+    { mode: "cursor", pad: CURSOR_PAD, viewportMargin: 6 },
   );
-
-  useLayoutEffect(() => {
-    if (!jumpTooltip || !tipRef.current) {
-      setPosition(null);
-      return;
-    }
-
-    const { x, y } = jumpTooltip;
-    const { width, height } = tipRef.current.getBoundingClientRect();
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-
-    let left = x + PAD;
-    let top = y + PAD;
-    if (left + width > viewportW - VIEWPORT_MARGIN) {
-      left = x - width - PAD;
-    }
-    if (top + height > viewportH - VIEWPORT_MARGIN) {
-      top = y - height - PAD;
-    }
-
-    setPosition({
-      left: Math.max(VIEWPORT_MARGIN, left),
-      top: Math.max(VIEWPORT_MARGIN, top),
-    });
-  }, [jumpTooltip]);
 
   if (!jumpTooltip) return null;
 
@@ -50,7 +27,11 @@ export function JumpTooltip() {
       style={
         position
           ? { left: position.left, top: position.top, visibility: "visible" }
-          : { left: jumpTooltip.x + PAD, top: jumpTooltip.y + PAD, visibility: "hidden" }
+          : {
+              left: jumpTooltip.x + CURSOR_PAD,
+              top: jumpTooltip.y + CURSOR_PAD,
+              visibility: "hidden",
+            }
       }
     >
       <span className="font-bold text-brand">↳</span>

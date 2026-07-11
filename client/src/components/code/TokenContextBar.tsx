@@ -6,6 +6,7 @@ import {
   InteractiveListRow,
   SemanticConnectionDot,
 } from "@/components/ui/InteractiveListRow";
+import { PinTab } from "@/components/ui/PinTab";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
@@ -14,7 +15,6 @@ import { openFileInEditor } from "@/api";
 import { fileBaseName, fromExternalCards, fromTokenReferences } from "@/lib/loadTargets";
 import { connectionCountLabel } from "@/lib/projectReferences";
 import type { TokenReference } from "@/lib/semanticLookup";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<string, string> = {
@@ -121,7 +121,6 @@ export function TokenContextBar() {
   const isPinned = tokenInfo.pinned;
   const { token, kind, connectionCount, projectConnectionCount, definedIn, role } =
     tokenInfo;
-  const swatch = TOKEN_EDGE_STROKE[kind];
   const def = definitionRef(references);
   const canJumpDef = !isDefinition && Boolean(def?.flowNodeId);
   const connectionLabel = connectionCountLabel({
@@ -144,30 +143,19 @@ export function TokenContextBar() {
             const label = trace.info?.token ?? trace.tokenKey.split("::").pop() ?? "?";
             const active = trace.tokenKey === activePinKey;
             return (
-              <button
+              <PinTab
                 key={trace.tokenKey}
-                type="button"
-                className={cn(
-                  "rounded-md px-2 py-0.5 font-mono text-2xs font-medium transition-colors",
-                  active
-                    ? "border border-brand-border bg-brand-surface text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
+                label={label}
+                active={active}
                 onClick={() => setActivePinKey(trace.tokenKey)}
-              >
-                {label}
-              </button>
+              />
             );
           })}
         </div>
       ) : null}
       <div className="flex items-center gap-3 px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-          <span
-            className="size-2.5 shrink-0 rounded-full"
-            style={{ background: swatch }}
-            aria-hidden
-          />
+          <SemanticConnectionDot kind={kind} className="size-2.5" />
           <span className="min-w-0 shrink truncate font-mono text-sm font-semibold text-foreground">
             {token}
           </span>

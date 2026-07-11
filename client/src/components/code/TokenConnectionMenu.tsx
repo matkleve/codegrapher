@@ -1,11 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Code2, DownloadCloud, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Code2, DownloadCloud } from "lucide-react";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
+import { MenuPanelHeader } from "@/components/ui/MenuPanelHeader";
+import { MenuSearchField } from "@/components/ui/MenuSearchField";
+import { floatingPanelClass } from "@/components/ui/floatingPanel";
 import { ConnectionMenuRow } from "@/components/graph/ConnectionMenuRow";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
+import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 import { openFileInEditor } from "@/api";
 import {
   type ConnectionMenuRow as ConnectionMenuRowData,
@@ -15,37 +18,6 @@ import { LOAD_PICKER_SEARCH_THRESHOLD } from "@/lib/loadTargets";
 import { cn } from "@/lib/utils";
 
 const MENU_WIDTH_PX = 320;
-const VIEWPORT_MARGIN = 8;
-
-function useMenuPosition(
-  panelRef: React.RefObject<HTMLDivElement | null>,
-  anchor: { x: number; y: number },
-  setPosition: (pos: { left: number; top: number }) => void,
-): void {
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const { width, height } = panel.getBoundingClientRect();
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-
-    let left = anchor.x - width / 2;
-    let top = anchor.y + 6;
-
-    if (left + width > viewportW - VIEWPORT_MARGIN) {
-      left = viewportW - width - VIEWPORT_MARGIN;
-    }
-    if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
-
-    if (top + height > viewportH - VIEWPORT_MARGIN) {
-      top = anchor.y - height - 6;
-    }
-    if (top < VIEWPORT_MARGIN) top = VIEWPORT_MARGIN;
-
-    setPosition({ left, top });
-  }, [anchor.x, anchor.y, panelRef, setPosition]);
-}
 
 function rowMatchesQuery(row: ConnectionMenuRowData, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -69,9 +41,6 @@ function TokenConnectionMenuPanel({
     useGraphInteraction();
   const panelRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(
-    null,
-  );
 
   const allRows = useMemo(
     () => menu.sections.flatMap((s) => s.rows),
@@ -101,7 +70,10 @@ function TokenConnectionMenuPanel({
     onClose();
   };
 
-  useMenuPosition(panelRef, menu.anchor, setPosition);
+  const position = useViewportAnchoredPosition(panelRef, menu.anchor, {
+    mode: "panel",
+    gapBelow: 6,
+  });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -139,10 +111,7 @@ function TokenConnectionMenuPanel({
       data-token-connection-menu
       role="menu"
       aria-label={`Connections for ${menu.token}`}
-      className={cn(
-        "pointer-events-auto fixed z-[62] overflow-hidden rounded-xl border border-border bg-card/98 shadow-lg backdrop-blur-sm",
-        allRows.length === 1 ? "min-w-48" : "",
-      )}
+      className={floatingPanelClass("fixed z-[62]", allRows.length === 1 ? "min-w-48" : undefined)}
       style={{
         width: MENU_WIDTH_PX,
         left: position?.left ?? menu.anchor.x,
@@ -152,28 +121,15 @@ function TokenConnectionMenuPanel({
       onMouseEnter={cancelHoverLeaveGrace}
       onMouseLeave={menu.variant === "hover" ? scheduleHoverLeaveGrace : undefined}
     >
-      <div className="border-b border-border px-3 py-2">
-        <p className="font-mono text-xs font-semibold text-foreground">{menu.token}</p>
-        <p className="text-2xs leading-none text-muted-foreground">{subtitle}</p>
-      </div>
+      <MenuPanelHeader title={menu.token} subtitle={subtitle} />
 
       {showSearch ? (
-        <div className="border-b border-border px-3 py-2">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              type="search"
-              placeholder="Filter connections…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="h-[var(--control-height-sm)] pl-8 text-xs"
-              autoFocus={menu.variant === "context"}
-            />
-          </div>
-        </div>
+        <MenuSearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Filter connections…"
+          autoFocus={menu.variant === "context"}
+        />
       ) : null}
 
       {menu.simActions && menu.simActions.length > 0 ? (

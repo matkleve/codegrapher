@@ -1,5 +1,6 @@
 import { PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useSimulation } from "@/context/SimulationContext";
 import { useResizableSimPanel } from "@/hooks/useResizableSimPanel";
 import { cn } from "@/lib/utils";
@@ -32,8 +33,8 @@ export function SimulationPreflight() {
             names.map((name) => (
               <label key={name} className="flex flex-col gap-0.5 text-xs">
                 <span className="font-medium">{name}</span>
-                <input
-                  className="rounded border border-input bg-background px-2 py-1 font-mono text-sm"
+                <Input
+                  className="font-mono"
                   value={preflightInputs[name] ?? ""}
                   onChange={(e) => setPreflightInput(name, e.target.value)}
                   placeholder="initial value"

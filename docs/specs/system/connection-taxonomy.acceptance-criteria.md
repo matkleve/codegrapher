@@ -240,7 +240,7 @@ Cross-file resolution: parent class resolved via import graph + `classNodeId(fil
 | # | Trigger | System Response |
 | --- | ------- | --------------- |
 | 1 | Default canvas state | No module-import wires |
-| 2 | User toggles "Show imports" in **graph header** (next to fit/theme controls) | Thin dotted wires importer class → imported class |
+| 2 | User toggles **Module import** in **ConnectionLegend** (canvas overlay, top-right) | Thin dotted wires importer class → imported class |
 | 3 | Toggle off | Wires removed immediately |
 
 Reuses existing `imports` edges from parser where both endpoint classes are on canvas.
@@ -254,13 +254,13 @@ Reuses existing `imports` edges from parser where both endpoint classes are on c
 | Color | Dedicated muted hue (`--edge-import`) |
 | Line | Thin dotted |
 | Arrowhead | Open, small |
-| Toggle location | Graph header toolbar |
+| Toggle location | `ConnectionLegend` on canvas overlay (top-right) |
 | Default | Off (`visibleEdgeKinds` excludes module import) |
 
 ### Acceptance Criteria
 
 - [x] Module-import wires hidden by default
-- [x] Graph header toggle shows/hides all import wires on current ego-graph
+- [x] ConnectionLegend toggle shows/hides all import wires on current ego-graph
 - [x] Wires use thin dotted style, visually subordinate to usage and structural edges
 - [x] Toggling does not affect hover/preview trace behavior
 - [x] Only drawn when both importer and imported class nodes are on canvas

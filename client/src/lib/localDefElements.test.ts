@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findLocalDefElement } from "@/lib/localDefElements";
-import { linksForElement } from "@/lib/linksForElement";
+import { linksForElement } from "@/lib/localDefLinks";
 
 describe("findLocalDefElement", () => {
   it("prefers in-body def over signature header chip", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBindingPreviewEdges } from "@/lib/linksForElement";
+import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
 import { buildMemberSymbolIndex } from "@/lib/localSymbolLinks";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";

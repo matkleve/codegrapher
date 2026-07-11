@@ -14,16 +14,15 @@ import {
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useSimulationOptional } from "@/context/SimulationContext";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
+import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import {
-  buildDefinitionPreviewEdges,
-  buildBindingPreviewEdges,
-  buildControlFlowPreviewEdges,
-  buildLocalPreviewEdges,
-  connectionCountsForHost,
   isDefinitionSignatureLine,
-  resolveLocalTargetId,
   type DefinitionEdgeContext,
-} from "@/lib/linksForElement";
+} from "@/lib/resolveDefinitionUsageSites";
+import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
+import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
+import { buildLocalPreviewEdges, resolveLocalTargetId } from "@/lib/localDefLinks";
+import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   defSiteFor,
   bindingDefForInit,
@@ -34,6 +33,8 @@ import {
   controlFlowAnchorFor,
   type ControlFlowIndex,
 } from "@/lib/controlFlowLinks";
+import { memberAccessReceiverIndices } from "@/lib/memberAccessChain";
+import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import {
   isTypeAnnotationContext,
@@ -115,6 +116,20 @@ export function CodeLine({
     return tokenizeLine(line, inBlock).tokens;
   }, [line, lineNumber, methodCode]);
 
+  /** Does `tokens[idx]` resolve to something on its own (local/param/indexed)? */
+  const isLinkableIdentifier = useCallback(
+    (idx: number): boolean => {
+      const tok = tokens[idx];
+      if (!tok || tok.kind !== "identifier") return false;
+      return (
+        hasSymbol(tok.text) ||
+        !!defSiteFor(symbolIndex, lineNumber, idx) ||
+        !!usageTargetFor(symbolIndex, lineNumber, idx)
+      );
+    },
+    [hasSymbol, lineNumber, symbolIndex, tokens],
+  );
+
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
       graphData,
@@ -154,6 +169,52 @@ export function CodeLine({
     [clearConnectionMenu, filePath, showConnectionMenu],
   );
 
+  /**
+   * A property-access identifier (`country` in `context.country`) cascades:
+   * hovering it also resolves its receiver chain's own edges, so both the
+   * property and the path used to reach it light up together. The receiver
+   * alone never cascades forward — only leftward, toward what it was reached
+   * through.
+   */
+  const buildReceiverCascadeEdges = useCallback(
+    (tokenIndex: number, edgeKeyBase: string): PreviewEdgeSpec[] => {
+      if (!Number.isFinite(tokenIndex)) return [];
+      const receiverIndices = memberAccessReceiverIndices(tokens, tokenIndex);
+      const edges: PreviewEdgeSpec[] = [];
+      for (const receiverIdx of receiverIndices) {
+        const receiverTok = tokens[receiverIdx];
+        if (!receiverTok || !isLinkableIdentifier(receiverIdx)) continue;
+        const receiverEl = chipRefs.current
+          .get(`${lineNumber}-${receiverIdx}`)
+          ?.getChipElement();
+        if (!receiverEl) continue;
+
+        const receiverKind = semanticFromChipElement(receiverEl, lookup(receiverTok.text));
+        const receiverEdgeKey = `${edgeKeyBase}-cascade-${receiverIdx}`;
+        const localReceiverEdges = buildLocalPreviewEdges(receiverEl, receiverKind, receiverEdgeKey);
+        if (localReceiverEdges.length > 0) {
+          edges.push(...localReceiverEdges);
+          continue;
+        }
+        if (!hasSymbol(receiverTok.text)) continue;
+        const resolvedReceiver = resolveVisibleTarget(
+          receiverTok.text,
+          symbols,
+          graphData,
+          getNode,
+          sourceFlowId,
+        );
+        if (resolvedReceiver?.mode === "graph") {
+          edges.push(
+            buildUsagePreviewEdge(receiverEdgeKey, resolvedReceiver, receiverEl, receiverTok.text),
+          );
+        }
+      }
+      return edges;
+    },
+    [getNode, graphData, hasSymbol, isLinkableIdentifier, lineNumber, lookup, sourceFlowId, symbols, tokens],
+  );
+
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
@@ -163,6 +224,7 @@ export function CodeLine({
       const entry = lookup(name);
       const kind = semanticFromChipElement(chipEl, entry);
       const tokenIndex = Number(chipKey.split("-").pop());
+      const cascadeEdges = buildReceiverCascadeEdges(tokenIndex, edgeKey);
       const bindingEdges =
         Number.isFinite(tokenIndex)
           ? buildBindingPreviewEdges(
@@ -182,7 +244,7 @@ export function CodeLine({
         bindingDefForInit(symbolIndex, lineNumber, tokenIndex)
       ) {
         clearConnectionMenu();
-        beginTrace(tokenKey, bindingEdges);
+        beginTrace(tokenKey, [...bindingEdges, ...cascadeEdges]);
         return;
       }
 
@@ -199,9 +261,14 @@ export function CodeLine({
         : [];
 
       const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
-      if (localEdges.length > 0 || bindingEdges.length > 0 || controlFlowEdges.length > 0) {
+      if (
+        localEdges.length > 0 ||
+        bindingEdges.length > 0 ||
+        controlFlowEdges.length > 0 ||
+        cascadeEdges.length > 0
+      ) {
         clearConnectionMenu();
-        beginTrace(tokenKey, [...localEdges, ...bindingEdges, ...controlFlowEdges]);
+        beginTrace(tokenKey, [...localEdges, ...bindingEdges, ...controlFlowEdges, ...cascadeEdges]);
         return;
       }
 
@@ -215,13 +282,13 @@ export function CodeLine({
         );
         if (!resolvedWithoutIndex) {
           clearConnectionMenu();
-          beginTrace(tokenKey, []);
+          beginTrace(tokenKey, cascadeEdges);
           return;
         }
         if (resolvedWithoutIndex.mode === "external") {
           if (resolvedWithoutIndex.cards.length === 0) {
             clearConnectionMenu();
-            beginTrace(tokenKey, []);
+            beginTrace(tokenKey, cascadeEdges);
             return;
           }
           beginTrace(tokenKey, [
@@ -232,6 +299,7 @@ export function CodeLine({
               name,
               kind,
             ),
+            ...cascadeEdges,
           ]);
           showUsageLoadMenu(name, kind, chipEl, resolvedWithoutIndex.cards);
           return;
@@ -239,13 +307,14 @@ export function CodeLine({
         clearConnectionMenu();
         beginTrace(tokenKey, [
           buildUsagePreviewEdge(edgeKey, resolvedWithoutIndex, chipEl, name),
+          ...cascadeEdges,
         ]);
         return;
       }
 
       if (!hasSymbol(name) || !entry) {
         clearConnectionMenu();
-        beginTrace(tokenKey, []);
+        beginTrace(tokenKey, cascadeEdges);
         return;
       }
 
@@ -259,29 +328,34 @@ export function CodeLine({
 
       if (!resolved) {
         clearConnectionMenu();
-        beginTrace(tokenKey, []);
+        beginTrace(tokenKey, cascadeEdges);
         return;
       }
 
       if (resolved.mode === "external") {
         if (resolved.cards.length === 0) {
           clearConnectionMenu();
-          beginTrace(tokenKey, []);
+          beginTrace(tokenKey, cascadeEdges);
           return;
         }
         const resolvedKind = semanticFromChipElement(chipEl, entry);
         beginTrace(tokenKey, [
           buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, resolvedKind),
+          ...cascadeEdges,
         ]);
         showUsageLoadMenu(name, resolvedKind, chipEl, resolved.cards);
         return;
       }
 
       clearConnectionMenu();
-      beginTrace(tokenKey, [buildUsagePreviewEdge(edgeKey, resolved, chipEl, name)]);
+      beginTrace(tokenKey, [
+        buildUsagePreviewEdge(edgeKey, resolved, chipEl, name),
+        ...cascadeEdges,
+      ]);
     },
     [
       beginTrace,
+      buildReceiverCascadeEdges,
       clearConnectionMenu,
       getNode,
       graphData,
@@ -738,14 +812,20 @@ export function CodeLine({
           ? resolveLocalTargetId(rawLocalTarget, sourceFlowId)
           : null;
         const indexed = hasSymbol(token.text);
-        const interactive = indexed || !!localDefId || !!localTargetId;
+        // A property access (`.country`) is interactive even when `country`
+        // itself resolves to nothing, as long as its receiver chain does —
+        // hovering it cascades left to whatever it was reached through.
+        const isCascadeCandidate =
+          prevText === "." &&
+          memberAccessReceiverIndices(tokens, i).some(isLinkableIdentifier);
+        const interactive = indexed || !!localDefId || !!localTargetId || isCascadeCandidate;
         const inTypeContext = isTypeAnnotationContext(prevText);
 
         if (!interactive) {
           return (
             <span
               key={`${lineNumber}-${i}`}
-              className={cn(inTypeContext && "text-[color:var(--token-edge-type)]")}
+              className={cn(inTypeContext && "code-type")}
             >
               {token.text}
             </span>

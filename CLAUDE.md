@@ -78,7 +78,7 @@ Pitfalls learned the hard way:
 - Simulate drag-drop onto the canvas: dispatch `dragover` + `drop` on `.graph-pane`
   with a `DataTransfer` whose key is `filepath` (see `client/src/lib/drag.ts`) set to
   the absolute file path.
-- Zoom: plain wheel **pans** (panOnScroll); `ctrlKey: true` wheel zooms. Zoom is
+- Zoom: plain wheel **pans** (panOnScroll); `shiftKey: true` wheel zooms. Zoom is
   clamped to ≈1.25× per wheel event (`graphPinchZoom.ts`). "Fit to screen" resets.
 - Simulating a node resize drag: React Flow's resize control uses d3-drag, which
   listens for **mouse** events — dispatch `mousedown` on

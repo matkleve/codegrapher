@@ -91,7 +91,8 @@ export function GraphFlowCanvas({
         elementsSelectable
         panOnScroll
         panOnScrollMode="free"
-        zoomOnScroll
+        zoomOnScroll={false}
+        zoomActivationKeyCode={null}
         zoomOnPinch
         panOnDrag
       >

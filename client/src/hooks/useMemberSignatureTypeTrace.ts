@@ -4,10 +4,8 @@ import type { TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
-import {
-  buildSignatureTypeUsageEdges,
-  connectionCountsForHost,
-} from "@/lib/linksForElement";
+import { buildSignatureTypeUsageEdges } from "@/lib/signatureTypeEdges";
+import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   buildHoverLoadMenu,
   loadTargetsFromExternalCards,

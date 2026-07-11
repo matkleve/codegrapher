@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSignatureTypeUsageEdges } from "@/lib/linksForElement";
+import { buildSignatureTypeUsageEdges } from "@/lib/signatureTypeEdges";
 import type { SymbolEntry } from "@/types";
 
 describe("buildSignatureTypeUsageEdges", () => {

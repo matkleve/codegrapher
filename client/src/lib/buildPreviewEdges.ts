@@ -31,6 +31,26 @@ export function liveToFromUsageEl(
   };
 }
 
+export function liveFromDefEl(
+  token: string,
+  definitionEl: HTMLElement,
+  flowNodeId?: string,
+  memberId?: string,
+): LiveAnchorHint {
+  return {
+    token,
+    flowNodeId:
+      flowNodeId ??
+      definitionEl.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ??
+      "",
+    memberId:
+      memberId ??
+      definitionEl.closest<HTMLElement>("[data-member-id]")?.dataset.memberId,
+    role: "definition",
+    traceKey: definitionEl.dataset.traceKey,
+  };
+}
+
 export function buildUsagePreviewEdge(
   edgeId: string,
   target: GraphVisibleTarget,
@@ -78,11 +98,18 @@ export function buildElementPreviewEdge(
   toEl: HTMLElement,
   kind: SemanticTokenKind,
 ): PreviewEdgeSpec {
+  const toToken = toEl.dataset.symbolName ?? "";
+  const fromToken =
+    fromEl.dataset.symbolName ??
+    fromEl.dataset.traceKey?.split("::").pop() ??
+    "";
   return {
     id: edgeId,
     from: { type: "element", el: fromEl },
     to: { type: "element", el: toEl },
     kind,
+    liveFrom: liveFromDefEl(fromToken, fromEl),
+    liveTo: liveToFromUsageEl(toToken, toEl),
   };
 }
 

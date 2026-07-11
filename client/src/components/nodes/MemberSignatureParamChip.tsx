@@ -6,7 +6,7 @@ import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import {
   buildParamDefPreviewEdges,
   paramUsageCount,
-} from "@/lib/linksForElement";
+} from "@/lib/paramDefPreviewEdges";
 import {
   paramDefForName,
   type MemberSymbolIndex,

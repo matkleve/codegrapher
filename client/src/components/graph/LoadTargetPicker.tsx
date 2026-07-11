@@ -1,8 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MenuPanelHeader } from "@/components/ui/MenuPanelHeader";
+import { MenuSearchField } from "@/components/ui/MenuSearchField";
+import { floatingPanelClass } from "@/components/ui/floatingPanel";
 import { LoadTargetRow } from "@/components/graph/LoadTargetRow";
+import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 import {
   filterLoadTargets,
   LOAD_PICKER_SEARCH_THRESHOLD,
@@ -12,7 +14,6 @@ import {
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
 const PICKER_WIDTH_PX = 320;
-const VIEWPORT_MARGIN = 8;
 
 export type LoadTargetPickerProps = {
   token: string;
@@ -36,9 +37,6 @@ export function LoadTargetPicker({
   const panelRef = useRef<HTMLDivElement>(null);
   const openedAtRef = useRef(0);
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(
-    null,
-  );
 
   const sorted = useMemo(
     () => sortLoadTargets(targets, contextFilePath),
@@ -50,11 +48,15 @@ export function LoadTargetPicker({
   );
   const showSearch = targets.length > LOAD_PICKER_SEARCH_THRESHOLD;
 
+  const position = useViewportAnchoredPosition(panelRef, anchor, {
+    mode: "panel",
+    gapBelow: 10,
+    gapAbove: 10,
+  });
+
   useEffect(() => {
     openedAtRef.current = Date.now();
   }, []);
-
-  useLayoutPosition(panelRef, anchor, setPosition);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -79,7 +81,7 @@ export function LoadTargetPicker({
       ref={panelRef}
       role="dialog"
       aria-label={`Load ${token}`}
-      className="pointer-events-auto fixed z-[62] overflow-hidden rounded-xl border border-border bg-card/98 shadow-lg backdrop-blur-sm"
+      className={floatingPanelClass("fixed z-[62]")}
       style={{
         width: PICKER_WIDTH_PX,
         left: position?.left ?? anchor.x,
@@ -87,30 +89,18 @@ export function LoadTargetPicker({
         visibility: position ? "visible" : "hidden",
       }}
     >
-      <div className="border-b border-border px-3 py-2">
-        <p className="font-mono text-xs font-semibold text-foreground">{token}</p>
-        <p className="text-2xs leading-none text-muted-foreground">
-          Choose a file to load into the graph
-        </p>
-      </div>
+      <MenuPanelHeader
+        title={token}
+        subtitle="Choose a file to load into the graph"
+      />
 
       {showSearch ? (
-        <div className="border-b border-border px-3 py-2">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              type="search"
-              placeholder="Filter files…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="h-[var(--control-height-sm)] pl-8 text-xs"
-              autoFocus
-            />
-          </div>
-        </div>
+        <MenuSearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Filter files…"
+          autoFocus
+        />
       ) : null}
 
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-x-hidden overflow-y-auto px-1.5 py-1.5">
@@ -137,34 +127,4 @@ export function LoadTargetPicker({
     </div>,
     document.body,
   );
-}
-
-function useLayoutPosition(
-  panelRef: React.RefObject<HTMLDivElement | null>,
-  anchor: { x: number; y: number },
-  setPosition: (pos: { left: number; top: number }) => void,
-): void {
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const { width, height } = panel.getBoundingClientRect();
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-
-    let left = anchor.x - width / 2;
-    let top = anchor.y + 10;
-
-    if (left + width > viewportW - VIEWPORT_MARGIN) {
-      left = viewportW - width - VIEWPORT_MARGIN;
-    }
-    if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
-
-    if (top + height > viewportH - VIEWPORT_MARGIN) {
-      top = anchor.y - height - 10;
-    }
-    if (top < VIEWPORT_MARGIN) top = VIEWPORT_MARGIN;
-
-    setPosition({ left, top });
-  }, [anchor.x, anchor.y, panelRef, setPosition]);
 }

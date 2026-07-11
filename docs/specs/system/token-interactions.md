@@ -11,8 +11,8 @@ Use cases: [design/token-interaction-use-cases.md](../../design/token-interactio
 
 An indexed token is a **token chip** in its kind color (class periwinkle, function
 blue, type teal, variable indigo). Pointer gestures summon a **preview edge** (definition →
-usage), an **info box**, a **jump tip**, or a **Load connector**; the surrounding
-code **dims** so the answer stands alone. Nothing is a standing layer — release
+usage, or binding / control-flow per kind), an **info box**, a **jump tip**, a **dashed Load stub** when the far end is off-canvas, and/or a **TokenConnectionMenu** for load/jump actions. The surrounding
+code **dims** so the answer stands alone. Nothing is a standing preview layer — release
 the gesture and the node returns to its calm resting state. This spec catalogs
 the gestures; edge mechanism lives in [preview-edges.md](preview-edges.md), dim/lit
 in [interaction-emphasis.md](interaction-emphasis.md).
@@ -23,7 +23,7 @@ Every indexed token in a class node body (`CodeLine`), member row header
 (`CollapsibleMemberRow`), method signature tags (`MemberSignatureTags` — param
 name chips and indexed type chips), and class title (`NodeCardHeader`), scoped
 to the `.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin),
-`hoverIntent.ts` (dwell), `linksForElement.ts` (endpoints), `PreviewEdgeOverlay`
+`hoverIntent.ts` (dwell), `localDefLinks.ts` / `buildDefinitionPreviewEdges.ts` (endpoints), `PreviewEdgeOverlay`
 (draw).
 
 ## Actions
@@ -31,15 +31,15 @@ to the `.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin),
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
 | 1 | Plain **hover** an indexed token (dwell) | Trace: edge **def → usage**, endpoints lit, rest dim | `hoverIntent` cold/warm |
-| 2 | Hover a **definition** (member/class name) | Fan-out edges to in-graph usages; dashed **Load** for off-canvas caller files; counts show **on canvas · in project** | `linksForElement` + reference index |
-| 3 | Hover a **usage** | Single edge from its definition to this site | `linksForElement` forward |
+| 2 | Hover a **definition** (member/class name) | Fan-out edges to in-graph usages; dashed **Load stub** for off-canvas caller files; counts show **on canvas · in project** | `buildDefinitionPreviewEdges` + reference index |
+| 3 | Hover a **usage** | Single edge from its definition to this site (or Load stub + menu if def off-canvas) | `resolveVisibleTarget` + `buildPreviewEdges` |
 | 4 | Hold **Ctrl** (reveal, no pin) | Instant preview; all indexed tokens shimmer; syntax/keywords dampen | `graph-ctrl-preview` |
 | 5 | **Click** a token or wire hit-zone | **Pin** one trace + open info box (plain click replaces pin set; Shift+click accumulates) | `pinnedTraces` |
 | 6 | Click empty canvas / **Esc** | Clear pin + trace; return to calm | click-away |
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
-| 10 | Hover an **external** token (indexed, def not in graph) | **TokenConnectionMenu** (hover variant): off-canvas **Load** rows (one row for N=1, list for N≥2) + footer hint; right-click opens full menu. No floating Load pill or stub wire. | `mode:"external"` |
+| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load stub** wire **plus** **TokenConnectionMenu** (hover variant): off-canvas **Load** rows (one row for N=1, list for N≥2) + footer hint; right-click opens full menu. No floating Load pill. | `buildLoadPreviewEdge` + `buildHoverLoadMenu` |
 | 11 | Click **Load all · N** (menu, shown when ≥2 load rows) | Load every off-canvas row into the graph in one merge (parallel; merge is a functional update so loads don't race) | `onLoadFile` per row |
 | 12 | Click a row in **TokenConnectionMenu** | Jump (on canvas), Load (off canvas), or Open in editor (context footer) | `onLoadFile` / `focusFlowNode` |
 | 13 | **Right-click** indexed token | **TokenConnectionMenu** (context variant): On canvas (Jump) + Off canvas (Load) + Open in editor footer — **does not pin** | context menu |
@@ -72,7 +72,7 @@ graph-pane
 └── JumpTooltip                (wire "Jump to")
 
 LoadTargetPicker (multi-file pick + filter) is retained for TokenContextBar's
-pinned-token load flow; the hover Load pill / LoadConnector was removed.
+pinned-token load flow. The floating Load pill (`LoadConnector`) was removed; dashed Load stub wires and `TokenConnectionMenu` remain. See [graph-chrome.md](../component/graph-chrome.md).
 ```
 
 ## Data
@@ -105,8 +105,8 @@ pinned-token load flow; the hover Load pill / LoadConnector was removed.
 - [ ] Given an active wire, when the pointer enters its first ~cm, then a
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
-  hovered with **one** off-canvas target, then **TokenConnectionMenu** (hover variant)
-  shows a single Load row (no floating Load pill or stub wire).
+  hovered with **one** off-canvas target, then a dashed **Load stub** wire is drawn
+  and **TokenConnectionMenu** (hover variant) shows a single Load row (no floating Load pill).
 - [ ] Given **two or more** off-canvas load targets, when hovered, then
   **TokenConnectionMenu** (hover variant) lists load rows, a **Load all · N** action
   above them, and a right-click hint footer.

@@ -2,77 +2,34 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useLayoutEffect,
   useMemo,
-  useRef,
-  useState,
   type ReactNode,
 } from "react";
 import type { Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useIndex } from "@/context/IndexContext";
-import {
-  enrichCallSites,
-  offCanvasCallSiteFiles,
-  projectReferencesForToken,
-  type CallSiteReference,
-} from "@/lib/projectReferences";
-import { collectGraphFilePaths } from "@/lib/graphFiles";
-import {
-  findSemanticReferences,
-  type TokenReference,
-} from "@/lib/semanticLookup";
-import {
-  clearHoverTimers,
-  emptyHoverTimers,
-  fireDelayMs,
-  INFO_DELAY_MS,
-  LEAVE_GRACE_MS,
-  shouldCommitHoverClear,
-  type HoverIntentTimers,
-} from "@/lib/hoverIntent";
+import { useConnectionLookups } from "@/hooks/useConnectionLookups";
+import { useConnectionEdgeState } from "@/hooks/useConnectionEdgeState";
+import { useLoadTraceRebuild } from "@/hooks/useLoadTraceRebuild";
+import { useRevealRevision } from "@/hooks/useRevealRevision";
+import { useTokenTraceState } from "@/hooks/useTokenTraceState";
+import { useTraceLitState } from "@/hooks/useTraceLitState";
 import {
   type PreviewEdgeSpec,
 } from "@/lib/previewEdgeTypes";
-import { computeTraceLit, EMPTY_TRACE_LIT, mergeTraceLit } from "@/lib/computeTraceLit";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
-import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import { useClearPinnedOnClickAway } from "@/hooks/useClearPinnedOnClickAway";
-import { clearJumpTooltip } from "@/context/JumpTooltipContext";
-import {
-  isDefinitionSignatureLine,
-} from "@/lib/linksForElement";
-import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
-import { buildUsageSiteIndex, type UsageSiteRecord } from "@/lib/usageSiteIndex";
-import {
-  applyPinGesture,
-  mergePinnedEdges,
-  pinnedKeys,
-  updatePinnedEdges,
-  updatePinnedInfo,
-  type PinnedTrace,
-} from "@/lib/pinnedTraces";
-import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
-import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
-import { notifyWireTransform } from "@/lib/wireEngine";
-import {
-  buildStructuralEdges,
-  mountedClassGraphIds,
-} from "@/lib/buildStructuralEdges";
-import { buildTransitiveEdges } from "@/lib/buildTransitiveEdges";
-import {
-  DEFAULT_VISIBLE_EDGE_KINDS,
-  filterPreviewEdgesByVisibility,
-  structuralTypesForVisibleKinds,
-} from "@/lib/connectionVisibility";
+import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
+import { buildUsageSiteIndex, type UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
+import type { CallSiteReference } from "@/lib/projectReferences";
+import type { PinnedTrace } from "@/lib/pinnedTraces";
+import type { TokenReference } from "@/lib/semanticLookup";
 import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -161,15 +118,6 @@ type GraphInteractionContextValue = {
   clearConnectionMenu: () => void;
 };
 
-type PinSnapshot = {
-  traces: PinnedTrace[];
-  activePinKey: string | null;
-  tokenInfo: TokenInfoState;
-};
-
-/** Caps memory use; deep back-tracking beyond this isn't a realistic use case. */
-const PIN_HISTORY_LIMIT = 20;
-
 const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
   null,
 );
@@ -192,341 +140,78 @@ export function GraphInteractionProvider({
   onFocusReadingMember,
 }: GraphInteractionProviderProps) {
   const { isCtrlActive } = useCtrlKey();
-  const isCtrlActiveRef = useRef(isCtrlActive);
-  isCtrlActiveRef.current = isCtrlActive;
   const { symbols, references } = useIndex();
   const { setCenter, getNode } = useReactFlow();
   // Recompute trace-lit when the mounted-trace-host set changes (a member or
   // class expanding/collapsing), so newly revealed tokens light up.
   const registryRevision = useElementRegistryRevision();
+  const revealRevision = useRevealRevision(nodes);
 
-  const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
-  const [pinnedTraces, setPinnedTraces] = useState<PinnedTrace[]>([]);
-  const [activePinKey, setActivePinKey] = useState<string | null>(null);
-  const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
-  const [isWarm, setIsWarm] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
-  const [connectionMenu, setConnectionMenu] = useState<TokenConnectionMenuState | null>(
-    null,
-  );
-  const [pinHistoryLength, setPinHistoryLength] = useState(0);
-  const [visibleEdgeKinds, setVisibleEdgeKinds] = useState<Set<ConnectionKind>>(
-    () => new Set(DEFAULT_VISIBLE_EDGE_KINDS),
-  );
-  const [pulseEdges, setPulseEdges] = useState<StructuralEdgeSpec[]>([]);
-  const transitiveHopDepth = 2;
+  const trace = useTokenTraceState(isCtrlActive);
+  const lookups = useConnectionLookups({ graphData, symbols, references });
 
-  const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
-  const hoveredTokenKeyRef = useRef<string | null>(null);
-  const pinnedTracesRef = useRef<PinnedTrace[]>([]);
-  const activePinKeyRef = useRef<string | null>(null);
-  const tokenInfoRef = useRef<TokenInfoState>(null);
-  tokenInfoRef.current = tokenInfo;
-  const pinHistoryRef = useRef<PinSnapshot[]>([]);
-  const pendingFireRef = useRef<{ tokenKey: string; onFire: () => void } | null>(
-    null,
-  );
-  const hoverClearRef = useRef<{ tokenKey: string; onClear: () => void } | null>(
-    null,
+  const indexedSymbolNames = useMemo(() => new Set(symbols.keys()), [symbols]);
+  const usageSiteIndex = useMemo(
+    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
+    [indexedSymbolNames, nodes],
   );
 
-  const endTrace = useCallback(() => {
-    setHoverPreviewEdges([]);
-    setHoveredTokenKey(null);
-    setIsWarm(false);
-    setConnectionMenu(null);
-    clearJumpTooltip();
-  }, []);
-
-  const clearConnectionMenu = useCallback(() => {
-    setConnectionMenu(null);
-  }, []);
-
-  const showConnectionMenu = useCallback((state: TokenConnectionMenuState) => {
-    setConnectionMenu(state);
-  }, []);
-
-  const endHoverPreview = useCallback(() => {
-    if (pinnedTracesRef.current.length > 0) {
-      hoveredTokenKeyRef.current = null;
-      setHoveredTokenKey(null);
-      setHoverPreviewEdges([]);
-      setConnectionMenu(null);
-      if (!tokenInfo?.pinned) setTokenInfo(null);
-      return;
-    }
-    endTrace();
-    if (!tokenInfo?.pinned) setTokenInfo(null);
-  }, [endTrace, tokenInfo?.pinned]);
-
-  const beginTrace = useCallback((tokenKey: string, edges: PreviewEdgeSpec[]) => {
-    setHoveredTokenKey(tokenKey);
-    setIsWarm(true);
-    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
-    if (pin) {
-      const updated = updatePinnedEdges(pinnedTracesRef.current, tokenKey, edges);
-      pinnedTracesRef.current = updated;
-      setPinnedTraces(updated);
-      setHoverPreviewEdges([]);
-      return;
-    }
-    if (pinnedTracesRef.current.length > 0) {
-      setHoverPreviewEdges(edges);
-      return;
-    }
-    setHoverPreviewEdges(edges);
-  }, []);
-
-  const resetHoverIntent = useCallback(() => {
-    clearHoverTimers(hoverTimersRef.current);
-    pendingFireRef.current = null;
-    hoveredTokenKeyRef.current = null;
-    hoverClearRef.current = null;
-  }, []);
-
-  const pushPinHistory = useCallback(() => {
-    if (pinnedTracesRef.current.length === 0) return;
-    const history = pinHistoryRef.current;
-    history.push({
-      traces: pinnedTracesRef.current,
-      activePinKey: activePinKeyRef.current,
-      tokenInfo: tokenInfoRef.current,
-    });
-    if (history.length > PIN_HISTORY_LIMIT) history.shift();
-    setPinHistoryLength(history.length);
-  }, []);
-
-  const clearTokenInfo = useCallback(() => {
-    pushPinHistory();
-    pinnedTracesRef.current = [];
-    activePinKeyRef.current = null;
-    setPinnedTraces([]);
-    setActivePinKey(null);
-    setTokenInfo(null);
-    endTrace();
-    resetHoverIntent();
-  }, [endTrace, pushPinHistory, resetHoverIntent]);
-
-  const goBackPin = useCallback(() => {
-    const history = pinHistoryRef.current;
-    const snapshot = history.pop();
-    setPinHistoryLength(history.length);
-    if (!snapshot) return;
-
-    resetHoverIntent();
-    pinnedTracesRef.current = snapshot.traces;
-    activePinKeyRef.current = snapshot.activePinKey;
-    setPinnedTraces(snapshot.traces);
-    setActivePinKey(snapshot.activePinKey);
-    setTokenInfo(snapshot.tokenInfo);
-    if (snapshot.activePinKey) {
-      setHoveredTokenKey(snapshot.activePinKey);
-      setIsWarm(true);
-    } else {
-      endTrace();
-    }
-  }, [endTrace, resetHoverIntent]);
-
-  const pinTrace = useCallback(
-    (tokenKey: string, shiftKey = false) => {
-      pushPinHistory();
-      resetHoverIntent();
-      const mode = shiftKey
-        ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
-          ? "toggle"
-          : "accumulate"
-        : "replace";
-      const { traces, activeKey } = applyPinGesture(
-        pinnedTracesRef.current,
-        tokenKey,
-        mode,
+  const lookupIndexedUsageSites = useCallback(
+    (token: string, sourceFlowId: string, sourceMemberId?: string) => {
+      const records = usageSiteIndex.get(token) ?? [];
+      return records.filter(
+        (rec) =>
+          !isDefinitionSignatureLine(
+            rec.line,
+            token,
+            rec.flowNodeId,
+            rec.memberId,
+            sourceFlowId,
+            sourceMemberId,
+          ),
       );
-      pinnedTracesRef.current = traces;
-      activePinKeyRef.current = activeKey;
-      setPinnedTraces(traces);
-      setActivePinKey(activeKey);
-      if (activeKey) {
-        setHoveredTokenKey(activeKey);
-        setIsWarm(true);
-      } else {
-        setTokenInfo(null);
-        endTrace();
-      }
     },
-    [endTrace, pushPinHistory, resetHoverIntent],
+    [usageSiteIndex],
   );
 
-  const showTokenInfo = useCallback(
-    (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => {
-      setTokenInfo(info);
-      if (info.pinned && activePinKeyRef.current) {
-        const key = activePinKeyRef.current;
-        const updated = updatePinnedInfo(
-          pinnedTracesRef.current,
-          key,
-          { ...info, pinned: true },
-        );
-        pinnedTracesRef.current = updated;
-        setPinnedTraces(updated);
-      }
-    },
-    [],
-  );
+  const edges = useConnectionEdgeState({
+    graphData,
+    nodes,
+    getNode,
+    symbols,
+    usageSiteIndex,
+    hoverPreviewEdges: trace.hoverPreviewEdges,
+    pinnedPreviewEdges: trace.pinnedPreviewEdges,
+    pinnedTraces: trace.pinnedTraces,
+    hoveredTokenKey: trace.hoveredTokenKey,
+    traceTokenKey: trace.traceTokenKey,
+  });
 
-  const handleSetActivePinKey = useCallback((tokenKey: string) => {
-    if (!pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)) return;
-    activePinKeyRef.current = tokenKey;
-    setActivePinKey(tokenKey);
-    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
-    if (pin?.info) {
-      setTokenInfo(pin.info);
-    }
-  }, []);
+  const refreshLoadTraces = useLoadTraceRebuild({
+    graphData,
+    symbols,
+    getNode,
+    hoveredTokenKeyRef: trace.hoveredTokenKeyRef,
+    hoverPreviewEdges: trace.hoverPreviewEdges,
+    setHoverPreviewEdges: trace.setHoverPreviewEdges,
+    pinnedTraces: trace.pinnedTraces,
+    setPinnedTraces: trace.setPinnedTraces,
+    pinnedTracesRef: trace.pinnedTracesRef,
+    revealRevision,
+  });
 
-  const isPinnedTokenKey = useCallback(
-    (tokenKey: string) =>
-      pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey),
-    [],
-  );
-
-  const scheduleHoverFire = useCallback(
-    (
-      tokenKey: string,
-      onFire: () => void,
-      onClear: () => void,
-      onInfo?: () => void,
-    ) => {
-      const timers = hoverTimersRef.current;
-      clearTimeout(timers.clear ?? undefined);
-      clearTimeout(timers.fire ?? undefined);
-      clearTimeout(timers.info ?? undefined);
-      timers.clear = null;
-      timers.fire = null;
-      timers.info = null;
-
-      pendingFireRef.current = { tokenKey, onFire };
-      hoverClearRef.current = { tokenKey, onClear };
-
-      const runFire = () => {
-        hoveredTokenKeyRef.current = tokenKey;
-        setHoveredTokenKey(tokenKey);
-        setIsWarm(true);
-        onFire();
-        pendingFireRef.current = null;
-        timers.fire = null;
-      };
-
-      const delay = fireDelayMs(
-        isWarm || hoveredTokenKey != null,
-        isCtrlActiveRef.current,
-      );
-      if (delay === 0) {
-        runFire();
-      } else {
-        timers.fire = setTimeout(runFire, delay);
-      }
-
-      if (onInfo) {
-        timers.info = setTimeout(() => {
-          if (
-            hoveredTokenKeyRef.current === tokenKey &&
-            !pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
-          ) {
-            onInfo();
-          }
-          timers.info = null;
-        }, INFO_DELAY_MS);
-      }
-    },
-    [hoveredTokenKey, isWarm],
-  );
-
-  const scheduleHoverClear = useCallback(
-    (tokenKey: string, onClear: () => void) => {
-      const timers = hoverTimersRef.current;
-      clearTimeout(timers.fire ?? undefined);
-      clearTimeout(timers.info ?? undefined);
-      timers.fire = null;
-      timers.info = null;
-
-      timers.clear = setTimeout(() => {
-        if (!shouldCommitHoverClear(tokenKey, hoverClearRef.current)) {
-          timers.clear = null;
-          return;
-        }
-        clearTimeout(timers.fire ?? undefined);
-        timers.fire = null;
-        timers.info = null;
-        hoveredTokenKeyRef.current = null;
-        pendingFireRef.current = null;
-        hoverClearRef.current = null;
-        onClear();
-        timers.clear = null;
-      }, LEAVE_GRACE_MS);
-    },
-    [],
-  );
-
-  const cancelHoverLeaveGrace = useCallback(() => {
-    clearTimeout(hoverTimersRef.current.clear ?? undefined);
-    hoverTimersRef.current.clear = null;
-  }, []);
-
-  const scheduleHoverLeaveGrace = useCallback(() => {
-    const clear = hoverClearRef.current;
-    if (!clear) return;
-    scheduleHoverClear(clear.tokenKey, clear.onClear);
-  }, [scheduleHoverClear]);
-
-  useEffect(() => {
-    if (!isCtrlActive) {
-      setConnectionMenu(null);
-      return;
-    }
-    const timers = hoverTimersRef.current;
-    if (!timers.fire) return;
-    const pending = pendingFireRef.current;
-    if (!pending) return;
-
-    clearTimeout(timers.fire);
-    timers.fire = null;
-    hoveredTokenKeyRef.current = pending.tokenKey;
-    pending.onFire();
-    pendingFireRef.current = null;
-  }, [isCtrlActive]);
-
-  const findReferences = useCallback(
-    (token: string) => findSemanticReferences(token, symbols, graphData),
-    [graphData, symbols],
-  );
-
-  const graphFilePaths = useMemo(
-    () => collectGraphFilePaths(graphData),
-    [graphData],
-  );
-
-  const lookupProjectReferences = useCallback(
-    (token: string) => projectReferencesForToken(references, token),
-    [references],
-  );
-
-  const lookupOffCanvasCallSiteFiles = useCallback(
-    (token: string) =>
-      offCanvasCallSiteFiles(
-        projectReferencesForToken(references, token),
-        graphFilePaths,
-      ),
-    [graphFilePaths, references],
-  );
-
-  const findCallSites = useCallback(
-    (token: string) =>
-      enrichCallSites(
-        projectReferencesForToken(references, token),
-        graphFilePaths,
-      ),
-    [graphFilePaths, references],
-  );
+  const { isHandleActive, edgeKindAtHandle } = useTraceLitState({
+    previewEdges: edges.previewEdges,
+    hoverPreviewEdges: trace.hoverPreviewEdges,
+    pinnedTraces: trace.pinnedTraces,
+    pinnedTokenKeySet: trace.pinnedTokenKeySet,
+    hoveredTokenKey: trace.hoveredTokenKey,
+    traceTokenKey: trace.traceTokenKey,
+    visibleEdgeKinds: edges.visibleEdgeKinds,
+    getNode,
+    revealRevision,
+    registryRevision,
+  });
 
   const focusFlowNode = useCallback(
     (flowNodeId: string) => {
@@ -556,368 +241,65 @@ export function GraphInteractionProvider({
     [getNode, nodes, setCenter, setNodes],
   );
 
-  useClearPinnedOnClickAway(pinnedTraces.length > 0, clearTokenInfo);
-
-  const pinnedPreviewEdges = useMemo(
-    () => mergePinnedEdges(pinnedTraces),
-    [pinnedTraces],
-  );
-  const pinnedTokenKey = activePinKey;
-
-  const indexedSymbolNames = useMemo(
-    () => new Set(symbols.keys()),
-    [symbols],
-  );
-
-  const usageSiteIndex = useMemo(
-    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
-    [indexedSymbolNames, nodes],
-  );
-
-  const traceTokenKey =
-    activePinKey ?? hoveredTokenKey ?? pinnedTraces[0]?.tokenKey ?? null;
-  const isTraceActive =
-    pinnedTraces.length > 0 || hoveredTokenKey != null;
-
-  const previewEdges = useMemo(() => {
-    const hasParallelHover =
-      pinnedTraces.length > 0 &&
-      hoveredTokenKey != null &&
-      !pinnedKeys(pinnedTraces).includes(hoveredTokenKey) &&
-      hoverPreviewEdges.length > 0;
-
-    let edges: PreviewEdgeSpec[];
-    if (pinnedPreviewEdges.length > 0) {
-      edges = hasParallelHover
-        ? [...pinnedPreviewEdges, ...hoverPreviewEdges]
-        : pinnedPreviewEdges;
-    } else {
-      edges = hoverPreviewEdges;
-    }
-
-    if (traceTokenKey && graphData && edges.length > 0) {
-      const transitive = buildTransitiveEdges(
-        traceTokenKey,
-        graphData,
-        usageSiteIndex,
-        transitiveHopDepth,
-        getNode,
-        symbols,
-      );
-      if (transitive.length > 0) {
-        edges = [
-          ...edges,
-          ...transitive.map((e) => ({ ...e, connectionKind: "transitive" as const })),
-        ];
-      }
-    }
-
-    return filterPreviewEdgesByVisibility(edges, visibleEdgeKinds);
-  }, [
-    graphData,
-    getNode,
-    hoverPreviewEdges,
-    hoveredTokenKey,
-    pinnedPreviewEdges,
-    pinnedTraces,
-    traceTokenKey,
-    usageSiteIndex,
-    symbols,
-    visibleEdgeKinds,
-  ]);
-
-  const mountedGraphIds = useMemo(() => {
-    const flowIds = new Set(nodes.map((n) => n.id));
-    return mountedClassGraphIds(graphData, flowIds);
-  }, [graphData, nodes]);
-
-  const visibleStructuralTypes = useMemo(
-    () => structuralTypesForVisibleKinds(visibleEdgeKinds),
-    [visibleEdgeKinds],
-  );
-
-  const structuralEdges = useMemo(
-    () => buildStructuralEdges(graphData, mountedGraphIds, visibleStructuralTypes),
-    [graphData, mountedGraphIds, visibleStructuralTypes],
-  );
-
-  const isEdgeKindVisible = useCallback(
-    (kind: ConnectionKind) => visibleEdgeKinds.has(kind),
-    [visibleEdgeKinds],
-  );
-
-  const toggleEdgeKind = useCallback((kind: ConnectionKind) => {
-    setVisibleEdgeKinds((prev) => {
-      const next = new Set(prev);
-      if (next.has(kind)) next.delete(kind);
-      else next.add(kind);
-      return next;
-    });
-  }, []);
-
-  const revealRevision = useMemo(() => {
-    const parts: string[] = [];
-    for (const node of nodes) {
-      if (node.type !== "class") continue;
-      const data = node.data as ClassNodeData;
-      parts.push(
-        `${node.id}:${data.collapsed ? "c" : "o"}:${data.expandedMethodIds.join(",")}:${data.expandedPropertyIds.join(",")}`,
-      );
-    }
-    return parts.join("|");
-  }, [nodes]);
-
-  const applyLoadTraceRebuild = useCallback(() => {
-    if (!graphData) return;
-
-    const hoverKey = hoveredTokenKeyRef.current;
-    if (hoverKey) {
-      setHoverPreviewEdges((prev) => {
-        if (!prev.some((e) => e.load)) return prev;
-        const rebuilt = rebuildTraceEdgesForKey(
-          hoverKey,
-          prev,
-          symbols,
-          graphData,
-          getNode,
-        );
-        return rebuilt ?? prev;
-      });
-    }
-
-    setPinnedTraces((prev) => {
-      let changed = false;
-      const next = prev.map((trace) => {
-        if (!trace.edges.some((e) => e.load)) return trace;
-        const rebuilt = rebuildTraceEdgesForKey(
-          trace.tokenKey,
-          trace.edges,
-          symbols,
-          graphData,
-          getNode,
-        );
-        if (!rebuilt) return trace;
-        changed = true;
-        return { ...trace, edges: rebuilt };
-      });
-      if (changed) {
-        pinnedTracesRef.current = next;
-      }
-      return changed ? next : prev;
-    });
-  }, [getNode, graphData, symbols]);
-
-  useLayoutEffect(() => {
-    const pendingLoad =
-      hoverPreviewEdges.some((e) => e.load) ||
-      pinnedTraces.some((t) => t.edges.some((e) => e.load));
-    if (!graphData || !pendingLoad) return;
-
-    let outerRaf = 0;
-    outerRaf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        applyLoadTraceRebuild();
-      });
-    });
-
-    return () => cancelAnimationFrame(outerRaf);
-  }, [
-    applyLoadTraceRebuild,
-    getNode,
-    graphData,
-    hoverPreviewEdges,
-    pinnedTraces,
-    revealRevision,
-    symbols,
-  ]);
-
-  const lookupIndexedUsageSites = useCallback(
-    (token: string, sourceFlowId: string, sourceMemberId?: string) => {
-      const records = usageSiteIndex.get(token) ?? [];
-      return records.filter(
-        (rec) =>
-          !isDefinitionSignatureLine(
-            rec.line,
-            token,
-            rec.flowNodeId,
-            rec.memberId,
-            sourceFlowId,
-            sourceMemberId,
-          ),
-      );
-    },
-    [usageSiteIndex],
-  );
-
-  const activeHandleKinds = useMemo(() => {
-    const map = new Map<string, SemanticTokenKind>();
-    for (const edge of previewEdges) {
-      const { from, to } = refinePreviewEdge(edge, getNode);
-      if (from.type === "handle") map.set(from.handle, edge.kind);
-      if (to.type === "handle") map.set(to.handle, edge.kind);
-    }
-    return map;
-  }, [getNode, previewEdges, revealRevision]);
-
-  const isHandleActive = useCallback(
-    (handle: string) => activeHandleKinds.has(handle),
-    [activeHandleKinds],
-  );
-
-  const edgeKindAtHandle = useCallback(
-    (handle: string): SemanticTokenKind | null =>
-      activeHandleKinds.get(handle) ?? null,
-    [activeHandleKinds],
-  );
-
-  const pinnedTraceLit = useMemo(() => {
-    let lit = EMPTY_TRACE_LIT;
-    for (const trace of pinnedTraces) {
-      lit = mergeTraceLit(
-        lit,
-        computeTraceLit(
-          trace.tokenKey,
-          filterPreviewEdgesByVisibility(trace.edges, visibleEdgeKinds),
-          getNode,
-        ),
-      );
-    }
-    return lit;
-  }, [getNode, pinnedTraces, revealRevision, registryRevision, visibleEdgeKinds]);
-
-  const hoverTraceLit = useMemo(() => {
-    if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
-    if (pinnedKeys(pinnedTraces).includes(hoveredTokenKey)) {
-      return EMPTY_TRACE_LIT;
-    }
-    return computeTraceLit(
-      hoveredTokenKey,
-      filterPreviewEdgesByVisibility(hoverPreviewEdges, visibleEdgeKinds),
-      getNode,
-    );
-  }, [
-    getNode,
-    hoverPreviewEdges,
-    hoveredTokenKey,
-    pinnedTraces,
-    revealRevision,
-    registryRevision,
-    visibleEdgeKinds,
-  ]);
-
-  const traceLit = useMemo(
-    () => mergeTraceLit(pinnedTraceLit, hoverTraceLit),
-    [hoverTraceLit, pinnedTraceLit],
-  );
-
-  const pinnedTokenKeySet = useMemo(
-    () => new Set(pinnedKeys(pinnedTraces)),
-    [pinnedTraces],
-  );
-
-  useLayoutEffect(() => {
-    if (!traceTokenKey) {
-      clearTraceLit();
-      return;
-    }
-    applyTraceLit(traceLit, {
-      pinnedTokenKeys: pinnedTokenKeySet,
-      hoveredTokenKey,
-    });
-    notifyWireTransform();
-  }, [hoveredTokenKey, pinnedTokenKeySet, traceLit, traceTokenKey]);
-
   const value = useMemo(
     () => ({
-      previewEdges,
-      structuralEdges,
-      pulseEdges,
-      visibleEdgeKinds,
-      isEdgeKindVisible,
-      toggleEdgeKind,
-      transitiveHopDepth,
-      setPulseEdges,
+      previewEdges: edges.previewEdges,
+      structuralEdges: edges.structuralEdges,
+      pulseEdges: edges.pulseEdges,
+      visibleEdgeKinds: edges.visibleEdgeKinds,
+      isEdgeKindVisible: edges.isEdgeKindVisible,
+      toggleEdgeKind: edges.toggleEdgeKind,
+      transitiveHopDepth: edges.transitiveHopDepth,
+      setPulseEdges: edges.setPulseEdges,
       isHandleActive,
       edgeKindAtHandle,
-      beginTrace,
-      endTrace,
-      endHoverPreview,
-      isWarm,
-      scheduleHoverFire,
-      scheduleHoverClear,
-      scheduleHoverLeaveGrace,
-      cancelHoverLeaveGrace,
-      tokenInfo,
-      showTokenInfo,
-      clearTokenInfo,
-      isTraceActive,
-      findReferences,
-      findCallSites,
-      lookupProjectReferences,
-      lookupOffCanvasCallSiteFiles,
+      beginTrace: trace.beginTrace,
+      endTrace: trace.endTrace,
+      endHoverPreview: trace.endHoverPreview,
+      isWarm: trace.isWarm,
+      scheduleHoverFire: trace.scheduleHoverFire,
+      scheduleHoverClear: trace.scheduleHoverClear,
+      scheduleHoverLeaveGrace: trace.scheduleHoverLeaveGrace,
+      cancelHoverLeaveGrace: trace.cancelHoverLeaveGrace,
+      tokenInfo: trace.tokenInfo,
+      showTokenInfo: trace.showTokenInfo,
+      clearTokenInfo: trace.clearTokenInfo,
+      isTraceActive: trace.isTraceActive,
+      findReferences: lookups.findReferences,
+      findCallSites: lookups.findCallSites,
+      lookupProjectReferences: lookups.lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles: lookups.lookupOffCanvasCallSiteFiles,
       focusFlowNode,
       focusReadingMember: onFocusReadingMember ?? (() => {}),
       onLoadFile,
-      refreshLoadTraces: applyLoadTraceRebuild,
+      refreshLoadTraces,
       graphData,
-      pinTrace,
-      pinnedTokenKey,
-      pinnedTraces,
-      activePinKey,
-      setActivePinKey: handleSetActivePinKey,
-      isPinnedTokenKey,
-      hoveredTokenKey,
+      pinTrace: trace.pinTrace,
+      pinnedTokenKey: trace.activePinKey,
+      pinnedTraces: trace.pinnedTraces,
+      activePinKey: trace.activePinKey,
+      setActivePinKey: trace.setActivePinKey,
+      isPinnedTokenKey: trace.isPinnedTokenKey,
+      hoveredTokenKey: trace.hoveredTokenKey,
       lookupIndexedUsageSites,
-      goBackPin,
-      canGoBackPin: pinHistoryLength > 0,
-      connectionMenu,
-      showConnectionMenu,
-      clearConnectionMenu,
+      goBackPin: trace.goBackPin,
+      canGoBackPin: trace.canGoBackPin,
+      connectionMenu: trace.connectionMenu,
+      showConnectionMenu: trace.showConnectionMenu,
+      clearConnectionMenu: trace.clearConnectionMenu,
     }),
     [
-      previewEdges,
-      structuralEdges,
-      pulseEdges,
-      visibleEdgeKinds,
-      isEdgeKindVisible,
-      toggleEdgeKind,
-      transitiveHopDepth,
+      edges,
       isHandleActive,
       edgeKindAtHandle,
-      beginTrace,
-      endTrace,
-      endHoverPreview,
-      isWarm,
-      scheduleHoverFire,
-      scheduleHoverClear,
-      scheduleHoverLeaveGrace,
-      cancelHoverLeaveGrace,
-      tokenInfo,
-      showTokenInfo,
-      clearTokenInfo,
-      isTraceActive,
-      findReferences,
-      findCallSites,
-      lookupProjectReferences,
-      lookupOffCanvasCallSiteFiles,
+      trace,
+      lookups,
       focusFlowNode,
       onFocusReadingMember,
       onLoadFile,
-      applyLoadTraceRebuild,
+      refreshLoadTraces,
       graphData,
-      pinTrace,
-      pinnedTokenKey,
-      pinnedTraces,
-      activePinKey,
-      handleSetActivePinKey,
-      isPinnedTokenKey,
-      hoveredTokenKey,
       lookupIndexedUsageSites,
-      goBackPin,
-      pinHistoryLength,
-      connectionMenu,
-      showConnectionMenu,
-      clearConnectionMenu,
     ],
   );
 

@@ -6,7 +6,12 @@ import {
   NODE_DRAG_HANDLE,
 } from "@/components/nodes/graphNodeUi";
 import type { ClassNodeData, FileNodeData } from "@/components/nodes/flowNodeData";
-import { buildClassProperties, methodsForClassNode } from "@/lib/classBody";
+import {
+  buildClassProperties,
+  buildTypeAliasMembers,
+  isTypeAliasCode,
+  methodsForClassNode,
+} from "@/lib/classBody";
 import {
   computeClassNodeHeight,
   layoutPreferenceFromData,
@@ -215,12 +220,14 @@ export function graphToFlow(
                 id: node.id,
                 label: node.label,
                 code: node.code ?? "",
+                startLine: node.startLine ?? 1,
               },
             ]
           : childMethods.map((m) => ({
               id: m.id,
               label: m.label,
               code: m.code ?? "",
+              startLine: m.startLine ?? 1,
             }));
 
       const methods = methodsForClassNode(rawMethods).map((m) => ({
@@ -229,12 +236,18 @@ export function graphToFlow(
         label: camelToWords(m.label),
       }));
 
-      const properties =
-        node.type === "class" || node.type === "module"
-          ? buildClassProperties(node.id, node.code ?? "", rawMethods).map((p) => ({
-              ...p,
-              label: camelToWords(p.label),
-            }))
+      const isTypeAlias =
+        node.type === "class" && isTypeAliasCode(node.code ?? "");
+
+      const properties = isTypeAlias
+        ? buildTypeAliasMembers(node.id, node.code ?? "", node.startLine ?? 1)
+        : node.type === "class" || node.type === "module"
+          ? buildClassProperties(node.id, node.code ?? "", rawMethods, node.startLine ?? 1).map(
+              (p) => ({
+                ...p,
+                label: camelToWords(p.label),
+              }),
+            )
           : [];
 
       const classData: ClassNodeData = {
@@ -242,9 +255,15 @@ export function graphToFlow(
         fileName: fileDisplayName(node.filePath),
         filePath: node.filePath,
         graphNodeId: node.id,
-        nodeKind: node.type === "module" ? "module" : node.type === "function" ? "function" : "class",
+        nodeKind: isTypeAlias
+          ? "type"
+          : node.type === "module"
+            ? "module"
+            : node.type === "function"
+              ? "function"
+              : "class",
         properties,
-        methods,
+        methods: isTypeAlias ? [] : methods,
         expandedPropertyIds: properties
           .filter((p) => expandedPropertyIds.has(p.id))
           .map((p) => p.id),

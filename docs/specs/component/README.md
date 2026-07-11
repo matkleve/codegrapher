@@ -6,6 +6,7 @@ Reusable UI behavior contracts. Check here before adding net-new interaction pat
 
 - [class-node](class-node.md) — compound container, member expand, live resize
 - [preview-edge-overlay](preview-edge-overlay.md) — SVG overlay, jump tooltip
+- [graph-chrome](graph-chrome.md) — connection legend, token connection menu, path highlight
 
 ## explorer/
 

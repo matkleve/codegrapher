@@ -6,7 +6,7 @@ React Flow compound node rendering one parsed class: header, collapsible propert
 
 ## What It Looks Like
 
-Rounded card with file-type chip, camelCase-split title, expand chevron. Method row headers show compact param and return-type tags parsed from the signature. Member rows stack vertically; expanded methods show monospace source with a **left gutter line number** per row; hovering a source line applies brand-tinted row background (simulation current line uses a stronger highlight). Resize handle at bottom; height always fits open content.
+Rounded card with file-type chip, camelCase-split title, expand chevron. Method row headers show compact param and return-type tags parsed from the signature. Member rows stack vertically; expanded methods show monospace source with a **left gutter line number** per row — the actual 1-based line number in the source file (not a per-member count restarting at 1), so it matches what an editor would show at that line; hovering a source line applies brand-tinted row background (simulation current line uses a stronger highlight). Resize handle at bottom; height always fits open content.
 
 ## Where It Lives
 
@@ -30,6 +30,7 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Method 
 | 7b | Hovers `switch`/`if` keyword or its condition/discriminant | **Control flow** fan-out to every `case`/`default`/`else`/`else if` branch — see [connection-taxonomy](../../system/connection-taxonomy.md) § Control flow | `buildControlFlowPreviewEdges` |
 | 7c | Hovers a single `case`/`default`/`else`/`else if` branch | One **Control flow** wire back to the `switch`/`if` keyword | `buildControlFlowPreviewEdges` |
 | 7d | Hovers indexed param or type in signature tags | Trace dims row + signature; edge when target resolves | `MemberSignatureTags` |
+| 7e | Hovers a property in a `a.b.c` member-access chain | Own **Usage** wire (if resolvable) **plus** its receiver's own wire, cascaded leftward — see [preview-edges.interactions.supplement.md](../../system/preview-edges.interactions.supplement.md) § Member-access cascade | `buildReceiverCascadeEdges` |
 | 8 | Hovers member def label | Def fan-out to usages | `buildDefinitionPreviewEdges` |
 | 9 | Right-click → path mode | _(graph-level)_ path highlight when second node picked | graph chrome |
 

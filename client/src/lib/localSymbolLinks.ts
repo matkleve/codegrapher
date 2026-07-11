@@ -153,10 +153,16 @@ function recordLineBinding(
 /**
  * Build def/usage map for one member body — mirrors connectors-proto.html
  * `data-def` / `data-target` wiring for params, locals, and property refs.
+ *
+ * `startLine` is the 1-based file line of `code`'s first line (the member
+ * signature). Keys MUST be file-absolute — `CodeLine` queries this index
+ * with its own `lineNumber` prop, which is always `startLine + i`, never a
+ * bare in-snippet offset.
  */
 export function buildMemberSymbolIndex(
   memberId: string,
   code: string,
+  startLine = 1,
 ): MemberSymbolIndex {
   const usageTargets = new Map<string, string>();
   const defSites = new Map<string, string>();
@@ -167,7 +173,7 @@ export function buildMemberSymbolIndex(
   let inBlockComment = false;
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const lineNumber = lineIdx + 1;
+    const lineNumber = startLine + lineIdx;
     const line = lines[lineIdx] ?? "";
     const trimmed = line.trim();
 

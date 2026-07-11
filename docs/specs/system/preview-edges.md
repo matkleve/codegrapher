@@ -25,7 +25,7 @@ Semantic-color dashed curves (function blue, class blue, …) with animated dash
 | 3 | Leaves token (unpinned) | Clear after 150ms grace | `LEAVE_GRACE_MS` |
 | 4 | Holds Ctrl | Instant fire + `graph-ctrl-preview` (dims keywords, shimmers indexed tokens) | `fireDelayMs(..., ctrl)=0` |
 | 5 | Clicks token | Pin trace (replaces pin set) + `TokenContextBar` | `pinTrace`, `graph-trace-pinned` |
-| 5b | Shift+clicks token | Add pin to accumulated set (keep prior pins lit) | `pinTrace` + multi-pin merge *(planned)* |
+| 5b | Shift+clicks token | Add pin to accumulated set (keep prior pins lit); toggle off if already pinned | `pinnedTraces` + `mergePinnedEdges` |
 | 6 | Empty canvas / Esc | Clear pin + trace | `clearTokenInfo` |
 | 7 | Hovers wire hit-zone | Jump tooltip at cursor | `JumpTooltip` |
 | 8 | Clicks wire hit-zone | Pin target + scroll + flash | overlay handler |
@@ -62,8 +62,8 @@ GraphFlowInner
 | State | Default | Effect |
 | ----- | ------- | ------ |
 | `hoveredTokenKey` | null | Ephemeral hover trace |
-| `pinnedTokenKey` | null | Locked trace(s); plain click replaces set; Shift+click accumulates *(planned)* |
-| `traceTokenKey` | derived | `pinned ?? hovered` → lit computation |
+| `pinnedTraces` | `[]` | Locked traces; plain click replaces set; Shift+click accumulates |
+| `traceTokenKey` | derived | active pin or hovered key → lit computation |
 | `previewEdges` | `[]` | Overlay path specs |
 | `isWarm` | false | 80ms vs 150ms dwell |
 | `tokenInfo` | null | Pinned `TokenContextBar` payload |
@@ -89,24 +89,29 @@ stateDiagram-v2
 | `GraphInteractionContext.tsx` | Trace + pin orchestration |
 | `PreviewEdgeOverlay.tsx` | SVG + live refine loop |
 | `resolveLiveAnchor.ts` | Per-frame anchor upgrade |
-| `linksForElement.ts` | Def fan-out sites |
+| `localDefLinks.ts` | Def fan-out + usage site pairs (`linksForElement`) |
+| `buildDefinitionPreviewEdges.ts` | Definition fan-out + off-canvas Load stubs |
+| `bindingPreviewEdges.ts` / `controlFlowPreviewEdges.ts` | Binding and branch wires |
 | `preview-wires.css` | Wires, sockets |
 | `trace-modes.css` | Trace dim |
 | `tokens-chips.css` | Chip ink |
 
 ## Acceptance Criteria
 
-- [ ] Cold hover fires only after 150ms; pass-over does not flash edges
-- [ ] Ctrl fires immediately; release returns to plain-hover rules
-- [ ] Leave grace 150ms prevents flicker between adjacent tokens
-- [ ] Edge direction definition → usage for usage hover and def fan-out
-- [ ] Collapsed target → class/member handle; expanded method → line chip
-- [ ] Expand/collapse retargets wires without re-hover
-- [ ] Def fan-out + expand callee: usage TokenChip gets lit/on (not wire-only)
-- [ ] Same-node usage connects to member def label
-- [ ] Pinned: foreign hover adds ephemeral edges/lit; pin unchanged until click
-- [ ] Node header background unchanged during trace
-- [ ] Preview edges only in overlay — not React Flow edges
+Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md) §1 Usage.
+
+- [x] Cold hover fires only after 150ms; pass-over does not flash edges
+- [x] Ctrl fires immediately; release returns to plain-hover rules
+- [x] Leave grace 150ms prevents flicker between adjacent tokens
+- [x] Edge direction definition → usage for usage hover and def fan-out
+- [x] Collapsed target → class/member handle; expanded method → line chip
+- [x] Expand/collapse retargets wires without re-hover
+- [x] Def fan-out + expand callee: usage TokenChip gets lit/on (not wire-only)
+- [x] Same-node usage connects to member def label
+- [x] Pinned: foreign hover adds ephemeral edges/lit; pin unchanged until click
+- [x] Shift+click accumulates pins; breadcrumb chips when N>1
+- [x] Node header background unchanged during trace
+- [x] Preview edges only in overlay — not React Flow edges
 
 ## Child specs
 

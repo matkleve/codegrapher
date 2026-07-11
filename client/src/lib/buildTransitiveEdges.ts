@@ -1,6 +1,7 @@
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId } from "@/lib/ctrlPreviewHandles";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
+import { getByMemberId } from "@/lib/elementRegistry";
+import { makeUsageTokenKey, memberIdFromDefKey } from "@/lib/traceKeys";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
@@ -16,12 +17,23 @@ const HOP_OPACITY: Record<number, number> = {
 
 function parseTraceToken(tokenKey: string): string | null {
   if (tokenKey.includes("::import::")) return null;
+
+  const memberId = memberIdFromDefKey(tokenKey);
+  if (memberId) {
+    const row = getByMemberId(memberId);
+    const name = row?.querySelector<HTMLElement>(".member-row-label")?.dataset.symbolName;
+    return name ?? null;
+  }
+
   const parts = tokenKey.split("::");
+  if (parts.length === 4 && parts[2] === "sig-type") {
+    return parts[3] ?? null;
+  }
   if (parts.length < 4) return null;
   return parts[parts.length - 1] ?? null;
 }
 
-function tokensOnLine(line: string, indexed: ReadonlySet<string>): string[] {
+function calleesOnLine(line: string, indexed: ReadonlySet<string>): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
   WORD_RE.lastIndex = 0;
@@ -29,6 +41,8 @@ function tokensOnLine(line: string, indexed: ReadonlySet<string>): string[] {
   while ((match = WORD_RE.exec(line)) !== null) {
     const token = match[1]!;
     if (!indexed.has(token) || seen.has(token)) continue;
+    const after = line.slice(match.index + token.length);
+    if (!/^\s*\(/.test(after)) continue;
     seen.add(token);
     found.push(token);
   }
@@ -85,11 +99,10 @@ export function buildTransitiveEdges(
     for (const token of frontier) {
       const sites = usageSiteIndex.get(token) ?? [];
       for (const site of sites) {
-        const lineTokens = tokensOnLine(site.line, indexed).filter((t) => t !== token);
-        for (const nextToken of lineTokens) {
-          if (visitedTokens.has(nextToken)) continue;
-          visitedTokens.add(nextToken);
-          nextFrontier.push(nextToken);
+        for (const callee of calleesOnLine(site.line, indexed)) {
+          if (visitedTokens.has(callee)) continue;
+          visitedTokens.add(callee);
+          nextFrontier.push(callee);
         }
       }
     }

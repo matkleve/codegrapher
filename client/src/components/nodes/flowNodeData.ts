@@ -6,6 +6,8 @@ export type MemberItem = {
   /** Raw symbol name for index lookup and trace wiring. */
   symbolName?: string;
   code: string;
+  /** 1-based line in the source file where `code`'s first line lives. */
+  startLine?: number;
 };
 
 export type MethodItem = MemberItem;
@@ -17,7 +19,7 @@ export type ClassNodeData = {
   fileName: string;
   filePath: string;
   graphNodeId: string;
-  nodeKind: "class" | "module" | "function";
+  nodeKind: "class" | "module" | "function" | "type";
   properties: MemberItem[];
   methods: MethodItem[];
   expandedPropertyIds: string[];

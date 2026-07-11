@@ -1,6 +1,6 @@
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { LiveAnchorHint } from "@/lib/previewEdgeTypes";
-import { connectionCountForHost } from "@/lib/linksForElement";
+import { connectionCountForHost } from "@/lib/connectionCounts";
 
 /** Context for the docked trace action bar (shown only when pinned). */
 export type TokenInfoState = {

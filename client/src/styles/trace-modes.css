@@ -170,6 +170,10 @@
     color var(--motion-dim) var(--ease);
 }
 
+.code-type {
+  color: var(--token-edge-type);
+}
+
 .code-kw {
   color: var(--code-keyword);
 }
@@ -178,6 +182,7 @@
   color: var(--muted-foreground);
 }
 
+.code-type,
 .code-kw,
 .code-pn,
 .code-comment,
@@ -199,12 +204,32 @@
 }
 
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-pn,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-comment,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-string,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw {
+  color: var(--faint-kw) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-pn {
+  color: var(--faint-pn) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-comment {
+  color: var(--faint-comment) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-string {
+  color: var(--faint-string) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-number {
+  color: var(--faint-number) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-type {
+  color: var(--faint-type) !important;
+}
+
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-body-wrap {
-  color: var(--faint) !important;
+  color: var(--faint-body) !important;
 }
 
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .file-type-chip,
@@ -302,7 +327,11 @@
 }
 
 .graph-trace-active .code-line.trace-lit-line .code-kw,
-.graph-trace-active .code-line.trace-lit-line .code-pn {
+.graph-trace-active .code-line.trace-lit-line .code-pn,
+.graph-trace-active .code-line.trace-lit-line .code-comment,
+.graph-trace-active .code-line.trace-lit-line .code-string,
+.graph-trace-active .code-line.trace-lit-line .code-number,
+.graph-trace-active .code-line.trace-lit-line .code-type {
   color: var(--muted-foreground) !important;
 }
 
@@ -336,6 +365,35 @@
 .graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
   color: var(--token-edge-variable) !important;
   -webkit-text-fill-color: currentColor;
+}
+
+/* Local-def sibling endpoints — grey chip-on under trace (wins over lit ink above) */
+.graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="class"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="class"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="class"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="class"] {
+  color: color-mix(in oklch, var(--token-edge-class) 36%, var(--muted-foreground)) !important;
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="function"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="function"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="function"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="function"] {
+  color: color-mix(in oklch, var(--token-edge-function) 36%, var(--muted-foreground)) !important;
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="type"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="type"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="type"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="type"] {
+  color: color-mix(in oklch, var(--token-edge-type) 36%, var(--muted-foreground)) !important;
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="variable"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="variable"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="variable"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-endpoint-sibling[data-token-kind="variable"] {
+  color: color-mix(in oklch, var(--token-edge-variable) 36%, var(--muted-foreground)) !important;
 }
 
 .graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit:not(.token-chip-on) .token-chip-text,

@@ -11,7 +11,7 @@ User right-clicks a line in an expanded method → **Start trace here**. A pre-f
 ## Where It Lives
 
 - **Entry:** context menu on `CodeLine` and collapsed `CollapsibleMemberRow` header
-- **Orchestration:** new `SimulationContext` (or extension of `GraphInteractionContext` — implementation TBD)
+- **Orchestration:** `SimulationContext` (`SimulationProvider` in `GraphFlowInner`)
 - **UI:** `SimulationPanel` (right rail), `SimulationToolbar` (bottom of graph pane), reuse `PreviewEdgeOverlay` for value-flow pulses
 - **Engine:** `client/src/lib/staticWalk/` (new) — statement list + scope snapshots from method `code` string
 
@@ -36,7 +36,7 @@ User right-clicks a line in an expanded method → **Start trace here**. A pre-f
 App
 └── GraphFlowInner
     ├── GraphInteractionProvider (existing trace)
-    ├── [SimulationProvider] (new)
+    ├── SimulationProvider
     ├── GraphFlowCanvas
     │   ├── PreviewEdgeOverlay (+ value-flow pulse layer)
     │   ├── TokenContextBar (existing — hidden or dimmed during sim)

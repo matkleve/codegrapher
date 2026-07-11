@@ -4,6 +4,8 @@ export interface GraphNode {
   label: string;
   filePath: string;
   code: string;
+  /** 1-based line in the source file where `code` (full text, incl. leading comments) begins. */
+  startLine?: number;
   loaded?: boolean;
   parent?: string;
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildClassProperties, inferSymbolName } from "@/lib/classBody";
+import {
+  buildClassProperties,
+  buildTypeAliasMembers,
+  inferSymbolName,
+  isTypeAliasCode,
+} from "@/lib/classBody";
 
 describe("inferSymbolName", () => {
   it("captures the property name, not the type, for interface-style fields", () => {
@@ -68,5 +73,53 @@ export class AddressFieldSuggestService {
     expect(symbolNames).toContain("value");
     expect(symbolNames).toContain("subtitle");
     expect(symbolNames).toContain("source");
+  });
+});
+
+describe("isTypeAliasCode", () => {
+  it("recognizes exported and non-exported type aliases", () => {
+    expect(isTypeAliasCode("export type AddressFieldKind = 'a' | 'b';")).toBe(true);
+    expect(isTypeAliasCode("type AddressFieldKind = 'a' | 'b';")).toBe(true);
+  });
+
+  it("does not match classes or interfaces", () => {
+    expect(isTypeAliasCode("export class Foo {}")).toBe(false);
+    expect(isTypeAliasCode("interface Foo {}")).toBe(false);
+  });
+});
+
+describe("buildTypeAliasMembers", () => {
+  it("splits a union-of-literals into one member per literal", () => {
+    const code = "export type AddressFieldKind = 'country' | 'city' | 'district';";
+    const members = buildTypeAliasMembers("node-1", code, 5);
+
+    expect(members.map((m) => m.label)).toEqual(["country", "city", "district"]);
+    expect(members.every((m) => m.startLine === 5)).toBe(true);
+  });
+
+  it("locates each member on its own line for a multi-line union", () => {
+    const code = [
+      "export type AddressFieldKind =",
+      "  | 'country'",
+      "  | 'city'",
+      "  | 'district';",
+    ].join("\n");
+    const members = buildTypeAliasMembers("node-1", code, 10);
+
+    expect(members.map((m) => m.startLine)).toEqual([11, 12, 13]);
+  });
+
+  it("ignores | nested inside generics or object shapes", () => {
+    const code = "export type Handler = ((a: 'x' | 'y') => void) | null;";
+    const members = buildTypeAliasMembers("node-1", code, 1);
+
+    expect(members).toHaveLength(2);
+    expect(members[0]?.label).toBe("((a: 'x' | 'y') => void)");
+    expect(members[1]?.label).toBe("null");
+  });
+
+  it("returns no members for a non-union alias (nothing to wire beyond the node itself)", () => {
+    const code = "export type AddressFieldContextRef = AddressFieldContext;";
+    expect(buildTypeAliasMembers("node-1", code)).toEqual([]);
   });
 });

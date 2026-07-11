@@ -10,6 +10,23 @@ export type UsageSiteRecord = {
   line: string;
 };
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Param / local name on a declaring line — not a usage reference for the index. */
+export function isLexicalDefinitionLine(line: string, token: string): boolean {
+  if (!new RegExp(`\\b${escapeRegExp(token)}\\b`).test(line)) return false;
+
+  const fnMatch = line.match(/\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)/);
+  if (fnMatch?.[1] === token) return true;
+
+  const bindingMatch = line.match(/\b(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)/);
+  if (bindingMatch?.[1] === token) return true;
+
+  return new RegExp(`\\b${escapeRegExp(token)}\\s*:`).test(line);
+}
+
 /** Precompute symbol → usage sites from visible class node method bodies. */
 export function buildUsageSiteIndex(
   nodes: Node[],
@@ -44,6 +61,7 @@ export function buildUsageSiteIndex(
         while ((match = WORD_RE.exec(line)) !== null) {
           const token = match[1]!;
           if (!indexedSymbols.has(token) || seenOnLine.has(token)) continue;
+          if (isLexicalDefinitionLine(line, token)) continue;
           seenOnLine.add(token);
           add(token, {
             flowNodeId,

@@ -29,5 +29,5 @@ export function viewportZoomedAtPointer(
 }
 
 export function isGraphZoomWheel(event: WheelEvent): boolean {
-  return event.ctrlKey || event.metaKey;
+  return event.shiftKey;
 }

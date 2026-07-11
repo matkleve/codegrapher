@@ -4,9 +4,14 @@ export interface IChargeable {
   charge(id: string, amount: number): Promise<boolean>;
 }
 
+export interface ShippingContext {
+  country: string;
+}
+
 export interface Address {
   city: string;
   district?: string;
+  shipping?: ShippingContext;
 }
 
 export class OrderService implements IChargeable {
@@ -42,6 +47,13 @@ export class OrderService implements IChargeable {
 
   describeAddress(addr: Address): string {
     return addr.city ?? "Unknown city";
+  }
+
+  formatContactLine(addr: Address): string {
+    const parts: string[] = [];
+    parts.push(addr.city);
+    parts.push(addr.shipping.country);
+    return parts.join(", ");
   }
 }
 

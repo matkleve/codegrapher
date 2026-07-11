@@ -10,6 +10,8 @@ export interface GraphNode {
   label: string;
   filePath: string;
   code: string;
+  /** 1-based line in `filePath` where `code` (full text, incl. leading comments) begins. */
+  startLine: number;
   loaded?: boolean;
   parent?: string;
 }
@@ -36,6 +38,11 @@ export interface FocusResult {
 
 function isTsFile(filePath: string): boolean {
   return /\.tsx?$/.test(filePath);
+}
+
+/** Line where `node.getFullText()` begins — aligns gutter numbers with `code` verbatim. */
+function fullTextStartLine(node: Node): number {
+  return node.getSourceFile().getLineAndColumnAtPos(node.getFullStart()).line;
 }
 
 /** Graph-node id conventions shared with the symbol index (`indexer.ts` enclosingSymbol). */
@@ -355,6 +362,7 @@ function parseFileInto(
           label: path.basename(filePath),
           filePath,
           code: sourceFile.getFullText(),
+          startLine: 1,
           loaded: true,
         },
         maxNodes,
@@ -379,6 +387,7 @@ function parseFileInto(
           label: className,
           filePath,
           code: classDecl.getFullText(),
+          startLine: fullTextStartLine(classDecl),
           loaded: true,
         },
         maxNodes,
@@ -407,6 +416,7 @@ function parseFileInto(
             label: methodName,
             filePath,
             code: methodCode,
+            startLine: fullTextStartLine(method),
             loaded: true,
             parent: compoundClasses ? classId : undefined,
           },
@@ -436,6 +446,34 @@ function parseFileInto(
         label: ifaceName,
         filePath,
         code: iface.getFullText(),
+        startLine: fullTextStartLine(iface),
+        loaded: true,
+      },
+      maxNodes,
+    );
+  }
+
+  // Type aliases (e.g. `type AddressFieldKind = 'a' | 'b'`) get the same
+  // class-shaped node as interfaces so every existing class-node lookup path
+  // (resolveVisibleTarget, composition/extends edges, symbol index matching
+  // by `entry.kind === "type"`) resolves them without special-casing. The
+  // client distinguishes the union-literal body via `isTypeAliasCode` in
+  // `graphToFlow.ts` rather than a different GraphNode.type.
+  for (const typeAlias of sourceFile.getTypeAliases()) {
+    if (acc.limitReached) break;
+    const aliasName = typeAlias.getName();
+    if (!aliasName) continue;
+    const aliasId = classNodeId(filePath, aliasName);
+    if (acc.nodeIds.has(aliasId)) continue;
+    addNode(
+      acc,
+      {
+        id: aliasId,
+        type: "class",
+        label: aliasName,
+        filePath,
+        code: typeAlias.getFullText(),
+        startLine: fullTextStartLine(typeAlias),
         loaded: true,
       },
       maxNodes,
@@ -444,7 +482,7 @@ function parseFileInto(
 
   if (acc.limitReached) return;
 
-  const moduleFunctions: { name: string; code: string; id: string }[] = [];
+  const moduleFunctions: { name: string; code: string; id: string; startLine: number }[] = [];
 
   for (const func of sourceFile.getFunctions()) {
     if (acc.limitReached) break;
@@ -454,6 +492,7 @@ function parseFileInto(
       name,
       code: func.getFullText(),
       id: functionNodeId(filePath, name),
+      startLine: fullTextStartLine(func),
     });
   }
 
@@ -471,6 +510,7 @@ function parseFileInto(
       name,
       code: varDecl.getFullText(),
       id: functionNodeId(filePath, name),
+      startLine: fullTextStartLine(varDecl),
     });
   }
 
@@ -488,6 +528,7 @@ function parseFileInto(
         label: moduleLabel,
         filePath,
         code: "",
+        startLine: 1,
         loaded: true,
       },
       maxNodes,
@@ -511,6 +552,7 @@ function parseFileInto(
           label: fn.name,
           filePath,
           code: fn.code,
+          startLine: fn.startLine,
           loaded: true,
           parent: compoundClasses ? moduleId : undefined,
         },

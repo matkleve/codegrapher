@@ -6,6 +6,8 @@ export type ClassMemberItem = {
   /** Raw identifier for symbol index / trace (before camelToWords display label). */
   symbolName?: string;
   code: string;
+  /** 1-based line in the source file where `code`'s first line lives. */
+  startLine: number;
 };
 
 /**
@@ -43,7 +45,16 @@ export function inferSymbolName(code: string): string | null {
   return field?.[1] ?? null;
 }
 
-type MethodLike = { id: string; label: string; code: string };
+type MethodLike = { id: string; label: string; code: string; startLine?: number };
+
+/** Number of newline characters before `pos` in `text` — 0-based line offset. */
+function newlinesBefore(text: string, pos: number): number {
+  let count = 0;
+  for (let i = 0; i < pos; i++) {
+    if (text.charCodeAt(i) === 10) count++;
+  }
+  return count;
+}
 
 /**
  * `classCode` is the declaration's full text, which includes any leading
@@ -119,11 +130,19 @@ function looksLikeMethod(code: string): boolean {
   return /\)\s*[:{]/.test(t) || /\)\s*=>/.test(t);
 }
 
-/** Class-level members (fields, constructor, decorators) excluding regular methods. */
+/**
+ * Class-level members (fields, constructor, decorators) excluding regular methods.
+ * `classStartLine` is the real file line where `classCode` begins (1-based), used to
+ * translate each split-out chunk's position back to an actual source line — chunks are
+ * located by verbatim search in the untouched `classCode`, never the method-excised
+ * `inner` text, since substituting method bodies with a placeholder newline would
+ * otherwise desync line counts from the file.
+ */
 export function buildClassProperties(
   graphNodeId: string,
   classCode: string,
   methods: MethodLike[],
+  classStartLine = 1,
 ): ClassMemberItem[] {
   if (!classCode.trim()) return [];
 
@@ -144,17 +163,24 @@ export function buildClassProperties(
       id: `${constructor.id}:ctor`,
       label: "Constructor",
       code: constructor.code.trim(),
+      startLine: constructor.startLine ?? classStartLine,
     });
   }
 
+  let searchCursor = 0;
   for (const chunk of splitDeclarations(inner)) {
     if (looksLikeMethod(chunk)) continue;
     const label = inferMemberLabel(chunk, "Member");
+    const idx = classCode.indexOf(chunk, searchCursor);
+    const startLine =
+      idx === -1 ? classStartLine : classStartLine + newlinesBefore(classCode, idx);
+    if (idx !== -1) searchCursor = idx + chunk.length;
     items.push({
       id: `${graphNodeId}:prop:${items.length}:${label.replace(/\s+/g, "_")}`,
       label,
       symbolName: inferSymbolName(chunk) ?? undefined,
       code: chunk,
+      startLine,
     });
   }
 
@@ -163,4 +189,70 @@ export function buildClassProperties(
 
 export function methodsForClassNode(methods: MethodLike[]): MethodLike[] {
   return methods.filter((m) => m.label !== "constructor");
+}
+
+/** `type Foo = 'a' | 'b'` (and similar) have no `{ ... }` body — the brace-based
+ * class/interface member extraction above can't parse them. */
+export function isTypeAliasCode(code: string): boolean {
+  return /^\s*(?:export\s+)?type\s+\w/.test(code);
+}
+
+/** Splits a type alias's RHS on top-level `|`, ignoring `|` nested inside
+ * `<>`, `()`, `{}`, or `[]` (e.g. a union member that is itself a generic). */
+function splitTopLevelUnion(rhs: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+
+  for (const ch of rhs) {
+    if (ch === "<" || ch === "(" || ch === "{" || ch === "[") depth++;
+    else if (ch === ">" || ch === ")" || ch === "}" || ch === "]") depth--;
+
+    if (ch === "|" && depth <= 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) parts.push(current);
+  return parts;
+}
+
+/** Member rows for a union-of-literals type alias, e.g. each `'country'` in
+ * `type AddressFieldKind = 'country' | 'city'`. Non-union aliases (object
+ * shapes, generic references) yield no members — the node still exists as a
+ * wire target, it just renders with an empty body. `aliasStartLine` anchors
+ * each member's line the same way `buildClassProperties` does. */
+export function buildTypeAliasMembers(
+  graphNodeId: string,
+  code: string,
+  aliasStartLine = 1,
+): ClassMemberItem[] {
+  const eq = code.indexOf("=");
+  if (eq === -1) return [];
+
+  const rhs = code.slice(eq + 1).replace(/;\s*$/, "");
+  const rawMembers = splitTopLevelUnion(rhs)
+    .map((m) => m.trim())
+    .filter(Boolean);
+  if (rawMembers.length <= 1) return [];
+
+  const items: ClassMemberItem[] = [];
+  let searchCursor = eq + 1;
+  for (const text of rawMembers) {
+    const idx = code.indexOf(text, searchCursor);
+    const startLine =
+      idx === -1 ? aliasStartLine : aliasStartLine + newlinesBefore(code, idx);
+    if (idx !== -1) searchCursor = idx + text.length;
+
+    const label = text.replace(/^['"`]|['"`]$/g, "");
+    items.push({
+      id: `${graphNodeId}:member:${items.length}:${label.replace(/\W+/g, "_")}`,
+      label,
+      code: text,
+      startLine,
+    });
+  }
+  return items;
 }

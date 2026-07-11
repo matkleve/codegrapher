@@ -33,7 +33,7 @@ flowchart TB
 | 2 | Hovers explorer row | `INTERACTIVE_ROW` | class on row |
 | 3 | Ctrl held on graph | Dim syntax/keywords; shimmer indexed chips | `graph-ctrl-preview` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
-| 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates *(planned)* | `graph-trace-pinned` + merged trace lit |
+| 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates | `graph-trace-pinned` + `mergeTraceLit` |
 | 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `.member-row-header.hoverable` |
 
 ## Trace vs brand (normative)
@@ -42,6 +42,7 @@ flowchart TB
 | ------- | --------------------- | ------------------ | ---------------------- |
 | Token chip text | `--faint` | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
 | Token background | transparent | `token-chip-on` semantic fill, **no border** | same semantic fill on hover |
+| Local-def sibling endpoint | — | `token-chip-endpoint-sibling` grey chip-on + grey socket (same geometry as focus) | — |
 | Node card header | card white | card white | card white |
 | Member row (lit) | `--member-row-trace-lit-bg` + inset function-blue border | `trace-member-lit` | per trace lit set |
 | Member row (dim, trace on) | `bg-muted` at rest; trace dims non-lit rows | no lit class | non-lit rows while trace active |
@@ -59,9 +60,9 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`
 | 2 | **Row header hover** | `--brand-surface` bg + `--brand-border` border; title + caret → `--brand` | unchanged | `--muted-foreground` on code (`--surface-neutral-strong` fill) | unchanged |
 | 3 | **Label/chip hover** (not header chrome) | unchanged unless pointer is on header | unchanged | — | semantic ink + semantic fill wash (same as `token-chip-on`) |
 | 4 | **Ctrl held** (`graph-ctrl-preview`) | trace dim mix (`foreground` 3% → `card`); lit rows unchanged | param/return pills → same neutral dim mix; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
-| 5 | **Trace active, row not lit** | trace dim mix on non-lit rows | bg transparent; text → `--faint` | text → `--faint` | non-lit chips → `--faint` |
+| 5 | **Trace active, row not lit** | trace dim mix on non-lit rows | bg transparent; text → `--faint` | syntax → per-token `--faint-*` mixes (greyish, hue hint) | non-lit chips → `--faint` |
 | 5b | **Trace active, owner row** (hovering sig param/type in that row) | same row bg may be owner-lit | non-lit sig fragments → `--faint` | — | **member row label** (function name) → `--faint` unless `token-chip-lit` |
-| 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | pill bg transparent; lit signature chips → same `token-chip-lit` + `token-chip-on` as body | lit lines → `trace-lit-line` | `token-chip-lit` + `token-chip-on` fill |
+| 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | pill bg transparent; lit signature chips → same `token-chip-lit` + `token-chip-on` as body | lit lines → `trace-lit-line`; syntax → `--muted-foreground` (no saturated primitives) | `token-chip-lit` + `token-chip-on` fill |
 | 7 | **Trace active, owner row** (`trace-member-owner-lit`) | same as lit row 6 | same as lit | same as lit | same as lit |
 | 8 | **Pinned** (`graph-trace-pinned`) | pinned trace stays lit (row 6/7); foreign hover → ephemeral preview | pinned source keeps semantic ink on hover | — | pin source: `token-chip-source`; foreign preview: same semantic fill as `token-chip-on` |
 | 9 | **Ctrl + trace** | Ctrl shimmer wins on indexed chips; row fills unchanged from 5–7 | indexed sig types stay semantic under Ctrl | `--faint` body text | shimmer + lit semantic ink |

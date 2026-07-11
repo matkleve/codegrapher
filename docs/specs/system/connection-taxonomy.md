@@ -2,7 +2,7 @@
 
 ## What It Is
 
-**Design spec — target state, not yet implemented** (except kind 1, which is today's preview edge). Defines the distinct *kinds* of relationship two graph elements can have, and the visual language (line style, color family, arrowhead, opacity) that keeps multiple kinds legible on one canvas at once.
+Defines the distinct *kinds* of relationship two graph elements can have, and the visual language (line style, color family, arrowhead, opacity) that keeps multiple kinds legible on one canvas at once. All ten kinds below are implemented — see the per-kind `Status` markers in [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md) for exact scope/known gaps per kind.
 
 ## What It Looks Like
 
@@ -19,9 +19,9 @@ Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-
 
 ## Where It Lives
 
-- **Existing rendering:** `PreviewEdgeOverlay`, `styles/preview-wires.css` (kind 1 only)
-- **New rendering (structural kinds):** not yet built — likely a sibling overlay or a `persistent: true` edge variant on the existing overlay; implementation TBD
-- **Data (new edge emission):** `server/src/parser.ts` (`extends`/`implements` — declared in the `GraphEdge` type union today, never emitted), `server/src/indexer.ts`
+- **Rendering:** `PreviewEdgeOverlay` (both preview and structural layers), `styles/preview-wires.css`
+- **Data (structural edge emission):** `server/src/parser.ts` (`addExtendsEdges`/`addImplementsEdges`/`addCompositionEdges`)
+- **Data (client-side edge assembly):** `client/src/lib/buildStructuralEdges.ts`, `client/src/lib/buildTransitiveEdges.ts`
 
 ## Actions
 
@@ -34,7 +34,7 @@ Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-
 | 5 | Constructor-injected dependency, both classes on canvas | Solid wire, filled-diamond arrowhead at owner end | Composition/DI |
 | 6 | Hover/pin a token with 2+ hop reach | Stepped-opacity dashed wires beyond the 1-hop set | Transitive |
 | 7 | Hover/pin a shared dependency of two unrelated siblings | Shared highlight color on both siblings, **no edge between them** | Shared-dependency |
-| 8 | "Show imports" toggle enabled | Thin dotted class-header-to-class-header wire | Module import |
+| 8 | "Show imports" toggle in **ConnectionLegend** | Thin dotted class-header-to-class-header wire | Module import |
 | 9 | Hover/pin a param/local binding or its initializer | Dotted binding wire, initializer → binding | Binding |
 | 10 | Hover/pin a `switch`/`if` keyword or its discriminant/condition | Dash-dot wires fan out to every `case`/`else` branch; hovering one branch wires back to the head only | Control flow |
 
@@ -83,11 +83,12 @@ Connection kinds
 
 | File | Purpose |
 | ---- | ------- |
-| `server/src/parser.ts` | Would emit `extends`/`implements` edges (currently declared, unused) |
+| `server/src/parser.ts` | Emits `extends`/`implements`/`composition` structural edges |
+| `client/src/lib/buildStructuralEdges.ts` | Filters structural edges to mounted graph nodes + visible kinds |
 | `client/src/lib/tokenColors.ts` | Per-token-kind color map + structural hues |
 | `client/src/lib/localSymbolLinks.ts` | Lexical def/usage map; initializer span for binding wires |
 | `client/src/lib/controlFlowLinks.ts` | Line-scanning switch/if-chain index — head keyword, condition identifiers, and case/else branch anchors per method body |
-| `client/src/lib/linksForElement.ts` | `buildControlFlowPreviewEdges` — condition/keyword hover fans out to branches, branch hover wires back to the head |
+| `client/src/lib/controlFlowPreviewEdges.ts` | `buildControlFlowPreviewEdges` — condition/keyword hover fans out to branches, branch hover wires back to the head |
 | `client/src/components/graph/PreviewEdgeOverlay.tsx` | Hover-gated preview + persistent structural wires |
 | `client/src/styles/preview-wires.css` | Line-style/arrowhead variants per kind (`--binding` dotted, `--branch` dash-dot) |
 
@@ -108,8 +109,9 @@ Summary (see child doc for full AC per kind):
 - [ ] Binding wires show initializer → binding for `const`/`let` declarations (e.g. `result.address` → `addr`)
 - [ ] Control-flow wires fan out from a `switch`/`if` keyword or its condition to every `case`/`else` branch, and wire back to the head only when hovering a single branch; `switch (field)` fans to every `case`/`default` at that switch's own nesting depth, not to nested switches/ifs inside a branch
 - [ ] Ternary (`cond ? a : b`) control flow is not yet indexed — tracked as a follow-up, not a v1 gap in this AC list
-- [ ] Legend toggles are 1:1 with kinds — toggling **Inheritance** hides only `extends` structural wires, not local variable usage/binding preview wires
-- [ ] A legend or per-edge tooltip lets a user identify what a given line style/arrowhead means without consulting this spec
+- [ ] Hovering a property in a `a.b.c` chain (Usage kind) cascades leftward to wire its receiver(s) too; hovering a receiver alone never cascades forward to what it's accessed through — see [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) § Member-access cascade
+- [x] Legend toggles are 1:1 with kinds — toggling **Inheritance** hides only `extends` structural wires, not local variable usage/binding preview wires
+- [ ] Per-edge hover tooltip identifying line style/arrowhead — **ConnectionLegend** covers kinds; wire-level tooltip not yet built
 
 ## Child specs
 

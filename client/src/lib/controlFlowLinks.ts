@@ -138,9 +138,14 @@ function openGroupIfHead(
  * chains (`cond ? a : b`) are a documented follow-up, not yet indexed here —
  * see connection-taxonomy.md § Control flow.
  */
+/**
+ * `startLine` is the 1-based file line of `code`'s first line. Keys MUST be
+ * file-absolute — see the matching note on `buildMemberSymbolIndex`.
+ */
 export function buildControlFlowIndex(
   memberId: string,
   code: string,
+  startLine = 1,
 ): ControlFlowIndex {
   const groups = new Map<string, ControlFlowGroup>();
   const anchors = new Map<string, ControlFlowAnchor>();
@@ -151,7 +156,7 @@ export function buildControlFlowIndex(
   let inBlockComment = false;
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const lineNumber = lineIdx + 1;
+    const lineNumber = startLine + lineIdx;
     const line = lines[lineIdx] ?? "";
     const tokenized = tokenizeLine(line, inBlockComment);
     inBlockComment = tokenized.inBlockComment;

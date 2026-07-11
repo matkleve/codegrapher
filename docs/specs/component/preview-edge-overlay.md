@@ -68,7 +68,7 @@ GraphFlowInner
 
 | Input | From |
 | ----- | ---- |
-| `PreviewEdgeSpec[]` | `buildPreviewEdges`, `linksForElement` |
+| `PreviewEdgeSpec[]` | `buildPreviewEdges`, `localDefLinks`, `buildStructuralEdges` |
 | `liveFrom` / `liveTo` | `previewEdgeTypes.ts` |
 | Anchor geometry | `resolvePreviewAnchor` |
 | Stroke | `TOKEN_EDGE_STROKE` CSS variables via `style` |

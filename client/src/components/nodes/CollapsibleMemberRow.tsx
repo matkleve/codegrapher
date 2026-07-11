@@ -9,11 +9,9 @@ import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
-import {
-  buildDefinitionPreviewEdges,
-  connectionCountsForHost,
-  type DefinitionEdgeContext,
-} from "@/lib/linksForElement";
+import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
+import type { DefinitionEdgeContext } from "@/lib/resolveDefinitionUsageSites";
+import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   buildMemberSymbolIndex,
   memberDefId,
@@ -31,6 +29,7 @@ import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import { findMethodOverride } from "@/lib/overrideInfo";
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -38,6 +37,8 @@ type CollapsibleMemberRowProps = {
   label: string;
   symbolName?: string;
   code: string;
+  /** 1-based line in the source file where `code`'s first line lives. */
+  startLine: number;
   /** When true, show parsed param/return tags in the row header. */
   showSignatureTags?: boolean;
   expanded: boolean;
@@ -54,6 +55,7 @@ export function CollapsibleMemberRow({
   label,
   symbolName,
   code,
+  startLine,
   showSignatureTags = false,
   expanded,
   onToggle,
@@ -92,12 +94,12 @@ export function CollapsibleMemberRow({
   const defKind = entry ? symbolKindToSemantic(entry.kind) : symbolName ? "function" : null;
   const traceable = hasSymbol(traceName) || Boolean(symbolName);
   const symbolIndex = useMemo(
-    () => buildMemberSymbolIndex(memberId, code),
-    [memberId, code],
+    () => buildMemberSymbolIndex(memberId, code, startLine),
+    [memberId, code, startLine],
   );
   const controlFlowIndex = useMemo(
-    () => buildControlFlowIndex(memberId, code),
-    [memberId, code],
+    () => buildControlFlowIndex(memberId, code, startLine),
+    [memberId, code, startLine],
   );
   const methodSignature = useMemo(
     () => (showSignatureTags ? parseMethodSignature(code) : null),
@@ -182,7 +184,7 @@ export function CollapsibleMemberRow({
         projectConnectionCount: counts.inProject,
         definedIn: classLabel,
         filePath,
-        line: 1,
+        line: startLine,
         sourceFlowId: flowNodeId,
         sourceGraphNodeId: graphNodeId,
         role: "definition",
@@ -196,6 +198,7 @@ export function CollapsibleMemberRow({
       filePath,
       flowNodeId,
       graphNodeId,
+      startLine,
       traceName,
     ],
   );
@@ -241,10 +244,10 @@ export function CollapsibleMemberRow({
         kind: defKind,
         role: "definition",
         chipEl: labelRef.current,
-        editorLine: 1,
+        editorLine: startLine,
       });
     },
-    [defKind, openContextMenu, traceName, traceable],
+    [defKind, openContextMenu, startLine, traceName, traceable],
   );
 
   const onReadingFocusDoubleClick = useCallback(
@@ -360,9 +363,11 @@ export function CollapsibleMemberRow({
           />
         ) : null}
         {overrideInfo ? (
-          <button
+          <Button
             type="button"
-            className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-2xs text-muted-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand"
+            variant="outline"
+            size="xs"
+            className="text-2xs text-muted-foreground"
             onClick={(e) => {
               e.stopPropagation();
               if (!labelRef.current) return;
@@ -388,7 +393,7 @@ export function CollapsibleMemberRow({
             }}
           >
             ↑ overrides {overrideInfo.parentClass}.{overrideInfo.methodName}
-          </button>
+          </Button>
         ) : null}
       </button>
       {expanded && code.trim() ? (
@@ -398,7 +403,7 @@ export function CollapsibleMemberRow({
               <CodeLine
                 key={`${memberId}-${i}`}
                 line={line}
-                lineNumber={i + 1}
+                lineNumber={startLine + i}
                 memberId={memberId}
                 sourceFlowId={flowNodeId}
                 sourceGraphNodeId={graphNodeId}

@@ -1,3 +1,5 @@
+import { memberIdFromDefKey } from "@/lib/traceKeys";
+
 const traceKeys = new Map<string, HTMLElement>();
 const localDefIds = new Map<string, HTMLElement>();
 const localTargetIds = new Map<string, HTMLElement>();
@@ -84,7 +86,27 @@ export function unregisterElement(el: HTMLElement): void {
   scheduleRegistryNotify();
 }
 
+function memberDefLabelForKey(key: string): HTMLElement | null {
+  const memberId = memberIdFromDefKey(key);
+  if (!memberId) return null;
+
+  const row = memberIds.get(memberId);
+  const labelFromRow = row?.querySelector<HTMLElement>(
+    `.member-row-label[data-trace-key="${CSS.escape(key)}"]`,
+  );
+  if (labelFromRow?.isConnected) return labelFromRow;
+
+  const pane = document.querySelector(".graph-pane");
+  const label = pane?.querySelector<HTMLElement>(
+    `[data-member-id="${CSS.escape(memberId)}"] .member-row-label[data-trace-key="${CSS.escape(key)}"]`,
+  );
+  return label?.isConnected ? label : null;
+}
+
 export function getByTraceKey(key: string): HTMLElement | null {
+  const label = memberDefLabelForKey(key);
+  if (label) return label;
+
   const el = traceKeys.get(key);
   return el?.isConnected ? el : null;
 }

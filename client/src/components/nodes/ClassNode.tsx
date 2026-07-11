@@ -105,7 +105,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         <div className="nodrag flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
           {hasProperties && (
             <MemberSection
-              label="Properties"
+              label={nodeData.nodeKind === "type" ? "Values" : "Properties"}
               expanded={propertiesSectionExpanded}
               onToggle={onTogglePropertiesSection}
               bulkActionLabel={anyPropertiesExpanded ? "Close all" : "Open all"}
@@ -118,6 +118,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   label={p.label}
                   symbolName={p.symbolName}
                   code={p.code}
+                  startLine={p.startLine ?? 1}
                   expanded={nodeData.expandedPropertyIds.includes(p.id)}
                   onToggle={onToggleProperty}
                   flowNodeId={id}
@@ -147,6 +148,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   label={m.label}
                   symbolName={m.symbolName}
                   code={m.code}
+                  startLine={m.startLine ?? 1}
                   showSignatureTags
                   expanded={nodeData.expandedMethodIds.includes(m.id)}
                   onToggle={onToggleMethod}

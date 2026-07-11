@@ -9,7 +9,7 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import { allLocalDefElements } from "@/lib/localDefElements";
-import { linksForElement } from "@/lib/linksForElement";
+import { linksForElement } from "@/lib/localDefLinks";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";

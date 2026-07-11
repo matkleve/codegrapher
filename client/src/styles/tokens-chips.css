@@ -11,10 +11,13 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   vertical-align: middle;
   width: fit-content;
   max-width: 100%;
-  margin: 0 -2px;
+  /* Negative margin cancels horizontal padding in the line box — pill is
+     visible but the token occupies only the label's text width. */
+  margin-inline: calc(-1 * var(--token-chip-pad-x));
   padding: var(--token-chip-pad-y) var(--token-chip-pad-x);
   border-radius: var(--token-chip-radius);
   font-weight: 560;
@@ -27,6 +30,7 @@
 }
 
 .token-def-label {
+  margin-inline: calc(-1 * var(--token-def-label-pad-x));
   padding: var(--token-def-label-pad-y) var(--token-def-label-pad-x);
   border-radius: var(--token-def-label-radius);
   font-weight: 620;
@@ -66,8 +70,9 @@
 
 /* Resting text-fill — base glyphs always use currentColor; Ctrl glint is ::after only. */
 .token-chip-text {
-  display: block;
+  display: inline;
   line-height: 1;
+  text-align: center;
   background-image: none;
   -webkit-text-fill-color: currentColor;
 }
@@ -79,6 +84,8 @@
 
 .token-shimmer-target {
   position: relative;
+  display: inline;
+  text-align: center;
 }
 
 .token-chip.token-chip-on,
@@ -125,6 +132,47 @@
 .token-def-label.token-chip-on[data-token-kind="variable"] {
   background: var(--token-surface-variable);
   box-shadow: none;
+}
+
+/* Local-def siblings (sig chip + in-body def) — same chip-on + socket, desaturated */
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] {
+  color: color-mix(in oklch, var(--token-edge-class) 36%, var(--muted-foreground));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] {
+  background: color-mix(in oklch, var(--token-surface-class) 50%, var(--muted));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] {
+  color: color-mix(in oklch, var(--token-edge-function) 36%, var(--muted-foreground));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] {
+  background: color-mix(in oklch, var(--token-surface-function) 50%, var(--muted));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] {
+  color: color-mix(in oklch, var(--token-edge-type) 36%, var(--muted-foreground));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] {
+  background: color-mix(in oklch, var(--token-surface-type) 50%, var(--muted));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] {
+  color: color-mix(in oklch, var(--token-edge-variable) 36%, var(--muted-foreground));
+}
+
+.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] {
+  background: color-mix(in oklch, var(--token-surface-variable) 50%, var(--muted));
 }
 
 /* Trace dim — restore semantic ink on hovered / focused chips (fill from rules above) */
@@ -208,8 +256,9 @@
 
 /* Shared connector chip shell (inline tokens + overlay Load) */
 .connector-chip-text {
-  display: block;
+  display: inline;
   line-height: 1;
+  text-align: center;
   -webkit-text-fill-color: currentColor;
 }
 

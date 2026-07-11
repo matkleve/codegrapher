@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "@xyflow/react";
-import { buildUsageSiteIndex } from "@/lib/usageSiteIndex";
+import {
+  buildUsageSiteIndex,
+  isLexicalDefinitionLine,
+} from "@/lib/usageSiteIndex";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 
 function classNode(
@@ -75,6 +78,37 @@ describe("buildUsageSiteIndex", () => {
     expect(index.get("PaymentGateway")).toHaveLength(1);
   });
 
+  it("skips param names on signature lines but indexes body references", () => {
+    const nodes = [
+      classNode("flow-1", [
+        {
+          id: "m-sub",
+          label: "buildSubtitle",
+          symbolName: "buildSubtitle",
+          code: "buildSubtitle(field: AddressFieldKind): string {\n  return field;\n}",
+        },
+        {
+          id: "m-score",
+          label: "scoreGeocoderHit",
+          symbolName: "scoreGeocoderHit",
+          code: "scoreGeocoderHit(result: T, field: F): number {\n  const value = extractFieldValue(result, field);\n}",
+        },
+      ]),
+    ];
+    const index = buildUsageSiteIndex(
+      nodes,
+      new Set(["field", "extractFieldValue"]),
+    );
+    const fieldSites = index.get("field") ?? [];
+    expect(fieldSites.filter((s) => s.lineNumber === 1)).toHaveLength(0);
+    expect(fieldSites.some((s) => s.memberId === "m-sub" && s.lineNumber === 2)).toBe(
+      true,
+    );
+    expect(fieldSites.some((s) => s.memberId === "m-score" && s.lineNumber === 2)).toBe(
+      true,
+    );
+  });
+
   it("indexes 500 lines × 20 symbols under 100ms", () => {
     const symbols = new Set(
       Array.from({ length: 20 }, (_, i) => `sym${i}`),
@@ -91,5 +125,31 @@ describe("buildUsageSiteIndex", () => {
     const elapsed = performance.now() - start;
     expect(index.size).toBe(20);
     expect(elapsed).toBeLessThan(100);
+  });
+});
+
+describe("isLexicalDefinitionLine", () => {
+  it("treats signature params and declarations as definitions", () => {
+    expect(isLexicalDefinitionLine("buildSubtitle(field: Kind): string {", "field")).toBe(
+      true,
+    );
+    expect(isLexicalDefinitionLine("const value = extractFieldValue(r, f);", "value")).toBe(
+      true,
+    );
+    expect(isLexicalDefinitionLine("function extractFieldValue() {}", "extractFieldValue")).toBe(
+      true,
+    );
+    expect(isLexicalDefinitionLine("scoreGeocoderHit(result: T, field: F)", "result")).toBe(
+      true,
+    );
+  });
+
+  it("treats call arguments as usages", () => {
+    expect(
+      isLexicalDefinitionLine("const value = extractFieldValue(result, field);", "field"),
+    ).toBe(false);
+    expect(
+      isLexicalDefinitionLine("const value = extractFieldValue(result, field);", "result"),
+    ).toBe(false);
   });
 });
