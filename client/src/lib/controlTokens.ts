@@ -8,6 +8,8 @@
  *             --motion-hover-surface, --motion-hover-color, --motion-dim,
  *             --motion-chip-surface, --motion-chip-color, --ease
  * Toggle-on tokens: --interactive-toggle-bg, --interactive-toggle-border
+ * Full inventory: docs/design/tokens.md — never add one-off CSS variables.
+ * Full inventory: docs/design/tokens.md — never add one-off CSS variables.
  */
 
 /** Base interactive surface — hover + expanded/pressed use brand tokens */

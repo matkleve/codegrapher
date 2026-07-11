@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cubicPath } from "@/lib/resolvePreviewAnchor";
+import { cubicPath, type ChipRect } from "@/lib/resolvePreviewAnchor";
 
 describe("cubicPath", () => {
   it("exits horizontally before bending on vertical spans", () => {
@@ -23,14 +23,14 @@ describe("cubicPath", () => {
     expect(Number(match![4])).toBe(180);
   });
 
-  it("detours right on left-to-right spans", () => {
+  it("skirts below same-row spans instead of crossing at label height", () => {
     const path = cubicPath(40, 100, 200, 105, "right", "left");
     const match = path.match(/C ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+),/);
     expect(match).toBeTruthy();
     expect(Number(match![1])).toBeGreaterThan(70);
-    expect(Number(match![2])).toBe(100);
+    expect(Number(match![2])).toBeGreaterThan(100);
     expect(Number(match![3])).toBeLessThan(170);
-    expect(Number(match![4])).toBe(105);
+    expect(Number(match![4])).toBeGreaterThan(105);
   });
 
   it("detours left on right-to-left spans", () => {
@@ -39,15 +39,20 @@ describe("cubicPath", () => {
     expect(match).toBeTruthy();
     expect(Number(match![1])).toBeGreaterThan(250);
     expect(Number(match![3])).toBeLessThan(10);
+    expect(Number(match![2])).toBeGreaterThan(100);
+    expect(Number(match![4])).toBeGreaterThan(105);
   });
 
-  it("detours horizontally on shallow diagonal fan-in", () => {
-    const path = cubicPath(40, 60, 220, 100, "right", "left");
+  it("skirts below chip obstacles on shallow diagonal fan-in", () => {
+    const chip: ChipRect = { left: 150, top: 88, right: 240, bottom: 118 };
+    const path = cubicPath(40, 60, 220, 100, "right", "left", {
+      obstacles: [chip],
+      clearance: 32,
+    });
     const match = path.match(/C ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+),/);
     expect(match).toBeTruthy();
     expect(Number(match![1])).toBeGreaterThan(70);
     expect(Number(match![3])).toBeLessThan(190);
-    expect(Number(match![2])).toBe(60);
-    expect(Number(match![4])).toBe(100);
+    expect(Number(match![4])).toBeGreaterThan(100);
   });
 });

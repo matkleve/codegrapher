@@ -62,7 +62,7 @@
 }
 
 .graph-pane.graph-ctrl-preview .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
-  background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
+  background: var(--trace-dim-surface) !important;
 }
 
 .graph-pane.graph-ctrl-preview .react-flow__node.class-node-root {
@@ -323,25 +323,29 @@
 }
 
 .graph-trace-active .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
-  background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
+  background: var(--trace-dim-surface) !important;
 }
 
 .graph-trace-active
   .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
-    .member-row-header:hover,
-    .member-body-wrap .code-kw.hoverable:hover
+    .member-row-label:hover,
+    .member-row-label:focus-visible,
+    .member-row-label.token-chip-on,
+    .member-row-label.token-chip-hover-preview
   ) {
-  background-color: var(--brand-surface) !important;
-  border-color: var(--brand-border) !important;
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
 }
 
 .graph-pane.graph-ctrl-preview
   .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
-    .member-row-header:hover,
-    .member-body-wrap .code-kw.hoverable:hover
+    .member-row-label:hover,
+    .member-row-label:focus-visible,
+    .member-row-label.token-chip-on,
+    .member-row-label.token-chip-hover-preview
   ) {
-  background-color: var(--brand-surface) !important;
-  border-color: var(--brand-border) !important;
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
 }
 
 .graph-trace-active .code-line.trace-lit-line .code-kw,

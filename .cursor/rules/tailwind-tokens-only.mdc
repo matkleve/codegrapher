@@ -1,0 +1,49 @@
+---
+description: Design tokens — reuse canonical palette only; never invent one-off CSS variables
+alwaysApply: true
+---
+
+# Design tokens
+
+**Inventory:** `docs/design/tokens.md`  
+**Interaction contract:** `docs/specs/system/interaction-emphasis.md`  
+**Canonical emission:** `client/src/index.css` (`:root` + `.dark`)
+
+## Do not
+
+- Add new CSS custom properties for one-off hovers (`--member-title-surface-*`, `--my-hover-bg`, …)
+- Use `hover:bg-primary` on graph / explorer / member chrome (periwinkle is for committed actions)
+- Put brand gold on indexed token chips (use `--token-surface-{kind}`)
+- Hardcode colors in JS/SVG attrs — use `var(--token-edge-*)` / `var(--edge-*)` via `style`
+- Hardcode `text-[Npx]` / `h-7` in components — use scale tokens; run `npm run lint:tokens`
+
+## Allowed sources
+
+| Layer | Use for |
+| ----- | ------- |
+| `@theme inline` in `index.css` | Tailwind classes: `bg-muted`, `text-brand`, `border-brand-border`, `text-xs`, … |
+| `:root` / `.dark` domain tokens | CSS `var(--…)` and `bg-[var(--…)]` when no bridge exists |
+| `controlTokens.ts` | Interactive class bundles (`.hoverable`, `INTERACTIVE_ROW`, …) |
+| Component-local vars | Animation stagger only (e.g. `--shimmer-delay`) — not theme colors |
+
+## Semantic aliases (already in `index.css` — reuse, don't duplicate)
+
+`--interactive-toggle-*` → `--surface-active*` · `--member-sig-bg-out` → `--surface-neutral-strong` · `--file-chip-angular` → `--file-chip-ts`
+
+## Styling map
+
+- **App chrome hover:** `.hoverable` → `--brand` / `--brand-surface` / `--brand-border`
+- **Token chips (body, sig, title pill):** `--token-surface-{kind}` in `tokens-chips.css`
+- **Member row rest:** `bg-muted` on `.member-row`
+- **Member header hover (chrome):** `--brand-surface` on `.member-row-header.hoverable`
+- **Member title hover/trace:** `--member-row-trace-lit-bg` + `--member-row-trace-lit-border` on `.member-row` via `:has(.member-row-label…)` in `nodes.css`
+- **Trace/Ctrl dim rows & sig pills:** `--trace-dim-surface`
+- **Trace dim ink:** `--faint` / `--faint-ctrl` / `--faint-*` — tune in `index.css`, no parallel dim tokens
+
+## When strength is wrong
+
+Adjust the **existing** token in `index.css` for **both** `:root` and `.dark`. If the same `color-mix` appears in multiple CSS files, consolidate to an existing named token in `index.css` (e.g. `--trace-dim-surface`) — do not copy-paste mixes.
+
+## CSS file ownership
+
+`index.css` (emit + `.hoverable`) · `tokens-chips.css` (chips) · `trace-modes.css` (trace/Ctrl) · `nodes.css` (member rows) · `preview-wires.css` (wires/sockets)

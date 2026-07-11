@@ -107,26 +107,30 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-/* Row container carries brand on header or in-body keyword hover */
+/* Title hover/trace — function-blue row container (existing trace-lit tokens) */
 .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
-  .member-row-header:hover,
-  .member-body-wrap .code-kw.hoverable:hover
+  .member-row-label:hover,
+  .member-row-label:focus-visible,
+  .member-row-label.token-chip-on,
+  .member-row-label.token-chip-hover-preview
 ) {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
+  background: var(--member-row-trace-lit-bg);
+  border-color: var(--member-row-trace-lit-border);
 }
 
 .member-row-header:hover {
-  background-color: transparent !important;
-  border-color: transparent !important;
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
 }
 
-/* Indexed token hover — chip lights up; row container carries brand above */
+/* Indexed token hover — chip lights up; header chrome stays flat (see interaction-emphasis.md §3) */
 .member-row-header:hover:has(
   .member-row-label:hover,
   .member-sig-token-chip:hover,
   .member-sig-type-chip:hover
 ) {
+  background-color: transparent !important;
+  border-color: transparent !important;
   color: inherit;
 }
 
@@ -223,7 +227,7 @@
   min-width: 1.75rem;
   text-align: right;
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   line-height: inherit;
   color: var(--muted-foreground);
@@ -393,7 +397,7 @@
 /* Ctrl reveal — neutral grey pills (nodes.css loads after trace-modes) */
 .graph-pane.graph-ctrl-preview .member-sig-value--in,
 .graph-pane.graph-ctrl-preview .member-sig-value--out {
-  background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
+  background: var(--trace-dim-surface) !important;
 }
 
 .member-sig-colon {

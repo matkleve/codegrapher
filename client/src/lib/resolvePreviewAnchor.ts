@@ -98,7 +98,84 @@ export function laneOffsetFromEdgeId(edgeId: string): number {
 export type CubicPathOptions = {
   clearance?: number;
   lane?: number;
+  obstacles?: ChipRect[];
 };
+
+export type ChipRect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+/** Endpoint chip boxes in overlay-local coordinates (for skirt routing). */
+export function chipObstaclesInSvg(
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
+): ChipRect[] {
+  const pad = 3;
+  const rects: ChipRect[] = [];
+  for (const el of [fromEl, toEl]) {
+    if (!el?.isConnected) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) continue;
+    rects.push({
+      left: r.left - svgBox.left - pad,
+      top: r.top - svgBox.top - pad,
+      right: r.right - svgBox.left + pad,
+      bottom: r.bottom - svgBox.top + pad,
+    });
+  }
+  return rects;
+}
+
+function segmentIntersectsRect(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  rect: ChipRect,
+): boolean {
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+  if (maxX < rect.left || minX > rect.right || maxY < rect.top || minY > rect.bottom) {
+    return false;
+  }
+  for (const t of [0.2, 0.4, 0.5, 0.6, 0.8]) {
+    const x = x1 + (x2 - x1) * t;
+    const y = y1 + (y2 - y1) * t;
+    if (
+      x >= rect.left &&
+      x <= rect.right &&
+      y >= rect.top &&
+      y <= rect.bottom
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function skirtDepth(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  obstacles: ChipRect[],
+  clearance: number,
+  sameRow: boolean,
+  lane: number,
+): number {
+  let depth = sameRow ? clearance * 0.85 : 0;
+  for (const rect of obstacles) {
+    if (!segmentIntersectsRect(x1, y1, x2, y2, rect)) continue;
+    depth = Math.max(depth, rect.bottom - Math.max(y1, y2) + 8);
+  }
+  return depth + Math.abs(lane) * 8;
+}
 
 function elementAnchor(
   el: HTMLElement,
@@ -160,8 +237,8 @@ export function resolvePreviewAnchor(
 
 /**
  * Cubic wire — exits `from` on the right (outgoing), enters `to` on the left
- * (incoming). Shallow spans detour further left/right in the flow direction so
- * the stroke does not cut through token labels.
+ * (incoming). Shallow spans extend stubs left/right, then skirt below any chip
+ * box the chord would cross so the stroke does not cover token labels.
  */
 export function cubicPath(
   x1: number,
@@ -177,14 +254,16 @@ export function cubicPath(
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
   const clearance = opts?.clearance ?? MIN_ARC_BULGE;
-  const laneShift = (opts?.lane ?? 0) * LANE_STAGGER;
+  const lane = opts?.lane ?? 0;
+  const laneShift = lane * LANE_STAGGER;
+  const obstacles = opts?.obstacles ?? [];
   const sameRow = absDy < SAME_ROW_THRESHOLD;
   const shallowSlope = sameRow || absDy < absDx * 0.5;
 
   let c1x: number;
   let c2x: number;
-  const c1y = y1;
-  const c2y = y2;
+  let c1y = y1;
+  let c2y = y2;
 
   if (shallowSlope) {
     const bulge =
@@ -202,9 +281,18 @@ export function cubicPath(
       c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT) + exitBulge;
       c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT) + entryBulge;
     }
+    const skirt = skirtDepth(x1, y1, x2, y2, obstacles, clearance, sameRow, lane);
+    if (skirt > 0) {
+      c1y = y1 + skirt;
+      c2y = y2 + skirt;
+    }
   } else {
     c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT);
     c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT);
+    const skirt = skirtDepth(x1, y1, x2, y2, obstacles, clearance, false, lane);
+    if (skirt > 0) {
+      c2y = y2 + skirt;
+    }
   }
 
   return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;

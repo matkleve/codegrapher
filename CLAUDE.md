@@ -37,6 +37,9 @@ When behavior changes, update the owning spec in the same change.
   origin).
 - Theming: light is the `:root` default, dark is the `.dark` class; the toggle
   (`ThemeToggle`, pinned to the file-explorer footer) persists to `localStorage["codegrapher:theme"]`.
+  **Design tokens:** canonical emission in `client/src/index.css`; full inventory in
+  `docs/design/tokens.md`. **Never add new CSS custom properties** for one-off colors
+  (see `.cursor/rules/tailwind-tokens-only.mdc`). Size scale enforced by `npm run lint:tokens`.
   Colors used from JS (e.g. `TOKEN_EDGE_STROKE`) must be CSS variables applied via
   `style`, not hex literals or SVG presentation attributes.
 - Interactive hover: see `docs/specs/system/interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
@@ -46,6 +49,10 @@ When behavior changes, update the owning spec in the same change.
   rules live in `index.css` (`.hoverable:hover`, section headers, graph controls); the
   button variants share `INTERACTIVE_SURFACE` in `lib/controlTokens.ts` (keep the
   two in sync).
+- Member rows: rest = `bg-muted`; header chrome `:hover` = brand via `.member-row-header.hoverable`;
+  **title** hover/trace = function-blue container via `--member-row-trace-lit-bg` /
+  `--member-row-trace-lit-border` on `.member-row`; title pill = `--token-surface-{kind}`;
+  param pills = `--member-sig-bg-in`. Never brand gold on token chips.
 
 ## Conventions
 

@@ -1,7 +1,8 @@
 # Design tokens
 
 **Who this is for:** anyone styling UI or referencing colors from JS/SVG.  
-**Canonical emission:** `client/src/index.css` (`:root` light default, `.dark` class for dark).
+**Canonical emission:** `client/src/index.css` (`:root` light default, `.dark` class for dark).  
+**Agent rule:** `.cursor/rules/tailwind-tokens-only.mdc` — reuse tokens below; never add one-off CSS variables.
 
 **CSS layout:**
 
@@ -22,7 +23,7 @@
 | `--background`, `--foreground` | App shell |
 | `--card`, `--card-foreground` | Class node cards |
 | `--border`, `--input`, `--ring` | Borders and focus rings |
-| `--muted`, `--muted-foreground` | Secondary text |
+| `--muted`, `--muted-foreground` | Secondary text; **member row resting fill** (`bg-muted`) |
 | `--primary` | Periwinkle action accent (both themes) — **not** default interactive hover |
 
 ## Brand (interactive hover)
@@ -32,6 +33,8 @@
 | `--brand` | Gold hover ink (both themes) |
 | `--brand-surface` | Hover fill |
 | `--brand-border` | Hover border |
+
+Registered in Tailwind as `brand`, `brand-surface`, `brand-border`.
 
 ## Motion
 
@@ -82,33 +85,29 @@ One hue per indexed symbol kind — chips, preview edges, and lit trace endpoint
 
 Syntax literals (non-indexed): `--code-keyword`, `--code-string`, `--code-number`.
 
-### Achromatic surfaces (property rows, signature pills)
+### Achromatic surfaces
 
 | Token | Role |
 | ----- | ---- |
-| `--surface-neutral` | Property member row resting fill |
-| `--surface-neutral-strong` | Return pill, code body hover |
+| `--surface-neutral-strong` | Return pill, expanded body hover wash, connector hover |
+| `--trace-dim-surface` | Trace/Ctrl dim row + sig pill fill (`foreground` 3% → `card`) |
 
 ### Method member rows
 
 | Token / surface | Role |
 | ------------- | ---- |
 | `bg-muted` on `.member-row` | Resting fill for all member rows (blue-grey `--muted`) |
+| `--brand-surface` / `--brand-border` | Header **chrome** hover (`.member-row-header.hoverable`, not title pill) |
+| `--member-row-trace-lit-bg` | **Title** hover/trace + lit member row — function blue into `--background` |
+| `--member-row-trace-lit-border` | Pairs with inset ring in `trace-modes.css` |
 | `--member-sig-bg-in` | Param pill fill — `color-mix` of function blue into `--background` |
 | `--member-sig-bg-out` | Return pill fill (`--surface-neutral-strong`) |
-| `--member-row-trace-lit-bg` | Lit member row during trace hover — function blue mixed into `--background` |
-| `--member-row-trace-lit-border` | Lit row border (pairs with inset ring in `trace-modes.css`) |
 
 Do **not** `color-mix` chromatic tokens into `--card` (chroma 0 breaks oklch hue toward red). Mix into `--background` or `--muted` instead.
 
 ### Signature chips
 
-| Token | Role |
-| ----- | ---- |
-| `--member-sig-bg-in` | Param value fill (`--surface-neutral`) |
-| `--member-sig-bg-out` | Return value fill (`--surface-neutral-strong`) |
-
-Borderless; param names use variable ink; indexed types use semantic ink only when **connectable**. No `--brand` on signature surfaces.
+Borderless; param names use variable ink; indexed types use semantic ink only when **connectable**. No `--brand` on signature surfaces. Under Ctrl/trace dim, sig pills use `--trace-dim-surface`.
 
 ### Structural connection edges (`--edge-*`)
 
@@ -133,6 +132,8 @@ Preview **control-flow** wires (`switch`/`if` → branch) use a dedicated hue, `
 | ----- | ---- |
 | `--faint` | Plain trace dim ink |
 | `--faint-ctrl` | Ctrl reveal dim (harder bleach) |
+| `--faint-body`, `--faint-kw`, … | Per-syntax trace dim mixes |
+| `--trace-dim-surface` | Dim member rows + sig pills under trace/Ctrl |
 | `--glint-hi` | Ctrl shimmer streak highlight |
 
 ## File-type pills
@@ -141,7 +142,7 @@ Preview **control-flow** wires (`switch`/`if` → branch) use a dedicated hue, `
 | ----- | ---- |
 | `--file-chip-ts` | TypeScript |
 | `--file-chip-react` | React (tsx/jsx) |
-| `--file-chip-angular` | Angular |
+| `--file-chip-angular` | Alias of `--file-chip-ts` |
 | `--file-chip-test` | Spec/test files |
 
 Applied via `.file-type-chip--*` classes in `nodes.css`.
@@ -161,12 +162,12 @@ Emitted once in `:root` (`index.css`). **Do not** use arbitrary `text-[Npx]` or 
 
 | Token | rem | Tailwind bridge | Role |
 | ----- | --- | --------------- | ---- |
-| `--font-size-2xs` | 0.625 | `text-2xs` | Micro labels (chevrons, badges) |
+| `--font-size-2xs` | 0.625 | `text-2xs` | Micro labels (chevrons, gutters, badges) |
 | `--font-size-caption` | 0.6875 | `text-caption` | Load connector, compact toolbar |
 | `--font-size-xs` | 0.75 | `text-xs` | Explorer rows, code lines, menus |
 | `--font-size-sm` | 0.875 | `text-sm` | Node titles, buttons |
 | `--font-size-md` | 1 | `text-base` | Body default |
-| `--control-height-compact` | 1.375 | — | Explorer / menu row height |
+| `--control-height-compact` | 1.5 | — | Explorer / menu row height |
 | `--control-height-sm` | 1.75 | — | Small buttons, compact inputs |
 | `--control-height-md` | 2 | — | Default buttons |
 | `--control-height-lg` | 2.25 | — | Icon-only large controls |
@@ -178,10 +179,10 @@ Emitted once in `:root` (`index.css`). **Do not** use arbitrary `text-[Npx]` or 
 
 | Token | Role |
 | ----- | ---- |
-| `--interactive-toggle-bg`, `--interactive-toggle-border` | `aria-pressed` map/toolbar toggles |
+| `--interactive-toggle-bg`, `--interactive-toggle-border` | Aliases of `--surface-active*` for `aria-pressed` toggles |
 
 ---
 
 ## Tailwind bridge
 
-Brand registered as `brand`, `brand-surface`, `brand-border` in Tailwind config. Prefer CSS variables in new work.
+Brand and shadcn palette colors are registered in `@theme inline` (`index.css`). Domain tokens (chips, trace, member rows) stay CSS-only via `var(--…)` unless a bridge is explicitly added. Prefer existing tokens over new ones.

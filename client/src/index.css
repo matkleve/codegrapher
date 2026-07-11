@@ -145,11 +145,10 @@
   --code-type-primitive: oklch(0.52 0.05 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);
-  --member-row-property-bg: var(--surface-neutral);
-  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 10%, var(--background));
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 16%, var(--background));
   --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 40%, var(--border));
-  --surface-neutral: oklch(0.965 0.001 0);
   --surface-neutral-strong: oklch(0.955 0.001 0);
+  --trace-dim-surface: color-mix(in oklch, var(--foreground) 3%, var(--card));
   --code-keyword: oklch(0.42 0.14 295);
   --code-string: oklch(0.46 0.11 55);
   --code-number: oklch(0.48 0.14 300);
@@ -158,7 +157,7 @@
   --explorer-file-in-graph: oklch(0.46 0.17 278);
   --file-chip-ts: oklch(0.52 0.14 250);
   --file-chip-react: oklch(0.72 0.12 220);
-  --file-chip-angular: oklch(0.52 0.14 250);
+  --file-chip-angular: var(--file-chip-ts);
   --file-chip-test: oklch(0.68 0.16 75);
   --radius-node: calc(var(--radius) + 0.1875rem);
   /* Brand gold hover accent — clearly interactive, distinct from primary periwinkle */
@@ -275,11 +274,10 @@ html.dark {
   --code-type-primitive: oklch(0.62 0.04 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 12%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);
-  --member-row-property-bg: var(--surface-neutral);
-  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 14%, var(--background));
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 24%, var(--background));
   --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 45%, var(--border));
-  --surface-neutral: oklch(0.24 0.004 0);
   --surface-neutral-strong: oklch(0.28 0.005 0);
+  --trace-dim-surface: color-mix(in oklch, var(--foreground) 3%, var(--card));
   --code-keyword: oklch(0.78 0.10 295);
   --code-string: oklch(0.80 0.09 55);
   --code-number: oklch(0.78 0.11 300);
@@ -373,7 +371,7 @@ html.dark {
   opacity: 0.35;
   filter: saturate(0.6);
   pointer-events: none;
-  transition: opacity 120ms var(--ease), filter 120ms var(--ease);
+  transition: opacity var(--motion-hover-surface) var(--ease), filter var(--motion-hover-surface) var(--ease);
 }
 
 .sidebar-collapse-warning__overlay {
@@ -455,7 +453,7 @@ html.dark {
   opacity: 0.35;
   filter: saturate(0.6);
   pointer-events: none;
-  transition: opacity 120ms var(--ease), filter 120ms var(--ease);
+  transition: opacity var(--motion-hover-surface) var(--ease), filter var(--motion-hover-surface) var(--ease);
 }
 
 .sim-panel-collapse-warning__overlay {

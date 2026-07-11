@@ -1,10 +1,10 @@
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
   chipClearance,
+  chipObstaclesInSvg,
   cubicPath,
   laneOffsetFromEdgeId,
   resolvePreviewAnchor,
-  straightPath,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -116,12 +116,20 @@ export function updateWireGeometry(
     }
 
     wire.group.style.display = "";
-    const pathD = straightPath(fromPt.x, fromPt.y, toPt.x, toPt.y);
+    const clearance = chipClearance(fromPt.el, toPt.el);
+    const obstacles = chipObstaclesInSvg(fromPt.el, toPt.el, svgBox);
+    const lane = laneOffsetFromEdgeId(spec.id);
+    const pathD = cubicPath(
+      fromPt.x,
+      fromPt.y,
+      toPt.x,
+      toPt.y,
+      fromPt.side,
+      toPt.side,
+      { clearance, lane, obstacles },
+    );
     wire.path.setAttribute("d", pathD);
     wire.glow.setAttribute("d", pathD);
-    // Full-length hit (not just the "~1cm" jump-tip segment used below): the
-    // load stub is the only path to a floating chip, so the whole run has to
-    // stay hoverable or a slow cursor loses the trace mid-transit.
     const fullHit = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
     wire.hitFrom.setAttribute(
       "d",
@@ -144,6 +152,7 @@ export function updateWireGeometry(
 
   wire.group.style.display = "";
   const clearance = chipClearance(fromPt.el, toPt.el);
+  const obstacles = chipObstaclesInSvg(fromPt.el, toPt.el, svgBox);
   const pathD = cubicPath(
     fromPt.x,
     fromPt.y,
@@ -151,7 +160,7 @@ export function updateWireGeometry(
     toPt.y,
     fromPt.side,
     toPt.side,
-    { clearance, lane: laneOffsetFromEdgeId(spec.id) },
+    { clearance, lane: laneOffsetFromEdgeId(spec.id), obstacles },
   );
   wire.path.setAttribute("d", pathD);
   wire.glow.setAttribute("d", pathD);
