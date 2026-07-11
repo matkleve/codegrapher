@@ -14,10 +14,16 @@ export interface GraphNode {
   parent?: string;
 }
 
+export type StructuralEdgeType =
+  | "extends"
+  | "implements"
+  | "composition"
+  | "imports";
+
 export interface GraphEdge {
   source: string;
   target: string;
-  type: "contains" | "imports" | "calls";
+  type: "contains" | "imports" | "calls" | StructuralEdgeType;
   label?: string;
 }
 
@@ -204,6 +210,131 @@ function addClassImportEdges(
   }
 }
 
+function resolveTypeNameToClassId(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+  typeName: string,
+): string | null {
+  const trimmed = typeName.replace(/<.*>$/, "").trim();
+  const local = classNodeId(filePath, trimmed);
+  if (acc.nodeIds.has(local)) return local;
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    const moduleSpecifier = importDecl.getModuleSpecifierValue();
+    if (!moduleSpecifier.startsWith(".")) continue;
+    const resolved = resolveImportPath(filePath, moduleSpecifier);
+    if (!resolved) continue;
+
+    for (const named of importDecl.getNamedImports()) {
+      if (named.getName() === trimmed) {
+        return resolveTargetClassId(acc, resolved, trimmed);
+      }
+    }
+    const defaultImport = importDecl.getDefaultImport();
+    if (defaultImport?.getText() === trimmed) {
+      return resolveTargetClassId(acc, resolved, trimmed);
+    }
+  }
+
+  return null;
+}
+
+function addExtendsEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+): void {
+  for (const classDecl of sourceFile.getClasses()) {
+    if (acc.limitReached) break;
+    const className = classDecl.getName();
+    if (!className) continue;
+
+    const extendsExpr = classDecl.getExtends();
+    if (!extendsExpr) continue;
+
+    const parentName = extendsExpr.getExpression().getText();
+    const parentId = resolveTypeNameToClassId(acc, filePath, sourceFile, parentName);
+    if (!parentId) continue;
+
+    addEdge(acc, {
+      source: classNodeId(filePath, className),
+      target: parentId,
+      type: "extends",
+    });
+  }
+}
+
+function addImplementsEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+): void {
+  for (const classDecl of sourceFile.getClasses()) {
+    if (acc.limitReached) break;
+    const className = classDecl.getName();
+    if (!className) continue;
+
+    const childId = classNodeId(filePath, className);
+    for (const impl of classDecl.getImplements()) {
+      const ifaceName = impl.getExpression().getText();
+      const targetId = resolveTypeNameToClassId(acc, filePath, sourceFile, ifaceName);
+      if (!targetId) continue;
+      addEdge(acc, {
+        source: childId,
+        target: targetId,
+        type: "implements",
+        label: ifaceName,
+      });
+    }
+  }
+}
+
+function addCompositionEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+): void {
+  for (const classDecl of sourceFile.getClasses()) {
+    if (acc.limitReached) break;
+    const className = classDecl.getName();
+    if (!className) continue;
+
+    const ownerId = classNodeId(filePath, className);
+    const ctor = classDecl.getConstructors()[0];
+    if (!ctor) continue;
+
+    for (const param of ctor.getParameters()) {
+      const scope = param.getScope();
+      if (scope === undefined) continue;
+
+      const typeNode = param.getTypeNode();
+      if (!typeNode) continue;
+
+      const depName = typeNode.getText().replace(/<.*>$/, "").trim();
+      const depId = resolveTypeNameToClassId(acc, filePath, sourceFile, depName);
+      if (!depId || depId === ownerId) continue;
+
+      addEdge(acc, {
+        source: ownerId,
+        target: depId,
+        type: "composition",
+        label: param.getName(),
+      });
+    }
+  }
+}
+
+function addStructuralEdges(
+  acc: ParseAccumulator,
+  filePath: string,
+  sourceFile: SourceFile,
+): void {
+  addExtendsEdges(acc, filePath, sourceFile);
+  addImplementsEdges(acc, filePath, sourceFile);
+  addCompositionEdges(acc, filePath, sourceFile);
+}
+
 function parseFileInto(
   acc: ParseAccumulator,
   filePath: string,
@@ -289,6 +420,26 @@ function parseFileInto(
         addEdge(acc, { source: classId, target: methodId, type: "contains" });
       }
     }
+  }
+
+  for (const iface of sourceFile.getInterfaces()) {
+    if (acc.limitReached) break;
+    const ifaceName = iface.getName();
+    if (!ifaceName) continue;
+    const ifaceId = classNodeId(filePath, ifaceName);
+    if (acc.nodeIds.has(ifaceId)) continue;
+    addNode(
+      acc,
+      {
+        id: ifaceId,
+        type: "class",
+        label: ifaceName,
+        filePath,
+        code: iface.getFullText(),
+        loaded: true,
+      },
+      maxNodes,
+    );
   }
 
   if (acc.limitReached) return;
@@ -399,6 +550,9 @@ export function parseFileGraph(
     includeFileNode: false,
   });
 
+  addClassImportEdges(acc, focusFile, sourceFile);
+  addStructuralEdges(acc, focusFile, sourceFile);
+
   return {
     nodes: acc.nodes,
     edges: acc.edges,
@@ -453,6 +607,7 @@ export function parseFocus(
     const sourceFile = project.getSourceFile(fp);
     if (!sourceFile) continue;
     addClassImportEdges(acc, fp, sourceFile);
+    addStructuralEdges(acc, fp, sourceFile);
   }
 
   return {

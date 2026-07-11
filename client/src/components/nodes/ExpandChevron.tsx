@@ -44,7 +44,7 @@ export function ExpandChevron({
           "flex h-full w-full items-center justify-center",
           headerHoverPreview
             ? "expand-chevron-icon"
-            : "transition-opacity duration-[380ms] ease-[var(--ease)]",
+            : "transition-opacity duration-[var(--motion-hover-color)] ease-[var(--ease)]",
           groupFlip,
         )}
       >
@@ -53,7 +53,7 @@ export function ExpandChevron({
       {groupHoverFlip ? (
         <span
           className={cn(
-            "absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-[380ms] ease-[var(--ease)]",
+            "absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-[var(--motion-hover-color)] ease-[var(--ease)]",
             groupShow,
           )}
         >

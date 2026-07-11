@@ -11,7 +11,7 @@ Full-pane SVG with dashed paths, glowing endpoint sockets, jump tooltip on wire 
 ## Where It Lives
 
 - **Component:** `PreviewEdgeOverlay.tsx`
-- **Styles:** `connectors.css`
+- **Styles:** `preview-wires.css`, `trace-modes.css`, `tokens-chips.css`
 - **Parent:** `GraphFlowCanvas` inside graph pane
 
 ## Render loop

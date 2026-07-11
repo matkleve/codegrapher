@@ -1,0 +1,147 @@
+import type { ReactNode } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  INTERACTIVE_ROW_DOUBLE,
+  INTERACTIVE_ROW_LEFT,
+  INTERACTIVE_ROW_STATIC_LEFT,
+} from "@/lib/controlTokens";
+import { TOKEN_EDGE_STROKE, type SemanticTokenKind } from "@/lib/tokenColors";
+import { cn } from "@/lib/utils";
+
+export type InteractiveListRowProps = {
+  title: string;
+  subtitle?: string;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  /** Visual outline badge (Jump, Load, …) — row click handles the action */
+  actionLabel?: string;
+  onClick?: () => void;
+  className?: string;
+  /** `comfortable` = two-line menu row; `compact` = single-line explorer density */
+  density?: "comfortable" | "compact";
+  /** Muted hover, no button — legend rows, labels */
+  interactive?: boolean;
+};
+
+export function SemanticConnectionDot({
+  kind,
+  className,
+}: {
+  kind: SemanticTokenKind;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn("size-2 shrink-0 rounded-full", className)}
+      style={{ background: TOKEN_EDGE_STROKE[kind] }}
+      aria-hidden
+    />
+  );
+}
+
+export function InteractiveListRowText({
+  title,
+  subtitle,
+  align = "left",
+  density = "comfortable",
+}: {
+  title: string;
+  subtitle?: string;
+  align?: "left" | "right";
+  density?: "comfortable" | "compact";
+}) {
+  if (density === "compact") {
+    return (
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-left text-xs text-foreground",
+          align === "right" && "text-right",
+        )}
+      >
+        {title}
+        {subtitle ? (
+          <span className="text-muted-foreground"> · {subtitle}</span>
+        ) : null}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        "min-w-0 flex-1",
+        align === "right" ? "text-right" : "text-left",
+      )}
+    >
+      <span className="control-row-text-title block truncate text-foreground">
+        {title}
+      </span>
+      {subtitle ? (
+        <span className="control-row-text-subtitle block truncate">
+          {subtitle}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+export function InteractiveListRow({
+  title,
+  subtitle,
+  leading,
+  trailing,
+  actionLabel,
+  onClick,
+  className,
+  density = "comfortable",
+  interactive = true,
+}: InteractiveListRowProps) {
+  const rowClass = interactive
+    ? density === "comfortable"
+      ? INTERACTIVE_ROW_DOUBLE
+      : cn(INTERACTIVE_ROW_LEFT, "control-row-compact")
+    : INTERACTIVE_ROW_STATIC_LEFT;
+
+  const trailingNode =
+    trailing ??
+    (actionLabel ? (
+      <span
+        className={cn(
+          buttonVariants({ variant: "outline", size: "xs" }),
+          "pointer-events-none shrink-0 font-medium",
+        )}
+      >
+        {actionLabel}
+      </span>
+    ) : null);
+
+  const rowBody = (
+    <>
+      {leading ? <span className="flex shrink-0 items-center gap-2">{leading}</span> : null}
+      <InteractiveListRowText
+        title={title}
+        subtitle={subtitle}
+        density={density}
+      />
+      {trailingNode ? (
+        <span className="ml-1 flex shrink-0 items-center">{trailingNode}</span>
+      ) : null}
+    </>
+  );
+
+  if (!interactive) {
+    return (
+      <div className={cn(rowClass, "text-foreground", className)}>{rowBody}</div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={cn(rowClass, "text-foreground", className)}
+      onClick={onClick}
+    >
+      {rowBody}
+    </button>
+  );
+}

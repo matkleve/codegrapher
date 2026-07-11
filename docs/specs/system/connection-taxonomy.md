@@ -19,7 +19,7 @@ Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-
 
 ## Where It Lives
 
-- **Existing rendering:** `PreviewEdgeOverlay`, `connectors.css` (kind 1 only)
+- **Existing rendering:** `PreviewEdgeOverlay`, `styles/preview-wires.css` (kind 1 only)
 - **New rendering (structural kinds):** not yet built — likely a sibling overlay or a `persistent: true` edge variant on the existing overlay; implementation TBD
 - **Data (new edge emission):** `server/src/parser.ts` (`extends`/`implements` — declared in the `GraphEdge` type union today, never emitted), `server/src/indexer.ts`
 
@@ -80,7 +80,7 @@ Connection kinds
 | `server/src/parser.ts` | Would emit `extends`/`implements` edges (currently declared, unused) |
 | `client/src/lib/tokenColors.ts` | Existing per-token-kind color map; needs a parallel per-relationship-kind map |
 | `client/src/components/graph/PreviewEdgeOverlay.tsx` | Existing hover-gated rendering; structural kinds need a persistent counterpart |
-| `client/src/styles/connectors.css` | Add line-style/arrowhead variants per kind |
+| `client/src/styles/preview-wires.css` | Add line-style/arrowhead variants per kind |
 
 ## Acceptance Criteria
 

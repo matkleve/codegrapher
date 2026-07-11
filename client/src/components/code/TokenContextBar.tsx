@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Code2, Crosshair, X } from "lucide-react";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Button } from "@/components/ui/button";
+import {
+  InteractiveListRow,
+  SemanticConnectionDot,
+} from "@/components/ui/InteractiveListRow";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
 import { openFileInEditor } from "@/api";
-import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
 import { fileBaseName, fromExternalCards, fromTokenReferences } from "@/lib/loadTargets";
 import { connectionCountLabel } from "@/lib/projectReferences";
 import type { TokenReference } from "@/lib/semanticLookup";
@@ -279,97 +282,63 @@ export function TokenContextBar() {
       </div>
 
       {expanded && listCount > 0 ? (
-        <div className="max-h-40 overflow-y-auto border-t border-border px-2 py-1.5">
+        <div className="max-h-40 overflow-x-hidden overflow-y-auto border-t border-border px-1.5 py-1.5">
           <ul className="flex flex-col gap-0.5">
             {isDefinition
               ? callSites.map((site, idx) => (
                   <li key={`c-${site.filePath}-${site.line}-${idx}`}>
-                    <button
-                      type="button"
-                      className={cn(
-                        INTERACTIVE_ROW_LEFT,
-                        "w-full gap-2 py-1.5 text-xs text-foreground",
-                      )}
-                      onClick={() => {
-                        if (site.inGraph) {
-                          loadTarget(site.filePath);
-                          return;
-                        }
-                        loadTarget(site.filePath);
-                      }}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ background: swatch }}
-                        aria-hidden
-                      />
-                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                      <span className="min-w-0 truncate text-left">
-                        {fileBaseName(site.filePath)}
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · line {site.line}
-                          {site.inGraph ? " · on canvas" : ""}
-                        </span>
-                      </span>
-                    </button>
+                    <InteractiveListRow
+                      title={fileBaseName(site.filePath)}
+                      subtitle={`line ${site.line}${site.inGraph ? " · on canvas" : ""}`}
+                      leading={
+                        <>
+                          <SemanticConnectionDot kind={kind} />
+                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                        </>
+                      }
+                      onClick={() => loadTarget(site.filePath)}
+                    />
                   </li>
                 ))
               : null}
             {!isDefinition
               ? graphRefs.map((ref, idx) => (
                   <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
-                    <button
-                      type="button"
-                      className={cn(
-                        INTERACTIVE_ROW_LEFT,
-                        "w-full gap-2 py-1.5 text-xs text-foreground",
-                      )}
+                    <InteractiveListRow
+                      title={
+                        ref.memberLabel
+                          ? `${ref.classLabel} → ${ref.memberLabel}`
+                          : ref.classLabel
+                      }
+                      subtitle={`line ${ref.line}`}
+                      leading={
+                        <>
+                          <SemanticConnectionDot kind={ref.kind} />
+                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                        </>
+                      }
                       onClick={() => {
                         clearTokenInfo();
                         focusFlowNode(ref.flowNodeId!);
                       }}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
-                        aria-hidden
-                      />
-                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                      <span className="min-w-0 truncate text-left">
-                        {ref.memberLabel
-                          ? `${ref.classLabel} → ${ref.memberLabel}`
-                          : ref.classLabel}
-                        <span className="text-muted-foreground"> · line {ref.line}</span>
-                      </span>
-                    </button>
+                    />
                   </li>
                 ))
               : null}
             {!isDefinition
               ? externalRefs.map((ref, idx) => (
                   <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
-                    <button
-                      type="button"
-                      className={cn(
-                        INTERACTIVE_ROW_LEFT,
-                        "w-full gap-2 py-1.5 text-xs text-foreground",
-                      )}
-                      onClick={() => {
-                        loadTarget(ref.filePath);
-                      }}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
-                        aria-hidden
-                      />
-                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                      <span className="min-w-0 truncate text-left">
-                        {ref.classLabel}
-                        <span className="text-muted-foreground"> · line {ref.line}</span>
-                      </span>
-                    </button>
+                    <InteractiveListRow
+                      title={ref.classLabel}
+                      subtitle={`line ${ref.line}`}
+                      leading={
+                        <>
+                          <SemanticConnectionDot kind={ref.kind} />
+                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                        </>
+                      }
+                      onClick={() => loadTarget(ref.filePath)}
+                    />
                   </li>
                 ))
               : null}

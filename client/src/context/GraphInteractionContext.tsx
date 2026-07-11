@@ -58,8 +58,14 @@ import {
 import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { notifyWireTransform } from "@/lib/wireEngine";
+import {
+  buildStructuralEdges,
+  mountedClassGraphIds,
+} from "@/lib/buildStructuralEdges";
+import { buildTransitiveEdges } from "@/lib/buildTransitiveEdges";
+import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
-import type { GraphData, ReferenceEntry } from "@/types";
+import type { GraphData, ReferenceEntry, StructuralEdgeType } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
 export { edgeTouchesHandle, refinePreviewEdge } from "@/lib/resolveLiveAnchor";
@@ -88,6 +94,12 @@ export type { TokenInfoState };
 
 type GraphInteractionContextValue = {
   previewEdges: PreviewEdgeSpec[];
+  structuralEdges: StructuralEdgeSpec[];
+  pulseEdges: StructuralEdgeSpec[];
+  showImports: boolean;
+  setShowImports: (show: boolean) => void;
+  setPulseEdges: React.Dispatch<React.SetStateAction<StructuralEdgeSpec[]>>;
+  transitiveHopDepth: number;
   isHandleActive: (handle: string) => boolean;
   edgeKindAtHandle: (handle: string) => SemanticTokenKind | null;
   /** Set trace key + wires in one commit (avoids staggered lit paint). */
@@ -186,6 +198,9 @@ export function GraphInteractionProvider({
     null,
   );
   const [pinHistoryLength, setPinHistoryLength] = useState(0);
+  const [showImports, setShowImports] = useState(false);
+  const [pulseEdges, setPulseEdges] = useState<StructuralEdgeSpec[]>([]);
+  const transitiveHopDepth = 2;
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
   const hoveredTokenKeyRef = useRef<string | null>(null);
@@ -529,6 +544,16 @@ export function GraphInteractionProvider({
   );
   const pinnedTokenKey = activePinKey;
 
+  const indexedSymbolNames = useMemo(
+    () => new Set(symbols.keys()),
+    [symbols],
+  );
+
+  const usageSiteIndex = useMemo(
+    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
+    [indexedSymbolNames, nodes],
+  );
+
   const traceTokenKey =
     activePinKey ?? hoveredTokenKey ?? pinnedTraces[0]?.tokenKey ?? null;
   const isTraceActive =
@@ -541,18 +566,57 @@ export function GraphInteractionProvider({
       !pinnedKeys(pinnedTraces).includes(hoveredTokenKey) &&
       hoverPreviewEdges.length > 0;
 
+    let edges: PreviewEdgeSpec[];
     if (pinnedPreviewEdges.length > 0) {
-      return hasParallelHover
+      edges = hasParallelHover
         ? [...pinnedPreviewEdges, ...hoverPreviewEdges]
         : pinnedPreviewEdges;
+    } else {
+      edges = hoverPreviewEdges;
     }
-    return hoverPreviewEdges;
+
+    if (traceTokenKey && graphData && edges.length > 0) {
+      const transitive = buildTransitiveEdges(
+        traceTokenKey,
+        graphData,
+        usageSiteIndex,
+        transitiveHopDepth,
+        getNode,
+        symbols,
+      );
+      if (transitive.length > 0) {
+        edges = [...edges, ...transitive];
+      }
+    }
+
+    return edges;
   }, [
+    graphData,
+    getNode,
     hoverPreviewEdges,
     hoveredTokenKey,
     pinnedPreviewEdges,
     pinnedTraces,
+    traceTokenKey,
+    usageSiteIndex,
+    symbols,
   ]);
+
+  const mountedGraphIds = useMemo(() => {
+    const flowIds = new Set(nodes.map((n) => n.id));
+    return mountedClassGraphIds(graphData, flowIds);
+  }, [graphData, nodes]);
+
+  const visibleStructuralTypes = useMemo(() => {
+    const types = new Set<StructuralEdgeType>(["extends", "implements", "composition"]);
+    if (showImports) types.add("imports");
+    return types;
+  }, [showImports]);
+
+  const structuralEdges = useMemo(
+    () => buildStructuralEdges(graphData, mountedGraphIds, visibleStructuralTypes),
+    [graphData, mountedGraphIds, visibleStructuralTypes],
+  );
 
   const revealRevision = useMemo(() => {
     const parts: string[] = [];
@@ -629,16 +693,6 @@ export function GraphInteractionProvider({
     revealRevision,
     symbols,
   ]);
-
-  const indexedSymbolNames = useMemo(
-    () => new Set(symbols.keys()),
-    [symbols],
-  );
-
-  const usageSiteIndex = useMemo(
-    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
-    [indexedSymbolNames, nodes],
-  );
 
   const lookupIndexedUsageSites = useCallback(
     (token: string, sourceFlowId: string, sourceMemberId?: string) => {
@@ -729,6 +783,12 @@ export function GraphInteractionProvider({
   const value = useMemo(
     () => ({
       previewEdges,
+      structuralEdges,
+      pulseEdges,
+      showImports,
+      setShowImports,
+      transitiveHopDepth,
+      setPulseEdges,
       isHandleActive,
       edgeKindAtHandle,
       beginTrace,
@@ -768,6 +828,10 @@ export function GraphInteractionProvider({
     }),
     [
       previewEdges,
+      structuralEdges,
+      pulseEdges,
+      showImports,
+      transitiveHopDepth,
       isHandleActive,
       edgeKindAtHandle,
       beginTrace,

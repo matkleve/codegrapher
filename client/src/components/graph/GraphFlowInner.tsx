@@ -37,6 +37,9 @@ import type {
   GraphCanvasProps,
 } from "@/components/graph/graphCanvasTypes";
 import { GraphInteractionProvider } from "@/context/GraphInteractionContext";
+import { SimulationProvider } from "@/context/SimulationContext";
+import { SimulationPanel, SimulationPreflight } from "@/components/simulation/SimulationPanel";
+import { SimulationToolbar } from "@/components/simulation/SimulationToolbar";
 import { JumpTooltipProvider } from "@/context/JumpTooltipContext";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { FIT_VIEW_PADDING, layoutFlowElements } from "@/lib/flowLayout";
@@ -560,7 +563,9 @@ export function GraphFlowInner({
           onLoadFile={onLoadFile}
           onFocusReadingMember={focusReadingMember}
         >
-          <GraphPane
+          <SimulationProvider>
+            <div className="flex min-h-0 min-w-0 flex-1">
+              <GraphPane
             ref={graphPaneRef}
             onDragOver={(e) => {
               e.preventDefault();
@@ -612,6 +617,11 @@ export function GraphFlowInner({
               </div>
             )}
           </GraphPane>
+              <SimulationPanel />
+            </div>
+            <SimulationToolbar />
+            <SimulationPreflight />
+          </SimulationProvider>
         </GraphInteractionProvider>
       </JumpTooltipProvider>
 

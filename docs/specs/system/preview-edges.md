@@ -13,7 +13,7 @@ Semantic-color dashed curves (function blue, class blue, …) with animated dash
 ## Where It Lives
 
 - **Orchestration:** `GraphInteractionContext`, `useTokenTrace`
-- **Rendering:** `PreviewEdgeOverlay`, `connectors.css`
+- **Rendering:** `PreviewEdgeOverlay`, `styles/preview-wires.css`, `styles/trace-modes.css`
 - **Anchors:** `ctrlPreviewHandles.ts`, `resolvePreviewAnchor.ts`, `resolveLiveAnchor.ts`
 
 ## Actions
@@ -90,7 +90,9 @@ stateDiagram-v2
 | `PreviewEdgeOverlay.tsx` | SVG + live refine loop |
 | `resolveLiveAnchor.ts` | Per-frame anchor upgrade |
 | `linksForElement.ts` | Def fan-out sites |
-| `connectors.css` | Trace dim, sockets, wires |
+| `preview-wires.css` | Wires, sockets |
+| `trace-modes.css` | Trace dim |
+| `tokens-chips.css` | Chip ink |
 
 ## Acceptance Criteria
 

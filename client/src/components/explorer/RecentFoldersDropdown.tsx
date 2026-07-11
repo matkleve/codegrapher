@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { Separator } from "@/components/ui/separator";
 import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
 import { folderDisplayName } from "@/lib/recentFolders";
@@ -26,17 +27,14 @@ export function RecentFoldersDropdown({
         <p className="cursor-default px-0 pb-2 text-xs font-medium text-muted-foreground">
           Recent folders
         </p>
-        <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+        <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
           {folders.map((path) => (
             <li key={path}>
-              <button
-                type="button"
-                className={`${INTERACTIVE_ROW_LEFT} py-2 text-[length:var(--font-size-sm)]`}
+              <InteractiveListRow
+                title={folderDisplayName(path)}
+                subtitle={path}
                 onClick={() => onSelect(path)}
-              >
-                <span className="block truncate text-sm font-medium">{folderDisplayName(path)}</span>
-                <span className="block truncate text-xs text-muted-foreground">{path}</span>
-              </button>
+              />
             </li>
           ))}
         </ul>

@@ -23,7 +23,7 @@ codegrapher uses a **single high-attention tier** for pointer focus: **brand gol
 
 - Global: `client/src/index.css` — `.hoverable:hover`, section headers, graph controls
 - JS constants: `client/src/lib/controlTokens.ts` — keep in sync with CSS
-- Connector motion: `client/src/styles/connectors.css`
+- Connector motion: `client/src/styles/preview-wires.css`, `client/src/styles/tokens-chips.css`
 
 ## Focus-visible
 

@@ -35,6 +35,12 @@ export function createWireGroup(
   path.classList.add("preview-edge-path");
   if (spec.load) path.classList.add("preview-edge-load");
   if (warm) path.classList.add("preview-edge-warm");
+  if (spec.hop === 2) path.classList.add("preview-wire--hop2");
+  if (spec.hop === 3) path.classList.add("preview-wire--hop3");
+  if (spec.opacity != null && spec.opacity < 1) {
+    path.style.opacity = String(spec.opacity);
+    glow.style.opacity = String(spec.opacity * 0.12);
+  }
   if (!spec.load) path.setAttribute("marker-end", "url(#preview-edge-arrow)");
 
   const hitFrom = document.createElementNS("http://www.w3.org/2000/svg", "path");

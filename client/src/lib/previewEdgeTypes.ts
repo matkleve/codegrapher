@@ -21,6 +21,9 @@ export type PreviewEdgeSpec = {
   kind: SemanticTokenKind;
   liveFrom?: LiveAnchorHint;
   liveTo?: LiveAnchorHint;
+  /** Transitive hop distance (2+); decays opacity on wire. */
+  hop?: number;
+  opacity?: number;
   /** Off-graph definition — dashed load stub + pill beside usage token. */
   load?: {
     token: string;

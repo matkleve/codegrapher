@@ -59,31 +59,7 @@ export function semanticFromChipElement(
   return entry ? symbolKindToSemantic(entry.kind) : "variable";
 }
 
-/** Resting text color per token type. */
-export const TOKEN_TEXT: Record<SemanticTokenKind, string> = {
-  function: "text-[color:var(--token-edge-function)]",
-  class: "text-[color:var(--token-edge-class)]",
-  type: "text-[color:var(--token-edge-type)]",
-  variable: "text-[color:var(--token-edge-variable)]",
-};
-
-/** Active chip border + anchor fill. */
-export const TOKEN_BORDER: Record<SemanticTokenKind, string> = {
-  function:
-    "border-[color:color-mix(in_oklch,var(--token-edge-function)_55%,var(--border))] dark:border-[color:color-mix(in_oklch,var(--token-edge-function)_50%,var(--border))]",
-  class: "border-[color:var(--token-edge-class)]",
-  type: "border-[color:var(--token-edge-type)]",
-  variable: "border-[color:var(--token-edge-variable)]",
-};
-
-/** Active chip background (Ctrl held). */
-export const TOKEN_BG: Record<SemanticTokenKind, string> = {
-  function: "bg-[color:color-mix(in_oklch,var(--token-edge-function)_10%,transparent)]",
-  class: "bg-[color:color-mix(in_oklch,var(--token-edge-class)_10%,transparent)]",
-  type: "bg-[color:color-mix(in_oklch,var(--token-edge-type)_10%,transparent)]",
-  variable: "bg-[color:color-mix(in_oklch,var(--token-edge-variable)_10%,transparent)]",
-};
-
+/** Flow-anchor fill classes — chip ink/borders live in tokens-chips.css via data-token-kind. */
 export const TOKEN_ANCHOR: Record<SemanticTokenKind, string> = {
   function:
     "bg-[color:var(--token-edge-function)] text-[color:var(--token-edge-function)]",
@@ -99,16 +75,4 @@ export const TOKEN_EDGE_STROKE: Record<SemanticTokenKind, string> = {
   class: "var(--token-edge-class)",
   type: "var(--token-edge-type)",
   variable: "var(--token-edge-variable)",
-};
-
-/** @deprecated Use TOKEN_BORDER + TOKEN_BG */
-export const TOKEN_PILL: Record<SemanticTokenKind, string> = {
-  class:
-    "border-[color:var(--token-edge-class)] bg-[color:color-mix(in_oklch,var(--token-edge-class)_10%,transparent)] text-[color:var(--token-edge-class)]",
-  function:
-    "border-[color:color-mix(in_oklch,var(--token-edge-function)_55%,var(--border))] bg-[color:color-mix(in_oklch,var(--token-edge-function)_10%,transparent)] text-[color:var(--token-edge-function)]",
-  type:
-    "border-[color:var(--token-edge-type)] bg-[color:color-mix(in_oklch,var(--token-edge-type)_10%,transparent)] text-[color:var(--token-edge-type)]",
-  variable:
-    "border-[color:var(--token-edge-variable)] bg-[color:color-mix(in_oklch,var(--token-edge-variable)_10%,transparent)] text-[color:var(--token-edge-variable)]",
 };

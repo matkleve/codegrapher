@@ -1,0 +1,329 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { buildStepList } from "@/lib/staticWalk/buildStepList";
+import { extractParamNames, scopeAtStep } from "@/lib/staticWalk/scopeAtStep";
+import { previewLineHandle } from "@/lib/ctrlPreviewHandles";
+import type {
+  PlaybackSpeed,
+  SimSession,
+  SimStep,
+  SimValue,
+} from "@/lib/staticWalk/types";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
+
+type SimAnchor = {
+  flowNodeId: string;
+  memberId: string;
+  methodName: string;
+  code: string;
+  signatureLine: string;
+  startLine: number;
+  endLine?: number;
+};
+
+type SimulationContextValue = {
+  simActive: boolean;
+  panelOpen: boolean;
+  setPanelOpen: (open: boolean) => void;
+  session: SimSession | null;
+  playbackSpeed: PlaybackSpeed;
+  setPlaybackSpeed: (speed: PlaybackSpeed) => void;
+  playing: boolean;
+  preflightOpen: boolean;
+  preflightInputs: Record<string, string>;
+  setPreflightInput: (name: string, value: string) => void;
+  startAnchor: SimAnchor | null;
+  endAnchor: { line: number } | null;
+  requestStartHere: (anchor: SimAnchor) => void;
+  requestEndHere: (line: number) => void;
+  runStartToEnd: (anchor: SimAnchor) => void;
+  confirmPreflight: () => void;
+  cancelPreflight: () => void;
+  stepForward: () => void;
+  stepBack: () => void;
+  togglePlay: () => void;
+  scrubTo: (index: number) => void;
+  exitSimulation: () => void;
+  currentScope: Map<string, SimValue>;
+};
+
+const SimulationContext = createContext<SimulationContextValue | null>(null);
+
+const LOOP_CAP = 100;
+
+function buildSession(
+  anchor: SimAnchor,
+  inputs: Record<string, string>,
+  endLine: number,
+): SimSession {
+  const parsed = buildStepList(anchor.code, anchor.startLine, endLine);
+  const paramNames = extractParamNames(anchor.signatureLine);
+  const steps: SimStep[] = parsed.map((stmt, index) => ({
+    lineNumber: stmt.lineNumber,
+    text: stmt.text,
+    kind: stmt.kind,
+    scopeSnapshot: scopeAtStep(anchor.code, index, inputs, paramNames),
+    edgePulse:
+      stmt.kind === "call" || stmt.kind === "return"
+        ? { fromLine: stmt.lineNumber, token: stmt.text.match(/\.(\w+)\s*\(/)?.[1] }
+        : undefined,
+  }));
+
+  return {
+    flowNodeId: anchor.flowNodeId,
+    memberId: anchor.memberId,
+    methodName: anchor.methodName,
+    startLine: anchor.startLine,
+    endLine,
+    inputs,
+    steps,
+    currentIndex: 0,
+  };
+}
+
+export function SimulationProvider({ children }: { children: ReactNode }) {
+  const { setPulseEdges, endHoverPreview } = useGraphInteraction();
+  const [simActive, setSimActive] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [session, setSession] = useState<SimSession | null>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
+  const [playing, setPlaying] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightInputs, setPreflightInputs] = useState<Record<string, string>>({});
+  const [startAnchor, setStartAnchor] = useState<SimAnchor | null>(null);
+  const [endAnchor, setEndAnchor] = useState<{ line: number } | null>(null);
+  const playLoopRef = useRef(0);
+
+  useEffect(() => {
+    if (!session || !simActive) {
+      setPulseEdges([]);
+      return;
+    }
+    const step = session.steps[session.currentIndex];
+    if (!step?.edgePulse) {
+      setPulseEdges([]);
+      return;
+    }
+    setPulseEdges([
+      {
+        id: `sim-pulse-${session.currentIndex}`,
+        from: {
+          type: "handle",
+          handle: previewLineHandle(session.memberId, step.edgePulse.fromLine),
+        },
+        to: {
+          type: "handle",
+          handle: previewLineHandle(session.memberId, step.lineNumber),
+        },
+        edgeType: "composition",
+        strokeStyle: "solid",
+        arrowhead: "open",
+        pulse: true,
+      },
+    ]);
+  }, [session, simActive, setPulseEdges]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("graph-sim-active", simActive);
+    return () => document.documentElement.classList.remove("graph-sim-active");
+  }, [simActive]);
+
+  useEffect(() => {
+    if (simActive) endHoverPreview();
+  }, [simActive, endHoverPreview]);
+
+  const exitSimulation = useCallback(() => {
+    setPlaying(false);
+    setSimActive(false);
+    setSession(null);
+    setPreflightOpen(false);
+    setStartAnchor(null);
+    setEndAnchor(null);
+    setPulseEdges([]);
+    window.clearInterval(playLoopRef.current);
+  }, [setPulseEdges]);
+
+  const activateSession = useCallback(
+    (anchor: SimAnchor, inputs: Record<string, string>) => {
+      const endLine = endAnchor?.line ?? anchor.code.split("\n").length;
+      const next = buildSession(anchor, inputs, endLine);
+      setSession(next);
+      setSimActive(true);
+      setPanelOpen(true);
+      setPreflightOpen(false);
+    },
+    [endAnchor],
+  );
+
+  const requestStartHere = useCallback((anchor: SimAnchor) => {
+    setStartAnchor(anchor);
+    setPanelOpen(true);
+    const params = extractParamNames(anchor.signatureLine);
+    const defaults: Record<string, string> = {};
+    for (const p of params) defaults[p] = "";
+    setPreflightInputs(defaults);
+    setPreflightOpen(true);
+  }, []);
+
+  const requestEndHere = useCallback((line: number) => {
+    setEndAnchor({ line });
+  }, []);
+
+  const runStartToEnd = useCallback(
+    (anchor: SimAnchor) => {
+      setStartAnchor(anchor);
+      requestStartHere(anchor);
+    },
+    [requestStartHere],
+  );
+
+  const confirmPreflight = useCallback(() => {
+    if (!startAnchor) return;
+    activateSession(startAnchor, preflightInputs);
+  }, [activateSession, preflightInputs, startAnchor]);
+
+  const cancelPreflight = useCallback(() => {
+    setPreflightOpen(false);
+  }, []);
+
+  const scrubTo = useCallback((index: number) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const clamped = Math.max(0, Math.min(index, prev.steps.length - 1));
+      return { ...prev, currentIndex: clamped };
+    });
+  }, []);
+
+  const stepForward = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      if (prev.currentIndex >= prev.steps.length - 1) return prev;
+      return { ...prev, currentIndex: prev.currentIndex + 1 };
+    });
+  }, []);
+
+  const stepBack = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      if (prev.currentIndex <= 0) return prev;
+      return { ...prev, currentIndex: prev.currentIndex - 1 };
+    });
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    setPlaying((p) => !p);
+  }, []);
+
+  useEffect(() => {
+    if (!playing || !session) {
+      window.clearInterval(playLoopRef.current);
+      return;
+    }
+
+    let iterations = 0;
+    playLoopRef.current = window.setInterval(() => {
+      iterations++;
+      if (iterations > LOOP_CAP) {
+        setPlaying(false);
+        return;
+      }
+      setSession((prev) => {
+        if (!prev || prev.currentIndex >= prev.steps.length - 1) {
+          setPlaying(false);
+          return prev;
+        }
+        return { ...prev, currentIndex: prev.currentIndex + 1 };
+      });
+    }, 600 / playbackSpeed);
+
+    return () => window.clearInterval(playLoopRef.current);
+  }, [playing, playbackSpeed, session]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && simActive) exitSimulation();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [exitSimulation, simActive]);
+
+  const currentScope = useMemo(() => {
+    if (!session) return new Map<string, SimValue>();
+    return session.steps[session.currentIndex]?.scopeSnapshot ?? new Map();
+  }, [session]);
+
+  const value = useMemo(
+    () => ({
+      simActive,
+      panelOpen,
+      setPanelOpen,
+      session,
+      playbackSpeed,
+      setPlaybackSpeed,
+      playing,
+      preflightOpen,
+      preflightInputs,
+      setPreflightInput: (name: string, value: string) =>
+        setPreflightInputs((prev) => ({ ...prev, [name]: value })),
+      startAnchor,
+      endAnchor,
+      requestStartHere,
+      requestEndHere,
+      runStartToEnd,
+      confirmPreflight,
+      cancelPreflight,
+      stepForward,
+      stepBack,
+      togglePlay,
+      scrubTo,
+      exitSimulation,
+      currentScope,
+    }),
+    [
+      simActive,
+      panelOpen,
+      session,
+      playbackSpeed,
+      playing,
+      preflightOpen,
+      preflightInputs,
+      startAnchor,
+      endAnchor,
+      requestStartHere,
+      requestEndHere,
+      runStartToEnd,
+      confirmPreflight,
+      cancelPreflight,
+      stepForward,
+      stepBack,
+      togglePlay,
+      scrubTo,
+      exitSimulation,
+      currentScope,
+    ],
+  );
+
+  return (
+    <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>
+  );
+}
+
+export function useSimulation(): SimulationContextValue {
+  const ctx = useContext(SimulationContext);
+  if (!ctx) {
+    throw new Error("useSimulation must be used within SimulationProvider");
+  }
+  return ctx;
+}
+
+export function useSimulationOptional(): SimulationContextValue | null {
+  return useContext(SimulationContext);
+}

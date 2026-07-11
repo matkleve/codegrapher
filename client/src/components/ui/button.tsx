@@ -5,7 +5,7 @@ import { INTERACTIVE_SURFACE } from "@/lib/controlTokens"
 import { cn } from "@/lib/utils"
 
 const interactiveStates =
-  "transition-[background-color,border-color,color,box-shadow] duration-300 ease-[var(--ease)] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:transition-[color,stroke] [&_svg]:duration-300 [&_svg]:ease-[var(--ease)]"
+  "transition-[background-color,border-color,color,box-shadow] duration-[var(--motion-hover-surface)] ease-[var(--ease)] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:transition-[color,stroke] [&_svg]:duration-[var(--motion-hover-color)] [&_svg]:ease-[var(--ease)]"
 
 const buttonVariants = cva(
   cn(

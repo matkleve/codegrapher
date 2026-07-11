@@ -11,6 +11,8 @@ import { TokenConnectionMenu } from "@/components/code/TokenConnectionMenu";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
+import { ConnectionLegend } from "@/components/graph/ConnectionLegend";
+import { SimulationPanelToggle } from "@/components/simulation/SimulationPanelToggle";
 import { LoadConnector } from "@/components/graph/LoadConnector";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
@@ -85,6 +87,10 @@ export function GraphFlowCanvas({
         <LoadConnector />
       </ReactFlow>
       <GraphPinchZoomBoost />
+      <div className="pointer-events-auto absolute right-3 top-3 z-50 flex items-center gap-1">
+        <SimulationPanelToggle />
+        <ConnectionLegend />
+      </div>
       <TokenContextBar />
       <TokenConnectionMenu />
       <JumpTooltip />

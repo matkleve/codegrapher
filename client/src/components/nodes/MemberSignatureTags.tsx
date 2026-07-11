@@ -69,6 +69,10 @@ export function MemberSignatureTags({
                   <MemberSignatureTypeLabel
                     type={param.type}
                     variant="in"
+                    memberId={memberId}
+                    flowNodeId={flowNodeId}
+                    graphNodeId={graphNodeId}
+                    filePath={filePath}
                     shimmerDelay={`-${((memberId.length + index + 1) * 0.37).toFixed(2)}s`}
                   />
                 </>
@@ -88,6 +92,10 @@ export function MemberSignatureTags({
               <MemberSignatureTypeLabel
                 type={returnType}
                 variant="out"
+                memberId={memberId}
+                flowNodeId={flowNodeId}
+                graphNodeId={graphNodeId}
+                filePath={filePath}
                 shimmerDelay={`-${((memberId.length + params.length + 1) * 0.37).toFixed(2)}s`}
               />
             </span>

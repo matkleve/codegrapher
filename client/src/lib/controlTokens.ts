@@ -5,7 +5,8 @@
  * Components import these constants — do not duplicate hover:bg-brand-* in Tailwind.
  *
  * CSS tokens: --brand, --brand-surface, --brand-border,
- *             --motion-hover-surface, --motion-hover-color, --ease
+ *             --motion-hover-surface, --motion-hover-color, --motion-dim,
+ *             --motion-chip-surface, --motion-chip-color, --ease
  * Toggle-on tokens: --interactive-toggle-bg, --interactive-toggle-border
  */
 
@@ -18,10 +19,15 @@ export const INTERACTIVE_ROW =
 
 export const INTERACTIVE_ROW_LEFT = `${INTERACTIVE_ROW} w-full justify-start text-left`;
 
+/** Two-line title + subtitle rows (menus, connection lists) — nav font tokens, not compact fixed height */
+export const INTERACTIVE_ROW_DOUBLE =
+  `${INTERACTIVE_SURFACE} control-row-double pointer-events-auto flex w-full cursor-pointer items-center justify-start border border-transparent text-left`;
+
 export const INTERACTIVE_ROW_NODRAG = `${INTERACTIVE_ROW} nodrag`;
+
+/** Read-only menu row — muted hover, no click affordance */
+export const INTERACTIVE_ROW_STATIC_LEFT =
+  "hoverable-neutral control-row-compact flex w-full cursor-default items-center border border-transparent justify-start text-left";
 
 /** Graph map / toolbar toggle when aria-pressed */
 export const INTERACTIVE_TOGGLE_ACTIVE = "interactive-toggle--active";
-
-/** Icon control: border only at rest, brand fill only on :hover (ignores aria-expanded fill) */
-export const INTERACTIVE_BORDER_BTN = "hoverable interactive-border-only";

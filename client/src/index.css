@@ -117,15 +117,19 @@
   --chart-1: oklch(0.52 0.16 278);
   --chart-2: oklch(0.58 0.14 255);
   --chart-3: oklch(0.54 0.11 200);
-  --chart-4: oklch(0.48 0.14 340);
+  --chart-4: oklch(0.48 0.08 258);
   --chart-5: oklch(0.38 0.03 260);
-  --token-class: var(--token-function);
-  --token-function: oklch(0.50 0.17 255);
-  --token-type: oklch(0.50 0.11 200);
   --token-edge-function: oklch(0.50 0.17 255);
-  --token-edge-class: var(--token-edge-function);
+  --token-edge-class: oklch(0.48 0.16 278);
   --token-edge-type: oklch(0.50 0.11 200);
-  --token-edge-variable: var(--token-edge-function);
+  --token-edge-variable: oklch(0.47 0.14 292);
+  --edge-inheritance: oklch(0.48 0.14 310);
+  --edge-implementation: oklch(0.50 0.12 175);
+  --edge-composition: oklch(0.46 0.15 25);
+  --edge-import: oklch(0.50 0.06 250);
+  --code-type-primitive: oklch(0.52 0.05 258);
+  --member-sig-bg-in: color-mix(in oklch, var(--foreground) 4%, var(--card));
+  --member-sig-bg-out: color-mix(in oklch, var(--foreground) 6%, var(--card));
   --code-keyword: oklch(0.42 0.14 295);
   --code-string: oklch(0.46 0.11 55);
   --code-number: oklch(0.48 0.14 300);
@@ -133,6 +137,11 @@
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
   --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.46 0.17 278);
+  --file-chip-ts: oklch(0.52 0.14 250);
+  --file-chip-react: oklch(0.72 0.12 220);
+  --file-chip-angular: oklch(0.50 0.22 25);
+  --file-chip-test: oklch(0.68 0.16 75);
+  --radius-node: 13px;
   /* Brand gold hover accent — clearly interactive, distinct from primary periwinkle */
   --brand: oklch(0.52 0.13 88);
   --brand-surface: oklch(0.96 0.03 88);
@@ -141,6 +150,9 @@
   --interactive-toggle-border: var(--surface-active-border);
   --motion-hover-surface: 320ms;
   --motion-hover-color: 380ms;
+  --motion-dim: 200ms;
+  --motion-chip-surface: 220ms;
+  --motion-chip-color: 280ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   /* Two dimming levels: --faint = hover/trace (prototype value); --faint-ctrl =
@@ -217,13 +229,17 @@ html.dark {
   --sidebar-accent-foreground: var(--secondary-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --token-class: var(--token-function);
-  --token-function: oklch(0.74 0.11 255);
-  --token-type: oklch(0.72 0.09 200);
   --token-edge-function: oklch(0.74 0.11 255);
-  --token-edge-class: var(--token-edge-function);
+  --token-edge-class: oklch(0.74 0.12 278);
   --token-edge-type: oklch(0.72 0.09 200);
-  --token-edge-variable: var(--token-edge-function);
+  --token-edge-variable: oklch(0.72 0.10 292);
+  --edge-inheritance: oklch(0.74 0.11 310);
+  --edge-implementation: oklch(0.72 0.10 175);
+  --edge-composition: oklch(0.72 0.12 25);
+  --edge-import: oklch(0.62 0.05 250);
+  --code-type-primitive: oklch(0.62 0.04 258);
+  --member-sig-bg-in: color-mix(in oklch, var(--foreground) 4%, var(--card));
+  --member-sig-bg-out: color-mix(in oklch, var(--foreground) 6%, var(--card));
   --code-keyword: oklch(0.78 0.10 295);
   --code-string: oklch(0.80 0.09 55);
   --code-number: oklch(0.78 0.11 300);
@@ -239,7 +255,7 @@ html.dark {
   --interactive-toggle-border: var(--surface-active-border);
   --faint: oklch(0.46 0.03 255);
   --faint-ctrl: oklch(0.34 0.03 255);
-  --glint-hi: #ffffff;
+  --glint-hi: oklch(1 0 0);
   --node-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.55);
 }
 
@@ -380,6 +396,35 @@ html.dark {
   height: var(--icon-size-sm);
 }
 
+/* Two-line menu rows — same xs / line-height: 1 tokens as explorer, auto height for 2 lines */
+.control-row-double {
+  height: auto;
+  padding-block: 0.25rem;
+  padding-inline: var(--control-padding-x-compact);
+  gap: var(--control-gap-compact);
+  align-items: center;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+
+.control-row-double .control-row-text-title {
+  font-weight: 500;
+  line-height: 1;
+  color: var(--foreground);
+}
+
+.control-row-double .control-row-text-subtitle {
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+
+.control-row-double svg:not([class*="size-"]),
+.control-row-double [data-icon] {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
 /* ── Interactive surface system (single source — see lib/controlTokens.ts) ── */
 .hoverable {
   transition:
@@ -409,6 +454,21 @@ html.dark {
   stroke: var(--brand);
 }
 
+/* Read-only rows (legend, labels) — muted hover without brand accent */
+.hoverable-neutral {
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease);
+  border: 1px solid transparent;
+}
+
+.hoverable-neutral:hover {
+  background-color: var(--muted);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
 /* Context bar — neutral hover; brand on chips reads as warning */
 [data-token-context-bar] .hoverable:hover {
   background-color: var(--muted);
@@ -420,45 +480,6 @@ html.dark {
 [data-token-context-bar] .hoverable:hover [data-icon] {
   color: var(--foreground);
   stroke: var(--foreground);
-}
-
-/* Border-only controls: transparent at rest; brand only on :hover */
-.interactive-border-only {
-  background-color: transparent;
-  border-color: var(--border);
-  color: var(--muted-foreground);
-}
-
-.interactive-border-only svg,
-.interactive-border-only [data-icon] {
-  color: var(--muted-foreground);
-  stroke: var(--muted-foreground);
-}
-
-.interactive-border-only:hover {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
-  color: var(--brand);
-}
-
-.interactive-border-only[aria-expanded="true"] {
-  background-color: transparent;
-  border-color: var(--border);
-  color: var(--muted-foreground);
-}
-
-.interactive-border-only[aria-expanded="true"]:hover {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
-  color: var(--brand);
-}
-
-.interactive-border-only:hover svg,
-.interactive-border-only:hover [data-icon],
-.interactive-border-only[aria-expanded="true"]:hover svg,
-.interactive-border-only[aria-expanded="true"]:hover [data-icon] {
-  color: var(--brand);
-  stroke: var(--brand);
 }
 
 /* Section headers + folder rows: muted at rest; brand only on :hover (expanded ≠ active) */
@@ -513,20 +534,6 @@ html.dark {
 .bg-sidebar button.explorer-folder-row:hover svg,
 .bg-sidebar button.explorer-folder-row:hover [data-icon] {
   color: var(--brand);
-}
-
-[data-graph-control] .graph-map-control-btn {
-  transition:
-    background-color var(--motion-hover-surface) var(--ease),
-    border-color var(--motion-hover-surface) var(--ease),
-    color var(--motion-hover-color) var(--ease),
-    box-shadow var(--motion-hover-surface) var(--ease);
-}
-
-[data-graph-control] .graph-map-control-btn svg {
-  transition:
-    color var(--motion-hover-color) var(--ease),
-    stroke var(--motion-hover-color) var(--ease);
 }
 
 .interactive-toggle--active,
@@ -653,289 +660,7 @@ html.dark {
   }
 }
 
-@import "./styles/connectors.css";
-
-/* Class/module node header — drag surface, expand/collapse, separator at bottom. */
-.node-card-header {
-  background-color: transparent;
-}
-
-.node-card-header:hover .node-card-caret,
-.node-card-header[aria-expanded="true"] .node-card-caret {
-  color: var(--brand);
-}
-
-.node-card-header .expand-chevron-icon {
-  transition: transform 380ms var(--ease);
-}
-
-.node-card-header[aria-expanded="false"]:hover:not(:has(.node-card-title:hover))
-  .expand-chevron-icon {
-  transform: rotate(90deg);
-}
-
-.node-card-header[aria-expanded="true"]:hover:not(:has(.node-card-title:hover))
-  .expand-chevron-icon {
-  transform: rotate(-90deg);
-}
-
-/* File-type chip — brand hover on the pill only (not the node header drag surface) */
-.file-type-chip {
-  transition:
-    background-color var(--motion-hover-surface) var(--ease),
-    border-color var(--motion-hover-surface) var(--ease),
-    color var(--motion-hover-color) var(--ease);
-}
-
-.file-type-chip:hover {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
-  color: var(--brand);
-}
-
-/* Node header drag grip — icon only at rest; brand surface on hover */
-.node-drag-grip {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  padding: var(--control-padding-x-sm) var(--control-padding-x-compact);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: grab;
-  background-color: transparent;
-  color: var(--muted-foreground);
-  transition: background-color var(--motion-hover-surface) var(--ease);
-}
-
-.node-drag-grip:hover {
-  background-color: var(--brand-surface);
-}
-
-.node-drag-grip:active {
-  cursor: grabbing;
-}
-
-.node-drag-grip svg {
-  color: currentColor;
-  stroke: currentColor;
-}
-
-/* Member row header layout (expand/collapse corners — not in proto) */
-.member-row-header {
-  background-color: transparent;
-  border-left-color: transparent;
-  border-right-color: transparent;
-  border-top-color: transparent;
-}
-
-.member-row-header--collapsed {
-  border-radius: var(--radius-md);
-}
-
-.member-row-header--expanded {
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-
-/* Member row: expand hit-target without painting the whole bar (proto .member-head) */
-.member-row-header.hoverable:hover,
-.member-row-header.hoverable[aria-expanded="true"] {
-  background-color: transparent;
-  border-color: transparent;
-  color: inherit;
-}
-
-.member-row-header.hoverable:hover .member-row-caret,
-.member-row-header.hoverable[aria-expanded="true"] .member-row-caret {
-  color: var(--brand);
-}
-
-.member-row-header--collapsed.hoverable:hover {
-  border-radius: var(--radius-md);
-}
-
-.member-row-header--expanded.hoverable:hover {
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-
-.node-card-caret,
-.member-row-caret,
-.member-section-label,
-.member-section-bulk {
-  transition: color var(--motion-hover-color) var(--ease);
-}
-
-/* Unicode carets sit low in the em-box — optical center against label text */
-.expand-chevron {
-  translate: 0 -0.06em;
-}
-
-/* Member row: rotate caret + lighten body on header hover (not while over token label) */
-.member-row-header .expand-chevron-icon {
-  transition: transform 380ms var(--ease);
-}
-
-.member-row-header[aria-expanded="false"]:hover:not(:has(.member-row-label:hover))
-  .expand-chevron-icon {
-  transform: rotate(90deg);
-}
-
-.member-row-header[aria-expanded="true"]:hover:not(:has(.member-row-label:hover))
-  .expand-chevron-icon {
-  transform: rotate(-90deg);
-}
-
-.member-body-wrap {
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  transition: background-color 0.2s var(--ease);
-}
-
-.member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
-  background-color: color-mix(in oklch, var(--background) 55%, var(--muted));
-}
-
-.dark .member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
-  background-color: color-mix(in oklch, white 8%, var(--muted));
-}
-
-/* Method header signature tags — in (params) vs out (return) */
-.member-signature-tags {
-  gap: 0.375rem;
-}
-
-.member-sig-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.member-sig-kind-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 0.875rem;
-  height: 0.875rem;
-  color: var(--muted-foreground);
-  line-height: 0;
-}
-
-.member-sig-value {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: baseline;
-  gap: 0.125rem;
-  border-radius: var(--token-chip-radius);
-  padding: 0 0.25rem;
-  white-space: nowrap;
-  font-size: inherit;
-  line-height: inherit;
-}
-
-.member-sig-value:has(.member-sig-type--expanded) {
-  align-items: flex-start;
-  white-space: normal;
-}
-
-.member-sig-type {
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  text-align: left;
-}
-
-.member-sig-type--expandable {
-  cursor: pointer;
-  max-width: 11rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-sig-type--expandable.member-sig-type--expanded {
-  max-width: min(100%, 16rem);
-  overflow: visible;
-  text-overflow: unset;
-  white-space: normal;
-}
-
-.member-sig-type-lines {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-
-.member-sig-type-line {
-  display: block;
-  white-space: nowrap;
-}
-
-.member-sig-value--in {
-  background: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
-}
-
-.member-sig-value--out {
-  background: color-mix(in oklch, var(--brand) 12%, var(--background));
-}
-
-.member-sig-param-name {
-  color: var(--foreground);
-}
-
-.member-sig-colon {
-  opacity: 0.5;
-}
-
-.member-sig-type--in {
-  color: var(--token-edge-function);
-}
-
-.member-sig-type--out {
-  color: var(--brand);
-}
-
-.member-signature-tags .token-chip.member-sig-token-chip {
-  margin: 0;
-  padding: 0;
-  font-size: inherit;
-  font-weight: 500;
-  line-height: inherit;
-  background: transparent;
-  box-shadow: none;
-  filter: none;
-}
-
-.member-sig-sep {
-  width: 1px;
-  align-self: stretch;
-  min-height: 0.75rem;
-  margin-inline: 0.125rem;
-  background: color-mix(in oklch, var(--border) 85%, transparent);
-}
-
-@keyframes node-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.react-flow__node.node-fade-in {
-  animation: node-fade-in 400ms ease-out;
-}
-
-@keyframes token-ref-dash {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.token-ref-connector-path {
-  stroke-dashoffset: 16;
-  animation: token-ref-dash 800ms linear infinite;
-}
+@import "./styles/tokens-chips.css";
+@import "./styles/trace-modes.css";
+@import "./styles/preview-wires.css";
+@import "./styles/nodes.css";

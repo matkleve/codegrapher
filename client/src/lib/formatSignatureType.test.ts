@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isIndexedSignatureType,
   isPrimitiveTypeName,
+  primaryIndexedSymbolInType,
 } from "@/lib/formatSignatureType";
 
 describe("signature type indexing", () => {
@@ -20,5 +21,11 @@ describe("signature type indexing", () => {
       true,
     );
     expect(isIndexedSignatureType("AddressFieldKind", hasSymbol)).toBe(true);
+  });
+
+  it("returns the first indexed symbol for trace targets", () => {
+    expect(primaryIndexedSymbolInType("Promise<GeocoderSearchResult>", hasSymbol)).toBe(
+      "GeocoderSearchResult",
+    );
   });
 });

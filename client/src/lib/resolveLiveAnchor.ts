@@ -31,7 +31,6 @@ export function findMemberDefLabel(
   memberId: string,
   token: string,
 ): HTMLElement | null {
-  const defKey = `${flowNodeId}::${memberId}`;
   const fromMember = getByMemberId(memberId);
   if (fromMember?.isConnected) {
     const label = fromMember.querySelector<HTMLElement>(

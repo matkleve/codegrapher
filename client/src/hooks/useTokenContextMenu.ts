@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useSimulationOptional } from "@/context/SimulationContext";
 import {
   buildContextMenu,
   buildDefinitionContextSections,
@@ -15,10 +16,17 @@ export type OpenContextMenuArgs = {
   editorLine?: number;
 };
 
+type SimulationAnchorArgs = {
+  methodName: string;
+  code: string;
+  signatureLine: string;
+};
+
 type UseTokenContextMenuArgs = {
   filePath: string;
   sourceFlowId: string;
   sourceMemberId?: string;
+  simulation?: SimulationAnchorArgs;
 };
 
 /** Right-click → full connection menu (jump + load). Does not pin. */
@@ -26,6 +34,7 @@ export function useTokenContextMenu({
   filePath,
   sourceFlowId,
   sourceMemberId,
+  simulation,
 }: UseTokenContextMenuArgs) {
   const {
     findReferences,
@@ -33,6 +42,7 @@ export function useTokenContextMenu({
     lookupIndexedUsageSites,
     showConnectionMenu,
   } = useGraphInteraction();
+  const sim = useSimulationOptional();
 
   return useCallback(
     (e: React.MouseEvent, { token, kind, role, chipEl, editorLine }: OpenContextMenuArgs & { chipEl: HTMLElement }) => {
@@ -60,7 +70,42 @@ export function useTokenContextMenu({
         filePath,
         editorTarget,
       );
-      if (menu) showConnectionMenu(menu);
+      if (!menu) return;
+
+      if (sim && simulation && sourceMemberId) {
+        const lineNumber = editorLine ?? 1;
+        const simAnchor = {
+          flowNodeId: sourceFlowId,
+          memberId: sourceMemberId,
+          methodName: simulation.methodName,
+          code: simulation.code,
+          signatureLine: simulation.signatureLine,
+          startLine: lineNumber,
+        };
+        showConnectionMenu({
+          ...menu,
+          simActions: [
+            {
+              id: "sim-start",
+              label: "Start trace here",
+              onSelect: () => sim.requestStartHere(simAnchor),
+            },
+            {
+              id: "sim-end",
+              label: "Set as end point",
+              onSelect: () => sim.requestEndHere(lineNumber),
+            },
+            {
+              id: "sim-run",
+              label: "Run start → end",
+              onSelect: () => sim.runStartToEnd(simAnchor),
+            },
+          ],
+        });
+        return;
+      }
+
+      showConnectionMenu(menu);
     },
     [
       filePath,
@@ -68,6 +113,8 @@ export function useTokenContextMenu({
       findReferences,
       lookupIndexedUsageSites,
       showConnectionMenu,
+      sim,
+      simulation,
       sourceFlowId,
       sourceMemberId,
     ],

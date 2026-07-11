@@ -37,6 +37,7 @@ export type TokenConnectionMenuState = {
   contextFilePath?: string;
   showRightClickHint?: boolean;
   editorTarget?: { filePath: string; line: number };
+  simActions?: { id: string; label: string; onSelect: () => void }[];
 };
 
 export function anchorBelowElement(el: HTMLElement): { x: number; y: number } {

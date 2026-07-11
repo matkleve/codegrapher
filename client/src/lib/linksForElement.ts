@@ -1,4 +1,12 @@
-import { buildCallSiteLoadPreviewEdge, buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
+import {
+  buildCallSiteLoadPreviewEdge,
+  buildElementPreviewEdge,
+  buildLoadPreviewEdge,
+  buildUsagePreviewEdge,
+} from "@/lib/buildPreviewEdges";
+import { ctrlPreviewEdgeId } from "@/lib/ctrlPreviewHandles";
+import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
+import type { SymbolEntry } from "@/types";
 import { toFlowId } from "@/lib/graphIds";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
@@ -121,6 +129,41 @@ export function paramUsageCount(
 }
 
 /** Param definition in header or signature line → in-body usages (DOM or member-scoped index). */
+/** Indexed type name in a method signature tag → definition on canvas or Load stub. */
+export function buildSignatureTypeUsageEdges(
+  symbolName: string,
+  kind: SemanticTokenKind,
+  usageEl: HTMLElement,
+  symbols: Map<string, SymbolEntry[]>,
+  graphData: GraphData | null,
+  getNode: (id: string) => Node | undefined,
+  sourceFlowId: string,
+  memberId: string,
+): PreviewEdgeSpec[] {
+  const resolved = resolveVisibleTarget(
+    symbolName,
+    symbols,
+    graphData,
+    getNode,
+    sourceFlowId,
+  );
+  if (!resolved) return [];
+
+  const edgeKey = ctrlPreviewEdgeId(
+    sourceFlowId,
+    `sig-type::${memberId}::${symbolName}`,
+  );
+
+  if (resolved.mode === "external") {
+    if (resolved.cards.length === 0) return [];
+    return [
+      buildLoadPreviewEdge(edgeKey, resolved.cards, usageEl, symbolName, kind),
+    ];
+  }
+
+  return [buildUsagePreviewEdge(edgeKey, resolved, usageEl, symbolName)];
+}
+
 export function buildParamDefPreviewEdges(
   paramName: string,
   paramDefId: string,

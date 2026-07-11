@@ -1,0 +1,191 @@
+/**
+ * Indexed token chips — resting ink, chip-on, load connector shell.
+ * Proto mapping: .tok / .member-head .name → .token-chip / .token-def-label
+ */
+
+.token-chip,
+.token-def-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 -2px;
+  padding: var(--token-chip-pad-y) var(--token-chip-pad-x);
+  border-radius: var(--token-chip-radius);
+  font-weight: 560;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-chip-surface) var(--ease),
+    box-shadow var(--motion-chip-surface) var(--ease),
+    color var(--motion-chip-color) var(--ease),
+    filter var(--motion-chip-surface) var(--ease);
+}
+
+.token-def-label {
+  padding: var(--token-def-label-pad-y) var(--token-def-label-pad-x);
+  border-radius: var(--token-def-label-radius);
+  font-weight: 620;
+}
+
+.token-chip[data-token-kind="class"] .token-chip-text {
+  color: var(--token-edge-class);
+}
+
+.token-chip[data-token-kind="function"] .token-chip-text {
+  color: var(--token-edge-function);
+}
+
+.token-chip[data-token-kind="type"] .token-chip-text {
+  color: var(--token-edge-type);
+}
+
+.token-chip[data-token-kind="variable"] .token-chip-text {
+  color: var(--token-edge-variable);
+}
+
+.token-def-label[data-token-kind="class"] {
+  color: var(--token-edge-class);
+}
+
+.token-def-label[data-token-kind="function"] {
+  color: var(--token-edge-function);
+}
+
+.token-def-label[data-token-kind="type"] {
+  color: var(--token-edge-type);
+}
+
+.token-def-label[data-token-kind="variable"] {
+  color: var(--token-edge-variable);
+}
+
+/* Resting text-fill — base glyphs always use currentColor; Ctrl glint is ::after only. */
+.token-chip-text {
+  display: block;
+  line-height: 1;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.token-def-label {
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.token-shimmer-target {
+  position: relative;
+}
+
+.token-chip.token-chip-on,
+.token-def-label.token-chip-on {
+  filter: brightness(1.16) saturate(1.12);
+}
+
+.token-chip.token-chip-on[data-token-kind="class"],
+.token-def-label.token-chip-on[data-token-kind="class"] {
+  background: color-mix(in oklch, var(--token-edge-class) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-class) 76%, transparent);
+}
+
+.token-chip.token-chip-on[data-token-kind="function"],
+.token-def-label.token-chip-on[data-token-kind="function"] {
+  background: color-mix(in oklch, var(--token-edge-function) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-function) 76%, transparent);
+}
+
+.token-chip.token-chip-on[data-token-kind="type"],
+.token-def-label.token-chip-on[data-token-kind="type"] {
+  background: color-mix(in oklch, var(--token-edge-type) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-type) 76%, transparent);
+}
+
+.token-chip.token-chip-on[data-token-kind="variable"],
+.token-def-label.token-chip-on[data-token-kind="variable"] {
+  background: color-mix(in oklch, var(--token-edge-variable) 15%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-variable) 76%, transparent);
+}
+
+/* Pinned trace source — lock semantic ink while hovering a foreign preview */
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="class"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="class"] {
+  color: var(--token-edge-class) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="function"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="function"] {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="type"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="type"] {
+  color: var(--token-edge-type) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="variable"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="variable"] {
+  color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source:hover .token-chip-text,
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source:focus-visible .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:hover,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:focus-visible {
+  color: inherit !important;
+  filter: none;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Ephemeral hover preview endpoint — brand accent while pin stays semantic */
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview {
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--brand) 68%, transparent);
+}
+
+/* Shared connector chip shell (inline tokens + overlay Load) */
+.connector-chip-text {
+  display: block;
+  line-height: 1;
+  -webkit-text-fill-color: currentColor;
+}
+
+.connector-chip--inline .connector-chip-text {
+  font-size: inherit;
+}
+
+.connector-chip--load {
+  padding: var(--connector-chip-load-pad-y) var(--connector-chip-load-pad-x);
+  border-radius: var(--connector-chip-load-radius);
+  background: var(--card);
+  border: 1px dashed color-mix(in oklch, var(--token-edge-function) 55%, var(--border));
+  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--border) 80%, transparent);
+  filter: none;
+  cursor: pointer;
+  z-index: 46;
+}
+
+.connector-chip--load[data-load-socket="right"] [data-flow-anchor="left"],
+.connector-chip--load:not([data-load-socket]) [data-flow-anchor="left"] {
+  display: none;
+}
+
+.connector-chip--load[data-load-socket="left"] [data-flow-anchor="right"] {
+  display: none;
+}
+
+.connector-chip--load .connector-chip-text {
+  font-size: var(--connector-chip-load-font-size);
+  font-weight: 560;
+  color: var(--token-edge-function);
+}
+
+.connector-chip--load:hover {
+  background: var(--brand-surface);
+}

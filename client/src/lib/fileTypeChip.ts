@@ -33,16 +33,11 @@ export type FileTypeChipStyle = {
   pillClass: string;
 };
 
-// The colored icon + faint background tint carry the language identity, so the
-// label text stays muted (the bright per-language text read too hot).
-const TS_PILL =
-  "border-[#3178c6]/35 bg-[#3178c6]/10 text-muted-foreground";
-const REACT_PILL =
-  "border-[#61dafb]/35 bg-[#61dafb]/10 text-muted-foreground";
-const ANGULAR_PILL =
-  "border-[#dd0031]/35 bg-[#dd0031]/10 text-muted-foreground";
-const TEST_PILL =
-  "border-amber-500/35 bg-amber-500/10 text-muted-foreground";
+// Language identity via CSS vars (--file-chip-*) in nodes.css; label stays muted.
+const TS_PILL = "file-type-chip--ts text-muted-foreground";
+const REACT_PILL = "file-type-chip--react text-muted-foreground";
+const ANGULAR_PILL = "file-type-chip--angular text-muted-foreground";
+const TEST_PILL = "file-type-chip--test text-muted-foreground";
 const DEFAULT_PILL =
   "border-border bg-muted text-muted-foreground";
 

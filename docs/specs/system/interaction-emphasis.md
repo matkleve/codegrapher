@@ -10,7 +10,7 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 
 ## Where It Lives
 
-- **CSS:** `client/src/index.css` (`.hoverable`), `connectors.css` (trace modes)
+- **CSS:** `client/src/index.css` (`.hoverable`), `styles/trace-modes.css`, `styles/tokens-chips.css`
 - **JS:** `client/src/lib/controlTokens.ts`
 - **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned` on `.graph-pane` (graph mood root)
 
@@ -43,17 +43,19 @@ flowchart TB
 | Token chip text | `--faint` | semantic `--token-edge-*` | `--faint`, no hover lift |
 | Token background | transparent | `token-chip-on` tint, **no inset border** | transparent |
 | Node card header | card white | card white | card white |
-| Member row (lit) | subtle function tint | `trace-member-lit` | per trace lit set |
+| Member row (lit) | neutral grey fill | `trace-member-lit` | per trace lit set |
 | FlowAnchor socket | hidden | soft glow `currentColor` | hidden unless endpoint |
 
-Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`connectors.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
+Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`trace-modes.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
 
 ## Component Hierarchy
 
 ```text
 index.css (.hoverable)
 ├── controlTokens.ts
-├── connectors.css (trace / ctrl / pinned)
+├── tokens-chips.css (chip ink / chip-on)
+├── trace-modes.css (trace / ctrl / pinned)
+├── preview-wires.css (sockets, wires)
 └── GraphFlowCanvas (mode classes)
 ```
 
@@ -63,7 +65,9 @@ index.css (.hoverable)
 | ---- | ------- |
 | `index.css` | Global `.hoverable`; header no trace tint |
 | `controlTokens.ts` | Tailwind bundles — sync with CSS |
-| `connectors.css` | Dim, lit, sockets, pinned lock |
+| `tokens-chips.css` | Resting ink, chip-on, pinned lock |
+| `trace-modes.css` | Dim, lit, Ctrl shimmer |
+| `preview-wires.css` | Sockets, preview wires |
 
 ## Acceptance Criteria
 

@@ -1,5 +1,7 @@
-import { updateWireGeometry, type WireElements } from "@/lib/previewEdgeDom";
+import type { WireElements } from "@/lib/previewEdgeDom";
+import type { StructuralWireElements } from "@/lib/structuralEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { Node } from "@xyflow/react";
 
 const SETTLE_MS = 100;
@@ -10,11 +12,20 @@ export type WireEngine = {
   dispose: () => void;
 };
 
+type WireLayer = {
+  getSpecs: () => PreviewEdgeSpec[] | StructuralEdgeSpec[];
+  getWires: () => Map<string, WireElements | StructuralWireElements>;
+  update: (
+    wire: WireElements | StructuralWireElements,
+    box: DOMRect,
+    getNode: (id: string) => Node | undefined,
+  ) => boolean;
+};
+
 type WireEngineOptions = {
   getSvg: () => SVGSVGElement | null;
-  getSpecs: () => PreviewEdgeSpec[];
-  getWires: () => Map<string, WireElements>;
   getNode: (id: string) => Node | undefined;
+  layers: WireLayer[];
 };
 
 export function createWireEngine(options: WireEngineOptions): WireEngine {
@@ -23,11 +34,16 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
 
   const tickOnce = (): void => {
     const svg = options.getSvg();
-    if (!svg || options.getSpecs().length === 0) return;
+    if (!svg) return;
     const box = svg.getBoundingClientRect();
-    for (const spec of options.getSpecs()) {
-      const wire = options.getWires().get(spec.id);
-      if (wire) updateWireGeometry(wire, box, options.getNode);
+    const hasSpecs = options.layers.some((layer) => layer.getSpecs().length > 0);
+    if (!hasSpecs) return;
+
+    for (const layer of options.layers) {
+      for (const spec of layer.getSpecs()) {
+        const wire = layer.getWires().get(spec.id);
+        if (wire) layer.update(wire, box, options.getNode);
+      }
     }
   };
 
@@ -52,7 +68,8 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
   };
 
   const onTransformChange = (): void => {
-    if (options.getSpecs().length === 0) return;
+    const hasSpecs = options.layers.some((layer) => layer.getSpecs().length > 0);
+    if (!hasSpecs) return;
     if (!raf) {
       raf = requestAnimationFrame(loop);
     }

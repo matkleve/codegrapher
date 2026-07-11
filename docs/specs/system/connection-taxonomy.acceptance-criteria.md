@@ -46,7 +46,7 @@ Child of [connection-taxonomy.md](connection-taxonomy.md). Per-kind Actions, Dat
 
 ## 2. Transitive (cousin / N-hop)
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Decayed-opacity extension of usage wires showing 2-hop (and optionally 3-hop) reach from a hovered/pinned token — e.g. A calls B calls C implies a secondary wire A⇢C when `transitiveHopDepth` allows.
 
@@ -75,18 +75,18 @@ Hop chain is built by walking existing usage/call relationships on the current e
 
 ### Acceptance Criteria
 
-- [ ] 1-hop wires unchanged from kind 1 (full opacity)
-- [ ] 2-hop wires render at visibly lower opacity than 1-hop
-- [ ] No wire shown beyond `transitiveHopDepth` (default 2)
-- [ ] Transitive wires clear when trace clears (leave grace / Esc / unpinned)
-- [ ] Computation runs only for the active hovered/pinned token, not eagerly for all nodes
-- [ ] Transitive wires use the same anchor escalation rules as usage wires
+- [x] 1-hop wires unchanged from kind 1 (full opacity)
+- [x] 2-hop wires render at visibly lower opacity than 1-hop
+- [x] No wire shown beyond `transitiveHopDepth` (default 2)
+- [x] Transitive wires clear when trace clears (leave grace / Esc / unpinned)
+- [x] Computation runs only for the active hovered/pinned token, not eagerly for all nodes
+- [x] Transitive wires use the same anchor escalation rules as usage wires
 
 ---
 
 ## 3. Inheritance
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Persistent structural wire for `class Child extends Parent`, child class header → parent class header.
 
@@ -115,18 +115,18 @@ Cross-file resolution: parent class resolved via import graph + `classNodeId(fil
 
 ### Acceptance Criteria
 
-- [ ] `extends` edge emitted when parser finds heritage clause and resolves parent class id
-- [ ] Wire renders without hover when both classes are on canvas
-- [ ] Hollow-triangle arrowhead, solid line, distinguishable from usage and composition
-- [ ] Only direct parent edge per class — no transitive grandparent wire
-- [ ] Cross-file parent resolves when parent file is in the same focus batch
-- [ ] Wire hidden when parent not on canvas (no dashed Load stub)
+- [x] `extends` edge emitted when parser finds heritage clause and resolves parent class id
+- [x] Wire renders without hover when both classes are on canvas
+- [x] Hollow-triangle arrowhead, solid line, distinguishable from usage and composition
+- [x] Only direct parent edge per class — no transitive grandparent wire
+- [x] Cross-file parent resolves when parent file is in the same focus batch
+- [x] Wire hidden when parent not on canvas (no dashed Load stub)
 
 ---
 
 ## 4. Implementation
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Persistent structural wire for `class C implements I`, class header → interface/type node header.
 
@@ -152,16 +152,16 @@ Cross-file resolution: parent class resolved via import graph + `classNodeId(fil
 
 ### Acceptance Criteria
 
-- [ ] `implements` edge emitted per interface clause when target resolves on canvas
-- [ ] Dotted line + hollow triangle, visually distinct from inheritance (solid) and usage (dashed)
-- [ ] Multiple interfaces produce multiple wires, not one aggregated edge
-- [ ] Wires persist without hover; hidden when interface endpoint not loaded
+- [x] `implements` edge emitted per interface clause when target resolves on canvas
+- [x] Dotted line + hollow triangle, visually distinct from inheritance (solid) and usage (dashed)
+- [x] Multiple interfaces produce multiple wires, not one aggregated edge
+- [x] Wires persist without hover; hidden when interface endpoint not loaded
 
 ---
 
 ## 5. Override
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Row-level annotation when a method overrides a parent method. **No canvas edge.**
 
@@ -184,17 +184,17 @@ Cross-file resolution: parent class resolved via import graph + `classNodeId(fil
 
 ### Acceptance Criteria
 
-- [ ] Override detected for subclass method with same name as resolvable parent method
-- [ ] Badge visible on member row without expanding method body
-- [ ] No persistent canvas edge for override relationship
-- [ ] Click badge summons one-hop preview wire to parent method (or Load stub if off-graph)
-- [ ] Badge visually distinct from trace-lit state (muted, not gold brand)
+- [x] Override detected for subclass method with same name as resolvable parent method
+- [x] Badge visible on member row without expanding method body
+- [x] No persistent canvas edge for override relationship
+- [x] Click badge summons one-hop preview wire to parent method (or Load stub if off-graph)
+- [x] Badge visually distinct from trace-lit state (muted, not gold brand)
 
 ---
 
 ## 6. Composition / DI
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Persistent structural wire for constructor parameter-properties (`constructor(private gateway: PaymentGateway)`), owner class → dependency class.
 
@@ -221,17 +221,17 @@ Cross-file resolution: parent class resolved via import graph + `classNodeId(fil
 
 ### Acceptance Criteria
 
-- [ ] Composition edge emitted for each constructor parameter-property with class-typed annotation
-- [ ] Filled-diamond arrowhead, solid line, distinguishable from inheritance triangle and usage dashed
-- [ ] One edge per injected dependency
-- [ ] Wire persists without hover when both classes on canvas
-- [ ] Body-assigned properties (`this.foo = foo` without parameter-property) do not emit composition edges in v1
+- [x] Composition edge emitted for each constructor parameter-property with class-typed annotation
+- [x] Filled-diamond arrowhead, solid line, distinguishable from inheritance triangle and usage dashed
+- [x] One edge per injected dependency
+- [x] Wire persists without hover when both classes on canvas
+- [x] Body-assigned properties (`this.foo = foo` without parameter-property) do not emit composition edges in v1
 
 ---
 
 ## 7. Module import
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** Optional thin wire showing file-level `import` dependency between class nodes. Off by default.
 
@@ -259,17 +259,17 @@ Reuses existing `imports` edges from parser where both endpoint classes are on c
 
 ### Acceptance Criteria
 
-- [ ] Module-import wires hidden by default
-- [ ] Graph header toggle shows/hides all import wires on current ego-graph
-- [ ] Wires use thin dotted style, visually subordinate to usage and structural edges
-- [ ] Toggling does not affect hover/preview trace behavior
-- [ ] Only drawn when both importer and imported class nodes are on canvas
+- [x] Module-import wires hidden by default
+- [x] Graph header toggle shows/hides all import wires on current ego-graph
+- [x] Wires use thin dotted style, visually subordinate to usage and structural edges
+- [x] Toggling does not affect hover/preview trace behavior
+- [x] Only drawn when both importer and imported class nodes are on canvas
 
 ---
 
 ## 8. Shared-dependency (sibling highlight)
 
-**Status:** `not started`
+**Status:** `implemented`
 
 **What it is:** When hovering/pinning a symbol that two or more unrelated call sites share, highlight all sibling usages in the dependency's color. **No edge between siblings.**
 
@@ -293,11 +293,11 @@ Reuses existing `imports` edges from parser where both endpoint classes are on c
 
 ### Acceptance Criteria
 
-- [ ] Sibling usages both receive lit/on styling when definition is traced
-- [ ] No preview edge drawn directly between sibling usage sites
-- [ ] Behavior composes with kind 1 fan-out (def→each usage wires still drawn)
-- [ ] Works with 2+ siblings without performance regression on graphs ≤ 50 nodes
-- [ ] Off-graph siblings still show via Load stub / reference list, not sibling highlight
+- [x] Sibling usages both receive lit/on styling when definition is traced
+- [x] No preview edge drawn directly between sibling usage sites
+- [x] Behavior composes with kind 1 fan-out (def→each usage wires still drawn)
+- [x] Works with 2+ siblings without performance regression on graphs ≤ 50 nodes
+- [x] Off-graph siblings still show via Load stub / reference list, not sibling highlight
 
 ---
 

@@ -9,8 +9,8 @@ Use cases: [design/token-interaction-use-cases.md](../../design/token-interactio
 
 ## What It Looks Like
 
-An indexed token is a **token chip** in its kind color (class blue, function
-blue, variable indigo). Pointer gestures summon a **preview edge** (definition →
+An indexed token is a **token chip** in its kind color (class periwinkle, function
+blue, type teal, variable indigo). Pointer gestures summon a **preview edge** (definition →
 usage), an **info box**, a **jump tip**, or a **Load connector**; the surrounding
 code **dims** so the answer stands alone. Nothing is a standing layer — release
 the gesture and the node returns to its calm resting state. This spec catalogs
@@ -47,8 +47,9 @@ Every indexed token in a class node body (`CodeLine`), member row header
 
 | Kind | Chip color | Definition target | Usage target | Body cascade |
 | ---- | ---------- | ----------------- | ------------ | ------------ |
-| **Class** | blue | class header anchor | usage site line | node lights; no member spread |
+| **Class** | periwinkle | class header anchor | usage site line | node lights; no member spread |
 | **Function / method** | blue | member row / expanded line | call site line | lights **its own body** (top→bottom) |
+| **Type** (annotation / import) | teal | type reference | usage site line | same as class (no body spread) |
 | **Variable / property** | indigo | property row | read/write site | does **not** light enclosing functions |
 
 Direction is always **definition → usage**, independent of which end is hovered

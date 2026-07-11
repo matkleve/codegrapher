@@ -1,6 +1,10 @@
 import { PaymentGateway } from "./PaymentGateway";
 
-export class OrderService {
+export interface IChargeable {
+  charge(id: string, amount: number): Promise<boolean>;
+}
+
+export class OrderService implements IChargeable {
   private orders: Map<string, number> = new Map();
 
   constructor(private gateway: PaymentGateway) {}
@@ -17,6 +21,13 @@ export class OrderService {
 
   cancelOrder(id: string): boolean {
     return this.orders.delete(id);
+  }
+}
+
+export class PremiumOrderService extends OrderService {
+  async checkout(id: string): Promise<boolean> {
+    const ok = await super.checkout(id);
+    return ok;
   }
 }
 

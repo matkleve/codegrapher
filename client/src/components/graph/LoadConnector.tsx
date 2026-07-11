@@ -17,7 +17,6 @@ type PickerState = {
   targets: ReturnType<typeof fromExternalCards>;
   anchor: { x: number; y: number };
   contextFilePath?: string;
-  dotSide: "left" | "right";
   kind: SemanticTokenKind;
 };
 
@@ -146,7 +145,6 @@ export function LoadConnector() {
         token: load.token,
         targets: fromExternalCards(candidates),
         anchor: { x: rect.left + rect.width / 2, y: rect.bottom },
-        dotSide: load.direction === "callSite" ? "left" : "right",
         kind: spec.kind,
       });
       return;
@@ -182,7 +180,6 @@ export function LoadConnector() {
           targets={picker.targets}
           anchor={picker.anchor}
           contextFilePath={picker.contextFilePath}
-          dotSide={picker.dotSide}
           kind={picker.kind}
           onSelect={loadTarget}
           onClose={() => setPicker(null)}

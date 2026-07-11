@@ -12,6 +12,7 @@ import {
   loadTargetsFromCallSiteRefs,
 } from "@/lib/connectionMenu";
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
+import { useSimulationOptional } from "@/context/SimulationContext";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
@@ -51,6 +52,9 @@ type CodeLineProps = {
   symbolIndex: MemberSymbolIndex;
   /** Raw member identifier — signature-line chips with this name are definitions. */
   memberSymbolName?: string;
+  methodCode?: string;
+  methodName?: string;
+  signatureLine?: string;
 };
 
 export function CodeLine({
@@ -63,6 +67,9 @@ export function CodeLine({
   definedInLabel,
   symbolIndex,
   memberSymbolName,
+  methodCode,
+  methodName,
+  signatureLine,
 }: CodeLineProps) {
   const { symbols, lookup, hasSymbol } = useIndex();
   const { getNode } = useReactFlow();
@@ -339,6 +346,10 @@ export function CodeLine({
     filePath,
     sourceFlowId,
     sourceMemberId: memberId,
+    simulation:
+      methodCode && methodName && signatureLine
+        ? { methodName, code: methodCode, signatureLine }
+        : undefined,
   });
 
   // `memberFanOut` is true only for the occurrence of the member/class's own
@@ -432,10 +443,18 @@ export function CodeLine({
   const lineTargetId = previewLineHandle(memberId, lineNumber);
   const lineTargetActive = isHandleActive(lineTargetId);
   const lineKind = edgeKindAtHandle(lineTargetId);
+  const sim = useSimulationOptional();
+  const isSimCurrent =
+    sim?.simActive &&
+    sim.session?.memberId === memberId &&
+    sim.session.steps[sim.session.currentIndex]?.lineNumber === lineNumber;
 
   return (
     <div
-      className="code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed"
+      className={cn(
+        "code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed",
+        isSimCurrent && "code-line--sim-current",
+      )}
     >
       <Handle
         type="target"

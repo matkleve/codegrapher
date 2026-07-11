@@ -23,16 +23,36 @@ function identifiersInType(type: string): string[] {
   return [...type.matchAll(/\b[A-Za-z_$][\w$]*\b/g)].map((match) => match[0]);
 }
 
+export function indexedSymbolsInType(
+  type: string,
+  hasSymbol: (name: string) => boolean,
+): string[] {
+  const trimmed = type.trim();
+  if (!trimmed) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of identifiersInType(trimmed)) {
+    if (isPrimitiveTypeName(id) || !hasSymbol(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
 /** True when the type names a project symbol (class, interface, enum, …), not a TS primitive. */
 export function isIndexedSignatureType(
   type: string,
   hasSymbol: (name: string) => boolean,
 ): boolean {
-  const trimmed = type.trim();
-  if (!trimmed) return false;
-  return identifiersInType(trimmed).some(
-    (id) => !isPrimitiveTypeName(id) && hasSymbol(id),
-  );
+  return indexedSymbolsInType(type, hasSymbol).length > 0;
+}
+
+/** First indexed symbol in a type string — used for signature trace targets. */
+export function primaryIndexedSymbolInType(
+  type: string,
+  hasSymbol: (name: string) => boolean,
+): string | null {
+  return indexedSymbolsInType(type, hasSymbol)[0] ?? null;
 }
 
 export function signatureTypeLines(type: string): string[] {

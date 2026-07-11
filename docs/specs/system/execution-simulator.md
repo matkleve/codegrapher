@@ -2,7 +2,7 @@
 
 ## What It Is
 
-**Design spec — not yet implemented.** Opt-in step-through mode that walks a method body statement-by-statement, showing which variables are in scope, how values change, and how data flows along existing preview-edge paths. MVP uses **Option A: static walk** (AST traversal, no real code execution). Options B (sandboxed `vm`) and C (DAP debugger attach) are documented as deferred — see [Engine options supplement](execution-simulator.engine-options.supplement.md).
+**Design spec — Option A static walk MVP implemented.** Opt-in step-through mode that walks a method body statement-by-statement, showing which variables are in scope, how values change, and how data flows along existing preview-edge paths. MVP uses **Option A: static walk** (AST traversal, no real code execution). Options B (sandboxed `vm`) and C (DAP debugger attach) are documented as deferred — see [Engine options supplement](execution-simulator.engine-options.supplement.md).
 
 ## What It Looks Like
 
@@ -77,18 +77,18 @@ Off-graph callee policy: **pause and prompt** — offer Load via existing `useLo
 
 ## Acceptance Criteria (Option A — static walk only)
 
-- [ ] Right-click **Start trace here** on an expanded method line opens pre-flight form for in-scope variables at that line
-- [ ] Step forward advances exactly one statement; current line visually highlighted
-- [ ] Step back rewinds without re-running forward pass (history is an array)
-- [ ] Play/pause auto-advances at configurable speed; scrub bar jumps to any prior step
-- [ ] Variable panel lists name → display value; changed names visually marked per step
+- [x] Right-click **Start trace here** on an expanded method line opens pre-flight form for in-scope variables at that line
+- [x] Step forward advances exactly one statement; current line visually highlighted
+- [x] Step back rewinds without re-running forward pass (history is an array)
+- [x] Play/pause auto-advances at configurable speed; scrub bar jumps to any prior step
+- [x] Variable panel lists name → display value; changed names visually marked per step
 - [ ] Step-into on call to on-canvas method moves highlight into callee; step-over skips callee body
 - [ ] Step-into on off-canvas callee pauses with Load prompt (no silent skip)
-- [ ] Argument/return steps trigger a visible pulse along the matching preview-edge path
-- [ ] Esc or Exit clears sim mode; plain hover trace works again
-- [ ] `graph-sim-active` distinguishes sim from `graph-trace-pinned` / `graph-ctrl-preview`
-- [ ] Loops: play mode stops after **100 iterations** per loop body with "cap reached" notice
-- [ ] `await` / async calls: step shows `await …` as unevaluated; does not hang play mode
+- [x] Argument/return steps trigger a visible pulse along the matching preview-edge path
+- [x] Esc or Exit clears sim mode; plain hover trace works again
+- [x] `graph-sim-active` distinguishes sim from `graph-trace-pinned` / `graph-ctrl-preview`
+- [x] Loops: play mode stops after **100 iterations** per loop body with "cap reached" notice
+- [x] `await` / async calls: step shows `await …` as unevaluated; does not hang play mode
 
 ## Open questions
 

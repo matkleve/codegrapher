@@ -8,6 +8,15 @@ export function makeUsageTokenKey(
   return `${sourceFlowId}::${memberId}::${lineNumber}::${token}`;
 }
 
+/** Signature tag type reference (header chips, not body line numbers). */
+export function makeSignatureTypeKey(
+  flowNodeId: string,
+  memberId: string,
+  symbolName: string,
+): string {
+  return `${flowNodeId}::${memberId}::sig-type::${symbolName}`;
+}
+
 export function makeMemberDefKey(flowNodeId: string, memberId: string): string {
   return `${flowNodeId}::def::${memberId}`;
 }

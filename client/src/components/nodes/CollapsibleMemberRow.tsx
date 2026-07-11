@@ -28,6 +28,9 @@ import {
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
+import { findMethodOverride } from "@/lib/overrideInfo";
+import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
+import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { cn } from "@/lib/utils";
 
 type CollapsibleMemberRowProps = {
@@ -64,7 +67,7 @@ export function CollapsibleMemberRow({
   const memberRowRef = useRef<HTMLDivElement>(null);
   useTraceHostRegistration(labelRef);
   useTraceHostRegistration(memberRowRef);
-  const { lookup, hasSymbol } = useIndex();
+  const { lookup, hasSymbol, symbols } = useIndex();
   const {
     isHandleActive,
     edgeKindAtHandle,
@@ -93,6 +96,14 @@ export function CollapsibleMemberRow({
   const methodSignature = useMemo(
     () => (showSignatureTags ? parseMethodSignature(code) : null),
     [code, showSignatureTags],
+  );
+  const signatureLine = code.split("\n")[0] ?? label;
+  const overrideInfo = useMemo(
+    () =>
+      symbolName && graphData
+        ? findMethodOverride(graphData, graphNodeId, symbolName)
+        : null,
+    [graphData, graphNodeId, symbolName],
   );
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
@@ -213,6 +224,7 @@ export function CollapsibleMemberRow({
     filePath,
     sourceFlowId: flowNodeId,
     sourceMemberId: memberId,
+    simulation: { methodName: traceName, code, signatureLine },
   });
 
   const onDefContextMenu = useCallback(
@@ -341,6 +353,37 @@ export function CollapsibleMemberRow({
             symbolIndex={symbolIndex}
           />
         ) : null}
+        {overrideInfo ? (
+          <button
+            type="button"
+            className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!labelRef.current) return;
+              const parentMethod = graphData?.nodes.find(
+                (n) =>
+                  n.type === "method" &&
+                  n.parent === overrideInfo.parentGraphNodeId &&
+                  n.label === overrideInfo.methodName,
+              );
+              if (!parentMethod) return;
+              const target = resolveVisibleTarget(
+                overrideInfo.methodName,
+                symbols,
+                graphData,
+                getNode,
+                flowNodeId,
+              );
+              if (!target || target.mode !== "graph") return;
+              beginTrace(
+                defTokenKey,
+                [buildUsagePreviewEdge(`override-${memberId}`, target, labelRef.current, traceName)],
+              );
+            }}
+          >
+            ↑ overrides {overrideInfo.parentClass}.{overrideInfo.methodName}
+          </button>
+        ) : null}
       </button>
       {expanded && code.trim() ? (
         <div className="member-body-wrap nodrag overflow-visible px-2 pb-2 pl-5 pt-1.5 text-muted-foreground">
@@ -357,6 +400,9 @@ export function CollapsibleMemberRow({
                 definedInLabel={classLabel}
                 symbolIndex={symbolIndex}
                 memberSymbolName={symbolName}
+                methodCode={code}
+                methodName={traceName}
+                signatureLine={signatureLine}
               />
             ))}
           </div>

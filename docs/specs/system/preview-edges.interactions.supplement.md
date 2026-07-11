@@ -292,4 +292,5 @@ flowchart LR
 | `resolveVisibleTarget.ts` | Usage → def target |
 | `resolveLiveAnchor.ts` | Per-frame anchor refine |
 | `computeTraceLit.ts` | Lit / endpoint sets |
-| `connectors.css` | Trace dim, sockets, wires |
+| `preview-wires.css` | Wires, sockets |
+| `trace-modes.css` | Trace dim |

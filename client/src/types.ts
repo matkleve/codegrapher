@@ -8,10 +8,16 @@ export interface GraphNode {
   parent?: string;
 }
 
+export type StructuralEdgeType =
+  | "extends"
+  | "implements"
+  | "composition"
+  | "imports";
+
 export interface GraphEdge {
   source: string;
   target: string;
-  type: "contains" | "imports" | "calls";
+  type: "contains" | "imports" | "calls" | StructuralEdgeType;
   label?: string;
 }
 

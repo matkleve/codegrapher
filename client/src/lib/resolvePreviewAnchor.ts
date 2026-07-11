@@ -16,11 +16,7 @@ const SAME_ROW_THRESHOLD = 10;
 const MIN_ARC_BULGE = 22;
 const MAX_ARC_BULGE = 48;
 
-import {
-  getByHandle,
-  getByMemberId,
-  getByTraceKey,
-} from "@/lib/elementRegistry";
+import { getByHandle } from "@/lib/elementRegistry";
 
 function findTargetAnchor(
   handleId: string,

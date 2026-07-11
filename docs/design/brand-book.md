@@ -84,7 +84,7 @@ Normative contract: [state-visuals.md](state-visuals.md) · [interaction-emphasi
 | Location | Current | Should be |
 | -------- | ------- | --------- |
 | `button.tsx` | `duration-300` | `var(--motion-hover-surface)` (320ms) |
-| `connectors.css` token chips | `0.22s` / `0.28s` | motion tokens |
+| `tokens-chips.css` chip transitions | aligned | `--motion-chip-*` tokens |
 | `ResizableSidebar.tsx` | `duration-200 ease-out` | `var(--ease)` + 320ms |
 | `member-body-wrap` | `0.2s` | `var(--motion-hover-surface)` |
 
@@ -135,7 +135,7 @@ Floating panels do not yet share a single shadow scale — candidate tokens: `--
 | `--font-size-sm` | 0.875rem (14px) | Buttons, node headers |
 | `--font-size-md` | 1rem (16px) | Body default |
 
-Code surfaces: `font-mono`. Token chips use non-standard weights **560** / **620** in `connectors.css`.
+Code surfaces: `font-mono`. Token chips use non-standard weights **560** / **620** in `tokens-chips.css`.
 
 ### Typography drift
 
@@ -210,7 +210,7 @@ Priority fixes for consistency (safe to do incrementally):
 
 1. Button `duration-300` → motion token (320ms)
 2. Name prototype radii: `--radius-node: 13px` in `:root`
-3. Align `connectors.css` chip transitions to motion tokens
+3. ~~Align chip transitions to motion tokens~~ (done 2026-07-11)
 4. Add `--font-size-2xs` and migrate overlay microcopy
 5. Wire `INTERACTIVE_BORDER_BTN` or remove the export
 6. Tokenize floating shadows (`--shadow-float-*`)
