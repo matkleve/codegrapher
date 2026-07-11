@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { shouldCommitHoverClear } from "@/lib/hoverIntent";
+import { fireDelayMs, shouldCommitHoverClear } from "@/lib/hoverIntent";
+
+describe("fireDelayMs", () => {
+  it("fires instantly when Ctrl is held", () => {
+    expect(fireDelayMs(false, true)).toBe(0);
+  });
+
+  it("fires instantly on keyboard focus", () => {
+    expect(fireDelayMs(false, false, true)).toBe(0);
+  });
+
+  it("uses cold/warm delays for plain pointer hover", () => {
+    expect(fireDelayMs(false, false)).toBe(150);
+    expect(fireDelayMs(true, false)).toBe(80);
+  });
+});
 
 describe("shouldCommitHoverClear", () => {
   it("commits when the scheduled token is still the latest leave target", () => {

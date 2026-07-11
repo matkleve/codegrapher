@@ -60,6 +60,7 @@ export function useHoverIntentTimers({
       onFire: () => void,
       onClear: () => void,
       onInfo?: () => void,
+      options?: { instant?: boolean },
     ) => {
       const timers = hoverTimersRef.current;
       clearTimeout(timers.clear ?? undefined);
@@ -84,6 +85,7 @@ export function useHoverIntentTimers({
       const delay = fireDelayMs(
         isWarm || hoveredTokenKey != null,
         isCtrlActiveRef.current,
+        options?.instant,
       );
       if (delay === 0) {
         runFire();

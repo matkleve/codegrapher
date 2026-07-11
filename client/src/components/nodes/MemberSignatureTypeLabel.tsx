@@ -51,6 +51,8 @@ export function MemberSignatureTypeLabel({
     indexed,
     onEnter,
     onLeave,
+    onFocus,
+    onBlur,
     onPinClick,
   } = useMemberSignatureTypeTrace({
     type,
@@ -91,6 +93,8 @@ export function MemberSignatureTypeLabel({
         className="member-sig-type-chip"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
+        onFocus={onFocus}
+        onBlur={onBlur}
         onClick={(e) => {
           e.stopPropagation();
           onPinClick(e);
@@ -139,6 +143,8 @@ export function MemberSignatureTypeLabel({
       }}
       onMouseEnter={indexed ? onEnter : undefined}
       onMouseLeave={indexed ? onLeave : undefined}
+      onFocus={indexed ? onFocus : undefined}
+      onBlur={indexed ? onBlur : undefined}
     >
       {expanded ? (
         <span className="member-sig-type-lines">

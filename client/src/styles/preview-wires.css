@@ -201,6 +201,7 @@
 
   .flow-anchor-off,
   .flow-anchor-on,
+  .graph-trace-warm .flow-anchor-on,
   .member-row,
   .react-flow__node.class-node-root,
   .code-kw,

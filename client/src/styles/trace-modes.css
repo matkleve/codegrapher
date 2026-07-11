@@ -326,6 +326,24 @@
   background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
 }
 
+.graph-trace-active
+  .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+    .member-row-header:hover,
+    .member-body-wrap .code-kw.hoverable:hover
+  ) {
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
+}
+
+.graph-pane.graph-ctrl-preview
+  .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+    .member-row-header:hover,
+    .member-body-wrap .code-kw.hoverable:hover
+  ) {
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
+}
+
 .graph-trace-active .code-line.trace-lit-line .code-kw,
 .graph-trace-active .code-line.trace-lit-line .code-pn,
 .graph-trace-active .code-line.trace-lit-line .code-comment,

@@ -23,10 +23,31 @@ describe("cubicPath", () => {
     expect(Number(match![4])).toBe(180);
   });
 
-  it("arcs above same-row spans", () => {
+  it("detours right on left-to-right spans", () => {
     const path = cubicPath(40, 100, 200, 105, "right", "left");
-    const match = path.match(/C ([\d.-]+) ([\d.-]+),/);
+    const match = path.match(/C ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+),/);
     expect(match).toBeTruthy();
-    expect(Number(match![2])).toBeLessThan(100);
+    expect(Number(match![1])).toBeGreaterThan(70);
+    expect(Number(match![2])).toBe(100);
+    expect(Number(match![3])).toBeLessThan(170);
+    expect(Number(match![4])).toBe(105);
+  });
+
+  it("detours left on right-to-left spans", () => {
+    const path = cubicPath(220, 100, 40, 105, "right", "left");
+    const match = path.match(/C ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+),/);
+    expect(match).toBeTruthy();
+    expect(Number(match![1])).toBeGreaterThan(250);
+    expect(Number(match![3])).toBeLessThan(10);
+  });
+
+  it("detours horizontally on shallow diagonal fan-in", () => {
+    const path = cubicPath(40, 60, 220, 100, "right", "left");
+    const match = path.match(/C ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+),/);
+    expect(match).toBeTruthy();
+    expect(Number(match![1])).toBeGreaterThan(70);
+    expect(Number(match![3])).toBeLessThan(190);
+    expect(Number(match![2])).toBe(60);
+    expect(Number(match![4])).toBe(100);
   });
 });

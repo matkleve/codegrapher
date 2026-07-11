@@ -12,7 +12,7 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 
 - **CSS:** `client/src/index.css` (`.hoverable`), `styles/trace-modes.css`, `styles/tokens-chips.css`
 - **JS:** `client/src/lib/controlTokens.ts`
-- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned` on `.graph-pane` (graph mood root)
+- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned`, `graph-trace-warm` on `.graph-pane` (graph mood root)
 
 ## Emphasis stack
 
@@ -50,6 +50,8 @@ flowchart TB
 
 Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`trace-modes.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
 
+**`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Tier B snaps ink/fill inside cards (`transition-duration: 0s`), but endpoint **socket dots** may use a short Tier-A transition while warm so sockets ease in when hopping token→token (`preview-wires.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
+
 ## Member container & signature fills (normative)
 
 Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned`. Imperative trace classes on DOM: `trace-member-lit`, `trace-member-owner-lit`, `trace-lit-line`, `token-chip-lit`, `token-chip-on`, `token-chip-source`, `token-chip-hover-preview`.
@@ -58,7 +60,7 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`
 | --- | ---- | -------------------- | ------------------------------ | --------------------------- | ---------------- |
 | 1 | **Idle** | all rows: `bg-muted` (blue-grey) | param pills: `--member-sig-bg-in`; return: neutral | transparent | semantic ink |
 | 2 | **Row header hover** | `--brand-surface` bg + `--brand-border` border; title + caret → `--brand` | unchanged | `--muted-foreground` on code (`--surface-neutral-strong` fill) | unchanged |
-| 3 | **Label/chip hover** (not header chrome) | unchanged unless pointer is on header | unchanged | — | semantic ink + semantic fill wash (same as `token-chip-on`) |
+| 3 | **Label/chip hover** (not header chrome) | `--brand-surface` bg + `--brand-border` border (same as row header hover) | unchanged | — | semantic ink + semantic fill wash (same as `token-chip-on`) |
 | 4 | **Ctrl held** (`graph-ctrl-preview`) | trace dim mix (`foreground` 3% → `card`); lit rows unchanged | param/return pills → same neutral dim mix; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
 | 5 | **Trace active, row not lit** | trace dim mix on non-lit rows | bg transparent; text → `--faint` | syntax → per-token `--faint-*` mixes (greyish, hue hint) | non-lit chips → `--faint` |
 | 5b | **Trace active, owner row** (hovering sig param/type in that row) | same row bg may be owner-lit | non-lit sig fragments → `--faint` | — | **member row label** (function name) → `--faint` unless `token-chip-lit` |

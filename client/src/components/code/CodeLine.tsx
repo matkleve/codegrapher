@@ -533,7 +533,13 @@ export function CodeLine({
   // Local param/variable defs keep the old per-occurrence key: they already
   // fan out correctly via `buildLocalPreviewEdges`, scoped to this member body.
   const onIdentifierEnter = useCallback(
-    (name: string, chipKey: string, isDefinition: boolean, memberFanOut: boolean) => {
+    (
+      name: string,
+      chipKey: string,
+      isDefinition: boolean,
+      memberFanOut: boolean,
+      instant = false,
+    ) => {
       const chip = chipRefs.current.get(chipKey);
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
@@ -552,6 +558,7 @@ export function CodeLine({
             ...buildUsagePinInfo(name, chipEl, isDefinition),
             pinned: false,
           }),
+        instant ? { instant: true } : undefined,
       );
     },
     [
@@ -577,6 +584,15 @@ export function CodeLine({
     },
     [clearHover, defTokenKey, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
   );
+
+  const onIdentifierFocus = useCallback(
+    (name: string, chipKey: string, isDefinition: boolean, memberFanOut: boolean) => {
+      onIdentifierEnter(name, chipKey, isDefinition, memberFanOut, true);
+    },
+    [onIdentifierEnter],
+  );
+
+  const onIdentifierBlur = onIdentifierLeave;
 
   const onIdentifierClick = useCallback(
     (
@@ -685,6 +701,19 @@ export function CodeLine({
                 );
               }}
               onMouseLeave={() => scheduleHoverClear(tokenKey, clearHover)}
+              onFocus={() => {
+                const chip = chipRefs.current.get(chipKey);
+                const chipEl = chip?.getChipElement();
+                if (!chipEl) return;
+                scheduleHoverFire(
+                  tokenKey,
+                  () => fireImportPreview(token.text, chipEl),
+                  clearHover,
+                  undefined,
+                  { instant: true },
+                );
+              }}
+              onBlur={() => scheduleHoverClear(tokenKey, clearHover)}
               onClick={(e) => {
                 e.stopPropagation();
                 const chipEl = chipRefs.current.get(chipKey)?.getChipElement();
@@ -742,6 +771,17 @@ export function CodeLine({
                   );
                 }}
                 onMouseLeave={() => scheduleHoverClear(cfKey, clearHover)}
+                onFocus={(e) => {
+                  const el = e.currentTarget;
+                  scheduleHoverFire(
+                    cfKey,
+                    () => fireControlFlowPreview(lineNumber, i, el),
+                    clearHover,
+                    undefined,
+                    { instant: true },
+                  );
+                }}
+                onBlur={() => scheduleHoverClear(cfKey, clearHover)}
                 onClick={(e) => {
                   e.stopPropagation();
                   commitTokenPin({
@@ -882,6 +922,10 @@ export function CodeLine({
               onIdentifierEnter(token.text, chipKey, isDefinition, memberFanOut)
             }
             onMouseLeave={() => onIdentifierLeave(token.text, memberFanOut)}
+            onFocus={() =>
+              onIdentifierFocus(token.text, chipKey, isDefinition, memberFanOut)
+            }
+            onBlur={() => onIdentifierBlur(token.text, memberFanOut)}
             onClick={(e) => {
               e.stopPropagation();
               onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut, e);

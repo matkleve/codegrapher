@@ -1,6 +1,8 @@
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
+  chipClearance,
   cubicPath,
+  laneOffsetFromEdgeId,
   resolvePreviewAnchor,
   straightPath,
   wireHitSegment,
@@ -141,6 +143,7 @@ export function updateWireGeometry(
   }
 
   wire.group.style.display = "";
+  const clearance = chipClearance(fromPt.el, toPt.el);
   const pathD = cubicPath(
     fromPt.x,
     fromPt.y,
@@ -148,6 +151,7 @@ export function updateWireGeometry(
     toPt.y,
     fromPt.side,
     toPt.side,
+    { clearance, lane: laneOffsetFromEdgeId(spec.id) },
   );
   wire.path.setAttribute("d", pathD);
   wire.glow.setAttribute("d", pathD);

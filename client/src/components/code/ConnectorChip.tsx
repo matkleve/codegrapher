@@ -23,6 +23,8 @@ export type ConnectorChipProps = {
   onKeyDown?: (e: KeyboardEvent<HTMLSpanElement>) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   onClick?: (e: MouseEvent<HTMLSpanElement>) => void;
 } & Record<`data-${string}`, string | undefined>;
 
@@ -45,6 +47,8 @@ export const ConnectorChip = forwardRef<HTMLSpanElement, ConnectorChipProps>(
       onKeyDown,
       onMouseEnter,
       onMouseLeave,
+      onFocus,
+      onBlur,
       onClick,
       ...dataProps
     },
@@ -71,6 +75,8 @@ export const ConnectorChip = forwardRef<HTMLSpanElement, ConnectorChipProps>(
         onKeyDown={onKeyDown}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        onFocus={onFocus}
+        onBlur={onBlur}
         onClick={onClick}
         {...dataProps}
       >

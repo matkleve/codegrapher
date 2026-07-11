@@ -76,6 +76,7 @@ sequenceDiagram
 | `FIRE_WARM_MS` | 80 | Adjacent token while warm |
 | `LEAVE_GRACE_MS` | 150 | Anti-flicker between neighbors |
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
+| Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
 
 **Leave-clear commit rule:** after `LEAVE_GRACE_MS`, clear runs when the leaving
 token is still the latest entry in `hoverClearRef` — **not** when it matches

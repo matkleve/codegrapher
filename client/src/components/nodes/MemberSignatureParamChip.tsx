@@ -98,7 +98,7 @@ export function MemberSignatureParamChip({
     ],
   );
 
-  const { onEnter, onLeave } = useTokenHover({
+  const { onEnter, onLeave, onFocus, onBlur } = useTokenHover({
     tokenKey,
     enabled,
     onFire: firePreview,
@@ -142,6 +142,8 @@ export function MemberSignatureParamChip({
         className="member-sig-token-chip"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
+        onFocus={onFocus}
+        onBlur={onBlur}
         onClick={(e) => {
           e.stopPropagation();
           onPinClick(e);

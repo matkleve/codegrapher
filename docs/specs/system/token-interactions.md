@@ -44,6 +44,7 @@ to the `.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin),
 | 12 | Click a row in **TokenConnectionMenu** | Jump (on canvas), Load (off canvas), or Open in editor (context footer) | `onLoadFile` / `focusFlowNode` |
 | 13 | **Right-click** indexed token | **TokenConnectionMenu** (context variant): On canvas (Jump) + Off canvas (Load) + Open in editor footer — **does not pin** | context menu |
 | 14 | **Click** token | Pin trace + **TokenContextBar** (unchanged; coexists with right-click menu) | `pinnedTraces` |
+| 15 | **Focus** an indexed token (keyboard) | Instant trace (no dwell); **Enter** pins | `scheduleHoverFire({ instant: true })` |
 
 ## Interaction by keyword kind
 
@@ -115,6 +116,8 @@ pinned-token load flow. The floating Load pill (`LoadConnector`) was removed; da
 - [ ] Given a token, when **left-clicked**, then pin behavior is unchanged (coexists with right-click menu).
 - [ ] Given **Load all** is clicked, then every off-canvas row loads into the graph
   (parallel; the merge is a functional update, so concurrent loads do not clobber).
+- [ ] Given keyboard focus on an indexed token, when focused, then trace fires
+  instantly (no dwell) and **Enter** pins the trace.
 - [ ] After load, the row's target upgrades to an in-graph preview wire when the
   definition is on the canvas.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim

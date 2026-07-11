@@ -203,7 +203,7 @@ export function CollapsibleMemberRow({
     ],
   );
 
-  const { onEnter: onDefEnter, onLeave: onDefLeave } = useTokenHover({
+  const { onEnter: onDefEnter, onLeave: onDefLeave, onFocus: onDefFocus, onBlur: onDefBlur } = useTokenHover({
     tokenKey: defTokenKey,
     enabled: traceable,
     onFire: fireDefPreview,
@@ -318,6 +318,8 @@ export function CollapsibleMemberRow({
             "member-row-label nodrag relative inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-medium text-foreground",
             traceable && "token-def-label cursor-pointer",
           )}
+          role={traceable ? "button" : undefined}
+          tabIndex={traceable ? 0 : undefined}
           style={
             traceable
               ? ({ "--shimmer-delay": `-${(memberId.length * 0.37).toFixed(2)}s` } as React.CSSProperties)
@@ -326,8 +328,20 @@ export function CollapsibleMemberRow({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseEnter={onDefEnter}
           onMouseLeave={onDefLeave}
+          onFocus={onDefFocus}
+          onBlur={onDefBlur}
           onContextMenu={onDefContextMenu}
           onClick={onDefClick}
+          onKeyDown={
+            traceable
+              ? (e) => {
+                  if (e.key === "Enter") {
+                    e.stopPropagation();
+                    onDefClick(e as unknown as React.MouseEvent);
+                  }
+                }
+              : undefined
+          }
         >
           {traceable && defKind ? (
             <>

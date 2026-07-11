@@ -1,4 +1,5 @@
 import {
+  chipClearance,
   cubicPath,
   resolvePreviewAnchor,
 } from "@/lib/resolvePreviewAnchor";
@@ -51,6 +52,7 @@ export function updateStructuralWireGeometry(
   }
 
   wire.group.style.display = "";
+  const clearance = chipClearance(fromPt.el, toPt.el);
   const pathD = cubicPath(
     fromPt.x,
     fromPt.y,
@@ -58,6 +60,7 @@ export function updateStructuralWireGeometry(
     toPt.y,
     fromPt.side,
     toPt.side,
+    { clearance },
   );
   wire.path.setAttribute("d", pathD);
   return true;

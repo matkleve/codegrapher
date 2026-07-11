@@ -79,6 +79,7 @@ type GraphInteractionContextValue = {
     onFire: () => void,
     onClear: () => void,
     onInfo?: () => void,
+    options?: { instant?: boolean },
   ) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleHoverLeaveGrace: () => void;

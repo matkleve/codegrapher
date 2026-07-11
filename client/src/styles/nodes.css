@@ -107,19 +107,26 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-.member-row-header:hover {
-  background-color: var(--brand-surface) !important;
-  border-color: var(--brand-border) !important;
+/* Row container carries brand on header or in-body keyword hover */
+.member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+  .member-row-header:hover,
+  .member-body-wrap .code-kw.hoverable:hover
+) {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
 }
 
-/* Indexed token hover — chip lights up; header chrome stays flat (see interaction-emphasis.md §3) */
+.member-row-header:hover {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Indexed token hover — chip lights up; row container carries brand above */
 .member-row-header:hover:has(
   .member-row-label:hover,
   .member-sig-token-chip:hover,
   .member-sig-type-chip:hover
 ) {
-  background-color: transparent !important;
-  border-color: transparent !important;
   color: inherit;
 }
 

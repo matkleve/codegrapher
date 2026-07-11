@@ -23,8 +23,12 @@ export function clearHoverTimers(timers: HoverIntentTimers): void {
   timers.info = null;
 }
 
-export function fireDelayMs(isWarm: boolean, isCtrlHeld: boolean): number {
-  if (isCtrlHeld) return 0;
+export function fireDelayMs(
+  isWarm: boolean,
+  isCtrlHeld: boolean,
+  instant = false,
+): number {
+  if (instant || isCtrlHeld) return 0;
   return isWarm ? FIRE_WARM_MS : FIRE_COLD_MS;
 }
 

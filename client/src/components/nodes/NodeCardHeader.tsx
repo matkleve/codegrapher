@@ -133,7 +133,7 @@ export function NodeCardHeader({
     symbolName,
   ]);
 
-  const { onEnter: onTitleEnter, onLeave: onTitleLeave } = useTokenHover({
+  const { onEnter: onTitleEnter, onLeave: onTitleLeave, onFocus: onTitleFocus, onBlur: onTitleBlur } = useTokenHover({
     tokenKey: defTokenKey,
     enabled: indexed,
     onFire: fireDefPreview,
@@ -224,6 +224,8 @@ export function NodeCardHeader({
               "node-card-title nodrag relative inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
               indexed && "token-def-label cursor-pointer",
             )}
+            role={indexed ? "button" : undefined}
+            tabIndex={indexed ? 0 : undefined}
             style={
               indexed
                 ? ({ "--shimmer-delay": "0s" } as React.CSSProperties)
@@ -232,8 +234,20 @@ export function NodeCardHeader({
             onPointerDown={(e) => e.stopPropagation()}
             onMouseEnter={onTitleEnter}
             onMouseLeave={onTitleLeave}
+            onFocus={onTitleFocus}
+            onBlur={onTitleBlur}
             onContextMenu={onTitleContextMenu}
             onClick={onTitleClick}
+            onKeyDown={
+              indexed
+                ? (e) => {
+                    if (e.key === "Enter") {
+                      e.stopPropagation();
+                      onTitleClick(e as unknown as React.MouseEvent);
+                    }
+                  }
+                : undefined
+            }
           >
             {indexed && defKind ? (
               <>

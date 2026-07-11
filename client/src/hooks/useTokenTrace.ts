@@ -47,7 +47,25 @@ export function useTokenHover({
     scheduleHoverClear(tokenKey, clearHover);
   }, [clearHover, enabled, scheduleHoverClear, tokenKey]);
 
-  return { onEnter, onLeave };
+  const onFocus = useCallback(() => {
+    if (!enabled) return;
+    const onInfo = buildTransientInfo
+      ? () => showTokenInfo({ ...buildTransientInfo(), pinned: false })
+      : undefined;
+    scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, { instant: true });
+  }, [
+    buildTransientInfo,
+    clearHover,
+    enabled,
+    onFire,
+    scheduleHoverFire,
+    showTokenInfo,
+    tokenKey,
+  ]);
+
+  const onBlur = onLeave;
+
+  return { onEnter, onLeave, onFocus, onBlur };
 }
 
 type UseTokenPinArgs = {

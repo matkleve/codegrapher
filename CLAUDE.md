@@ -103,9 +103,6 @@ Pitfalls learned the hard way:
   refines the resting height to the measured DOM (guarded by `isDragging`, deps must
   exclude the `height` prop). Body is `flex-1 overflow-hidden` as a hard clip. Members
   open/close strictly top→bottom; shrinking closes eagerly so a row is never clipped.
-- Ctrl-hover only lights up **indexed** tokens, i.e. class and method names, and only
-  when a method body is expanded (collapsed rows have no code tokens). Variables and
-  properties are not in the server symbol index, so they never light up — extending
-  that requires indexing them in `server/src/parser.ts`.
+- Ctrl held on graph shimmers **interactive** token chips (indexed symbols, in-body params/locals via `localSymbolLinks`, and member-access cascade receivers) when the method body is expanded (collapsed rows have no code tokens). The server symbol index (`indexer.ts`) covers classes, methods, properties, and signature params; in-body locals are resolved client-side. Plain identifiers with no index or lexical link stay inert.
 - The server API is plain GET — `curl "http://localhost:3001/api/focus?path=<abs>&depth=1"`
   is the fastest way to assert parser output without touching the UI.

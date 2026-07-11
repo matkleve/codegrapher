@@ -12,9 +12,13 @@ export type ResolvedAnchor = {
 export type EndpointRole = "from" | "to";
 
 const ANCHOR_OUTSET = 9;
+const CHIP_DOT_DIAMETER = 4;
+const CHIP_DOT_GAP = 4;
 const SAME_ROW_THRESHOLD = 10;
-const MIN_ARC_BULGE = 22;
-const MAX_ARC_BULGE = 48;
+const MIN_ARC_BULGE = 32;
+const MAX_ARC_BULGE = 72;
+const ARC_BULGE_DX_FACTOR = 0.2;
+const LANE_STAGGER = 12;
 /** Horizontal run-out from a port before the curve bends (px). */
 const MIN_HORIZONTAL_EXIT = 30;
 
@@ -52,29 +56,80 @@ function sideForEndpoint(role: EndpointRole): "left" | "right" {
   return role === "from" ? "right" : "left";
 }
 
+function flowAnchorVisible(dot: HTMLElement | null): boolean {
+  return Boolean(dot?.isConnected && dot.classList.contains("flow-anchor-on"));
+}
+
+function syntheticChipAnchor(
+  chipRect: DOMRect,
+  side: "left" | "right",
+  svgBox: DOMRect,
+): { x: number; y: number } {
+  const inset = CHIP_DOT_GAP + CHIP_DOT_DIAMETER / 2;
+  return {
+    x:
+      (side === "right" ? chipRect.right + inset : chipRect.left - inset) -
+      svgBox.left,
+    y: chipRect.top + chipRect.height / 2 - svgBox.top,
+  };
+}
+
+/** Detour distance so a wire clears token chip labels between endpoints. */
+export function chipClearance(
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+): number {
+  let maxH = 20;
+  for (const el of [fromEl, toEl]) {
+    if (!el?.isConnected) continue;
+    maxH = Math.max(maxH, el.getBoundingClientRect().height);
+  }
+  return Math.ceil(maxH / 2) + 16;
+}
+
+export function laneOffsetFromEdgeId(edgeId: string): number {
+  const match = edgeId.match(/-(\d+)$/);
+  if (!match) return 0;
+  const index = Number(match[1]);
+  if (!Number.isFinite(index)) return 0;
+  return (index % 3) - 1;
+}
+
+export type CubicPathOptions = {
+  clearance?: number;
+  lane?: number;
+};
+
 function elementAnchor(
   el: HTMLElement,
   side: "left" | "right",
   box: DOMRect,
 ): ResolvedAnchor {
+  const chipRect = el.getBoundingClientRect();
   const dot = el.querySelector<HTMLElement>(`[data-flow-anchor="${side}"]`);
-  if (dot?.isConnected) {
+  if (dot && flowAnchorVisible(dot)) {
     const rect = dot.getBoundingClientRect();
-    return {
-      x: rect.left + rect.width / 2 - box.left,
-      y: rect.top + rect.height / 2 - box.top,
-      side,
-      el,
-      token: el.dataset.symbolName,
-    };
+    if (rect.width > 0 && rect.height > 0) {
+      return {
+        x: rect.left + rect.width / 2 - box.left,
+        y: rect.top + rect.height / 2 - box.top,
+        side,
+        el,
+        token: el.dataset.symbolName,
+      };
+    }
   }
 
-  const rect = el.getBoundingClientRect();
+  if (dot?.isConnected) {
+    const pt = syntheticChipAnchor(chipRect, side, box);
+    return { x: pt.x, y: pt.y, side, el, token: el.dataset.symbolName };
+  }
+
   const x =
-    (side === "right" ? rect.right : rect.left) -
+    (side === "right" ? chipRect.right : chipRect.left) -
     box.left +
     (side === "right" ? ANCHOR_OUTSET : -ANCHOR_OUTSET);
-  const y = rect.top + rect.height / 2 - box.top;
+  const y = chipRect.top + chipRect.height / 2 - box.top;
   return { x, y, side, el, token: el.dataset.symbolName };
 }
 
@@ -105,7 +160,8 @@ export function resolvePreviewAnchor(
 
 /**
  * Cubic wire — exits `from` on the right (outgoing), enters `to` on the left
- * (incoming). Arcs above same-row spans so the stroke does not cut through text.
+ * (incoming). Shallow spans detour further left/right in the flow direction so
+ * the stroke does not cut through token labels.
  */
 export function cubicPath(
   x1: number,
@@ -114,25 +170,41 @@ export function cubicPath(
   y2: number,
   fromSide: "left" | "right" = "right",
   toSide: "left" | "right" = "left",
+  opts?: CubicPathOptions,
 ): string {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const sameRow = Math.abs(dy) < SAME_ROW_THRESHOLD;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  const clearance = opts?.clearance ?? MIN_ARC_BULGE;
+  const laneShift = (opts?.lane ?? 0) * LANE_STAGGER;
+  const sameRow = absDy < SAME_ROW_THRESHOLD;
+  const shallowSlope = sameRow || absDy < absDx * 0.5;
 
-  let c1x = x1 + dx * 0.45;
-  let c2x = x2 - dx * 0.45;
-  let c1y: number;
-  let c2y: number;
+  let c1x: number;
+  let c2x: number;
+  const c1y = y1;
+  const c2y = y2;
 
-  if (sameRow) {
-    const bulge = -Math.max(MIN_ARC_BULGE, Math.min(MAX_ARC_BULGE, Math.abs(dx) * 0.12));
-    c1y = y1 + bulge;
-    c2y = y2 + bulge;
+  if (shallowSlope) {
+    const bulge =
+      Math.max(
+        clearance,
+        MIN_ARC_BULGE,
+        Math.min(MAX_ARC_BULGE, absDx * ARC_BULGE_DX_FACTOR),
+      ) + Math.abs(laneShift);
+    const exitBulge = fromSide === "right" ? bulge : -bulge;
+    const entryBulge = toSide === "left" ? -bulge : bulge;
+    if (sameRow && absDx < MIN_HORIZONTAL_EXIT * 2) {
+      c1x = x1 + dx * 0.45 + exitBulge * 0.35;
+      c2x = x2 - dx * 0.45 + entryBulge * 0.35;
+    } else {
+      c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT) + exitBulge;
+      c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT) + entryBulge;
+    }
   } else {
     c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT);
-    c1y = y1;
     c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT);
-    c2y = y2;
   }
 
   return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;

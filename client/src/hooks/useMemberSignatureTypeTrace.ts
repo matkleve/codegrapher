@@ -128,7 +128,7 @@ export function useMemberSignatureTypeTrace({
     });
   }, [filePath, flowNodeId, graphNodeId, semantic, symbolName, type]);
 
-  const { onEnter, onLeave } = useTokenHover({
+  const { onEnter, onLeave, onFocus, onBlur } = useTokenHover({
     tokenKey,
     enabled: indexed,
     onFire: firePreview,
@@ -156,6 +156,8 @@ export function useMemberSignatureTypeTrace({
     indexed,
     onEnter,
     onLeave,
+    onFocus,
+    onBlur,
     onPinClick,
   };
 }

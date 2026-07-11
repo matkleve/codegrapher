@@ -11,8 +11,7 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | # | Question | Current state | Options |
 | --- | -------- | ------------- | ------- |
 | 1 | **Simulation step-into / step-over** | Spec'd in `execution-simulator.md` AC; not implemented | **A)** Build next (loop-aware walk + callee descent) · **B)** Demote AC to deferred and hide menu items until built |
-| 2 | **Per-edge wire tooltips** | `connection-taxonomy.md` AC open; `ConnectionLegend` covers kinds | **A)** Add hover tooltip on wire hit-zones · **B)** Legend-only is enough — close AC |
-| 3 | **Path highlight scope** | Shortest path over React Flow structural edges only | **A)** Keep (module/DI graph) · **B)** Extend to include usage preview relationships (much harder) |
+| 2 | **Path highlight scope** | Shortest path over React Flow structural edges only | **A)** Keep (module/DI graph) · **B)** Extend to include usage preview relationships (much harder) |
 
 **Resolved in this pass (no further action):** Load stub wires **stay** alongside `TokenConnectionMenu` (dashed = elsewhere; menu = load action). Floating Load pill stays removed.
 
@@ -47,6 +46,8 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | Long-hover info box (transient) | `INFO_DELAY_MS` + transient `TokenContextBar` mode |
 | Brand accent gold vs cyan | Code + docs aligned on gold (`--brand` hue ~88). |
 | Pin trigger Ctrl-click vs plain click | **Plain click** pins; Ctrl is reveal-only (dims keywords, instant hover). |
+| Per-edge wire tooltips | **Legend-only** — `ConnectionLegend` + jump tip on wire hit-zone; per-edge tooltip AC closed in `connection-taxonomy.md`. |
+| Keyboard focus trace | Focus on indexed token fires instant trace (no dwell); Enter pins. |
 
 ---
 
