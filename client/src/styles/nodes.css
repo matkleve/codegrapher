@@ -246,6 +246,12 @@
   background: var(--member-sig-bg-out);
 }
 
+/* Ctrl reveal — neutral grey pills (nodes.css loads after trace-modes) */
+.graph-pane.graph-ctrl-preview .member-sig-value--in,
+.graph-pane.graph-ctrl-preview .member-sig-value--out {
+  background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
+}
+
 .member-sig-param-name {
   color: var(--foreground);
   font-weight: 600;

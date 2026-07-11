@@ -58,7 +58,7 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`
 | 1 | **Idle** | all rows: `bg-muted` (blue-grey) | param pills: `--member-sig-bg-in`; return: neutral | transparent | semantic ink |
 | 2 | **Row header hover** (caret area, not label) | unchanged | unchanged | `--surface-neutral-strong` | unchanged |
 | 3 | **Label/chip `.hoverable:hover`** | transparent (header suppresses brand bg) | unchanged | — | brand gold ink on label only |
-| 4 | **Ctrl held** (`graph-ctrl-preview`) | trace dim mix (`foreground` 3% → `card`); lit rows unchanged | all pills → `--muted` bg; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
+| 4 | **Ctrl held** (`graph-ctrl-preview`) | trace dim mix (`foreground` 3% → `card`); lit rows unchanged | param/return pills → same neutral dim mix; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
 | 5 | **Trace active, row not lit** | trace dim mix on non-lit rows | bg transparent; text → `--faint` | text → `--faint` | non-lit chips → `--faint` |
 | 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | bg transparent; lit chips → semantic ink | lit lines → `trace-lit-line` | `token-chip-lit` + `token-chip-on` fill |
 | 7 | **Trace active, owner row** (`trace-member-owner-lit`) | same as lit row 6 | same as lit | same as lit | same as lit |

@@ -38,10 +38,6 @@
   color: var(--faint-ctrl) !important;
 }
 
-.graph-pane.graph-ctrl-preview .member-sig-value {
-  background: var(--muted) !important;
-}
-
 .graph-pane.graph-ctrl-preview .member-sig-type--connectable.member-sig-type--in {
   color: var(--token-edge-type) !important;
 }
