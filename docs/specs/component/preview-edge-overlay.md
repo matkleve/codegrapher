@@ -6,7 +6,7 @@ DOM/SVG layer above the React Flow canvas that measures anchor elements each fra
 
 ## What It Looks Like
 
-Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). **Data** preview kinds (usage, binding, transitive, load) use cubic wires that skirt below labels; **control-flow** (`branch`) uses one shared orthogonal trunk per fan-out group — a short exit **right** from the source, **straight down** on a single bus (no down-then-right jog), then per-branch spurs that run **left along the target row** and stub into the left anchor. Only the first branch wire draws the trunk.
+Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). **Data** preview kinds (usage, binding, transitive, load) use cubic wires that skirt below labels; **control-flow** (`branch`) uses one shared orthogonal bus in the **left gutter** beside the case column — exit down from the decision, across below the head line, down the bus, then short taps **right** into each branch's left anchor (never through token text). Only the first branch wire draws the bus.
 
 ## Where It Lives
 

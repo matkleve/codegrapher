@@ -93,9 +93,6 @@ type BranchWireLayout = {
   drawHitFrom: boolean;
 };
 
-let branchFanCacheKey = "";
-let branchFanCache = new Map<string, BranchWireLayout>();
-
 function resolveBranchFanLayout(
   spec: PreviewEdgeSpec,
   allSpecs: PreviewEdgeSpec[],
@@ -105,68 +102,59 @@ function resolveBranchFanLayout(
   const fan = spec.branchFan;
   if (!fan || fan.count <= 1) return null;
 
-  const cacheKey = allSpecs.map((s) => s.id).join("\0");
-  if (cacheKey !== branchFanCacheKey) {
-    branchFanCache = new Map();
-    branchFanCacheKey = cacheKey;
+  const groupSpecs = allSpecs.filter(
+    (s) =>
+      s.connectionKind === "branch" &&
+      s.branchFan?.groupId === fan.groupId &&
+      s.branchFan.count > 1,
+  );
+  if (groupSpecs.length <= 1) return null;
 
-    const groups = new Map<string, PreviewEdgeSpec[]>();
-    for (const s of allSpecs) {
-      if (s.connectionKind !== "branch" || !s.branchFan) continue;
-      const list = groups.get(s.branchFan.groupId) ?? [];
-      list.push(s);
-      groups.set(s.branchFan.groupId, list);
-    }
+  groupSpecs.sort((a, b) => a.branchFan!.index - b.branchFan!.index);
 
-    for (const [, groupSpecs] of groups) {
-      if (groupSpecs.length <= 1) continue;
-      groupSpecs.sort((a, b) => a.branchFan!.index - b.branchFan!.index);
+  const head = groupSpecs[0]!;
+  const { from } = refinePreviewEdge(head, getNode);
+  const fromPt = resolvePreviewAnchor(from, svgBox, "from");
+  if (!fromPt) return null;
 
-      const head = groupSpecs[0]!;
-      const { from } = refinePreviewEdge(head, getNode);
-      const fromPt = resolvePreviewAnchor(from, svgBox, "from");
-      if (!fromPt) continue;
+  const resolved = groupSpecs
+    .map((s) => {
+      const { to } = refinePreviewEdge(s, getNode);
+      const toPt = resolvePreviewAnchor(to, svgBox, "to");
+      if (!toPt) return null;
+      return { spec: s, toPt };
+    })
+    .filter((row): row is NonNullable<typeof row> => row != null);
 
-      const resolved = groupSpecs
-        .map((s) => {
-          const { to } = refinePreviewEdge(s, getNode);
-          const toPt = resolvePreviewAnchor(to, svgBox, "to");
-          if (!toPt) return null;
-          return { spec: s, toPt };
-        })
-        .filter((row): row is NonNullable<typeof row> => row != null);
+  if (resolved.length <= 1) return null;
 
-      if (resolved.length <= 1) continue;
+  const paths = layoutBranchFanPaths(
+    fromPt.x,
+    fromPt.y,
+    fromPt.el,
+    resolved.map((row) => ({
+      x2: row.toPt.x,
+      y2: row.toPt.y,
+      toEl: row.toPt.el,
+    })),
+    svgBox,
+  );
 
-      const paths = layoutBranchFanPaths(
-        fromPt.x,
-        fromPt.y,
-        fromPt.el,
-        resolved.map((row) => ({
-          x2: row.toPt.x,
-          y2: row.toPt.y,
-          toEl: row.toPt.el,
-        })),
-        svgBox,
-      );
+  const index = resolved.findIndex((row) => row.spec.id === spec.id);
+  if (index < 0) return null;
 
-      for (let i = 0; i < resolved.length; i++) {
-        const row = resolved[i]!;
-        const pathD = paths[i];
-        if (!pathD) continue;
-        branchFanCache.set(row.spec.id, {
-          pathD,
-          fromX: fromPt.x,
-          fromY: fromPt.y,
-          toX: row.toPt.x,
-          toY: row.toPt.y,
-          drawHitFrom: i === 0,
-        });
-      }
-    }
-  }
+  const row = resolved[index]!;
+  const pathD = paths[index];
+  if (!pathD) return null;
 
-  return branchFanCache.get(spec.id) ?? null;
+  return {
+    pathD,
+    fromX: fromPt.x,
+    fromY: fromPt.y,
+    toX: row.toPt.x,
+    toY: row.toPt.y,
+    drawHitFrom: index === 0,
+  };
 }
 
 export function updateWireGeometry(

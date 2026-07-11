@@ -111,10 +111,18 @@ export function resolveUsageSiteAnchor(
   classData: ClassNodeData,
   memberId: string,
   lineNumber: number,
-  tokenIndex: number,
+  tokenIndex: number | null,
   token: string,
 ): AnchorRef {
-  const chip = usageChipInGraph(flowNodeId, memberId, lineNumber, tokenIndex, token);
+  // Exact index when known (hint built from a live chip); otherwise fall back to
+  // the first same-token chip on the line. A usage site that was collapsed when
+  // the trace was pinned has no rendered chip to read the index from, so
+  // tokenIndex stays null until the row expands — without this fallback the
+  // call-site chip never resolves and never lights. Mirrors the definition side.
+  const chip =
+    (tokenIndex != null
+      ? usageChipInGraph(flowNodeId, memberId, lineNumber, tokenIndex, token)
+      : null) ?? firstUsageChipOnLine(flowNodeId, memberId, lineNumber, token);
   if (chip?.isConnected) return { type: "element", el: chip };
 
   const bodyExpanded = !(classData.collapsed ?? false);
@@ -201,7 +209,9 @@ function resolveHint(
   }
 
   if (hint.role === "usage") {
-    if (!hint.memberId || hint.lineNumber == null || hint.tokenIndex == null) {
+    // tokenIndex may be null for a site collapsed at pin time; resolve by
+    // line + token in that case (see resolveUsageSiteAnchor).
+    if (!hint.memberId || hint.lineNumber == null) {
       return { type: "handle", handle: previewMemberHandle(hint.memberId ?? "") };
     }
     const classData = getClassNodeData(hint.flowNodeId, getNode);
@@ -213,7 +223,7 @@ function resolveHint(
       classData,
       hint.memberId,
       hint.lineNumber,
-      hint.tokenIndex,
+      hint.tokenIndex ?? null,
       hint.token,
     );
   }

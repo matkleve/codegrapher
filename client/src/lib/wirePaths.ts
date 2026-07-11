@@ -4,6 +4,7 @@ import { chipClearance, cubicPath, type CubicPathOptions } from "@/lib/resolvePr
 const ORTHOGONAL_STUB = 24;
 const ORTHOGONAL_TRUNK_PAD = 12;
 const ORTHOGONAL_LANE = 14;
+const ORTHOGONAL_LINE_PAD = 8;
 
 export type OrthogonalPathOptions = {
   stub?: number;
@@ -25,9 +26,24 @@ function elRectInSvg(
   };
 }
 
+function lineRectInSvg(
+  el: HTMLElement | null,
+  svgBox: DOMRect,
+): { left: number; right: number; top: number; bottom: number } | null {
+  const line = el?.closest(".code-line");
+  if (!line || typeof (line as HTMLElement).getBoundingClientRect !== "function") {
+    return null;
+  }
+  return elRectInSvg(line as HTMLElement, svgBox);
+}
+
+function belowRectY(rect: { bottom: number } | null, fallback: number): number {
+  return (rect?.bottom ?? fallback) + ORTHOGONAL_LINE_PAD;
+}
+
 export type BranchTrunkGeometry = {
   startX: number;
-  trunkX: number;
+  busX: number;
   trunkPrefix: string;
 };
 
@@ -37,33 +53,56 @@ export type BranchSpurInput = {
   toEl: HTMLElement | null;
 };
 
-/** Short exit column to the right of the source, then straight down. */
+/** Left gutter column — left of every branch chip, never through token text. */
+export function computeBranchBusX(
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+  stub = ORTHOGONAL_STUB,
+): number {
+  let minLeft = Infinity;
+  for (const spur of spurs) {
+    const toRect = elRectInSvg(spur.toEl, svgBox);
+    const left = toRect?.left ?? spur.x2;
+    minLeft = Math.min(minLeft, left);
+  }
+  if (!Number.isFinite(minLeft)) return stub;
+  return minLeft - stub - ORTHOGONAL_TRUNK_PAD;
+}
+
+/**
+ * Decision → down beside source → across gutter below head line →
+ * vertical bus beside case column.
+ */
 export function computeBranchTrunk(
   x1: number,
   y1: number,
   fromEl: HTMLElement | null,
+  spurs: BranchSpurInput[],
   svgBox: DOMRect,
   trunkBottomY: number,
 ): BranchTrunkGeometry {
   const fromRect = elRectInSvg(fromEl, svgBox);
+  const lineRect = lineRectInSvg(fromEl, svgBox);
   const chipRight = fromRect?.right ?? x1;
   const startX = Math.max(x1, chipRight + ORTHOGONAL_TRUNK_PAD * 0.25);
-  const trunkX = startX + ORTHOGONAL_STUB;
+  const busX = computeBranchBusX(spurs, svgBox);
+  const busTopY = belowRectY(lineRect, y1);
 
   return {
     startX,
-    trunkX,
+    busX,
     trunkPrefix: [
       `M ${startX} ${y1}`,
-      `L ${trunkX} ${y1}`,
-      `L ${trunkX} ${trunkBottomY}`,
+      `L ${startX} ${busTopY}`,
+      `L ${busX} ${busTopY}`,
+      `L ${busX} ${trunkBottomY}`,
     ].join(" "),
   };
 }
 
-/** Branch off the trunk at the target row — left along the row, stub into anchor. */
+/** Tap from the bus rightward in the gutter, stub into the branch left anchor. */
 export function branchSpurPath(
-  trunkX: number,
+  busX: number,
   x2: number,
   y2: number,
   toEl: HTMLElement | null,
@@ -74,7 +113,7 @@ export function branchSpurPath(
   const entryX = (toRect?.left ?? x2) - stub;
 
   return [
-    `M ${trunkX} ${y2}`,
+    `M ${busX} ${y2}`,
     `L ${entryX} ${y2}`,
     `L ${x2} ${y2}`,
   ].join(" ");
@@ -87,13 +126,14 @@ export function layoutBranchFanPaths(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
 ): string[] {
+  if (spurs.length === 0) return [];
+
   const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
-  const trunk = computeBranchTrunk(x1, y1, fromEl, svgBox, trunkBottomY);
+  const trunk = computeBranchTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
   const spurPaths = spurs.map((spur) =>
-    branchSpurPath(trunk.trunkX, spur.x2, spur.y2, spur.toEl, svgBox),
+    branchSpurPath(trunk.busX, spur.x2, spur.y2, spur.toEl, svgBox),
   );
 
-  if (spurPaths.length === 0) return [];
   return [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)];
 }
 
@@ -163,7 +203,7 @@ export type PreviewWirePathInput = {
 
 /**
  * Path geometry per preview connection kind:
- * - branch (control flow): bbox-aware orthogonal (exit right of source, enter branch)
+ * - branch (control flow): left-gutter bus + side taps into branches
  * - usage, binding, transitive, load: cubic (data/value)
  */
 export function previewWirePath(input: PreviewWirePathInput): string {

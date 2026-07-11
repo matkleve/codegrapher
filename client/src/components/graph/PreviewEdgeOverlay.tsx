@@ -93,7 +93,15 @@ export function PreviewEdgeOverlay() {
     });
     engineRef.current = engine;
     registerWireEngine(engine);
+
+    const pane = document.querySelector(".graph-pane");
+    const onScroll = (): void => {
+      engine.tickOnce();
+    };
+    pane?.addEventListener("scroll", onScroll, true);
+
     return () => {
+      pane?.removeEventListener("scroll", onScroll, true);
       engine.dispose();
       engineRef.current = null;
       registerWireEngine(null);
