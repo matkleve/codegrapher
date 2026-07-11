@@ -266,6 +266,32 @@
   font-size: inherit;
 }
 
+/* Control-flow keywords — chip sockets + trace-lit, syntax keyword ink (not variable pill). */
+.connector-chip--control-flow {
+  margin-inline: 0;
+  padding: 0;
+  font-weight: inherit;
+  background: transparent;
+  box-shadow: none;
+}
+
+.connector-chip--control-flow .control-flow-chip-text {
+  color: var(--code-keyword);
+  font-weight: inherit;
+}
+
+.connector-chip--control-flow.token-chip-on .control-flow-chip-text,
+.connector-chip--control-flow.token-chip-lit .control-flow-chip-text,
+.connector-chip--control-flow.token-chip-hover-preview .control-flow-chip-text {
+  color: var(--code-keyword);
+}
+
+.connector-chip--control-flow.token-chip-on .control-flow-chip-text {
+  background: color-mix(in oklch, var(--edge-control-flow) 18%, transparent);
+  border-radius: var(--token-chip-radius);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--edge-control-flow) 42%, transparent);
+}
+
 .connector-chip--load {
   padding: var(--connector-chip-load-pad-y) var(--connector-chip-load-pad-x);
   border-radius: var(--connector-chip-load-radius);

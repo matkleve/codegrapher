@@ -24,8 +24,8 @@ import {
 export type TraceLitState = {
   litTokenKeys: ReadonlySet<string>;
   endpointTokenKeys: ReadonlySet<string>;
-  /** Wire port side per endpoint trace key (`from` → right, `to` → left). */
-  endpointPortSide: ReadonlyMap<string, "left" | "right">;
+  /** Wire port sides per endpoint trace key (`from` → right, `to` → left). */
+  endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>;
   litMemberIds: ReadonlySet<string>;
   ownerLitMemberIds: ReadonlySet<string>;
   litLineMemberIds: ReadonlySet<string>;
@@ -49,7 +49,7 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
   return {
     litTokenKeys: new Set([...a.litTokenKeys, ...b.litTokenKeys]),
     endpointTokenKeys: new Set([...a.endpointTokenKeys, ...b.endpointTokenKeys]),
-    endpointPortSide: new Map([...a.endpointPortSide, ...b.endpointPortSide]),
+    endpointPortSide: mergeEndpointPortSides(a.endpointPortSide, b.endpointPortSide),
     litMemberIds: new Set([...a.litMemberIds, ...b.litMemberIds]),
     ownerLitMemberIds: new Set([...a.ownerLitMemberIds, ...b.ownerLitMemberIds]),
     litLineMemberIds: new Set([...a.litLineMemberIds, ...b.litLineMemberIds]),
@@ -58,10 +58,24 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
   };
 }
 
+function mergeEndpointPortSides(
+  a: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
+  b: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
+): Map<string, Set<"left" | "right">> {
+  const out = new Map<string, Set<"left" | "right">>();
+  for (const [key, sides] of a) out.set(key, new Set(sides));
+  for (const [key, sides] of b) {
+    const merged = out.get(key) ?? new Set<"left" | "right">();
+    for (const side of sides) merged.add(side);
+    out.set(key, merged);
+  }
+  return out;
+}
+
 type LitCollections = {
   litTokenKeys: Set<string>;
   endpointTokenKeys: Set<string>;
-  endpointPortSide: Map<string, "left" | "right">;
+  endpointPortSide: Map<string, Set<"left" | "right">>;
   litMemberIds: Set<string>;
   ownerLitMemberIds: Set<string>;
   litLineMemberIds: Set<string>;
@@ -75,7 +89,10 @@ function markEndpointPort(
   state: LitCollections,
 ): void {
   const traceKey = traceKeyFromElement(el);
-  if (traceKey) state.endpointPortSide.set(traceKey, side);
+  if (!traceKey) return;
+  const sides = state.endpointPortSide.get(traceKey) ?? new Set<"left" | "right">();
+  sides.add(side);
+  state.endpointPortSide.set(traceKey, sides);
 }
 
 type ResolvedEndpoint = {
@@ -363,7 +380,7 @@ export function computeTraceLit(
   const state: LitCollections = {
     litTokenKeys: new Set<string>([activeTokenKey]),
     endpointTokenKeys: new Set<string>([activeTokenKey]),
-    endpointPortSide: new Map<string, "left" | "right">(),
+    endpointPortSide: new Map<string, Set<"left" | "right">>(),
     litMemberIds: new Set<string>(),
     ownerLitMemberIds: new Set<string>(),
     litLineMemberIds: new Set<string>(),

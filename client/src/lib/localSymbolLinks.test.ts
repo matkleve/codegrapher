@@ -142,4 +142,30 @@ describe("buildMemberSymbolIndex binding inits", () => {
     const index = buildMemberSymbolIndex(MEMBER, code);
     expect(index.bindingInitOf.size).toBe(0);
   });
+
+  it("anchors binding init on receiver when property name matches local name", () => {
+    const code = `fn(): void {
+  const importance = result.importance ?? 0.5;
+  return lexical + importance;
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, code);
+    const declLine = "  const importance = result.importance ?? 0.5;";
+    const tokens = tokenizeLine(declLine).tokens;
+    const importanceIndex = tokens.findIndex(
+      (t, i) =>
+        t.kind === "identifier" &&
+        t.text === "importance" &&
+        tokens.slice(0, i).some((p) => p.text === "const"),
+    );
+    const resultIndex = tokens.findIndex((t) => t.kind === "identifier" && t.text === "result");
+    expect(importanceIndex).toBeGreaterThan(-1);
+    expect(resultIndex).toBeGreaterThan(-1);
+
+    const importanceDefId = defSiteFor(index, 2, importanceIndex);
+    expect(importanceDefId).toBeDefined();
+
+    const site = bindingInitFor(index, importanceDefId!);
+    expect(site).toEqual({ lineNumber: 2, tokenIndex: resultIndex, token: "result" });
+    expect(bindingDefForInit(index, 2, resultIndex)).toBe(importanceDefId);
+  });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { ControlFlowChip } from "@/components/code/ControlFlowChip";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { commitTokenPin } from "@/hooks/useTokenTrace";
@@ -14,7 +15,6 @@ import {
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useSimulationOptional } from "@/context/SimulationContext";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
-import { registerTraceHost, unregisterElement } from "@/lib/elementRegistry";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import {
   isDefinitionSignatureLine,
@@ -316,8 +316,6 @@ export function CodeLine({
     [beginTrace, filePath, lineNumber, memberId, showUsageLoadMenu, sourceFlowId],
   );
 
-  const controlFlowRefs = useRef<Map<string, HTMLElement>>(new Map());
-
   const fireControlFlowPreview = useCallback(
     (cfLine: number, cfTokenIndex: number, hostEl: HTMLElement) => {
       const edgeKey = ctrlPreviewEdgeId(
@@ -340,6 +338,14 @@ export function CodeLine({
       );
     },
     [beginTrace, clearConnectionMenu, controlFlowIndex, memberId, sourceFlowId],
+  );
+
+  const fireCfFromRef = useCallback(
+    (cfLine: number, cfTokenIndex: number, cfRefKey: string) => {
+      const chipEl = chipRefs.current.get(cfRefKey)?.getChipElement();
+      if (chipEl) fireControlFlowPreview(cfLine, cfTokenIndex, chipEl);
+    },
+    [fireControlFlowPreview],
   );
 
   const buildControlFlowPinInfo = useCallback(
@@ -667,83 +673,72 @@ export function CodeLine({
           if (cfAnchor && cfAnchor.role !== "condition") {
             const cfKey = makeControlFlowKey(sourceFlowId, memberId, lineNumber, i);
             const cfRefKey = `${lineNumber}-${i}`;
+            const cfRole = cfAnchor.role === "head" ? "head" : "branch";
             return (
-              <span
+              <ControlFlowChip
                 key={`${lineNumber}-${i}`}
-                ref={(el) => {
-                  const prev = controlFlowRefs.current.get(cfRefKey);
-                  if (prev && prev !== el) unregisterElement(prev);
-                  if (el) {
-                    controlFlowRefs.current.set(cfRefKey, el);
-                    registerTraceHost(el);
-                  } else {
-                    controlFlowRefs.current.delete(cfRefKey);
-                    if (prev) unregisterElement(prev);
-                  }
+                ref={(handle) => {
+                  if (handle) chipRefs.current.set(cfRefKey, handle);
+                  else chipRefs.current.delete(cfRefKey);
                 }}
-                data-trace-key={cfKey}
-                className="code-kw hoverable cursor-pointer"
-                role="button"
-                tabIndex={0}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  scheduleHoverFire(
-                    cfKey,
-                    () => fireControlFlowPreview(lineNumber, i, el),
-                    clearHover,
-                  );
-                }}
+                text={token.text}
+                traceKey={cfKey}
+                cfRole={cfRole}
+                shimmerDelay={`-${((lineNumber * 7 + i) * 0.37).toFixed(2)}s`}
+                onMouseEnter={() =>
+                  scheduleHoverFire(cfKey, () => fireCfFromRef(lineNumber, i, cfRefKey), clearHover)
+                }
                 onMouseLeave={() => scheduleHoverClear(cfKey, clearHover)}
-                onFocus={(e) => {
-                  const el = e.currentTarget;
+                onFocus={() =>
                   scheduleHoverFire(
                     cfKey,
-                    () => fireControlFlowPreview(lineNumber, i, el),
+                    () => fireCfFromRef(lineNumber, i, cfRefKey),
                     clearHover,
                     undefined,
                     { instant: true },
-                  );
-                }}
+                  )
+                }
                 onBlur={() => scheduleHoverClear(cfKey, clearHover)}
                 onClick={(e) => {
                   e.stopPropagation();
+                  const chipEl = chipRefs.current.get(cfRefKey)?.getChipElement();
+                  if (!chipEl) return;
                   commitTokenPin({
                     pinTrace,
                     showTokenInfo,
                     tokenKey: cfKey,
-                    onFire: () => fireControlFlowPreview(lineNumber, i, e.currentTarget),
+                    onFire: () => fireControlFlowPreview(lineNumber, i, chipEl),
                     buildPinInfo: () =>
                       buildControlFlowPinInfo(
                         token.text,
-                        cfAnchor.role === "head" ? "definition" : "usage",
+                        cfRole === "head" ? "definition" : "usage",
                         lineNumber,
                       ),
-                    animateEl: e.currentTarget,
+                    animateEl: chipEl,
                     event: e,
                     shiftKey: e.shiftKey,
                   });
                 }}
                 onKeyDown={(e) => {
                   if (e.key !== "Enter") return;
-                  const el = controlFlowRefs.current.get(cfRefKey);
-                  if (!el) return;
+                  const chip = chipRefs.current.get(cfRefKey);
+                  const chipEl = chip?.getChipElement();
+                  if (!chipEl) return;
                   commitTokenPin({
                     pinTrace,
                     showTokenInfo,
                     tokenKey: cfKey,
-                    onFire: () => fireControlFlowPreview(lineNumber, i, el),
+                    onFire: () => fireControlFlowPreview(lineNumber, i, chipEl),
                     buildPinInfo: () =>
                       buildControlFlowPinInfo(
                         token.text,
-                        cfAnchor.role === "head" ? "definition" : "usage",
+                        cfRole === "head" ? "definition" : "usage",
                         lineNumber,
                       ),
-                    animateEl: el,
+                    animateEl: chipEl,
                   });
                 }}
-              >
-                {token.text}
-              </span>
+              />
             );
           }
 

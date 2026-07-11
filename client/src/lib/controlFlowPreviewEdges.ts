@@ -81,6 +81,7 @@ function makeBranchEdge(
   toEl: HTMLElement,
   fromRole: LiveAnchorHint["role"],
   toRole: LiveAnchorHint["role"],
+  branchFan?: PreviewEdgeSpec["branchFan"],
 ): PreviewEdgeSpec {
   return {
     id: edgeId,
@@ -88,6 +89,7 @@ function makeBranchEdge(
     to: { type: "element", el: toEl },
     kind: "variable",
     connectionKind: "branch",
+    branchFan,
     liveFrom: liveHintFromEl(fromEl, fromRole),
     liveTo: liveHintFromEl(toEl, toRole),
   };
@@ -143,5 +145,9 @@ export function buildControlFlowPreviewEdges(
       ),
     );
   }
-  return edges;
+  const count = edges.length;
+  return edges.map((edge, index) => ({
+    ...edge,
+    branchFan: count > 1 ? { groupId: group.id, index, count } : undefined,
+  }));
 }

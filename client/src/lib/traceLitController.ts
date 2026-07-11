@@ -85,6 +85,9 @@ function isDefinitionHost(host: HTMLElement): boolean {
 }
 
 function anchorColorClasses(host: HTMLElement): string[] {
+  if (host.dataset.controlFlowRole) {
+    return ["bg-[color:var(--edge-control-flow)]", "text-[color:var(--edge-control-flow)]"];
+  }
   const kind = host.dataset.tokenKind as SemanticTokenKind | undefined;
   if (kind && kind in TOKEN_ANCHOR) {
     return TOKEN_ANCHOR[kind].split(/\s+/).filter(Boolean);
@@ -122,37 +125,39 @@ function primaryHostInDefGroup(
 
 function applyEndpointSockets(
   host: HTMLElement,
-  portSide: "left" | "right",
+  portSides: ReadonlySet<"left" | "right">,
   isSibling: boolean,
 ): HTMLElement[] {
   const restore: HTMLElement[] = [];
   const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
   const right = host.querySelector<HTMLElement>('[data-flow-anchor="right"]');
-  const socket = portSide === "right" ? right : left;
-  if (!socket) return restore;
+  for (const side of portSides) {
+    const socket = side === "right" ? right : left;
+    if (!socket) continue;
 
-  restore.push(socket);
-  socket.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
-  socket.classList.add(ANCHOR_ON);
-  removeAnchorColorClasses(socket);
-  if (isSibling) {
-    socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "bg-border", "text-border");
-  } else {
-    socket.classList.add(...anchorColorClasses(host));
+    restore.push(socket);
+    socket.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
+    socket.classList.add(ANCHOR_ON);
+    removeAnchorColorClasses(socket);
+    if (isSibling) {
+      socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "bg-border", "text-border");
+    } else {
+      socket.classList.add(...anchorColorClasses(host));
+    }
   }
   return restore;
 }
 
-function portSideForHost(
+function portSidesForHost(
   host: HTMLElement,
-  endpointPortSide: ReadonlyMap<string, "left" | "right">,
-): "left" | "right" {
+  endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
+): ReadonlySet<"left" | "right"> {
   const traceKey = traceKeyFromHost(host);
   if (traceKey) {
     const fromEdge = endpointPortSide.get(traceKey);
-    if (fromEdge) return fromEdge;
+    if (fromEdge && fromEdge.size > 0) return fromEdge;
   }
-  return isDefinitionHost(host) ? "right" : "left";
+  return new Set([isDefinitionHost(host) ? "right" : "left"]);
 }
 
 function applyEndpointHost(
@@ -160,7 +165,7 @@ function applyEndpointHost(
   isSibling: boolean,
   pinnedTokenKeys: ReadonlySet<string>,
   hoveredTokenKey: string | null,
-  endpointPortSide: ReadonlyMap<string, "left" | "right">,
+  endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
 ): void {
   const traceKey = traceKeyFromHost(host);
   const extra: string[] = [CHIP_ON];
@@ -173,7 +178,7 @@ function applyEndpointHost(
   }
   const restoreAnchors = applyEndpointSockets(
     host,
-    portSideForHost(host, endpointPortSide),
+    portSidesForHost(host, endpointPortSide),
     isSibling,
   );
   track(host, extra, restoreAnchors);

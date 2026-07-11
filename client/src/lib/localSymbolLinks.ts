@@ -207,24 +207,37 @@ function recordLineBinding(
 
   if (!bindingDefId || eqIndex < 0) return;
 
+  const bindingName = bindingDefId.split("::").at(-2) ?? null;
+  let first: { index: number; token: string } | null = null;
   let rightmost: { index: number; token: string } | null = null;
   for (let i = eqIndex + 1; i < tokens.length; i++) {
     const t = tokens[i]!;
     if (t.text === ";") break;
     if (t.kind === "identifier") {
+      if (!first) first = { index: i, token: t.text };
       rightmost = { index: i, token: t.text };
     }
   }
 
   if (!rightmost) return;
 
+  // `const importance = result.importance` — rightmost is the property token with the
+  // same name as the binding; anchor on the receiver instead to avoid a same-line loop.
+  const chosen =
+    bindingName &&
+    rightmost.token === bindingName &&
+    first &&
+    first.token !== bindingName
+      ? first
+      : rightmost;
+
   const site: BindingSite = {
     lineNumber,
-    tokenIndex: rightmost.index,
-    token: rightmost.token,
+    tokenIndex: chosen.index,
+    token: chosen.token,
   };
   bindingInitOf.set(bindingDefId, site);
-  bindingInitSites.set(`${lineNumber}:${rightmost.index}`, bindingDefId);
+  bindingInitSites.set(`${lineNumber}:${chosen.index}`, bindingDefId);
 }
 
 /**

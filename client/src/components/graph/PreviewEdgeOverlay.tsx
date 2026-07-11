@@ -80,7 +80,8 @@ export function PreviewEdgeOverlay() {
         {
           getSpecs: () => specsRef.current,
           getWires: () => wiresRef.current,
-          update: (wire, box, node) => updateWireGeometry(wire as WireElements, box, node),
+          update: (wire, box, node) =>
+            updateWireGeometry(wire as WireElements, box, node, specsRef.current),
         },
         {
           getSpecs: () => structuralSpecsRef.current,

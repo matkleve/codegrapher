@@ -20,6 +20,13 @@ export type LiveAnchorHint = {
   traceKey?: string;
 };
 
+/** Shared control-flow fan-out trunk — one vertical bus, spurs per branch. */
+export type BranchFanSpec = {
+  groupId: string;
+  index: number;
+  count: number;
+};
+
 export type PreviewEdgeSpec = {
   id: string;
   from: AnchorRef;
@@ -27,6 +34,8 @@ export type PreviewEdgeSpec = {
   kind: SemanticTokenKind;
   /** Defaults to usage when omitted. */
   connectionKind?: PreviewConnectionKind;
+  /** When set, branch wires share one trunk; only index 0 draws it. */
+  branchFan?: BranchFanSpec;
   liveFrom?: LiveAnchorHint;
   liveTo?: LiveAnchorHint;
   /** Transitive hop distance (2+); decays opacity on wire. */

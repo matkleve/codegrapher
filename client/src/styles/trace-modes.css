@@ -81,13 +81,15 @@
 }
 
 .graph-pane.graph-ctrl-preview .token-chip.cursor-pointer,
-.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer {
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer,
+.graph-pane.graph-ctrl-preview .control-flow-chip.cursor-pointer {
   background: transparent;
   box-shadow: none;
 }
 
 .graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
-.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after {
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after,
+.graph-pane.graph-ctrl-preview .control-flow-chip.cursor-pointer .token-shimmer-target::after {
   content: attr(data-text);
   position: absolute;
   left: 0;
@@ -204,7 +206,8 @@
 }
 
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw {
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .control-flow-chip-text {
   color: var(--faint-kw) !important;
 }
 
@@ -349,6 +352,7 @@
 }
 
 .graph-trace-active .code-line.trace-lit-line .code-kw,
+.graph-trace-active .code-line.trace-lit-line .control-flow-chip-text,
 .graph-trace-active .code-line.trace-lit-line .code-pn,
 .graph-trace-active .code-line.trace-lit-line .code-comment,
 .graph-trace-active .code-line.trace-lit-line .code-string,
