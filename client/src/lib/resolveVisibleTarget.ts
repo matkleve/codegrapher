@@ -384,8 +384,36 @@ export function resolveVisibleTarget(
   }
 
   const cards = externalCardsNotYetInGraph(token, symbols, graphData);
-  if (cards.length === 0) return null;
-  return { mode: "external", cards };
+  if (cards.length > 0) {
+    return { mode: "external", cards };
+  }
+
+  // Module-level types/interfaces indexed in a file on canvas but not graph nodes
+  // (e.g. enum beside an exported class) still resolve to Load/jump via index cards.
+  const moduleLevel = entries.filter(
+    (e) =>
+      !e.enclosingSymbol &&
+      (e.kind === "type" || e.kind === "interface"),
+  );
+  if (moduleLevel.length > 0) {
+    const onCanvas = graphData
+      ? findDefinitionInLoadedGraph(
+          token,
+          graphData,
+          getNode,
+          sourceFlowId,
+          defaultKind,
+        )
+      : null;
+    if (!onCanvas) {
+      const indexCards = buildExternalReferenceCards(token, symbols);
+      if (indexCards.length > 0) {
+        return { mode: "external", cards: indexCards };
+      }
+    }
+  }
+
+  return null;
 }
 
 function escapeRegExp(s: string): string {

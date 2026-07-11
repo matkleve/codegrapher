@@ -49,7 +49,7 @@ server/index.ts
 | ----------- | -------------- | ---------------- | ----------------- |
 | Class | yes | n/a (module-level) | yes |
 | Function (exported) / exported arrow fn | yes | n/a (module-level) | yes |
-| Interface / type alias / enum | yes | n/a (module-level) | partial (type chips only, no body trace) |
+| Interface / type alias / enum | yes | n/a (module-level) | yes — signature `sig-type` chips + body type refs; definition may be index-only (Load/jump) when not a graph node |
 | Method (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes |
 | Property (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes — resolves to the property's member row, same-class and cross-file |
 | Parameter | yes | yes — `enclosingSymbol` = owning method/function id | no (client-local only, see `localSymbolLinks.ts`) |

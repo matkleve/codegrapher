@@ -383,4 +383,30 @@ describe("resolveVisibleTarget", () => {
     expect(cards).toHaveLength(2);
     expect(cards.find((c) => c.filePath === "/a/A.ts")?.occurrenceCount).toBe(2);
   });
+
+  it("resolves module-level type in a file on canvas to external when type is not a graph node", () => {
+    const graphData = demoGraph();
+    const nodes = flowNodes(graphData);
+    const orderFlowId = toFlowId(orderClassId);
+    const typeSymbols = new Map<string, SymbolEntry[]>([
+      [
+        "AddressFieldKind",
+        [{ filePath: ORDER, kind: "type", line: 3 }],
+      ],
+    ]);
+
+    const result = resolveVisibleTarget(
+      "AddressFieldKind",
+      typeSymbols,
+      graphData,
+      getNodeFactory(nodes),
+      orderFlowId,
+    );
+
+    expect(result?.mode).toBe("external");
+    if (result?.mode === "external") {
+      expect(result.cards[0]?.filePath).toBe(ORDER);
+      expect(result.cards[0]?.line).toBe(3);
+    }
+  });
 });

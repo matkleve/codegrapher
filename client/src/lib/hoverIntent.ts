@@ -27,3 +27,11 @@ export function fireDelayMs(isWarm: boolean, isCtrlHeld: boolean): number {
   if (isCtrlHeld) return 0;
   return isWarm ? FIRE_WARM_MS : FIRE_COLD_MS;
 }
+
+/** Leave-clear runs when this token is still the latest pointer-leave target. */
+export function shouldCommitHoverClear(
+  tokenKey: string,
+  hoverClearRef: { tokenKey: string } | null,
+): boolean {
+  return hoverClearRef?.tokenKey === tokenKey;
+}

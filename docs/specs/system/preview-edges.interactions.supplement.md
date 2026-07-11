@@ -33,7 +33,9 @@ stateDiagram-v2
   end note
 ```
 
-**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow).
+**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub.
+
+**Signature type trace keys:** `{flowNodeId}::{memberId}::sig-type::{symbolName}` — parsed by `liveToFromUsageEl` without a line number; anchor resolves via `getByTraceKey` on the `MemberSignatureTypeLabel` chip.
 
 **Effective trace lit:** `mergeTraceLit(pinned, hover)` when both differ; `pinnedPreviewEdges` restore on hover leave.
 
@@ -75,6 +77,13 @@ sequenceDiagram
 | `LEAVE_GRACE_MS` | 150 | Anti-flicker between neighbors |
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
 
+**Leave-clear commit rule:** after `LEAVE_GRACE_MS`, clear runs when the leaving
+token is still the latest entry in `hoverClearRef` — **not** when it matches
+`hoveredTokenKey`. This prevents a stuck trace when the user leaves token B before
+B's dwell fires while token A's trace is still active (A's clear was cancelled on
+entering B). Hover `TokenConnectionMenu` cancels the grace timer on `mouseenter`;
+leaving the menu re-schedules clear via `scheduleHoverLeaveGrace`.
+
 ---
 
 ## Edge direction and fan-out
@@ -99,6 +108,8 @@ flowchart TB
 | Usage in `CodeLine` | `buildUsagePreviewEdge` | 1 |
 | Member row / class title def | `buildDefinitionPreviewEdges` | All usages in ego-graph |
 | Local param / local var | `buildLocalPreviewEdges` | In-body only |
+| Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
+| Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
 
@@ -273,7 +284,7 @@ flowchart TB
 | Ctrl + trace | shimmer stays on for every indexed token (Ctrl always wins) | faint + shimmer | no tint |
 | Pinned | pinned trace lit + optional hover preview | faint until dwell (or immediately if Ctrl held) | no tint |
 
-**Active chips (`token-chip-on`):** semantic tint fill (`color-mix` ~12% `--token-edge-*` into `--background`), **no inset ring**; idle `:hover` on `.cursor-pointer` chips uses the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
+**Active chips (`token-chip-on`):** semantic tint fill (`--token-surface-*` — `color-mix(in srgb, …)` of `--token-edge-*` into white / `--background`), **no inset ring**; idle `:hover` and `:focus-visible` on `.cursor-pointer` chips use the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
 
 **Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur.
 

@@ -6,7 +6,7 @@ React Flow compound node rendering one parsed class: header, collapsible propert
 
 ## What It Looks Like
 
-Rounded card with file-type chip, camelCase-split title, expand chevron. Method row headers show compact param and return-type tags parsed from the signature. Member rows stack vertically; expanded methods show monospace source. Resize handle at bottom; height always fits open content.
+Rounded card with file-type chip, camelCase-split title, expand chevron. Method row headers show compact param and return-type tags parsed from the signature. Member rows stack vertically; expanded methods show monospace source with a **left gutter line number** per row; hovering a source line applies brand-tinted row background (simulation current line uses a stronger highlight). Resize handle at bottom; height always fits open content.
 
 ## Where It Lives
 
@@ -26,6 +26,7 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Method 
 | 5 | Clicks section header | Bulk expand/collapse section | `onToggleMethodsSection` |
 | 6 | Drags resize control | Live snap height to content | `useClassNodeResize` |
 | 7 | Hovers indexed token in body | Preview edge — see [preview-edges](../../system/preview-edges.md) | `GraphInteractionContext` |
+| 7b | Hovers indexed param or type in signature tags | Trace dims row + signature; edge when target resolves | `MemberSignatureTags` |
 | 8 | Hovers member def label | Def fan-out to usages | `buildDefinitionPreviewEdges` |
 | 9 | Right-click → path mode | _(graph-level)_ path highlight when second node picked | graph chrome |
 

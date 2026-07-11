@@ -201,6 +201,8 @@
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-pn,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-comment,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-string,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-body-wrap {
   color: var(--faint) !important;
 }
@@ -211,11 +213,23 @@
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-kind-icon,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-colon,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-param-name,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--in,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--out,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--primitive,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-title,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-caret,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-caret {
   color: var(--faint) !important;
+}
+
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit),
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
+  .member-row-label:not(.token-chip-lit)
+  .token-shimmer-target {
+  color: var(--faint) !important;
+  -webkit-text-fill-color: currentColor;
 }
 
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value {

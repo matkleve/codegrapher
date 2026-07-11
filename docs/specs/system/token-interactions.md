@@ -20,9 +20,11 @@ in [interaction-emphasis.md](interaction-emphasis.md).
 ## Where It Lives
 
 Every indexed token in a class node body (`CodeLine`), member row header
-(`CollapsibleMemberRow`), and class title (`NodeCardHeader`), scoped to the
-`.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin), `hoverIntent.ts`
-(dwell), `linksForElement.ts` (endpoints), `PreviewEdgeOverlay` (draw).
+(`CollapsibleMemberRow`), method signature tags (`MemberSignatureTags` — param
+name chips and indexed type chips), and class title (`NodeCardHeader`), scoped
+to the `.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin),
+`hoverIntent.ts` (dwell), `linksForElement.ts` (endpoints), `PreviewEdgeOverlay`
+(draw).
 
 ## Actions
 
@@ -49,8 +51,9 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | ---- | ---------- | ----------------- | ------------ | ------------ |
 | **Class** | periwinkle | class header anchor | usage site line | node lights; no member spread |
 | **Function / method** | blue | member row / expanded line | call site line | lights **its own body** (top→bottom) |
-| **Type** (annotation / import) | teal | type reference | usage site line | same as class (no body spread) |
+| **Type** (annotation / import / signature tag) | teal | type reference | usage site line or `sig-type` chip | same as class (no body spread) |
 | **Variable / property** | indigo | property row | read/write site | does **not** light enclosing functions |
+| **Param** (signature tag) | indigo | param chip in signature | in-body read sites | owner row lit; function name dims |
 
 Direction is always **definition → usage**, independent of which end is hovered
 (the source feeds its readers). Cascade rule U9: a function endpoint keeps its
@@ -116,6 +119,13 @@ pinned-token load flow; the hover Load pill / LoadConnector was removed.
   definition is on the canvas.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim
   (no upward cascade); a function endpoint lights its own body.
+- [ ] Given an indexed type name in a method signature tag (e.g. `AddressFieldKind`
+  after `:`), when hovered past dwell, then `graph-trace-active` dims the member
+  row label and non-lit signature text (including union/comment fragments like
+  `e.g. "Vienna Austria"`), draws a preview edge when a definition resolves (on
+  canvas or Load stub), and lights the hovered chip — same dwell/trace contract
+  as a param chip (`field`), regardless of whether the definition is a graph
+  node.
 - [ ] Plain hover never fires without a dwell; Ctrl fires instantly.
 
 ## Interaction emphasis

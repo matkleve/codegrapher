@@ -5,7 +5,10 @@ import {
   buildUsagePreviewEdge,
 } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId } from "@/lib/ctrlPreviewHandles";
-import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
+import {
+  buildExternalReferenceCards,
+  resolveVisibleTarget,
+} from "@/lib/resolveVisibleTarget";
 import type { SymbolEntry } from "@/types";
 import { toFlowId } from "@/lib/graphIds";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -140,19 +143,23 @@ export function buildSignatureTypeUsageEdges(
   sourceFlowId: string,
   memberId: string,
 ): PreviewEdgeSpec[] {
-  const resolved = resolveVisibleTarget(
+  const edgeKey = ctrlPreviewEdgeId(
+    sourceFlowId,
+    `sig-type::${memberId}::${symbolName}`,
+  );
+
+  let resolved = resolveVisibleTarget(
     symbolName,
     symbols,
     graphData,
     getNode,
     sourceFlowId,
   );
-  if (!resolved) return [];
-
-  const edgeKey = ctrlPreviewEdgeId(
-    sourceFlowId,
-    `sig-type::${memberId}::${symbolName}`,
-  );
+  if (!resolved) {
+    const indexCards = buildExternalReferenceCards(symbolName, symbols);
+    if (indexCards.length === 0) return [];
+    resolved = { mode: "external", cards: indexCards };
+  }
 
   if (resolved.mode === "external") {
     if (resolved.cards.length === 0) return [];

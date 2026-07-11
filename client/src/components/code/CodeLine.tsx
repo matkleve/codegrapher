@@ -452,25 +452,29 @@ export function CodeLine({
   return (
     <div
       className={cn(
-        "code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed",
+        "code-line group/code-line",
         isSimCurrent && "code-line--sim-current",
       )}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={lineTargetId}
-        className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
-      />
-      <FlowAnchor
-        side="left"
-        targetId={lineTargetId}
-        size="node"
-        visible={lineTargetActive}
-        highlighted={lineTargetActive}
-        colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
-      />
-      {tokens.map((token, i) => {
+      <span className="code-line-gutter" aria-hidden>
+        {lineNumber}
+      </span>
+      <div className="code-line-body relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed">
+        <Handle
+          type="target"
+          position={Position.Left}
+          id={lineTargetId}
+          className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
+        />
+        <FlowAnchor
+          side="left"
+          targetId={lineTargetId}
+          size="node"
+          visible={lineTargetActive}
+          highlighted={lineTargetActive}
+          colorClass={lineTargetActive && lineKind ? TOKEN_ANCHOR[lineKind] : "bg-border"}
+        />
+        {tokens.map((token, i) => {
         if (token.kind === "string" && isImportModuleSpecifier(tokens, i)) {
           const chipKey = `import-${lineNumber}-${i}`;
           const tokenKey = makeImportSpecKey(
@@ -651,6 +655,7 @@ export function CodeLine({
           />
         );
       })}
+      </div>
     </div>
   );
 }

@@ -38,6 +38,9 @@ export function makeImportSpecKey(
 export function memberIdFromUsageKey(key: string): string | null {
   const parts = key.split("::");
   if (parts.length < 4 || parts[1] === "def") return null;
+  if (parts.length === 4 && parts[2] === "sig-type") return parts[1] ?? null;
+  const lineNumber = Number(parts[2]);
+  if (!Number.isFinite(lineNumber)) return null;
   return parts[1] ?? null;
 }
 

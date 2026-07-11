@@ -77,6 +77,7 @@ One hue per indexed symbol kind — chips, preview edges, and lit trace endpoint
 | `--token-edge-function` | function / method | blue (~255) |
 | `--token-edge-type` | type annotation, import path | teal (~200) |
 | `--token-edge-variable` | variable, property, param | indigo (~292) |
+| `--token-surface-*` | chip `:hover`, `:focus-visible`, `token-chip-on` fill — `color-mix(in srgb, …)` light tint of matching `--token-edge-*` (never oklch into achromatic neutral — hue snaps red) |
 | `--code-type-primitive` | TS primitive in signatures | muted blue-gray |
 
 Syntax literals (non-indexed): `--code-keyword`, `--code-string`, `--code-number`.

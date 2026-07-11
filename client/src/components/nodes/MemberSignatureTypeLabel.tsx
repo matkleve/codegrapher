@@ -2,7 +2,9 @@ import { useRef, useState, type ReactNode } from "react";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useMemberSignatureTypeTrace } from "@/hooks/useMemberSignatureTypeTrace";
+import { useIndex } from "@/context/IndexContext";
 import {
+  primaryIndexedSymbolInType,
   signatureTypeIsExpandable,
   signatureTypeLines,
   truncateSignatureType,
@@ -37,6 +39,7 @@ export function MemberSignatureTypeLabel({
   filePath,
   shimmerDelay,
 }: MemberSignatureTypeLabelProps) {
+  const { hasSymbol } = useIndex();
   const chipRef = useRef<TokenChipHandle>(null);
   const hostRef = useRef<HTMLButtonElement>(null);
   useTraceHostRegistration(hostRef);
@@ -45,7 +48,7 @@ export function MemberSignatureTypeLabel({
   const {
     semantic,
     tokenKey,
-    connectable,
+    indexed,
     onEnter,
     onLeave,
     onPinClick,
@@ -102,8 +105,12 @@ export function MemberSignatureTypeLabel({
     </span>
   );
 
-  const renderType = (text: string, key?: string): ReactNode =>
-    connectable ? renderConnectableChip(text, key) : renderPlainType(text, key);
+  const renderType = (text: string, key?: string): ReactNode => {
+    if (primaryIndexedSymbolInType(text, hasSymbol)) {
+      return renderConnectableChip(text, key);
+    }
+    return renderPlainType(text, key);
+  };
 
   if (!expandable) {
     return renderType(type);
@@ -115,23 +122,23 @@ export function MemberSignatureTypeLabel({
       type="button"
       className={cn(
         "member-sig-type member-sig-type-expand-host",
-        connectable ? "member-sig-type--indexed" : primitiveTypeClassName(variant),
+        indexed ? "member-sig-type--indexed" : primitiveTypeClassName(variant),
         INTERACTIVE_SURFACE,
         "member-sig-type--expandable",
         expanded && "member-sig-type--expanded",
       )}
       title={expanded ? "Click to collapse" : type}
       aria-expanded={expanded}
-      data-trace-key={connectable ? tokenKey : undefined}
-      data-token-kind={connectable ? semantic : undefined}
-      data-symbol-role={connectable ? "usage" : undefined}
+      data-trace-key={indexed ? tokenKey : undefined}
+      data-token-kind={indexed ? semantic : undefined}
+      data-symbol-role={indexed ? "usage" : undefined}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
         setExpanded((open) => !open);
       }}
-      onMouseEnter={connectable ? onEnter : undefined}
-      onMouseLeave={connectable ? onLeave : undefined}
+      onMouseEnter={indexed ? onEnter : undefined}
+      onMouseLeave={indexed ? onLeave : undefined}
     >
       {expanded ? (
         <span className="member-sig-type-lines">

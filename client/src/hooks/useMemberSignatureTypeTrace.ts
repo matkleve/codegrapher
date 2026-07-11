@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type RefObject } from "react";
+import { useCallback, type RefObject } from "react";
 import { useReactFlow } from "@xyflow/react";
 import type { TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
@@ -47,50 +47,18 @@ export function useMemberSignatureTypeTrace({
   } = useGraphInteraction();
 
   const symbolName = primaryIndexedSymbolInType(type, hasSymbol);
+  const indexed = Boolean(symbolName);
   const entry = symbolName ? lookup(symbolName) : undefined;
   const semantic = entry ? symbolKindToSemantic(entry.kind) : "type";
   const tokenKey = symbolName
     ? makeSignatureTypeKey(flowNodeId, memberId, symbolName)
     : "";
 
-  const connectable = useMemo(() => {
-    if (!symbolName) return false;
-    return (
-      resolveVisibleTarget(symbolName, symbols, graphData, getNode, flowNodeId) !=
-      null
-    );
-  }, [flowNodeId, getNode, graphData, symbolName, symbols]);
-
   const resolveHost = () =>
     chipRef.current?.getChipElement() ?? hostRef.current;
 
-  const showUsageLoadMenu = (chipEl: HTMLElement) => {
-    if (!symbolName) return;
-    const resolved = resolveVisibleTarget(
-      symbolName,
-      symbols,
-      graphData,
-      getNode,
-      flowNodeId,
-    );
-    if (!resolved || resolved.mode !== "external") {
-      clearConnectionMenu();
-      return;
-    }
-    const menuState = buildHoverLoadMenu(
-      symbolName,
-      semantic,
-      "usage",
-      chipEl,
-      loadTargetsFromExternalCards(resolved.cards),
-      filePath,
-    );
-    if (menuState) showConnectionMenu(menuState);
-    else clearConnectionMenu();
-  };
-
   const firePreview = useCallback(() => {
-    if (!symbolName || !connectable) return;
+    if (!symbolName || !tokenKey) return;
     const chipEl = resolveHost();
     if (!chipEl) return;
     const edges = buildSignatureTypeUsageEdges(
@@ -104,17 +72,39 @@ export function useMemberSignatureTypeTrace({
       memberId,
     );
     beginTrace(tokenKey, edges);
-    if (edges.some((e) => e.load)) showUsageLoadMenu(chipEl);
-    else clearConnectionMenu();
+    if (edges.some((e) => e.load)) {
+      const resolved = resolveVisibleTarget(
+        symbolName,
+        symbols,
+        graphData,
+        getNode,
+        flowNodeId,
+      );
+      if (resolved?.mode === "external") {
+        const menuState = buildHoverLoadMenu(
+          symbolName,
+          semantic,
+          "usage",
+          chipEl,
+          loadTargetsFromExternalCards(resolved.cards),
+          filePath,
+        );
+        if (menuState) showConnectionMenu(menuState);
+        else clearConnectionMenu();
+      }
+    } else {
+      clearConnectionMenu();
+    }
   }, [
     beginTrace,
     clearConnectionMenu,
-    connectable,
+    filePath,
     flowNodeId,
     getNode,
     graphData,
     memberId,
     semantic,
+    showConnectionMenu,
     symbolName,
     symbols,
     tokenKey,
@@ -142,7 +132,7 @@ export function useMemberSignatureTypeTrace({
 
   const { onEnter, onLeave } = useTokenHover({
     tokenKey,
-    enabled: connectable,
+    enabled: indexed,
     onFire: firePreview,
     onClear: () => {},
     buildTransientInfo: () => {
@@ -153,7 +143,7 @@ export function useMemberSignatureTypeTrace({
 
   const { onPinClick } = useTokenPin({
     tokenKey,
-    enabled: connectable,
+    enabled: indexed,
     onFire: firePreview,
     buildPinInfo: () => {
       const { pinned: _p, ...rest } = buildPinInfo();
@@ -165,7 +155,7 @@ export function useMemberSignatureTypeTrace({
     symbolName,
     semantic,
     tokenKey,
-    connectable,
+    indexed,
     onEnter,
     onLeave,
     onPinClick,

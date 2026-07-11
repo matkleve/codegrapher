@@ -30,6 +30,7 @@ import {
   fireDelayMs,
   INFO_DELAY_MS,
   LEAVE_GRACE_MS,
+  shouldCommitHoverClear,
   type HoverIntentTimers,
 } from "@/lib/hoverIntent";
 import {
@@ -448,11 +449,17 @@ export function GraphInteractionProvider({
       timers.info = null;
 
       timers.clear = setTimeout(() => {
-        if (hoveredTokenKeyRef.current === tokenKey) {
-          hoveredTokenKeyRef.current = null;
-          pendingFireRef.current = null;
-          onClear();
+        if (!shouldCommitHoverClear(tokenKey, hoverClearRef.current)) {
+          timers.clear = null;
+          return;
         }
+        clearTimeout(timers.fire ?? undefined);
+        timers.fire = null;
+        timers.info = null;
+        hoveredTokenKeyRef.current = null;
+        pendingFireRef.current = null;
+        hoverClearRef.current = null;
+        onClear();
         timers.clear = null;
       }, LEAVE_GRACE_MS);
     },
