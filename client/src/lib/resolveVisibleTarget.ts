@@ -79,7 +79,6 @@ function buildClassGraphTarget(
   kind: SemanticTokenKind,
   flowNodeId: string,
   classLabel: string,
-  sourceFlowId: string,
 ): GraphVisibleTarget {
   const definitionEl = findClassDefLabel(flowNodeId, token);
   return {
@@ -93,14 +92,17 @@ function buildClassGraphTarget(
   };
 }
 
-function buildMethodGraphTarget(
+/** Shared by methods and properties — both render as member rows with the same collapse/expand levels. */
+function buildMemberGraphTarget(
   token: string,
   kind: SemanticTokenKind,
   flowNodeId: string,
   classData: ClassNodeData,
   memberId: string,
-  methodLabel: string,
+  memberLabel: string,
   sourceFlowId: string,
+  members: ClassNodeData["methods"],
+  expandedMemberIds: string[],
 ): GraphVisibleTarget {
   const definitionEl = findMemberDefLabel(flowNodeId, memberId, token);
 
@@ -111,7 +113,7 @@ function buildMethodGraphTarget(
       flowNodeId,
       targetHandle: previewMemberHandle(memberId),
       definitionEl: definitionEl ?? undefined,
-      label: methodLabel,
+      label: memberLabel,
       kind,
       memberId,
     };
@@ -124,27 +126,27 @@ function buildMethodGraphTarget(
       level: "class",
       flowNodeId,
       targetHandle: previewTargetTop(flowNodeId),
-      label: methodLabel,
+      label: memberLabel,
       kind,
       memberId,
     };
   }
 
-  const methodExpanded = classData.expandedMethodIds.includes(memberId);
-  if (!methodExpanded) {
+  const memberExpanded = expandedMemberIds.includes(memberId);
+  if (!memberExpanded) {
     return {
       mode: "graph",
       level: "member",
       flowNodeId,
       targetHandle: previewMemberHandle(memberId),
-      label: methodLabel,
+      label: memberLabel,
       kind,
       memberId,
     };
   }
 
-  const methodItem = classData.methods.find((m) => m.id === memberId);
-  const codeLines = methodItem?.code.split("\n") ?? [];
+  const memberItem = members.find((m) => m.id === memberId);
+  const codeLines = memberItem?.code.split("\n") ?? [];
   let relativeLine = 1;
   for (let i = 0; i < codeLines.length; i++) {
     if (new RegExp(`\\b${escapeRegExp(token)}\\b`).test(codeLines[i]!)) {
@@ -186,22 +188,39 @@ export function findDefinitionInLoadedGraph(
       (node.type === "class" || node.type === "module") &&
       node.label === token
     ) {
-      return buildClassGraphTarget(token, kind, flowNodeId, node.label, sourceFlowId);
+      return buildClassGraphTarget(token, kind, flowNodeId, node.label);
     }
 
     const method = classData.methods.find((m) => m.symbolName === token);
-    if (!method) continue;
+    if (method) {
+      const methodNode = graphData.nodes.find((n) => n.id === method.id);
+      return buildMemberGraphTarget(
+        token,
+        kind,
+        flowNodeId,
+        classData,
+        method.id,
+        methodNode?.label ?? token,
+        sourceFlowId,
+        classData.methods,
+        classData.expandedMethodIds,
+      );
+    }
 
-    const methodNode = graphData.nodes.find((n) => n.id === method.id);
-    return buildMethodGraphTarget(
-      token,
-      kind,
-      flowNodeId,
-      classData,
-      method.id,
-      methodNode?.label ?? token,
-      sourceFlowId,
-    );
+    const property = classData.properties.find((m) => m.symbolName === token);
+    if (property) {
+      return buildMemberGraphTarget(
+        token,
+        kind,
+        flowNodeId,
+        classData,
+        property.id,
+        property.label,
+        sourceFlowId,
+        classData.properties,
+        classData.expandedPropertyIds,
+      );
+    }
   }
 
   return null;
@@ -228,7 +247,7 @@ function targetFromGraphNode(
     const memberId = findMemberId(graphNode, classData, token);
     if (!memberId) return null;
 
-    return buildMethodGraphTarget(
+    return buildMemberGraphTarget(
       token,
       kind,
       flowNodeId,
@@ -236,6 +255,8 @@ function targetFromGraphNode(
       memberId,
       graphNode.label,
       sourceFlowId,
+      classData.methods,
+      classData.expandedMethodIds,
     );
   }
 
@@ -244,7 +265,26 @@ function targetFromGraphNode(
     graphNode.type === "module"
   ) {
     const flowNodeId = toFlowId(graphNode.id);
-    return buildClassGraphTarget(token, kind, flowNodeId, graphNode.label, sourceFlowId);
+
+    if (entry.kind === "property") {
+      const classData = getClassNodeData(flowNodeId, getNode);
+      const property = classData?.properties.find((p) => p.symbolName === token);
+      if (!classData || !property) return null;
+
+      return buildMemberGraphTarget(
+        token,
+        kind,
+        flowNodeId,
+        classData,
+        property.id,
+        property.label,
+        sourceFlowId,
+        classData.properties,
+        classData.expandedPropertyIds,
+      );
+    }
+
+    return buildClassGraphTarget(token, kind, flowNodeId, graphNode.label);
   }
 
   return null;
@@ -315,15 +355,9 @@ export function resolveVisibleTarget(
   const defaultKind = symbolKindToSemantic(entries[0]!.kind);
 
   if (graphData) {
-    const onCanvas = findDefinitionInLoadedGraph(
-      token,
-      graphData,
-      getNode,
-      sourceFlowId,
-      defaultKind,
-    );
-    if (onCanvas) return onCanvas;
-
+    // Scoped index entries first — `enclosingSymbol` lets this pick the right
+    // definition when multiple on-canvas classes share a member name. The bare
+    // canvas scan below is a fallback for tokens with no (or no matching) entry.
     for (const entry of entries) {
       const graphNode = graphNodeForEntry(entry, token, graphData);
       if (!graphNode) continue;
@@ -338,6 +372,15 @@ export function resolveVisibleTarget(
       );
       if (target) return target;
     }
+
+    const onCanvas = findDefinitionInLoadedGraph(
+      token,
+      graphData,
+      getNode,
+      sourceFlowId,
+      defaultKind,
+    );
+    if (onCanvas) return onCanvas;
   }
 
   const cards = externalCardsNotYetInGraph(token, symbols, graphData);

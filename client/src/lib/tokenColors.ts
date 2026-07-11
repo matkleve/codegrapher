@@ -16,6 +16,8 @@ export function symbolKindToSemantic(kind: SymbolKind): SemanticTokenKind {
     case "method":
       return "function";
     case "property":
+    case "param":
+    case "local":
       return "variable";
   }
 }

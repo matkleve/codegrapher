@@ -50,12 +50,14 @@ server/index.ts
 | Class | yes | n/a (module-level) | yes |
 | Function (exported) / exported arrow fn | yes | n/a (module-level) | yes |
 | Interface / type alias / enum | yes | n/a (module-level) | partial (type chips only, no body trace) |
-| Method (on exported/injectable class) | yes | **missing** — bare name only | yes, but see caveat below |
-| Property (on exported/injectable class) | yes | **missing** — bare name only | **no** — indexed but not resolvable as a cross-file trace target |
-| Parameter | no | n/a until indexed | no (client-local only, see `localSymbolLinks.ts`) |
-| Local (`const`/`let`) | no | n/a until indexed | no (client-local only, see `localSymbolLinks.ts`) |
+| Method (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes |
+| Property (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes — resolves to the property's member row, same-class and cross-file |
+| Parameter | yes | yes — `enclosingSymbol` = owning method/function id | no (client-local only, see `localSymbolLinks.ts`) |
+| Local (`const`/`let`) | yes | yes — `enclosingSymbol` = owning method/function id, scoped to direct body (not nested closures) | no (client-local only, see `localSymbolLinks.ts`) |
 
-**Caveat (current bug, not yet fixed):** `findDefinitionInLoadedGraph` (`client/src/lib/resolveVisibleTarget.ts`) resolves a method definition by scanning on-canvas classes for the first method whose `symbolName` matches — it does not consult `enclosingSymbol`. Two on-canvas classes with a same-named method will resolve to whichever one the scan visits first, not necessarily the correct one for the hovered call site's actual target class. Scoped identity (this spec) is required to fix this; see Acceptance Criteria.
+**Resolved:** `resolveVisibleTarget` now tries scoped index entries (`graphNodeForEntry` + `targetFromGraphNode`) before the bare canvas scan (`findDefinitionInLoadedGraph`), so two on-canvas classes with a same-named method or property resolve via `enclosingSymbol`, not scan order. The bare scan remains as a fallback for tokens with no matching entry.
+
+**Known remaining gap (not fixed by this contract):** resolving *which* object a method call targets when the receiver's type isn't known (e.g. `a.charge()` vs `b.charge()` where `a`/`b` are different classes both exposing `charge`) still requires type-checking the call expression, not just scoping the definition — out of scope here. Params/locals are indexed but intentionally not preview-eligible yet (no UI consumer); wiring them into preview edges is separate follow-up work.
 
 ## Scoped identity contract (normative)
 
@@ -85,11 +87,11 @@ Stateless per request. Client owns merged ego-graph state.
 - [x] `fixtures/demo` OrderService.checkout indexes `charge`, `PaymentGateway`
 - [x] Focus endpoint returns import-linked files for merge
 - [x] Parser errors return HTTP error, not partial silent graph
-- [ ] `method` and `property` entries carry `enclosingSymbol`
-- [ ] Given two on-canvas classes with a same-named method, hovering a call site resolves to the definition whose `enclosingSymbol` matches the call's resolved class — not the first node encountered on canvas
-- [ ] Property definitions are resolvable as cross-file preview-edge targets (currently inert — see caveat above)
-- [ ] Parameters and locals appear in the server index with `enclosingSymbol` set to their owning method/function
-- [ ] Existing class/function/interface/type resolution is unaffected (no `enclosingSymbol` required, no regression in `fixtures/demo`)
+- [x] `method` and `property` entries carry `enclosingSymbol`
+- [x] Given two on-canvas classes with a same-named method or property, hovering resolves to the definition whose `enclosingSymbol` matches — not the first node encountered on canvas (`resolveVisibleTarget.test.ts`)
+- [x] Property definitions are resolvable as cross-file preview-edge targets
+- [x] Parameters and locals appear in the server index with `enclosingSymbol` set to their owning method/function, scoped to direct body (verified against `fixtures/demo`)
+- [x] Existing class/function/interface/type resolution is unaffected (no `enclosingSymbol` required; full client test suite green, no `fixtures/demo` regression)
 
 ## References
 

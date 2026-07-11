@@ -65,6 +65,8 @@ export function CollapsibleMemberRow({
     lookupIndexedUsageSites,
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
+    cancelHoverLeaveGrace,
+    focusReadingMember,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -212,10 +214,20 @@ export function CollapsibleMemberRow({
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
         aria-expanded={expanded}
-        onPointerDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          cancelHoverLeaveGrace();
+        }}
         onClick={(e) => {
           e.stopPropagation();
+          cancelHoverLeaveGrace();
           onToggle(memberId);
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          cancelHoverLeaveGrace();
+          focusReadingMember(flowNodeId, memberId);
         }}
       >
         <ExpandChevron

@@ -117,6 +117,8 @@ type GraphInteractionContextValue = {
   lookupProjectReferences: (token: string) => ReferenceEntry[];
   lookupOffCanvasCallSiteFiles: (token: string) => ReferenceEntry[];
   focusFlowNode: (flowNodeId: string) => void;
+  /** Expand member, widen node, scroll into reading position; persists `?focus=` URL. */
+  focusReadingMember: (flowNodeId: string, memberId: string) => void;
   onLoadFile: (filePath: string) => void | Promise<void>;
   /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
   refreshLoadTraces: () => void;
@@ -157,6 +159,7 @@ type GraphInteractionProviderProps = {
   nodes: Node[];
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
   onLoadFile: (filePath: string) => void | Promise<void>;
+  onFocusReadingMember?: (flowNodeId: string, memberId: string) => void;
 };
 
 export function GraphInteractionProvider({
@@ -165,6 +168,7 @@ export function GraphInteractionProvider({
   nodes,
   setNodes,
   onLoadFile,
+  onFocusReadingMember,
 }: GraphInteractionProviderProps) {
   const { isCtrlActive } = useCtrlKey();
   const isCtrlActiveRef = useRef(isCtrlActive);
@@ -749,6 +753,7 @@ export function GraphInteractionProvider({
       lookupProjectReferences,
       lookupOffCanvasCallSiteFiles,
       focusFlowNode,
+      focusReadingMember: onFocusReadingMember ?? (() => {}),
       onLoadFile,
       refreshLoadTraces: applyLoadTraceRebuild,
       graphData,
@@ -790,6 +795,7 @@ export function GraphInteractionProvider({
       lookupProjectReferences,
       lookupOffCanvasCallSiteFiles,
       focusFlowNode,
+      onFocusReadingMember,
       onLoadFile,
       applyLoadTraceRebuild,
       graphData,

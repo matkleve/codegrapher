@@ -53,6 +53,13 @@ export function graphNodeForEntry(
     ) {
       return node;
     }
+    if (
+      entry.kind === "property" &&
+      (node.type === "class" || node.type === "module") &&
+      entry.enclosingSymbol === node.id
+    ) {
+      return node;
+    }
   }
 
   for (const node of graphData.nodes) {

@@ -24,6 +24,8 @@ Split pane with folder path input, file tree, recent files. Right side is React 
 | 4 | Clicks Browse for folder | Native OS dialog | `POST /api/browse-folder` — **never headless** |
 | 5 | Toggles theme | Persist `localStorage["codegrapher:theme"]` | `ThemeToggle` |
 | 6 | Resizes sidebar divider | Update sidebar width; below warn width shows collapse hint; release below threshold collapses | `useResizableSidebar` |
+| 7 | Double-clicks member row on canvas | Reading focus — expand, scroll, persist `?focus=nodeId\|memberId` | `focusReadingMember` — see class-node |
+| 8 | Clicks reading-focus control (canvas) | Re-run reading layout for current `?focus=` selection | `GraphFlowInner` |
 
 ## Component Hierarchy
 

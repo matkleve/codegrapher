@@ -310,6 +310,64 @@ describe("resolveVisibleTarget", () => {
     expect(target?.flowNodeId).toBe(flowId);
   });
 
+  it("resolves a property definition to its own member row on the same class", () => {
+    const graphData = demoGraph();
+    const nodes = flowNodes(graphData);
+    const orderFlowId = toFlowId(orderClassId);
+    const ordersPropId = `${orderClassId}:prop:orders`;
+    (nodes.get(orderFlowId)!.data as ClassNodeData).properties = [
+      { id: ordersPropId, label: "orders", symbolName: "orders", code: "orders: Map<string, number>" },
+    ];
+
+    const target = findDefinitionInLoadedGraph(
+      "orders",
+      graphData,
+      getNodeFactory(nodes),
+      orderFlowId,
+      "variable",
+    );
+
+    expect(target?.mode).toBe("graph");
+    expect(target?.flowNodeId).toBe(orderFlowId);
+    expect(target?.memberId).toBe(ordersPropId);
+  });
+
+  it("resolves a property via scoped index entry, not the first same-named property on canvas", () => {
+    const graphData = demoGraph();
+    const nodes = flowNodes(graphData);
+    const orderFlowId = toFlowId(orderClassId);
+    const paymentFlowId = toFlowId(paymentClassId);
+    const ordersOnOrder = `${orderClassId}:prop:orders`;
+    const ordersOnPayment = `${paymentClassId}:prop:orders`;
+    (nodes.get(orderFlowId)!.data as ClassNodeData).properties = [
+      { id: ordersOnOrder, label: "orders", symbolName: "orders", code: "orders: Map<string, number>" },
+    ];
+    (nodes.get(paymentFlowId)!.data as ClassNodeData).properties = [
+      { id: ordersOnPayment, label: "orders", symbolName: "orders", code: "orders: string[]" },
+    ];
+
+    const propertySymbols = new Map<string, SymbolEntry[]>([
+      [
+        "orders",
+        [{ filePath: PAYMENT, kind: "property", line: 2, enclosingSymbol: paymentClassId }],
+      ],
+    ]);
+
+    const result = resolveVisibleTarget(
+      "orders",
+      propertySymbols,
+      graphData,
+      getNodeFactory(nodes),
+      "flow-unrelated-caller",
+    );
+
+    expect(result?.mode).toBe("graph");
+    if (result?.mode === "graph") {
+      expect(result.flowNodeId).toBe(paymentFlowId);
+      expect(result.memberId).toBe(ordersOnPayment);
+    }
+  });
+
   it("builds one card per file for duplicate index rows", () => {
     const dupes = new Map<string, SymbolEntry[]>([
       [

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 const DRAG_THRESHOLD_PX = 4;
 
 const PIN_TARGET_SELECTOR =
-  ".token-chip, .token-def-label, [data-token-context-bar], .preview-edge-hit, .connector-chip--load";
+  ".token-chip, .token-def-label, [data-token-context-bar], .preview-edge-hit, .connector-chip--load, .member-row-header, .node-card-header";
 
 function isPinTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;

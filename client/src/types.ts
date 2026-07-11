@@ -41,12 +41,20 @@ export type SymbolKind =
   | "method"
   | "interface"
   | "type"
-  | "property";
+  | "property"
+  | "param"
+  | "local";
 
+/**
+ * `enclosingSymbol` is the owning declaration's graph-node id (`GraphNode.id` format),
+ * present for scoped kinds (method, property, param, local). See
+ * docs/specs/service/parser-index.md.
+ */
 export type SymbolEntry = {
   filePath: string;
   kind: SymbolKind;
   line: number;
+  enclosingSymbol?: string;
 };
 
 export type ProjectIndexResponse = {

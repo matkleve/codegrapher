@@ -187,6 +187,7 @@ Implementation: `client/src/lib/computeTraceLit.ts`, `GraphInteractionContext` `
 | Click token / wire | Pin one trace (**replaces** existing pins) |
 | Shift+click token | **Accumulate** pin — add trace; merged lit + wires *(planned)* |
 | Esc / empty canvas | Clear all pins |
+| Expand class/member header during pin | Pin + wires **stay**; anchors retarget via `revealRevision` |
 
 ---
 
@@ -236,8 +237,8 @@ flowchart TB
 | ---- | ---------- | ---------- | ----------- |
 | Idle | semantic colors | normal | card background |
 | Trace active | semantic + endpoints `token-chip-on` | `--faint` text, **no bg wash** | **no tint** (stays white/card) |
-| Ctrl + trace | no shimmer on lit (trace wins) | faint | no tint |
-| Pinned | pinned trace lit + optional hover preview | faint until dwell | no tint |
+| Ctrl + trace | shimmer stays on for every indexed token (Ctrl always wins) | faint + shimmer | no tint |
+| Pinned | pinned trace lit + optional hover preview | faint until dwell (or immediately if Ctrl held) | no tint |
 
 **Active chips (`token-chip-on`):** inset `0.5px` ring at ~76% semantic `currentColor`; pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use brand inset ring.
 

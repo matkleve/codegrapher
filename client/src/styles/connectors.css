@@ -279,14 +279,17 @@ html.graph-ctrl-preview .token-def-label.cursor-pointer {
   filter: none;
 }
 
-/* Trace + Ctrl: trace focus wins — no glint overlay. */
-.graph-trace-active .token-shimmer-target::after {
+/* Trace only (no Ctrl): plain hover/pin shouldn't glint the whole graph.
+   Ctrl held keeps shimmering every indexed token no matter what's pinned or
+   hovered — it's a global "what's clickable" filter, not something trace
+   should suppress (docs/specs/system/interaction-emphasis.md). */
+html:not(.graph-ctrl-preview) .graph-trace-active .token-shimmer-target::after {
   content: none;
   animation: none;
 }
 
-.graph-trace-active .token-chip.cursor-pointer .token-chip-text,
-.graph-trace-active .token-def-label.cursor-pointer {
+html:not(.graph-ctrl-preview) .graph-trace-active .token-chip.cursor-pointer .token-chip-text,
+html:not(.graph-ctrl-preview) .graph-trace-active .token-def-label.cursor-pointer {
   background-image: none;
   -webkit-text-fill-color: currentColor;
   animation: none;

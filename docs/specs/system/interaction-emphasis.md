@@ -46,7 +46,7 @@ flowchart TB
 | Member row (lit) | subtle function tint | `trace-member-lit` | per trace lit set |
 | FlowAnchor socket | hidden | soft glow `currentColor` | hidden unless endpoint |
 
-Ctrl + trace: trace wins — no shimmer on tokens (`connectors.css`).
+Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`connectors.css`, scoped via `html:not(.graph-ctrl-preview) .graph-trace-active`).
 
 ## Component Hierarchy
 
@@ -71,6 +71,7 @@ index.css (.hoverable)
 - [ ] JS/SVG colors via CSS variables in `style`
 - [ ] Trace dim is color-only — no container opacity / bg wash on code
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
+- [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state
 - [ ] `controlTokens.ts` and `index.css` stay in sync
 

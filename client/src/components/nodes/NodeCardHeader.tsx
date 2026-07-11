@@ -37,7 +37,7 @@ export function NodeCardHeader({
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles } =
+  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles, cancelHoverLeaveGrace } =
     useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -132,9 +132,10 @@ export function NodeCardHeader({
     (e: MouseEvent<HTMLDivElement>) => {
       if ((e.target as HTMLElement).closest(".file-type-chip, .node-card-title")) return;
       e.stopPropagation();
+      cancelHoverLeaveGrace();
       onToggleCollapsed();
     },
-    [onToggleCollapsed],
+    [cancelHoverLeaveGrace, onToggleCollapsed],
   );
 
   return (
@@ -153,6 +154,7 @@ export function NodeCardHeader({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
+          cancelHoverLeaveGrace();
           onToggleCollapsed();
         }
       }}

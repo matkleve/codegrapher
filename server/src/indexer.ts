@@ -1,12 +1,17 @@
 import {
+  Node,
   Project,
   SyntaxKind,
+  type ArrowFunction,
   type ClassDeclaration,
+  type FunctionDeclaration,
+  type FunctionExpression,
+  type MethodDeclaration,
   type SourceFile,
 } from "ts-morph";
 import * as fs from "fs";
 import * as path from "path";
-import { resolveImportPath } from "./parser";
+import { classNodeId, functionNodeId, methodNodeId, resolveImportPath } from "./parser";
 
 export type SymbolKind =
   | "class"
@@ -14,7 +19,9 @@ export type SymbolKind =
   | "method"
   | "interface"
   | "type"
-  | "property";
+  | "property"
+  | "param"
+  | "local";
 
 import {
   buildProjectReferences,
@@ -25,11 +32,22 @@ import {
 
 export type { ReferenceEntry };
 
+/**
+ * `enclosingSymbol` is the owning declaration's graph-node id (same id format as
+ * `GraphNode.id` — see `classNodeId`/`methodNodeId`/`functionNodeId` in parser.ts).
+ * Required for scoped kinds (method, property, param, local) so lookups can
+ * disambiguate same-named members instead of matching on bare name alone.
+ * Absent for module-level kinds (class, function, interface, type). See
+ * docs/specs/service/parser-index.md.
+ */
 export type SymbolEntry = {
   filePath: string;
   kind: SymbolKind;
   line: number;
+  enclosingSymbol?: string;
 };
+
+type FunctionLikeNode = MethodDeclaration | FunctionDeclaration | ArrowFunction | FunctionExpression;
 
 export type ProjectIndex = {
   folderPath: string;
@@ -160,17 +178,43 @@ function addSymbol(
   filePath: string,
   kind: SymbolKind,
   line: number,
+  enclosingSymbol?: string,
 ): void {
   if (!name) return;
   if (PRIMITIVE_NAMES.has(name) || TS_KEYWORDS.has(name)) return;
 
-  const entry: SymbolEntry = { filePath, kind, line };
+  const entry: SymbolEntry = { filePath, kind, line, enclosingSymbol };
   const list = index.get(name) ?? [];
   const dup = list.some(
     (e) => e.filePath === entry.filePath && e.kind === entry.kind && e.line === entry.line,
   );
   if (!dup) list.push(entry);
   index.set(name, list);
+}
+
+/** Simple identifier-named params/locals only — destructured bindings are skipped (no addressable single name). */
+function indexParamsAndLocals(
+  index: Map<string, SymbolEntry[]>,
+  filePath: string,
+  enclosingSymbol: string | undefined,
+  fn: FunctionLikeNode,
+): void {
+  if (!enclosingSymbol) return;
+
+  for (const param of fn.getParameters()) {
+    const nameNode = param.getNameNode();
+    if (!Node.isIdentifier(nameNode)) continue;
+    addSymbol(index, nameNode.getText(), filePath, "param", param.getStartLineNumber(), enclosingSymbol);
+  }
+
+  for (const varDecl of fn.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
+    const owningFn = varDecl.getFirstAncestor((a) => Node.isFunctionLikeDeclaration(a));
+    if (owningFn !== fn) continue;
+
+    const nameNode = varDecl.getNameNode();
+    if (!Node.isIdentifier(nameNode)) continue;
+    addSymbol(index, nameNode.getText(), filePath, "local", varDecl.getStartLineNumber(), enclosingSymbol);
+  }
 }
 
 function hasInjectableDecorator(cls: ClassDeclaration): boolean {
@@ -229,11 +273,16 @@ function indexSourceFile(
     }
 
     if (exported || injectable) {
+      const classId = name ? classNodeId(filePath, name) : undefined;
+
       for (const method of cls.getMethods()) {
-        addSymbol(index, method.getName(), filePath, "method", method.getStartLineNumber());
+        const methodName = method.getName();
+        addSymbol(index, methodName, filePath, "method", method.getStartLineNumber(), classId);
+        const methodId = classId && name ? methodNodeId(filePath, name, methodName) : undefined;
+        indexParamsAndLocals(index, filePath, methodId, method);
       }
       for (const prop of cls.getProperties()) {
-        addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber());
+        addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber(), classId);
       }
     }
   }
@@ -255,7 +304,11 @@ function indexSourceFile(
 
   for (const fn of sf.getFunctions()) {
     if (!isExportedDeclaration(fn)) continue;
-    addSymbol(index, fn.getName(), filePath, "function", fn.getStartLineNumber());
+    const name = fn.getName();
+    addSymbol(index, name, filePath, "function", fn.getStartLineNumber());
+    if (name) {
+      indexParamsAndLocals(index, filePath, functionNodeId(filePath, name), fn);
+    }
   }
 
   for (const varDecl of sf.getVariableDeclarations()) {
@@ -272,12 +325,13 @@ function indexSourceFile(
       initKind === SyntaxKind.FunctionExpression;
     if (!isFn) continue;
 
-    addSymbol(
+    const name = varDecl.getName();
+    addSymbol(index, name, filePath, "function", varDecl.getStartLineNumber());
+    indexParamsAndLocals(
       index,
-      varDecl.getName(),
       filePath,
-      "function",
-      varDecl.getStartLineNumber(),
+      functionNodeId(filePath, name),
+      init as ArrowFunction | FunctionExpression,
     );
   }
 
