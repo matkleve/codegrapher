@@ -1,5 +1,6 @@
-import { buildCallSiteLoadPreviewEdge, liveFromDefEl } from "@/lib/buildPreviewEdges";
+import { liveFromDefEl } from "@/lib/buildPreviewEdges";
 import { buildLocalPreviewEdges } from "@/lib/localDefLinks";
+import { areMemberDefSiblingHosts } from "@/lib/memberDefAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import {
   resolveDefinitionUsageSites,
@@ -8,18 +9,19 @@ import {
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
-function offCanvasLoadCards(
-  token: string,
-  context: DefinitionEdgeContext | undefined,
-) {
-  return (context?.lookupOffCanvasCallSiteFiles?.(token) ?? []).map((site) => ({
-    symbolName: token,
-    filePath: site.filePath,
-    line: site.line,
-    occurrenceCount: 1,
-  }));
+function isRealUsageSite(
+  definitionEl: HTMLElement,
+  anchor: PreviewEdgeSpec["to"],
+): boolean {
+  if (anchor.type !== "element") return true;
+  if (anchor.el === definitionEl) return false;
+  return !areMemberDefSiblingHosts(definitionEl, anchor.el);
 }
 
+/**
+ * Def → usage preview wires for a hovered/pinned definition chip.
+ * Off-canvas call sites are listed in the connection menu only — not as self-loop load wires.
+ */
 export function buildDefinitionPreviewEdges(
   token: string,
   kind: SemanticTokenKind,
@@ -29,7 +31,7 @@ export function buildDefinitionPreviewEdges(
   const local = buildLocalPreviewEdges(definitionEl, kind, `local-def-${token}`);
   if (local.length > 0) return local;
 
-  const sites =
+  const sites = (
     context?.getNode
       ? resolveDefinitionUsageSites(
           token,
@@ -43,24 +45,10 @@ export function buildDefinitionPreviewEdges(
       : resolveUsageAnchors(token, definitionEl).map((el) => ({
           anchor: { type: "element" as const, el },
           liveTo: { token, flowNodeId: context?.sourceFlowId ?? "", role: "usage" as const },
-        }));
+        }))
+  ).filter((site) => isRealUsageSite(definitionEl, site.anchor));
 
-  const offCanvas = offCanvasLoadCards(token, context);
-
-  if (sites.length === 0) {
-    if (offCanvas.length === 0) return [];
-    return [
-      buildCallSiteLoadPreviewEdge(
-        `callsite-load-${token}`,
-        offCanvas,
-        definitionEl,
-        token,
-        kind,
-      ),
-    ];
-  }
-
-  const edges = sites.map((site, index) => ({
+  return sites.map((site, index) => ({
     id: `def-${token}-${index}`,
     from: { type: "element", el: definitionEl },
     to: site.anchor,
@@ -73,18 +61,4 @@ export function buildDefinitionPreviewEdges(
     ),
     liveTo: site.liveTo,
   }));
-
-  if (offCanvas.length > 0) {
-    edges.push(
-      buildCallSiteLoadPreviewEdge(
-        `callsite-load-${token}`,
-        offCanvas,
-        definitionEl,
-        token,
-        kind,
-      ),
-    );
-  }
-
-  return edges;
 }

@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { PinTab } from "@/components/ui/PinTab";
 import { SimInputsForm } from "@/components/simulation/SimInputsForm";
 import { SimPathsList } from "@/components/simulation/SimPathsList";
+import { SimRunFooter } from "@/components/simulation/SimRunFooter";
+import { SimRunHeader } from "@/components/simulation/SimRunHeader";
 import { SimStepLedger } from "@/components/simulation/SimStepLedger";
 import { SimTraceBanner } from "@/components/simulation/SimTraceBanner";
 import { useSimulation } from "@/context/SimulationContext";
@@ -69,7 +71,7 @@ export function SimulationPreflight() {
 }
 
 function SimPanelTabBody({ tab }: { tab: SimPanelTab }) {
-  const { simActive, session, currentScope } = useSimulation();
+  const { simActive, session } = useSimulation();
 
   if (tab === "inputs") return <SimInputsForm />;
   if (tab === "paths") return <SimPathsList />;
@@ -91,24 +93,15 @@ function SimPanelTabBody({ tab }: { tab: SimPanelTab }) {
     );
   }
 
+  const atEnd = session.currentIndex >= session.steps.length - 1;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div>
-        <p className="mb-1 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
-          At step
-        </p>
-        <table className="w-full text-2xs">
-          <tbody>
-            {[...currentScope.entries()].slice(0, 6).map(([name, val]) => (
-              <tr key={name}>
-                <td className="py-0.5 font-mono">{name}</td>
-                <td className="py-0.5 font-mono text-muted-foreground">{val.display}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <SimRunHeader session={session} />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <SimStepLedger />
       </div>
-      <SimStepLedger />
+      <SimRunFooter session={session} visible={atEnd} />
     </div>
   );
 }

@@ -35,6 +35,8 @@ export type SimStep = {
   scopeSnapshot: Map<string, SimValue>;
   detail: SimStepDetail;
   edgePulse?: { fromLine: number; toMemberId?: string; token?: string };
+  /** Call resolves to a class node other than the session owner. */
+  crossesClass?: boolean;
 };
 
 export type SimSession = {

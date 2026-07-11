@@ -23,6 +23,7 @@ import {
   saveSimTracePath,
   type SimTracePath,
 } from "@/lib/simTracePaths";
+import { enrichSimSteps } from "@/lib/enrichSimSteps";
 import { effectiveEndFileLine, isFileLineInTraceRange } from "@/lib/simTraceBounds";
 import type {
   PlaybackSpeed,
@@ -270,7 +271,17 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
           : endAnchor?.memberId === anchor.memberId
             ? endAnchor.line
             : effectiveEndFileLine(anchor, null);
-      const next = buildSession(anchor, inputs, endLine);
+      const built = buildSession(anchor, inputs, endLine);
+      const next = {
+        ...built,
+        steps: enrichSimSteps(
+          built.steps,
+          anchor.flowNodeId,
+          symbols,
+          graphData,
+          getNode,
+        ),
+      };
       setSession(next);
       setSimActive(true);
       setPanelOpen(true);
@@ -278,7 +289,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       setPreflightOpen(false);
       setLedgerExpanded(new Set([0]));
     },
-    [endAnchor],
+    [endAnchor, getNode, graphData, symbols],
   );
 
   const armStartHere = useCallback((anchor: SimAnchor) => {
@@ -335,13 +346,23 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     if (simActive && session) {
       const endLine = session.endLine;
       const prevIndex = session.currentIndex;
-      const next = buildSession(startAnchor, preflightInputs, endLine);
+      const rebuilt = buildSession(startAnchor, preflightInputs, endLine);
+      const next = {
+        ...rebuilt,
+        steps: enrichSimSteps(
+          rebuilt.steps,
+          startAnchor.flowNodeId,
+          symbols,
+          graphData,
+          getNode,
+        ),
+      };
       next.currentIndex = Math.min(prevIndex, Math.max(next.steps.length - 1, 0));
       setSession(next);
       return;
     }
     setPanelTab("inputs");
-  }, [preflightInputs, session, simActive, startAnchor]);
+  }, [preflightInputs, session, simActive, startAnchor, symbols, graphData, getNode]);
 
   const saveCurrentPath = useCallback(
     (label?: string) => {

@@ -124,6 +124,10 @@ flowchart TB
 
 **Member row label display:** `.member-row-label` shows the raw symbol name (`traceName`), matching the signature-line chip — not camelCase-split display text.
 
+**Member def siblings:** The row title and signature-line name chip share one definition. They **light together** (`trace-lit`) but never receive a preview wire between them — only real usages (call sites, etc.) get edges.
+
+**No self-loop wires:** Preview edges never draw from a chip back to itself. Off-canvas call sites appear in the **connection menu** (load list) only — not as a circular wire on the definition chip.
+
 ---
 
 ## Local lexical trace (usage + binding)

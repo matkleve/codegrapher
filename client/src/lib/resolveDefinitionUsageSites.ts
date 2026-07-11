@@ -2,6 +2,7 @@ import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { toFlowId } from "@/lib/graphIds";
 import { escapeRegExp } from "@/lib/graphPaneDom";
 import type { AnchorRef, LiveAnchorHint } from "@/lib/previewEdgeTypes";
+import { areMemberDefSiblingHosts } from "@/lib/memberDefAnchor";
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
@@ -119,15 +120,22 @@ export function resolveDefinitionUsageSites(
       const classData = rfNode.data as ClassNodeData;
 
       for (const tokenIndex of tokenIndexesOnLine(rec.line, token)) {
+        const anchor = resolveUsageSiteAnchor(
+          rec.flowNodeId,
+          classData,
+          rec.memberId,
+          rec.lineNumber,
+          tokenIndex,
+          token,
+        );
+        if (
+          anchor.type === "element" &&
+          areMemberDefSiblingHosts(definitionEl, anchor.el)
+        ) {
+          continue;
+        }
         add({
-          anchor: resolveUsageSiteAnchor(
-            rec.flowNodeId,
-            classData,
-            rec.memberId,
-            rec.lineNumber,
-            tokenIndex,
-            token,
-          ),
+          anchor,
           liveTo: {
             token,
             flowNodeId: rec.flowNodeId,
@@ -143,6 +151,7 @@ export function resolveDefinitionUsageSites(
   }
 
   for (const el of resolveUsageAnchors(token, definitionEl)) {
+    if (areMemberDefSiblingHosts(definitionEl, el)) continue;
     const traceKey = el.dataset.traceKey ?? "";
     const parsed = parseUsageTokenKey(traceKey);
     if (parsed) {
@@ -204,15 +213,22 @@ export function resolveDefinitionUsageSites(
         }
 
         for (const tokenIndex of tokenIndexesOnLine(line, token)) {
+          const anchor = resolveUsageSiteAnchor(
+            flowNodeId,
+            classData,
+            method.id,
+            lineNumber,
+            tokenIndex,
+            token,
+          );
+          if (
+            anchor.type === "element" &&
+            areMemberDefSiblingHosts(definitionEl, anchor.el)
+          ) {
+            continue;
+          }
           add({
-            anchor: resolveUsageSiteAnchor(
-              flowNodeId,
-              classData,
-              method.id,
-              lineNumber,
-              tokenIndex,
-              token,
-            ),
+            anchor,
             liveTo: {
               token,
               flowNodeId,

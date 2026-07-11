@@ -10,8 +10,12 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 
 | # | Question | Current state | Options |
 | --- | -------- | ------------- | ------- |
-| 1 | **Simulation step-into / step-over** | Spec'd in `execution-simulator.md` AC; not implemented | **A)** Build next (loop-aware walk + callee descent) · **B)** Demote AC to deferred and hide menu items until built |
-| 2 | **Path highlight scope** | Shortest path over React Flow structural edges only | **A)** Keep (module/DI graph) · **B)** Extend to include usage preview relationships (much harder) |
+| 1 | **Simulation step-into / step-over** | Spec'd in `execution-simulator.md` AC; not implemented | **A)** Build next · **B)** Demote AC to deferred |
+| 2 | **Path highlight scope** | Shortest path over React Flow structural edges only | **A)** Keep · **B)** Extend to usage preview |
+| 3 | **Scenario node placement (S2)** | **Decided: canvas overlay** — `execution-simulator.vision.supplement.md` | — |
+| 4 | **Anchor UX (S1.5)** | Two-click line numbers; cross-class end → reachability warning | **A)** Replace modifiers · unreachable end prompts scenario |
+| 5 | **Off-canvas callee** | **Decided: suggest Mock** + Load fallback | — |
+| 6 | **S1 transport** | **Implemented** — discrete tick strip (`SimStepTickStrip`), Start/Δ/End panel | — |
 
 ## Simulation interaction UX (spec'd 2026-07-11)
 

@@ -23,7 +23,7 @@ export function parseTemplateLiteralParts(text: string): TemplatePart[] {
 
   const inner = text.slice(1, -1);
   const parts: TemplatePart[] = [];
-  const re = /\$\{([a-zA-Z_$][\w$]*)\}/g;
+  const re = /\$\{\s*([a-zA-Z_$][\w$]*)/g;
   let last = 0;
   let match: RegExpExecArray | null;
 
@@ -31,12 +31,31 @@ export function parseTemplateLiteralParts(text: string): TemplatePart[] {
     if (match.index > last) {
       parts.push({ kind: "text", text: inner.slice(last, match.index) });
     }
+
+    let depth = 0;
+    let closeIdx = -1;
+    for (let j = match.index; j < inner.length; j++) {
+      const ch = inner[j]!;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          closeIdx = j;
+          break;
+        }
+      }
+    }
+
+    const raw =
+      closeIdx >= 0
+        ? inner.slice(match.index, closeIdx + 1)
+        : inner.slice(match.index);
     parts.push({
       kind: "interpolation",
       name: match[1]!,
-      raw: match[0],
+      raw,
     });
-    last = match.index + match[0].length;
+    last = closeIdx >= 0 ? closeIdx + 1 : inner.length;
   }
 
   if (last < inner.length) {

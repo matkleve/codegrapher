@@ -70,7 +70,10 @@
   Opt-in step-through simulation of a method body (gutter anchors, statement highlight, tabbed simulation panel, playback toolbar). **Option A static walk** is implemented — AST/lexical stepping without running user code. Step-into/out is spec'd but not yet built. Spec: [execution-simulator.md](specs/system/execution-simulator.md) · interactions: [index](specs/system/execution-simulator.interactions.supplement.md) · [modes](specs/system/execution-simulator.modes.supplement.md) · workspace: [execution-simulator.workspace.supplement.md](specs/system/execution-simulator.workspace.supplement.md).
 
 - **Sim trace path**  
-  A saved, named setup: method identity, start/end line anchors, and upfront input values. Runnable from the Simulation panel **Paths** tab without re-arming the gutter. Persisted in `localStorage` for MVP.
+  A saved, named setup: method identity, start/end line anchors, and upfront input values. Runnable from the Simulation panel **Paths** tab without re-arming the gutter. Persisted in `localStorage` for MVP. **v2:** superseded by **Sim scenario** (Start/Stop nodes, mocks) — see [execution-simulator.vision.supplement.md](specs/system/execution-simulator.vision.supplement.md).
+
+- **Sim scenario** *(vision — not implemented)*  
+  BPMN-like simulation graph on the ego-canvas: **Start** node (inputs), **Stop** node (expected result), optional **Mock** nodes that stub callee responses for class isolation. Spec: [execution-simulator.vision.supplement.md](specs/system/execution-simulator.vision.supplement.md).
 
 - **Anchor**  
   DOM target for an edge endpoint. Resolved per node expansion level: class header → member row → exact source line. IDs from `client/src/lib/ctrlPreviewHandles.ts`.

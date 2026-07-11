@@ -1,5 +1,6 @@
 import { Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SimStepTickStrip } from "@/components/simulation/SimStepTickStrip";
 import { useSimulation } from "@/context/SimulationContext";
 import type { PlaybackSpeed } from "@/lib/staticWalk/types";
 
@@ -21,10 +22,8 @@ export function SimulationToolbar() {
 
   if (!simActive || !session) return null;
 
-  const max = Math.max(session.steps.length - 1, 0);
-
   return (
-    <div className="pointer-events-auto absolute bottom-14 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-brand-border bg-card/95 px-3 py-2 shadow-md backdrop-blur-sm">
+    <div className="pointer-events-auto absolute bottom-14 left-1/2 z-50 flex max-w-[min(96vw,720px)] -translate-x-1/2 items-center gap-2 rounded-lg border border-brand-border bg-card/95 px-3 py-2 shadow-md backdrop-blur-sm">
       <Button type="button" variant="ghost" size="icon-sm" onClick={stepBack} aria-label="Step back">
         <SkipBack />
       </Button>
@@ -40,22 +39,18 @@ export function SimulationToolbar() {
       <Button type="button" variant="ghost" size="icon-sm" onClick={stepForward} aria-label="Step forward">
         <SkipForward />
       </Button>
-      <input
-        type="range"
-        min={0}
-        max={max}
-        value={session.currentIndex}
-        onChange={(e) => scrubTo(Number(e.target.value))}
-        className="w-32 accent-[color:var(--brand)]"
-        aria-label="Scrub steps"
+      <SimStepTickStrip
+        steps={session.steps}
+        currentIndex={session.currentIndex}
+        onSelect={scrubTo}
       />
-      <span className="text-xs text-muted-foreground">
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         {session.currentIndex + 1}/{session.steps.length}
       </span>
       <select
         value={playbackSpeed}
         onChange={(e) => setPlaybackSpeed(Number(e.target.value) as PlaybackSpeed)}
-        className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+        className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
         aria-label="Playback speed"
       >
         {SPEEDS.map((s) => (

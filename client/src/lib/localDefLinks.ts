@@ -1,5 +1,6 @@
 import { buildElementPreviewEdge, liveToFromUsageEl } from "@/lib/buildPreviewEdges";
 import { findLocalDefElement } from "@/lib/localDefElements";
+import { areMemberDefSiblingHosts } from "@/lib/memberDefAnchor";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { graphPane } from "@/lib/graphPaneDom";
@@ -31,7 +32,7 @@ export function linksForElement(host: HTMLElement): LinkPair[] {
   const targetId = host.dataset.localTargetId;
   if (targetId) {
     const from = findLocalDefElement(pane, targetId);
-    if (!from) return [];
+    if (!from || from === host || areMemberDefSiblingHosts(from, host)) return [];
     return [{ from, to: host }];
   }
 
@@ -43,7 +44,7 @@ export function linksForElement(host: HTMLElement): LinkPair[] {
   );
   const pairs: LinkPair[] = [];
   for (const to of usages) {
-    if (to === host) continue;
+    if (to === host || areMemberDefSiblingHosts(host, to)) continue;
     pairs.push({ from: host, to });
   }
   return pairs;

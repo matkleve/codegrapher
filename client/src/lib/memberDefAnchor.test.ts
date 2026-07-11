@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from "vitest";
 import {
   clearTraceAnchorHost,
+  areMemberDefSiblingHosts,
   lockTraceAnchorPreference,
   resolveMemberDefEndpoint,
   setTraceAnchorHost,
@@ -117,5 +118,22 @@ describe("resolveMemberDefEndpoint", () => {
     clearTraceAnchorHost();
 
     expect(resolveMemberDefEndpoint("flow-1::def::member-1")).toBe(bodyChip);
+  });
+
+  it("treats row title and signature chip as sibling hosts, not wire endpoints", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    pane.innerHTML = `
+      <div data-member-id="member-1">
+        <span class="member-row-label" data-trace-key="flow-1::def::member-1" data-local-def-id="local-def::member::member-1"></span>
+        <div class="member-body-wrap">
+          <span class="token-chip" data-trace-key="flow-1::def::member-1" data-local-target-id="local-def::member::member-1"></span>
+        </div>
+      </div>
+    `;
+    document.body.append(pane);
+    const label = pane.querySelector<HTMLElement>(".member-row-label")!;
+    const body = pane.querySelector<HTMLElement>(".token-chip")!;
+    expect(areMemberDefSiblingHosts(label, body)).toBe(true);
   });
 });

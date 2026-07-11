@@ -26,4 +26,21 @@ describe("parseTemplateLiteralParts", () => {
       { kind: "interpolation", name: "lat", raw: "${lat}" },
     ]);
   });
+
+  it("splits expression interpolations like the line scanner", () => {
+    const token = "`${lng - delta},${lat + delta},${lng + delta},${lat - delta}`";
+    const parts = parseTemplateLiteralParts(token);
+    expect(parts.filter((p) => p.kind === "interpolation").map((p) => p.name)).toEqual([
+      "lng",
+      "lat",
+      "lng",
+      "lat",
+    ]);
+    expect(parts.filter((p) => p.kind === "interpolation").map((p) => p.raw)).toEqual([
+      "${lng - delta}",
+      "${lat + delta}",
+      "${lng + delta}",
+      "${lat - delta}",
+    ]);
+  });
 });

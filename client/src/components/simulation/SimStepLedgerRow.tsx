@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { SimStep } from "@/lib/staticWalk/types";
+import { formatStepDelta } from "@/lib/simStepSummary";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<SimStep["kind"], string> = {
@@ -45,6 +46,7 @@ export function SimStepLedgerRow({
   onSelect,
 }: SimStepLedgerRowProps) {
   const { detail } = step;
+  const delta = formatStepDelta(step);
 
   return (
     <div
@@ -79,7 +81,18 @@ export function SimStepLedgerRow({
         <span className="w-10 shrink-0 font-mono text-2xs uppercase text-muted-foreground">
           {KIND_LABEL[step.kind]}
         </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-2xs">{step.text.trim()}</span>
+        {expanded ? (
+          <span className="min-w-0 flex-1 truncate font-mono text-2xs">{step.text.trim()}</span>
+        ) : (
+          <span className="min-w-0 flex-1 truncate font-mono text-2xs text-muted-foreground">
+            {delta || step.text.trim()}
+          </span>
+        )}
+        {step.crossesClass && !expanded ? (
+          <span className="shrink-0 rounded bg-[var(--token-surface-class)] px-1 py-px text-2xs text-foreground">
+            ↗
+          </span>
+        ) : null}
       </button>
       {expanded ? (
         <div className="border-t border-border px-2 pb-2 pt-1">

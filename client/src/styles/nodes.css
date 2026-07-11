@@ -270,6 +270,56 @@
   pointer-events: none;
 }
 
+/* Simulation toolbar — compact per-step ticks (scales down for long traces) */
+.sim-tick-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-block: 2px;
+  scrollbar-width: thin;
+}
+
+.sim-tick {
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--motion-hover-surface) var(--ease);
+}
+
+.sim-tick:hover {
+  transform: scale(1.35);
+}
+
+.sim-tick--past {
+  background: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
+}
+
+.sim-tick--current {
+  background: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand-border);
+}
+
+.sim-tick--future {
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.sim-tick--call {
+  border-radius: 1px;
+}
+
+.sim-tick--cross-class {
+  box-shadow: 0 0 0 1px var(--token-surface-class);
+}
+
+.sim-tick--current.sim-tick--cross-class {
+  box-shadow:
+    0 0 0 1px var(--brand-border),
+    0 0 0 2px var(--token-surface-class);
+}
+
 .code-line--sim-range {
   background: color-mix(in oklch, var(--brand) 4%, transparent);
 }

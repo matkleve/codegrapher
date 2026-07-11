@@ -27,6 +27,7 @@ import { buildLocalPreviewEdges, resolveLocalTargetId } from "@/lib/localDefLink
 import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   defSiteFor,
+  memberDefId,
   type MemberSymbolIndex,
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
@@ -858,10 +859,24 @@ export function CodeLine({
         const prevText = prevToken?.text ?? null;
 
         const rawLocalTarget = usageTargetFor(symbolIndex, lineNumber, i);
-        const localDefId = defSiteFor(symbolIndex, lineNumber, i);
-        const localTargetId = rawLocalTarget
-          ? resolveLocalTargetId(rawLocalTarget, sourceFlowId)
-          : null;
+        const isMemberSignatureDecl =
+          memberSymbolName != null &&
+          token.text === memberSymbolName &&
+          isDefinitionSignatureLine(
+            line,
+            token.text,
+            sourceFlowId,
+            memberId,
+            sourceFlowId,
+            memberId,
+          );
+        const localDefId =
+          defSiteFor(symbolIndex, lineNumber, i) ??
+          (isMemberSignatureDecl ? memberDefId(memberId) : undefined);
+        const localTargetId =
+          rawLocalTarget && !isMemberSignatureDecl
+            ? resolveLocalTargetId(rawLocalTarget, sourceFlowId)
+            : null;
         const indexed = hasSymbol(token.text);
         // A property access (`.country`) is interactive even when `country`
         // itself resolves to nothing, as long as its receiver chain does —
@@ -889,17 +904,6 @@ export function CodeLine({
           indexed &&
           semantic === "class" &&
           (prevText === "class" || prevText === "interface");
-        const isMemberSignatureDecl =
-          memberSymbolName != null &&
-          token.text === memberSymbolName &&
-          isDefinitionSignatureLine(
-            line,
-            token.text,
-            sourceFlowId,
-            memberId,
-            sourceFlowId,
-            memberId,
-          );
         const isDefinition = Boolean(
           localDefId || isClassDeclName || isMemberSignatureDecl,
         );

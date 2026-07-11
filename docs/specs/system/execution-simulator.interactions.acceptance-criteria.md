@@ -63,3 +63,10 @@ Supplement to [interactions index](execution-simulator.interactions.supplement.m
 
 - [ ] Hover preview traces still work during active run (coexist; not suppressed)
 - [ ] `graph-sim-active` on exit clears sim chrome; value-flow pulses cleared
+
+## Vision (S1+ — not yet implemented)
+
+- [ ] Toolbar discrete tick strip replaces range slider — [transport-panel supplement](execution-simulator.transport-panel.supplement.md)
+- [ ] Run tab Start / Δ / End layout
+- [ ] Two-click line-number anchors with cross-class reachability warning — [vision supplement](execution-simulator.vision.supplement.md)
+- [ ] Canvas Start/Stop/Mock scenario nodes (S2)

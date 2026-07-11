@@ -104,3 +104,24 @@ export function resolveMemberDefEndpoint(key: string): HTMLElement | null {
 
   return siblings.find((host) => host.isConnected) ?? null;
 }
+
+/** Row title + signature-line chip are one definition — lit together, never wired. */
+export function areMemberDefSiblingHosts(a: HTMLElement, b: HTMLElement): boolean {
+  const memberIds = new Set<string>();
+
+  for (const el of [a, b]) {
+    const defId = el.dataset.localDefId ?? el.dataset.localTargetId;
+    if (defId?.startsWith("local-def::member::")) {
+      memberIds.add(defId.slice("local-def::member::".length));
+    }
+    const mid = el.dataset.traceKey ? memberIdFromDefKey(el.dataset.traceKey) : null;
+    if (mid) memberIds.add(mid);
+  }
+
+  if (memberIds.size !== 1) return false;
+  const memberId = [...memberIds][0]!;
+  return [a, b].every(
+    (el) =>
+      el.closest<HTMLElement>(`[data-member-id="${CSS.escape(memberId)}"]`) != null,
+  );
+}

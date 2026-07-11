@@ -7,6 +7,8 @@ Normative UX contract for simulation modes, entry surfaces, anchors, transport, 
 | [modes supplement](execution-simulator.modes.supplement.md) | Mode FSM, anchor lifecycle, preflight flow, implicit end |
 | [surfaces supplement](execution-simulator.surfaces.supplement.md) | Gutter, token menu, panel, toolbar — gesture matrix |
 | [interactions AC](execution-simulator.interactions.acceptance-criteria.md) | Testable checkboxes |
+| [vision supplement](execution-simulator.vision.supplement.md) | **S2+** scenario graph, mocks, two-click anchors — product direction |
+| [transport-panel supplement](execution-simulator.transport-panel.supplement.md) | **S1** discrete timeline + Start/Δ/End panel layout |
 
 Parent: [execution-simulator.md](execution-simulator.md) · workspace chrome: [execution-simulator.workspace.supplement.md](execution-simulator.workspace.supplement.md).
 

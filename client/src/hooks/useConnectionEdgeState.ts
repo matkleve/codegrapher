@@ -12,6 +12,7 @@ import {
 } from "@/lib/connectionVisibility";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import { pinnedKeys, type PinnedTrace } from "@/lib/pinnedTraces";
+import { filterRenderablePreviewEdges } from "@/lib/previewEdgeFilter";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
@@ -103,7 +104,10 @@ export function useConnectionEdgeState({
       }
     }
 
-    return filterPreviewEdgesByVisibility(edges, visibleEdgeKinds);
+    return filterPreviewEdgesByVisibility(
+      filterRenderablePreviewEdges(edges, getNode),
+      visibleEdgeKinds,
+    );
   }, [
     graphData,
     getNode,

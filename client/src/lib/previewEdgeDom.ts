@@ -226,6 +226,11 @@ export function updateWireGeometry(
     return false;
   }
 
+  if (fromPt.el && toPt.el && fromPt.el === toPt.el) {
+    wire.group.style.display = "none";
+    return false;
+  }
+
   wire.group.style.display = "";
 
   const fanLayout = resolveBranchFanLayout(spec, allSpecs, svgBox, getNode);
