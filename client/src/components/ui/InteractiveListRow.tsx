@@ -42,6 +42,8 @@ export type InteractiveListRowProps = {
   disabled?: boolean;
   /** `div` supports drag (file tree); default `button` */
   as?: "button" | "div";
+  /** `false` = size to content instead of filling the row (e.g. a pill next to a flex-1 sibling) */
+  fullWidth?: boolean;
   draggable?: boolean;
   onDragStart?: DragEventHandler<HTMLDivElement>;
   "aria-pressed"?: boolean;
@@ -122,10 +124,12 @@ export function InteractiveListRowText({
 function compactRowClass(
   density: InteractiveListRowProps["density"],
   hoverStyle: InteractiveListRowProps["hoverStyle"],
+  fullWidth: boolean,
 ): string {
   if (density === "comfortable") return INTERACTIVE_ROW_DOUBLE;
   if (hoverStyle === "neutral") return INTERACTIVE_ROW_NEUTRAL_LEFT;
-  return cn(INTERACTIVE_ROW_LEFT, "control-row-compact");
+  const base = cn(INTERACTIVE_ROW_LEFT, "control-row-compact");
+  return fullWidth ? base : base.replace("w-full", "w-auto");
 }
 
 export function InteractiveListRow({
@@ -145,6 +149,7 @@ export function InteractiveListRow({
   mono = false,
   disabled = false,
   as = "button",
+  fullWidth = true,
   draggable = false,
   onDragStart,
   "aria-pressed": ariaPressed,
@@ -153,7 +158,7 @@ export function InteractiveListRow({
   const rowClass = interactive
     ? tone === "passive"
       ? INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT
-      : compactRowClass(density, hoverStyle)
+      : compactRowClass(density, hoverStyle, fullWidth)
     : tone === "passive"
       ? cn(INTERACTIVE_ROW_PASSIVE_LEFT, "cursor-default")
       : cn(

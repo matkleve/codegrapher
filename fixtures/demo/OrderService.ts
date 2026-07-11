@@ -4,6 +4,11 @@ export interface IChargeable {
   charge(id: string, amount: number): Promise<boolean>;
 }
 
+export interface Address {
+  city: string;
+  district?: string;
+}
+
 export class OrderService implements IChargeable {
   private orders: Map<string, number> = new Map();
 
@@ -21,6 +26,22 @@ export class OrderService implements IChargeable {
 
   cancelOrder(id: string): boolean {
     return this.orders.delete(id);
+  }
+
+  describeStatus(status: string): string {
+    switch (status) {
+      case "pending":
+        return "Awaiting payment";
+      case "paid": {
+        return "Payment received";
+      }
+      default:
+        return "Unknown status";
+    }
+  }
+
+  describeAddress(addr: Address): string {
+    return addr.city ?? "Unknown city";
   }
 }
 

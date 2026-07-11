@@ -15,11 +15,21 @@ export function localDefId(
   return `local-def::${memberId}::${scope}::${name}::${line}`;
 }
 
+export type BindingSite = {
+  lineNumber: number;
+  tokenIndex: number;
+  token: string;
+};
+
 export type MemberSymbolIndex = {
   /** usage key `${line}:${tokenIndex}` → def id or `property::name` */
   usageTargets: Map<string, string>;
   /** token positions that are definitions: `${line}:${tokenIndex}` → def id */
   defSites: Map<string, string>;
+  /** binding def id → initializer token on the declaring line */
+  bindingInitOf: Map<string, BindingSite>;
+  /** init anchor `${line}:${tokenIndex}` → binding def id */
+  bindingInitSites: Map<string, string>;
 };
 
 function extractParams(
@@ -27,7 +37,7 @@ function extractParams(
   memberId: string,
   lineNumber: number,
 ): { name: string; tokenIndex: number; defId: string }[] {
-  const tokens = tokenizeLine(line);
+  const tokens = tokenizeLine(line).tokens;
   const out: { name: string; tokenIndex: number; defId: string }[] = [];
   let inParams = false;
   let pendingName: string | null = null;
@@ -69,7 +79,7 @@ function extractContinuationParams(
   const trimmed = line.trim();
   if (!trimmed || trimmed.startsWith(")")) return [];
 
-  const tokens = tokenizeLine(line);
+  const tokens = tokenizeLine(line).tokens;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i]!;
     if (t.kind !== "identifier" || t.text === "this") continue;
@@ -79,6 +89,65 @@ function extractContinuationParams(
     return [{ name: t.text, tokenIndex: i, defId }];
   }
   return [];
+}
+
+/** Record initializer → binding for `const|let name = expr` on one line. */
+function recordLineBinding(
+  lineNumber: number,
+  tokens: readonly { kind: string; text: string }[],
+  defSites: Map<string, string>,
+  bindingInitOf: Map<string, BindingSite>,
+  bindingInitSites: Map<string, string>,
+): void {
+  let decl: "const" | "let" | null = null;
+  let bindingDefId: string | null = null;
+  let eqIndex = -1;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.kind === "whitespace") continue;
+
+    if (t.text === "const" || t.text === "let") {
+      decl = t.text;
+      bindingDefId = null;
+      continue;
+    }
+
+    if (decl && t.kind === "identifier" && !bindingDefId) {
+      const defId = defSites.get(`${lineNumber}:${i}`);
+      if (defId?.includes("::local::")) {
+        bindingDefId = defId;
+        decl = null;
+      }
+      continue;
+    }
+
+    if (t.text === "=" && bindingDefId) {
+      eqIndex = i;
+      break;
+    }
+  }
+
+  if (!bindingDefId || eqIndex < 0) return;
+
+  let rightmost: { index: number; token: string } | null = null;
+  for (let i = eqIndex + 1; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.text === ";") break;
+    if (t.kind === "identifier") {
+      rightmost = { index: i, token: t.text };
+    }
+  }
+
+  if (!rightmost) return;
+
+  const site: BindingSite = {
+    lineNumber,
+    tokenIndex: rightmost.index,
+    token: rightmost.token,
+  };
+  bindingInitOf.set(bindingDefId, site);
+  bindingInitSites.set(`${lineNumber}:${rightmost.index}`, bindingDefId);
 }
 
 /**
@@ -91,8 +160,11 @@ export function buildMemberSymbolIndex(
 ): MemberSymbolIndex {
   const usageTargets = new Map<string, string>();
   const defSites = new Map<string, string>();
+  const bindingInitOf = new Map<string, BindingSite>();
+  const bindingInitSites = new Map<string, string>();
   const lines = code.split("\n");
   const scope = new Map<string, string>();
+  let inBlockComment = false;
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineNumber = lineIdx + 1;
@@ -111,7 +183,9 @@ export function buildMemberSymbolIndex(
       }
     }
 
-    const tokens = tokenizeLine(line);
+    const tokenized = tokenizeLine(line, inBlockComment);
+    inBlockComment = tokenized.inBlockComment;
+    const tokens = tokenized.tokens;
     let prev: string | null = null;
 
     for (let i = 0; i < tokens.length; i++) {
@@ -119,6 +193,11 @@ export function buildMemberSymbolIndex(
       if (t.kind === "whitespace") continue;
 
       if (t.kind === "identifier") {
+        const siteKey = `${lineNumber}:${i}`;
+        if (defSites.has(siteKey)) {
+          prev = t.text;
+          continue;
+        }
         if (prev === "const" || prev === "let") {
           const defId = localDefId(memberId, t.text, lineNumber, "local");
           scope.set(t.text, defId);
@@ -135,9 +214,17 @@ export function buildMemberSymbolIndex(
 
       prev = t.text;
     }
+
+    recordLineBinding(
+      lineNumber,
+      tokens,
+      defSites,
+      bindingInitOf,
+      bindingInitSites,
+    );
   }
 
-  return { usageTargets, defSites };
+  return { usageTargets, defSites, bindingInitOf, bindingInitSites };
 }
 
 export function usageTargetFor(
@@ -170,4 +257,19 @@ export function paramDefForName(
     return { defId, lineNumber };
   }
   return null;
+}
+
+export function bindingInitFor(
+  index: MemberSymbolIndex,
+  defId: string,
+): BindingSite | undefined {
+  return index.bindingInitOf.get(defId);
+}
+
+export function bindingDefForInit(
+  index: MemberSymbolIndex,
+  lineNumber: number,
+  tokenIndex: number,
+): string | undefined {
+  return index.bindingInitSites.get(`${lineNumber}:${tokenIndex}`);
 }

@@ -26,7 +26,10 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Method 
 | 5 | Clicks section header | Bulk expand/collapse section | `onToggleMethodsSection` |
 | 6 | Drags resize control | Live snap height to content | `useClassNodeResize` |
 | 7 | Hovers indexed token in body | Preview edge — see [preview-edges](../../system/preview-edges.md) | `GraphInteractionContext` |
-| 7b | Hovers indexed param or type in signature tags | Trace dims row + signature; edge when target resolves | `MemberSignatureTags` |
+| 7a | Hovers local/param binding or initializer | Usage fan-out + **binding** wire (init → binding) — see [connection-taxonomy](../../system/connection-taxonomy.md) § Binding | `buildBindingPreviewEdges` |
+| 7b | Hovers `switch`/`if` keyword or its condition/discriminant | **Control flow** fan-out to every `case`/`default`/`else`/`else if` branch — see [connection-taxonomy](../../system/connection-taxonomy.md) § Control flow | `buildControlFlowPreviewEdges` |
+| 7c | Hovers a single `case`/`default`/`else`/`else if` branch | One **Control flow** wire back to the `switch`/`if` keyword | `buildControlFlowPreviewEdges` |
+| 7d | Hovers indexed param or type in signature tags | Trace dims row + signature; edge when target resolves | `MemberSignatureTags` |
 | 8 | Hovers member def label | Def fan-out to usages | `buildDefinitionPreviewEdges` |
 | 9 | Right-click → path mode | _(graph-level)_ path highlight when second node picked | graph chrome |
 
@@ -92,7 +95,8 @@ Resize MUST commit via `computeClassNodeHeight` — do not bind card CSS height 
 - [ ] Resize never leaves empty space below last visible row
 - [ ] Shrinking height closes members top→bottom before clipping
 - [ ] Method row headers show param + return tags when signature parses
-- [ ] Header param names use TokenChip connectors (def → in-body usages)
+- [x] Header param names use TokenChip connectors (def → in-body usages)
+- [x] Param usage wires anchor at the in-body declaration when hovering a usage; hovering a def fans out only from that chip (header twin lights, no duplicate wire)
 - [ ] Only expanded method bodies expose indexed token chips for preview
 - [ ] `previewTargetTop(id)` handle is unique per node
 - [ ] Double-clicking anywhere in a member row (header or inline body) expands it and scrolls it into reading position

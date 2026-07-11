@@ -8,36 +8,68 @@ export type ClassMemberItem = {
   code: string;
 };
 
+/**
+ * Anchored to the start of the (comment-stripped) declaration so it captures the
+ * property/field identifier itself — never a type name. Handles interface-style
+ * `name?: Type;` (no modifier) as well as class fields with modifiers/decorators.
+ */
+const FIELD_NAME_RE =
+  /^(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|protected|readonly|static|abstract|declare)\s+)*(\w+)\s*\??\s*(?:[:=;]|$)/;
+
+/** Strips leading `//` and `/* ... *\/` comments so declaration regexes see the real code. */
+function stripLeadingComments(code: string): string {
+  let text = code.trimStart();
+  for (;;) {
+    if (text.startsWith("//")) {
+      const nl = text.indexOf("\n");
+      text = nl === -1 ? "" : text.slice(nl + 1).trimStart();
+      continue;
+    }
+    if (text.startsWith("/*")) {
+      const end = text.indexOf("*/");
+      text = end === -1 ? "" : text.slice(end + 2).trimStart();
+      continue;
+    }
+    return text;
+  }
+}
+
 /** Field/property identifier from a member chunk, if any. */
 export function inferSymbolName(code: string): string | null {
-  const trimmed = code.trim();
+  const trimmed = stripLeadingComments(code);
   if (/^constructor\s*\(/.test(trimmed)) return null;
 
-  const field = trimmed.match(
-    /(?:public|private|protected|readonly|static|\s)+(\w+)\s*(?:[=:]|;)/,
-  );
+  const field = trimmed.match(FIELD_NAME_RE);
   return field?.[1] ?? null;
 }
 
 type MethodLike = { id: string; label: string; code: string };
 
+/**
+ * `classCode` is the declaration's full text, which includes any leading
+ * `@Decorator({ ... })` (e.g. Angular `@Injectable`/`@Component`). Those carry their
+ * own `{ ... }`, so a naive `indexOf("{")` grabs the decorator's brace instead of the
+ * class body's — search for the opening brace only after the `class`/`interface`
+ * keyword to avoid slicing decorator config text in as a bogus member.
+ */
 function extractClassBodyInner(classCode: string): string {
-  const open = classCode.indexOf("{");
+  const keyword = classCode.search(/\b(?:class|interface)\b/);
+  const searchFrom = keyword === -1 ? 0 : keyword;
+  const open = classCode.indexOf("{", searchFrom);
   const close = classCode.lastIndexOf("}");
   if (open === -1 || close <= open) return classCode;
   return classCode.slice(open + 1, close);
 }
 
 function inferMemberLabel(code: string, fallback: string): string {
-  const ctor = code.match(/constructor\s*\(/);
+  const stripped = stripLeadingComments(code);
+  const ctor = stripped.match(/^constructor\s*\(/);
   if (ctor) return "Constructor";
 
-  const field = code.match(
-    /(?:public|private|protected|readonly|static|\s)+(\w+)\s*(?:[=:]|;)/,
-  );
+  const field = stripped.match(FIELD_NAME_RE);
   if (field?.[1]) return camelToWords(field[1]);
 
-  const firstLine = code.trim().split("\n")[0] ?? "";
+  const firstLine = stripped.split("\n")[0] ?? "";
   const short = firstLine.slice(0, 48).trim();
   return short ? camelToWords(short.replace(/[;{].*$/, "")) : fallback;
 }

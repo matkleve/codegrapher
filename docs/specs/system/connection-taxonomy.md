@@ -35,13 +35,17 @@ Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-
 | 6 | Hover/pin a token with 2+ hop reach | Stepped-opacity dashed wires beyond the 1-hop set | Transitive |
 | 7 | Hover/pin a shared dependency of two unrelated siblings | Shared highlight color on both siblings, **no edge between them** | Shared-dependency |
 | 8 | "Show imports" toggle enabled | Thin dotted class-header-to-class-header wire | Module import |
+| 9 | Hover/pin a param/local binding or its initializer | Dotted binding wire, initializer → binding | Binding |
+| 10 | Hover/pin a `switch`/`if` keyword or its discriminant/condition | Dash-dot wires fan out to every `case`/`else` branch; hovering one branch wires back to the head only | Control flow |
 
 ## Component Hierarchy
 
 ```text
 Connection kinds
 ├── Preview (on-demand, hover-gated — existing contract, unchanged)
-│   ├── Usage            — dashed, token-kind color, open arrow
+│   ├── Usage            — dashed, token-kind color, open arrow (def → usage)
+│   ├── Binding          — dotted, variable color, open arrow (initializer → binding)
+│   ├── Control flow      — dash-dot, dedicated green hue, filled arrow (condition → branch)
 │   └── Transitive        — dashed, stepped opacity, same color family as Usage
 ├── Structural (persistent once both ends loaded — new, deliberate exception)
 │   ├── Inheritance        — solid, hollow triangle arrow
@@ -58,6 +62,8 @@ Connection kinds
 | Kind | Direction | Persistent? | Reuses token-kind color? |
 | ---- | --------- | ----------- | ------------------------- |
 | Usage | definition → usage | No (hover-gated) | Yes |
+| Binding | initializer → binding | No (hover-gated) | Yes — always `variable` |
+| Control flow | condition/keyword → branch | No (hover-gated) | No — dedicated hue (`--edge-control-flow`) |
 | Transitive | definition → N-hop usage | No (hover-gated) | Yes, decayed opacity |
 | Inheritance | child → parent | **Yes** | No — dedicated hue |
 | Implementation | class → interface | **Yes** | No — dedicated hue |
@@ -70,7 +76,7 @@ Connection kinds
 
 | State | Type | Default | Effect |
 | ----- | ---- | ------- | ------ |
-| `visibleEdgeKinds` | `Set<ConnectionKind>` | Usage only | Which structural kinds render without a hover; module import off by default |
+| `visibleEdgeKinds` | `Set<ConnectionKind>` | usage + binding + control flow + structural (except module import) | Per-kind legend toggles; module import off by default |
 | `transitiveHopDepth` | number | 2 | Max hop distance shown as decayed-opacity wires |
 
 ## File Map
@@ -78,9 +84,12 @@ Connection kinds
 | File | Purpose |
 | ---- | ------- |
 | `server/src/parser.ts` | Would emit `extends`/`implements` edges (currently declared, unused) |
-| `client/src/lib/tokenColors.ts` | Existing per-token-kind color map; needs a parallel per-relationship-kind map |
-| `client/src/components/graph/PreviewEdgeOverlay.tsx` | Existing hover-gated rendering; structural kinds need a persistent counterpart |
-| `client/src/styles/preview-wires.css` | Add line-style/arrowhead variants per kind |
+| `client/src/lib/tokenColors.ts` | Per-token-kind color map + structural hues |
+| `client/src/lib/localSymbolLinks.ts` | Lexical def/usage map; initializer span for binding wires |
+| `client/src/lib/controlFlowLinks.ts` | Line-scanning switch/if-chain index — head keyword, condition identifiers, and case/else branch anchors per method body |
+| `client/src/lib/linksForElement.ts` | `buildControlFlowPreviewEdges` — condition/keyword hover fans out to branches, branch hover wires back to the head |
+| `client/src/components/graph/PreviewEdgeOverlay.tsx` | Hover-gated preview + persistent structural wires |
+| `client/src/styles/preview-wires.css` | Line-style/arrowhead variants per kind (`--binding` dotted, `--branch` dash-dot) |
 
 ## Acceptance Criteria
 
@@ -96,6 +105,10 @@ Summary (see child doc for full AC per kind):
 - [ ] Override relationships render as a row badge, never as a canvas edge
 - [ ] Shared-dependency relationships highlight both siblings in the dependency's color, never draw a line directly between the siblings
 - [ ] Module-import wires are hidden by default and only appear when `visibleEdgeKinds` includes them
+- [ ] Binding wires show initializer → binding for `const`/`let` declarations (e.g. `result.address` → `addr`)
+- [ ] Control-flow wires fan out from a `switch`/`if` keyword or its condition to every `case`/`else` branch, and wire back to the head only when hovering a single branch; `switch (field)` fans to every `case`/`default` at that switch's own nesting depth, not to nested switches/ifs inside a branch
+- [ ] Ternary (`cond ? a : b`) control flow is not yet indexed — tracked as a follow-up, not a v1 gap in this AC list
+- [ ] Legend toggles are 1:1 with kinds — toggling **Inheritance** hides only `extends` structural wires, not local variable usage/binding preview wires
 - [ ] A legend or per-edge tooltip lets a user identify what a given line style/arrowhead means without consulting this spec
 
 ## Child specs

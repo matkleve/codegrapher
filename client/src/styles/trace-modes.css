@@ -232,21 +232,22 @@
   -webkit-text-fill-color: currentColor;
 }
 
+/* Sig param/return hover: title stays dim unless it is the lit trace endpoint */
+.graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+  .member-row-label:not(.token-chip-lit),
+.graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+  .member-row-label:not(.token-chip-lit)
+  .token-shimmer-target {
+  color: var(--faint) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value {
   background: transparent !important;
 }
 
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .token-chip:not(.token-chip-lit) .token-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .token-def-label:not(.token-chip-lit),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
-  .member-signature-tags
-  .token-chip.member-sig-token-chip:not(.token-chip-lit)
-  .token-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
-  .member-signature-tags
-  .token-chip.member-sig-type-chip:not(.token-chip-lit)
-  .token-chip-text {
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .token-def-label:not(.token-chip-lit) {
   color: var(--faint) !important;
   font-weight: 600;
   background: transparent;

@@ -72,47 +72,142 @@ export type CodeToken = {
   kind: CodeTokenKind;
 };
 
-const LINE_TOKEN_RE =
-  /(\s+|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|0x[\da-fA-F]+|\d+\.?\d*|[a-zA-Z_$][\w$]*|[^\w\s])/g;
+export type TokenizeLineResult = {
+  tokens: CodeToken[];
+  inBlockComment: boolean;
+};
 
-export function tokenizeLine(line: string): CodeToken[] {
+function readQuotedString(line: string, start: number): number {
+  const quote = line[start]!;
+  let i = start + 1;
+  while (i < line.length) {
+    const ch = line[i]!;
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === quote) return i + 1;
+    i++;
+  }
+  return line.length;
+}
+
+function readTemplateString(line: string, start: number): number {
+  let i = start + 1;
+  while (i < line.length) {
+    const ch = line[i]!;
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === "`") return i + 1;
+    i++;
+  }
+  return line.length;
+}
+
+function pushComment(tokens: CodeToken[], text: string): void {
+  if (text) tokens.push({ text, kind: "comment" });
+}
+
+/** Whether a 1-based line starts inside an unclosed `/*` block from earlier lines. */
+export function blockCommentOpenAtLineStart(
+  code: string,
+  lineNumber: number,
+): boolean {
+  if (lineNumber <= 1) return false;
+
+  const lines = code.split("\n");
+  let inBlock = false;
+  for (let i = 0; i < lineNumber - 1; i++) {
+    inBlock = tokenizeLine(lines[i] ?? "", inBlock).inBlockComment;
+  }
+  return inBlock;
+}
+
+export function tokenizeLine(
+  line: string,
+  inBlockComment = false,
+): TokenizeLineResult {
   const tokens: CodeToken[] = [];
-  let match: RegExpExecArray | null;
-  LINE_TOKEN_RE.lastIndex = 0;
+  let i = 0;
+  let inBlock = inBlockComment;
 
-  while ((match = LINE_TOKEN_RE.exec(line)) !== null) {
-    const text = match[0];
-    if (!text) continue;
+  while (i < line.length) {
+    if (inBlock) {
+      const close = line.indexOf("*/", i);
+      if (close === -1) {
+        pushComment(tokens, line.slice(i));
+        return { tokens, inBlockComment: true };
+      }
+      pushComment(tokens, line.slice(i, close + 2));
+      i = close + 2;
+      inBlock = false;
+      continue;
+    }
 
-    if (/^\s+$/.test(text)) {
-      tokens.push({ text, kind: "whitespace" });
+    const ch = line[i]!;
+    if (ch === '"' || ch === "'") {
+      const end = readQuotedString(line, i);
+      tokens.push({ text: line.slice(i, end), kind: "string" });
+      i = end;
       continue;
     }
-    if (text.startsWith("//")) {
-      tokens.push({ text, kind: "comment" });
+    if (ch === "`") {
+      const end = readTemplateString(line, i);
+      tokens.push({ text: line.slice(i, end), kind: "string" });
+      i = end;
       continue;
     }
-    if (text.startsWith('"') || text.startsWith("'") || text.startsWith("`")) {
-      tokens.push({ text, kind: "string" });
+
+    if (line.startsWith("//", i)) {
+      pushComment(tokens, line.slice(i));
+      return { tokens, inBlockComment: false };
+    }
+
+    if (line.startsWith("/*", i)) {
+      const close = line.indexOf("*/", i + 2);
+      if (close === -1) {
+        pushComment(tokens, line.slice(i));
+        return { tokens, inBlockComment: true };
+      }
+      pushComment(tokens, line.slice(i, close + 2));
+      i = close + 2;
       continue;
     }
-    if (/^\d/.test(text) || text.startsWith("0x")) {
-      tokens.push({ text, kind: "number" });
+
+    const wsMatch = /^\s+/.exec(line.slice(i));
+    if (wsMatch) {
+      tokens.push({ text: wsMatch[0], kind: "whitespace" });
+      i += wsMatch[0].length;
       continue;
     }
-    if (/^[a-zA-Z_$][\w$]*$/.test(text)) {
+
+    const numMatch = /^(0x[\da-fA-F]+|\d+\.?\d*)/.exec(line.slice(i));
+    if (numMatch) {
+      tokens.push({ text: numMatch[0], kind: "number" });
+      i += numMatch[0].length;
+      continue;
+    }
+
+    const idMatch = /^[a-zA-Z_$][\w$]*/.exec(line.slice(i));
+    if (idMatch) {
+      const text = idMatch[0];
       tokens.push({
         text,
         kind: TS_KEYWORDS.has(text) ? "keyword" : "identifier",
       });
+      i += text.length;
       continue;
     }
-    tokens.push({ text, kind: "operator" });
+
+    tokens.push({ text: ch, kind: "operator" });
+    i += 1;
   }
 
   if (tokens.length === 0 && line.length > 0) {
     tokens.push({ text: line, kind: "other" });
   }
 
-  return tokens;
+  return { tokens, inBlockComment: inBlock };
 }

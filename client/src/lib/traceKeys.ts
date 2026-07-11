@@ -8,6 +8,16 @@ export function makeUsageTokenKey(
   return `${sourceFlowId}::${memberId}::${lineNumber}::${token}`;
 }
 
+/** Control-flow anchor (switch/if/case/else keyword or condition identifier). */
+export function makeControlFlowKey(
+  sourceFlowId: string,
+  memberId: string,
+  lineNumber: number,
+  tokenIndex: number,
+): string {
+  return `${sourceFlowId}::${memberId}::${lineNumber}::cf-${tokenIndex}`;
+}
+
 /** Signature tag type reference (header chips, not body line numbers). */
 export function makeSignatureTypeKey(
   flowNodeId: string,

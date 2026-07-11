@@ -301,6 +301,112 @@ Reuses existing `imports` edges from parser where both endpoint classes are on c
 
 ---
 
+## 9. Binding (initializer → binding)
+
+**Status:** `implemented` (assignment-step sim pulse deferred)
+
+**What it is:** On-demand preview wire showing **where a param or local binding gets its value** on the declaring statement. Distinct from **Usage** (def → later references) and from **Inheritance** (structural `extends`).
+
+Example: `const addr = result.address;`
+
+| Wire | Kind | Direction |
+| ---- | ---- | --------- |
+| `addr` → `if (addr)` | Usage | binding def → usage |
+| `result` → param `result` in signature | Usage | param def → usage |
+| `result.address` → `addr` | **Binding** | initializer expr → binding |
+
+### Actions
+
+| # | Trigger | System Response |
+| --- | ------- | --------------- |
+| 1 | Hover/pin local/param **binding** (`addr` on LHS) | Usage fan-out to in-body references **plus** one binding wire from initializer → binding |
+| 2 | Hover/pin **initializer** token on same decl (`address` in `result.address`) | Single binding wire to the bound name on that line |
+| 3 | Hover usage only (`addr` in `if (addr)`) | Usage wire to binding def only — no binding wire |
+| 4 | `const x = literal;` (no identifier in RHS) | No binding wire |
+| 5 | Toggle **Binding** off in legend | Hide binding wires; usage fan-out unchanged |
+
+### Data
+
+| Field | Value |
+| ----- | ----- |
+| Direction | **initializer → binding** (value flows into the bound name) |
+| Persistent | No — hover/Ctrl/pin only |
+| Color | `var(--token-edge-variable)` |
+| Line | **Dotted** preview overlay (`preview-edge-path--binding`) — not structural `implements` dotted |
+| Arrowhead | Open, at binding end |
+| Animation | Dot/dash flow **toward binding** (value sink) |
+| Scope | Same method body only (`localSymbolLinks.ts`) |
+| Init anchor | Rightmost identifier in the `=` RHS on that line (`address` for `result.address`; `foo` for `= foo`) |
+| Binding anchor | LHS identifier chip (`addr`) |
+
+### Acceptance Criteria
+
+- [x] `const addr = result.address;` — hovering `addr` shows binding wire from `address` → `addr` in addition to usage fan-out
+- [x] Hovering `address` in the initializer shows the same binding wire (initializer → binding)
+- [x] Hovering `result` in the initializer still resolves param def → usage only (no binding wire)
+- [x] Binding wire uses dotted line + variable color — visually distinct from usage dashed and inheritance solid
+- [x] Legend **Binding** toggle hides only binding wires; **Inheritance** toggle hides only `extends` structural wires
+- [ ] Assignment-step pulses in [execution-simulator.md](execution-simulator.md) travel along the binding wire when present
+
+---
+
+## 10. Control flow (switch/case, if/else)
+
+**Status:** `implemented` (ternary, and multi-line `switch`/`if` headers, deferred)
+
+**What it is:** On-demand preview wire showing **which branch a value can take** at a `switch` or `if`/`else if`/`else` chain. Distinct from **Usage** (which only wires the discriminant identifier to its other occurrences) and from **Binding** (value → name, not decision → branch).
+
+Example:
+
+```ts
+switch (field) {
+  case 'city': return addr.city ?? null;
+  case 'district': { /* ... */ }
+  default: return null;
+}
+```
+
+Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `default`. Hovering one `case` wires back to `switch` only.
+
+### Actions
+
+| # | Trigger | System Response |
+| --- | ------- | --------------- |
+| 1 | Hover/pin the `switch`/`if` **keyword** | Fan-out: one wire from the keyword to every `case`/`default`/`else`/`else if` branch of that statement |
+| 2 | Hover/pin the discriminant/condition **identifier** (`field` in `switch (field)`) | Same fan-out as the keyword, in addition to the identifier's normal usage wires |
+| 3 | Hover/pin a single branch keyword (`case`, `default`, `else`, `else if`) | One wire back to the `switch`/`if` keyword only — not to sibling branches |
+| 4 | A `case`/`if` body contains its own nested `switch`/`if` | Nested statement is its own independent group; hovering the outer head does not fan into the nested statement's branches |
+| 5 | Toggle **Control flow** off in legend | Hide all branch wires; usage/binding wires unchanged |
+
+### Data
+
+| Field | Value |
+| ----- | ----- |
+| Direction | **condition/keyword → branch** (decision flows outward to each possible branch) |
+| Persistent | No — hover/Ctrl/pin only |
+| Color | Dedicated hue, `var(--edge-control-flow)` — not a token-kind color |
+| Line | Dash-dot (`preview-edge-branch`), distinct from usage dashed and binding dotted |
+| Arrowhead | Filled, at branch end |
+| Scope | Same method body only (`controlFlowLinks.ts`), naive line/brace-depth scan (no full AST) |
+| Head anchor | The `switch`/`if` keyword token |
+| Branch anchor | The `case`/`default` keyword (switch) or `else`/`else if` keyword (if-chain) |
+| Condition anchor | Any identifier inside the head's own `(...)`, single-line headers only |
+
+### Acceptance Criteria
+
+- [x] Hovering `switch` in `switch (field) { case 'city': ...; case 'district': ...; default: ... }` draws one wire to each of `case 'city'`, `case 'district'`, and `default`
+- [x] Hovering the discriminant identifier (`field`) draws the same branch fan-out, alongside its existing usage wire(s)
+- [x] Hovering a single `case`/`default` wires back to `switch` only, not to sibling cases
+- [x] `if (n > 10) { ... } else if (n > 0) { ... } else { ... }` chains `else if` and `else` as branches of the same group as `if`
+- [x] A case body's own nested braces (e.g. `case 'x': { ... }`) do not close the outer `switch` group early
+- [x] A nested `switch`/`if` inside a branch body is its own group — hovering the outer head never fans into it
+- [x] Control-flow wires use the dedicated `--edge-control-flow` hue and dash-dot line — visually distinct from usage, binding, and structural edges
+- [x] Legend **Control flow** toggle hides only branch wires; Usage/Binding toggles are unaffected
+- [ ] Ternary (`cond ? a : b`) is not yet indexed — tracked as a follow-up
+- [ ] Multi-line `switch (`/`if (` headers (discriminant on a different line than the keyword) are not yet indexed — known limitation, single-line headers only
+
+---
+
 ## References
 
 - Parent taxonomy: [connection-taxonomy.md](connection-taxonomy.md)

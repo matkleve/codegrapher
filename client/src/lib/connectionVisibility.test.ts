@@ -1,23 +1,45 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_VISIBLE_EDGE_KINDS,
-  structuralTypesForVisibleKinds,
+  filterPreviewEdgesByVisibility,
+  previewConnectionKind,
 } from "@/lib/connectionVisibility";
+import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 
-describe("connectionVisibility", () => {
-  it("defaults with module import off", () => {
-    expect(DEFAULT_VISIBLE_EDGE_KINDS.has("usage")).toBe(true);
-    expect(DEFAULT_VISIBLE_EDGE_KINDS.has("module-import")).toBe(false);
+function edge(
+  overrides: Partial<PreviewEdgeSpec> = {},
+): PreviewEdgeSpec {
+  return {
+    id: "e",
+    from: { type: "handle", handle: "a" },
+    to: { type: "handle", handle: "b" },
+    kind: "variable",
+    ...overrides,
+  };
+}
+
+describe("filterPreviewEdgesByVisibility", () => {
+  it("filters usage and binding independently", () => {
+    const edges = [
+      edge({ id: "u" }),
+      edge({ id: "b", connectionKind: "binding" }),
+      edge({ id: "t", hop: 2, connectionKind: "transitive" }),
+    ];
+
+    expect(
+      filterPreviewEdgesByVisibility(edges, new Set(["usage"])).map((e) => e.id),
+    ).toEqual(["u", "t"]);
+
+    expect(
+      filterPreviewEdgesByVisibility(edges, new Set(["binding"])).map((e) => e.id),
+    ).toEqual(["b"]);
+
+    expect(
+      filterPreviewEdgesByVisibility(edges, new Set(["inheritance"])).map((e) => e.id),
+    ).toEqual([]);
   });
 
-  it("maps visible legend kinds to structural edge types", () => {
-    const types = structuralTypesForVisibleKinds(DEFAULT_VISIBLE_EDGE_KINDS);
-    expect(types).toEqual(new Set(["extends", "implements", "composition"]));
-  });
-
-  it("includes imports when module-import is visible", () => {
-    const kinds = new Set([...DEFAULT_VISIBLE_EDGE_KINDS, "module-import" as const]);
-    const types = structuralTypesForVisibleKinds(kinds);
-    expect(types.has("imports")).toBe(true);
+  it("classifies hop edges as transitive", () => {
+    expect(previewConnectionKind(edge({ hop: 2 }))).toBe("transitive");
+    expect(previewConnectionKind(edge())).toBe("usage");
   });
 });

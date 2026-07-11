@@ -10,6 +10,8 @@ export const STRUCTURAL_EDGE_STROKE: Record<StructuralEdgeType, string> = {
 
 export type ConnectionKind =
   | "usage"
+  | "binding"
+  | "branch"
   | "transitive"
   | "inheritance"
   | "implementation"
@@ -20,6 +22,8 @@ export type ConnectionKind =
 
 export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
   usage: "Usage",
+  binding: "Binding",
+  branch: "Control flow",
   transitive: "Transitive",
   inheritance: "Inheritance",
   implementation: "Implementation",

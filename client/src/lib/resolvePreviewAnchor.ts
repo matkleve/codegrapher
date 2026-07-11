@@ -15,8 +15,26 @@ const ANCHOR_OUTSET = 9;
 const SAME_ROW_THRESHOLD = 10;
 const MIN_ARC_BULGE = 22;
 const MAX_ARC_BULGE = 48;
+/** Horizontal run-out from a port before the curve bends (px). */
+const MIN_HORIZONTAL_EXIT = 30;
 
 import { getByHandle } from "@/lib/elementRegistry";
+
+function exitControlX(
+  anchorX: number,
+  side: "left" | "right",
+  stub: number,
+): number {
+  return side === "right" ? anchorX + stub : anchorX - stub;
+}
+
+function entryControlX(
+  anchorX: number,
+  side: "left" | "right",
+  stub: number,
+): number {
+  return side === "left" ? anchorX - stub : anchorX + stub;
+}
 
 function findTargetAnchor(
   handleId: string,
@@ -111,13 +129,10 @@ export function cubicPath(
     c1y = y1 + bulge;
     c2y = y2 + bulge;
   } else {
-    const fromOut = fromSide === "right" ? ANCHOR_OUTSET * 2 : -ANCHOR_OUTSET * 2;
-    const toOut = toSide === "left" ? -ANCHOR_OUTSET * 2 : ANCHOR_OUTSET * 2;
-    c1x = x1 + fromOut + dx * 0.35;
-    c2x = x2 + toOut - dx * 0.35;
-    const verticalPull = Math.sign(dy || 1) * Math.min(Math.abs(dy) * 0.25, 20);
-    c1y = y1 + verticalPull;
-    c2y = y2 - verticalPull;
+    c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT);
+    c1y = y1;
+    c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT);
+    c2y = y2;
   }
 
   return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;

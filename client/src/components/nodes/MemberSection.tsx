@@ -39,6 +39,7 @@ export function MemberSection({
           density="compact"
           title={bulkActionLabel}
           contentTone="muted"
+          fullWidth={false}
           className="member-section-bulk nodrag shrink-0"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {

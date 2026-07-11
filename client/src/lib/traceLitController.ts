@@ -1,4 +1,5 @@
 import type { TraceLitState } from "@/lib/computeTraceLit";
+import { allLocalDefElements } from "@/lib/localDefElements";
 import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
@@ -22,6 +23,17 @@ let previous: Applied[] = [];
 
 function chipHostForTraceKey(key: string): HTMLElement | null {
   return getByTraceKey(key);
+}
+
+function litHostsForEndpoint(host: HTMLElement): HTMLElement[] {
+  const defId = host.dataset.localDefId;
+  if (!defId) return [host];
+
+  const pane = document.querySelector(".graph-pane");
+  if (!pane) return [host];
+
+  const siblings = allLocalDefElements(pane, defId);
+  return siblings.length > 0 ? siblings : [host];
 }
 
 function clearPrevious(): void {
@@ -127,8 +139,10 @@ export function applyTraceLit(
     } else if (hoveredTokenKey === key) {
       extra.push(CHIP_HOVER_PREVIEW);
     }
-    const restoreAnchors = applyEndpointSockets(host);
-    track(host, extra, restoreAnchors);
+    for (const litHost of litHostsForEndpoint(host)) {
+      const restoreAnchors = applyEndpointSockets(litHost);
+      track(litHost, extra, restoreAnchors);
+    }
   }
 
   for (const memberId of state.litMemberIds) {

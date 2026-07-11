@@ -67,6 +67,7 @@ import {
 import { buildTransitiveEdges } from "@/lib/buildTransitiveEdges";
 import {
   DEFAULT_VISIBLE_EDGE_KINDS,
+  filterPreviewEdgesByVisibility,
   structuralTypesForVisibleKinds,
 } from "@/lib/connectionVisibility";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
@@ -604,13 +605,14 @@ export function GraphInteractionProvider({
         symbols,
       );
       if (transitive.length > 0) {
-        edges = [...edges, ...transitive];
+        edges = [
+          ...edges,
+          ...transitive.map((e) => ({ ...e, connectionKind: "transitive" as const })),
+        ];
       }
     }
 
-    if (!visibleEdgeKinds.has("usage")) return [];
-
-    return edges;
+    return filterPreviewEdgesByVisibility(edges, visibleEdgeKinds);
   }, [
     graphData,
     getNode,
@@ -773,18 +775,26 @@ export function GraphInteractionProvider({
     for (const trace of pinnedTraces) {
       lit = mergeTraceLit(
         lit,
-        computeTraceLit(trace.tokenKey, trace.edges, getNode),
+        computeTraceLit(
+          trace.tokenKey,
+          filterPreviewEdgesByVisibility(trace.edges, visibleEdgeKinds),
+          getNode,
+        ),
       );
     }
     return lit;
-  }, [getNode, pinnedTraces, revealRevision, registryRevision]);
+  }, [getNode, pinnedTraces, revealRevision, registryRevision, visibleEdgeKinds]);
 
   const hoverTraceLit = useMemo(() => {
     if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
     if (pinnedKeys(pinnedTraces).includes(hoveredTokenKey)) {
       return EMPTY_TRACE_LIT;
     }
-    return computeTraceLit(hoveredTokenKey, hoverPreviewEdges, getNode);
+    return computeTraceLit(
+      hoveredTokenKey,
+      filterPreviewEdgesByVisibility(hoverPreviewEdges, visibleEdgeKinds),
+      getNode,
+    );
   }, [
     getNode,
     hoverPreviewEdges,
@@ -792,6 +802,7 @@ export function GraphInteractionProvider({
     pinnedTraces,
     revealRevision,
     registryRevision,
+    visibleEdgeKinds,
   ]);
 
   const traceLit = useMemo(

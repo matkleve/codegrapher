@@ -107,7 +107,10 @@ flowchart TB
 | ------------ | ------------ | ----- |
 | Usage in `CodeLine` | `buildUsagePreviewEdge` | 1 |
 | Member row / class title def | `buildDefinitionPreviewEdges` | All usages in ego-graph |
-| Local param / local var | `buildLocalPreviewEdges` | In-body only |
+| Local param / local var | `buildLocalPreviewEdges` | In-body usages only |
+| Local/param binding + initializer | `buildBindingPreviewEdges` | 1 binding wire (init → binding) when decl has identifier RHS |
+| `switch`/`if` keyword or condition identifier | `buildControlFlowPreviewEdges` | Fan-out: 1 wire per branch (`case`/`default`/`else`/`else if`) |
+| Single `case`/`default`/`else`/`else if` branch | `buildControlFlowPreviewEdges` | 1 wire back to the `switch`/`if` keyword |
 | Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
 | Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
 
@@ -116,6 +119,75 @@ flowchart TB
 **DOM fan-out:** Member signature tokens (`isDefinitionSignatureLine`) carry `data-symbol-role="definition"` in `CodeLine` so they are not counted as usage anchors when tracing from the member-row label.
 
 **Same-class usage → def:** `resolveVisibleTarget` MUST NOT skip `flowNodeId === sourceFlowId`; wire lands on `.member-row-label` element when present.
+
+---
+
+## Local lexical trace (usage + binding)
+
+Params and locals use a client-side lexical index (`localSymbolLinks.ts`). Two preview kinds apply:
+
+```mermaid
+flowchart LR
+  subgraph decl ["const addr = result.address;"]
+    Init["address<br/>(initializer)"] -->|Binding| Bind["addr<br/>(binding)"]
+    Bind -->|Usage| Use["if (addr)"]
+    Param["result param"] -->|Usage| InitRef["result<br/>in initializer"]
+  end
+```
+
+| Relationship | Kind | Direction | Builder |
+| ------------ | ---- | --------- | ------- |
+| Binding def → later reference | Usage | def → usage | `buildLocalPreviewEdges` |
+| Initializer expr → bound name | **Binding** | initializer → binding | `buildBindingPreviewEdges` |
+| Param def → reference in body | Usage | def → usage | `buildParamDefPreviewEdges` / local |
+
+**Normative — binding vs usage:** Usage answers "where is this name referenced later?" Binding answers "where does this binding get its value on the declaring line?" They MUST NOT share one kind or one legend toggle.
+
+**Initializer resolution:** For `const|let <name> = <expr>;` on a single line, the binding source anchor is the **rightmost identifier token** in `<expr>`. Property reads (`result.address`) anchor on the property identifier (`address`); the receiver (`result`) keeps its own usage wire to the param def when hovered independently.
+
+**Compound trace on binding hover:** Hovering the binding site MUST emit both usage fan-out (if any) and the binding wire (when RHS has an identifier anchor).
+
+---
+
+## Control-flow fan-out (switch/case, if/else)
+
+A separate client-side index (`controlFlowLinks.ts`) tracks `switch`/`case`/`default` and `if`/`else if`/`else` structure per method body via line/brace-depth scanning (no full AST — same pragmatic style as `localSymbolLinks.ts`).
+
+```mermaid
+flowchart TD
+  Head["switch (field)"] -->|Control flow| C1["case 'city'"]
+  Head -->|Control flow| C2["case 'district'"]
+  Head -->|Control flow| C3["default"]
+  Field["field<br/>(condition identifier)"] -.->|same fan-out| Head
+```
+
+**Compound trace on condition hover:** Hovering the discriminant/condition identifier (e.g. `field`) MUST emit both its normal usage wire(s) (`buildLocalPreviewEdges`) and the control-flow fan-out (`buildControlFlowPreviewEdges`) — merged in `CodeLine.firePreview`, same pattern as the binding merge above.
+
+**Normative — control flow vs usage/binding:** Control flow answers "which branch does this decision lead to?" It is a distinct kind (`branch`) from Usage (def → later reference) and Binding (value → name); it MUST NOT share a legend toggle with either.
+
+**Direction:** always condition/keyword → branch, never branch → condition, even when the wire was summoned by hovering a single branch (only the *set* of drawn wires is filtered, not the direction).
+
+**Known v1 limitations:** ternary (`cond ? a : b`) is not indexed; a `switch`/`if` header whose discriminant/condition is on a different line than the keyword is not indexed (single-line headers only).
+
+---
+
+## Legend kind filters (normative)
+
+Each `ConnectionLegend` row toggles exactly one `ConnectionKind` in `visibleEdgeKinds`.
+
+| Legend label | Affects | Does **not** affect |
+| ------------ | ------- | ------------------- |
+| Usage | Indexed + local def→usage preview, transitive decay wires | Binding, control flow, structural |
+| Binding | Initializer→binding preview wires | Usage fan-out, control flow, structural |
+| Control flow | `switch`/`if` branch fan-out wires | Usage, Binding, structural |
+| Inheritance | Persistent `extends` structural wires | Preview wires of any kind |
+| Implementation | Persistent `implements` structural wires | Preview wires |
+| Composition | Persistent `composition` structural wires | Preview wires |
+| Module import | Persistent `imports` structural wires (toggle-gated) | Preview wires |
+
+**Common confusion:** Local variable preview wires (purple/variable, dashed) are **Usage**, not Inheritance. Toggling Inheritance off MUST leave them visible unless Usage is also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, and `branch` separately.
+
+Default on: usage, binding, control flow, inheritance, implementation, composition. Default off: module import.
 
 ---
 

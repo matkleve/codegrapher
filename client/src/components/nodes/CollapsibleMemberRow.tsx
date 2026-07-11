@@ -18,6 +18,7 @@ import {
   buildMemberSymbolIndex,
   memberDefId,
 } from "@/lib/localSymbolLinks";
+import { buildControlFlowIndex } from "@/lib/controlFlowLinks";
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeMemberDefKey } from "@/lib/traceKeys";
@@ -92,6 +93,10 @@ export function CollapsibleMemberRow({
   const traceable = hasSymbol(traceName) || Boolean(symbolName);
   const symbolIndex = useMemo(
     () => buildMemberSymbolIndex(memberId, code),
+    [memberId, code],
+  );
+  const controlFlowIndex = useMemo(
+    () => buildControlFlowIndex(memberId, code),
     [memberId, code],
   );
   const methodSignature = useMemo(
@@ -400,6 +405,7 @@ export function CollapsibleMemberRow({
                 filePath={filePath}
                 definedInLabel={classLabel}
                 symbolIndex={symbolIndex}
+                controlFlowIndex={controlFlowIndex}
                 memberSymbolName={symbolName}
                 methodCode={code}
                 methodName={traceName}

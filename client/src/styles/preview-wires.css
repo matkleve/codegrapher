@@ -62,6 +62,26 @@
   opacity: 0.9;
 }
 
+.preview-edge-path.preview-edge-binding {
+  stroke-dasharray: 2 4;
+}
+
+.preview-edge-glow.preview-edge-binding {
+  opacity: 0.1;
+}
+
+.preview-edge-path.preview-edge-binding.preview-edge-warm {
+  animation: proto-flow 900ms linear infinite;
+}
+
+.preview-edge-path.preview-edge-branch {
+  stroke-dasharray: 7 3 2 3;
+}
+
+.preview-edge-glow.preview-edge-branch {
+  opacity: 0.14;
+}
+
 .preview-edge-glow.preview-edge-warm {
   animation: none;
   opacity: 0.16;
@@ -77,11 +97,19 @@
 }
 
 .preview-edge-path.preview-wire--hop2 {
-  opacity: 0.5;
+  opacity: 0.42;
 }
 
 .preview-edge-path.preview-wire--hop3 {
-  opacity: 0.25;
+  opacity: 0.22;
+}
+
+.preview-edge-glow.preview-wire--hop2 {
+  opacity: 0.06;
+}
+
+.preview-edge-glow.preview-wire--hop3 {
+  opacity: 0.04;
 }
 
 /* Structural wires (persistent taxonomy kinds) */

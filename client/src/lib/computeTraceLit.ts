@@ -8,6 +8,7 @@ import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
+import { allLocalDefElements } from "@/lib/localDefElements";
 import { linksForElement } from "@/lib/linksForElement";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -138,6 +139,35 @@ function absorbToken(el: HTMLElement, state: LitCollections, asEndpoint: boolean
 
   const flowNodeId = flowNodeFromElement(el);
   if (flowNodeId) state.litFlowNodeIds.add(flowNodeId);
+
+  const defId = el.dataset.localDefId;
+  if (defId) absorbLocalDefSiblings(defId, state, asEndpoint, el);
+}
+
+/** Header signature chips and in-body param defs share one `localDefId` — light both. */
+function absorbLocalDefSiblings(
+  defId: string,
+  state: LitCollections,
+  asEndpoint: boolean,
+  skip?: HTMLElement,
+): void {
+  const pane = document.querySelector(".graph-pane");
+  if (!pane) return;
+
+  for (const el of allLocalDefElements(pane, defId)) {
+    if (el === skip) continue;
+    const traceKey = traceKeyFromElement(el);
+    if (!traceKey) continue;
+
+    state.litTokenKeys.add(traceKey);
+    if (asEndpoint) state.endpointTokenKeys.add(traceKey);
+
+    const kind = kindFromElement(el);
+    if (kind) state.tokenKinds.set(traceKey, kind);
+
+    const flowNodeId = flowNodeFromElement(el);
+    if (flowNodeId) state.litFlowNodeIds.add(flowNodeId);
+  }
 }
 
 function spreadLocalLinkChain(seedKey: string, state: LitCollections): void {

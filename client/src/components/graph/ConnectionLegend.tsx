@@ -26,6 +26,20 @@ const LEGEND_ITEMS: LegendItem[] = [
     stroke: "var(--token-edge-function)",
   },
   {
+    kind: "binding",
+    pathClass:
+      "preview-edge-path preview-edge-binding preview-edge-warm connection-legend-swatch--flow",
+    arrowhead: "filled",
+    stroke: "var(--token-edge-variable)",
+  },
+  {
+    kind: "branch",
+    pathClass:
+      "preview-edge-path preview-edge-branch preview-edge-warm connection-legend-swatch--flow",
+    arrowhead: "filled",
+    stroke: "var(--edge-control-flow)",
+  },
+  {
     kind: "inheritance",
     pathClass: "structural-edge-path structural-edge-path--solid",
     arrowhead: "hollow-triangle",

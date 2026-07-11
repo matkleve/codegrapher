@@ -52,16 +52,18 @@ server/index.ts
 | Interface / type alias / enum | yes | n/a (module-level) | yes — signature `sig-type` chips + body type refs; definition may be index-only (Load/jump) when not a graph node |
 | Method (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes |
 | Property (on exported/injectable class) | yes | yes — `enclosingSymbol` = owning class id | yes — resolves to the property's member row, same-class and cross-file |
+| Property / method signature (on exported interface) | yes | yes — `enclosingSymbol` = owning interface's `class:` id | yes — e.g. `addr.city` resolves to `city`'s member row on the `Address` interface node, same Usage wire as a class property |
+| Type alias object-literal member (`type T = { foo: string }`) | **no** | n/a | not indexed — known gap, only `interface { ... }` shapes are walked for members |
 | Parameter | yes | yes — `enclosingSymbol` = owning method/function id | no (client-local only, see `localSymbolLinks.ts`) |
-| Local (`const`/`let`) | yes | yes — `enclosingSymbol` = owning method/function id, scoped to direct body (not nested closures) | no (client-local only, see `localSymbolLinks.ts`) |
+| Local (`const`/`let`) | yes | yes — `enclosingSymbol` = owning method/function id, scoped to direct body (not nested closures) | binding + usage (client-local — see `localSymbolLinks.ts`) |
 
 **Resolved:** `resolveVisibleTarget` now tries scoped index entries (`graphNodeForEntry` + `targetFromGraphNode`) before the bare canvas scan (`findDefinitionInLoadedGraph`), so two on-canvas classes with a same-named method or property resolve via `enclosingSymbol`, not scan order. The bare scan remains as a fallback for tokens with no matching entry.
 
-**Known remaining gap (not fixed by this contract):** resolving *which* object a method call targets when the receiver's type isn't known (e.g. `a.charge()` vs `b.charge()` where `a`/`b` are different classes both exposing `charge`) still requires type-checking the call expression, not just scoping the definition — out of scope here. Params/locals are indexed but intentionally not preview-eligible yet (no UI consumer); wiring them into preview edges is separate follow-up work.
+**Known remaining gap (not fixed by this contract):** resolving *which* object a method call targets when the receiver's type isn't known (e.g. `a.charge()` vs `b.charge()` where `a`/`b` are different classes both exposing `charge`) still requires type-checking the call expression, not just scoping the definition — out of scope here. Params/locals preview uses client-local usage + binding wires (`localSymbolLinks.ts`) — see [connection-taxonomy.md](../system/connection-taxonomy.md) § Binding.
 
 ## Scoped identity contract (normative)
 
-- Index entries for `method` and `property` kinds **MUST** carry `enclosingSymbol` set to the owning class's graph-node id.
+- Index entries for `method` and `property` kinds **MUST** carry `enclosingSymbol` set to the owning class's graph-node id — this applies equally to an interface's property/method **signatures**, whose owner is the interface's `class:`-prefixed graph-node id (interfaces are indexed as `type: "class"` graph nodes, same as classes — see `parser.ts`).
 - Adding `param` and `local` kinds **MUST** carry `enclosingSymbol` set to the owning method/function's graph-node id — never indexed as bare names at project scope (locals/params are not addressable outside their body; a project-wide bare-name index entry for them would be meaningless and would collide across every function that happens to use `id` or `result`).
 - Resolution (`resolveVisibleTarget`, `findDefinitionInLoadedGraph`) **MUST** prefer the entry whose `enclosingSymbol` matches the call site's resolved container over a bare-name-only match, when both are available.
 - The **Ctrl-hover / preview-edge rendering path is unchanged** — this contract only affects *which* definition a token resolves to, not the wire-drawing mechanism (anchors, dwell timing, dashed styling stay as specified in `preview-edges.md`).
@@ -90,6 +92,8 @@ Stateless per request. Client owns merged ego-graph state.
 - [x] `method` and `property` entries carry `enclosingSymbol`
 - [x] Given two on-canvas classes with a same-named method or property, hovering resolves to the definition whose `enclosingSymbol` matches — not the first node encountered on canvas (`resolveVisibleTarget.test.ts`)
 - [x] Property definitions are resolvable as cross-file preview-edge targets
+- [x] `interface Address { city: string }` indexes `city` as a `property` with `enclosingSymbol` = the interface's `class:` id, so `addr.city` in a method body (where `addr: Address`) becomes an interactive Usage token — no new connection kind, same Usage wire as a class property (`fixtures/demo/OrderService.describeAddress`)
+- [ ] Object-literal members of a `type` alias (`type T = { foo: string }`) are indexed the same way — tracked as a follow-up, `interface` shapes only for now
 - [x] Parameters and locals appear in the server index with `enclosingSymbol` set to their owning method/function, scoped to direct body (verified against `fixtures/demo`)
 - [x] Existing class/function/interface/type resolution is unaffected (no `enclosingSymbol` required; full client test suite green, no `fixtures/demo` regression)
 

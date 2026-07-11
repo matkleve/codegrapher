@@ -131,15 +131,6 @@
   color: var(--muted-foreground) !important;
 }
 
-.member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
-  .member-row-label,
-.member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
-  .member-row-label
-  .token-shimmer-target {
-  color: var(--foreground) !important;
-  -webkit-text-fill-color: currentColor;
-}
-
 /* Indexed chip hover — semantic fill in tokens-chips.css; header chrome keeps brand below */
 
 .member-row-header:hover:not(:has(

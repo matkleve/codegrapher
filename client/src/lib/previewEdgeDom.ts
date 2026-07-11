@@ -34,10 +34,24 @@ export function createWireGroup(
   path.setAttribute("fill", "none");
   path.classList.add("preview-edge-path");
   if (spec.load) path.classList.add("preview-edge-load");
+  if (spec.connectionKind === "binding") {
+    path.classList.add("preview-edge-binding");
+    glow.classList.add("preview-edge-binding");
+  }
+  if (spec.connectionKind === "branch") {
+    path.classList.add("preview-edge-branch");
+    glow.classList.add("preview-edge-branch");
+  }
   if (warm) path.classList.add("preview-edge-warm");
-  if (spec.hop === 2) path.classList.add("preview-wire--hop2");
-  if (spec.hop === 3) path.classList.add("preview-wire--hop3");
-  if (spec.opacity != null && spec.opacity < 1) {
+  if (spec.hop === 2) {
+    path.classList.add("preview-wire--hop2");
+    glow.classList.add("preview-wire--hop2");
+  }
+  if (spec.hop === 3) {
+    path.classList.add("preview-wire--hop3");
+    glow.classList.add("preview-wire--hop3");
+  }
+  if (spec.opacity != null && spec.opacity < 1 && spec.hop == null) {
     path.style.opacity = String(spec.opacity);
     glow.style.opacity = String(spec.opacity * 0.12);
   }
@@ -51,7 +65,12 @@ export function createWireGroup(
   hitTo.setAttribute("fill", "none");
   hitTo.classList.add("preview-edge-hit");
 
-  const stroke = TOKEN_EDGE_STROKE[spec.kind];
+  const stroke =
+    spec.connectionKind === "branch"
+      ? "var(--edge-control-flow)"
+      : spec.hop != null && spec.hop >= 2
+        ? "var(--edge-transitive)"
+        : TOKEN_EDGE_STROKE[spec.kind];
   glow.style.stroke = stroke;
   path.style.stroke = stroke;
 

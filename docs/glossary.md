@@ -46,7 +46,13 @@
   Transient dashed SVG edge summoned on token hover (or Ctrl reveal). Always **definition → usage**. Spec: [preview-edges.md](specs/system/preview-edges.md).
 
 - **Connection kind**  
-  One of the distinct relationship types two graph elements can have (usage, inheritance, composition, transitive reach, …), each with its own line style/color/arrowhead. Today only "usage" is implemented. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
+  One of the distinct relationship types two graph elements can have (usage, **binding**, **control flow**, inheritance, composition, transitive reach, …), each with its own line style/color/arrowhead. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
+
+- **Binding edge**  
+  On-demand dotted preview wire from an initializer expression to the param/local it binds (e.g. `result.address` → `addr`). Direction is **value source → binding**, unlike usage (def → later reference). Summoned on the same hover/Ctrl/pin path as usage wires.
+
+- **Control-flow edge (branch)**  
+  On-demand dash-dot preview wire from a `switch`/`if` keyword (or its condition/discriminant identifier) to every `case`/`default`/`else`/`else if` branch of that statement. Direction is **condition/keyword → branch**. Hovering one branch instead draws a single wire back to the head. Answers "which branch does this decision lead to?" — distinct from usage and binding. See [connection-taxonomy.md](specs/system/connection-taxonomy.md) § Control flow.
 
 - **Structural edge**  
   A connection kind (inheritance, implementation, composition/DI) that renders **persistently** once both endpoints are loaded, unlike preview edges — a deliberate, named exception to the on-demand rule. Not yet implemented.

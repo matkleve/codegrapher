@@ -96,7 +96,6 @@ export function GraphFlowInner({
   const historyBackRef = useRef<FlowSnapshot[]>([]);
   const historyForwardRef = useRef<FlowSnapshot[]>([]);
   const prevGraphKeyRef = useRef(-1);
-  const lastSyncedFocusRef = useRef<string | null>(null);
   const pathFromIdRef = useRef<string | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -249,14 +248,14 @@ export function GraphFlowInner({
       return;
     }
 
-    const focusFile = graphData.focusFile ?? null;
-    const replaceAll =
-      graphResetKey !== prevGraphKeyRef.current ||
-      focusFile !== lastSyncedFocusRef.current;
+    // graphResetKey is the sole "replace" signal (bumped only by the tree-click
+    // replace action in App.tsx) — merges (drag / "load into graph") must never
+    // match here, or every incremental load wrongly re-runs a full dagre layout
+    // + generic fitView instead of appending and centering on the new node.
+    const replaceAll = graphResetKey !== prevGraphKeyRef.current;
 
     if (replaceAll) {
       prevGraphKeyRef.current = graphResetKey;
-      lastSyncedFocusRef.current = focusFile;
     }
 
     try {

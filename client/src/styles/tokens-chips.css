@@ -185,15 +185,6 @@
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-pinned .token-chip.token-chip-on.token-chip-source:hover .token-chip-text,
-.graph-trace-pinned .token-chip.token-chip-on.token-chip-source:focus-visible .token-chip-text,
-.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:hover,
-.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:focus-visible {
-  color: inherit !important;
-  background-image: none;
-  -webkit-text-fill-color: currentColor;
-}
-
 /* Ephemeral hover preview endpoint — same semantic fill as chip-on */
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {

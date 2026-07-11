@@ -1,6 +1,9 @@
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { ExternalReferenceCard } from "@/lib/resolveVisibleTarget";
 
+/** Preview overlay connection kind — distinct from structural taxonomy edges. */
+export type PreviewConnectionKind = "usage" | "binding" | "branch" | "transitive";
+
 export type AnchorRef =
   | { type: "element"; el: HTMLElement; side?: "left" | "right" }
   | { type: "handle"; handle: string };
@@ -21,6 +24,8 @@ export type PreviewEdgeSpec = {
   from: AnchorRef;
   to: AnchorRef;
   kind: SemanticTokenKind;
+  /** Defaults to usage when omitted. */
+  connectionKind?: PreviewConnectionKind;
   liveFrom?: LiveAnchorHint;
   liveTo?: LiveAnchorHint;
   /** Transitive hop distance (2+); decays opacity on wire. */

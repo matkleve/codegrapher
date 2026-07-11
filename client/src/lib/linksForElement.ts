@@ -12,7 +12,16 @@ import {
 import type { SymbolEntry } from "@/types";
 import { toFlowId } from "@/lib/graphIds";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
+import {
+  bindingDefForInit,
+  bindingInitFor,
+  type MemberSymbolIndex,
+} from "@/lib/localSymbolLinks";
+import {
+  controlFlowAnchorFor,
+  controlFlowGroup,
+  type ControlFlowIndex,
+} from "@/lib/controlFlowLinks";
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -20,8 +29,10 @@ import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { ReferenceEntry } from "@/types";
 import type { ConnectionCounts } from "@/lib/projectReferences";
+import { allLocalDefElements, findLocalDefElement } from "@/lib/localDefElements";
 import type { GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
+import { makeControlFlowKey, makeUsageTokenKey } from "@/lib/traceKeys";
 
 export type LinkPair = { from: HTMLElement; to: HTMLElement };
 
@@ -57,6 +68,8 @@ function escapeRegExp(s: string): string {
 /**
  * Prototype `linksFor(host)` — def→usage pairs anchored on DOM elements.
  * Usage hosts carry `data-local-target-id`; definition hosts carry `data-local-def-id`.
+ * Header chip + in-body param line share one `localDefId` — fan out from every def
+ * sibling so both views wire to the same usages (same lexical binding).
  */
 export function linksForElement(host: HTMLElement): LinkPair[] {
   const pane = graphPane();
@@ -64,19 +77,26 @@ export function linksForElement(host: HTMLElement): LinkPair[] {
 
   const targetId = host.dataset.localTargetId;
   if (targetId) {
-    const def = pane.querySelector<HTMLElement>(
-      `[data-local-def-id="${CSS.escape(targetId)}"]`,
-    );
-    return def ? [{ from: def, to: host }] : [];
+    const defs = allLocalDefElements(pane, targetId);
+    if (defs.length === 0) return [];
+    return defs.map((from) => ({ from, to: host }));
   }
 
   const defId = host.dataset.localDefId;
   if (!defId) return [];
 
+  const defs = allLocalDefElements(pane, defId);
   const usages = pane.querySelectorAll<HTMLElement>(
     `[data-local-target-id="${CSS.escape(defId)}"]`,
   );
-  return [...usages].map((to) => ({ from: host, to }));
+  const pairs: LinkPair[] = [];
+  for (const from of defs) {
+    for (const to of usages) {
+      if (to === from) continue;
+      pairs.push({ from, to });
+    }
+  }
+  return pairs;
 }
 
 export function resolvePropertyDefId(
@@ -109,6 +129,114 @@ export function buildLocalPreviewEdges(
   return linksForElement(host).map((pair, index) =>
     buildElementPreviewEdge(`${edgeIdPrefix}-${index}`, pair.from, pair.to, kind),
   );
+}
+
+/** Initializer expression → param/local binding on the declaring line. */
+export function buildBindingPreviewEdges(
+  host: HTMLElement,
+  symbolIndex: MemberSymbolIndex,
+  flowNodeId: string,
+  memberId: string,
+  lineNumber: number,
+  tokenIndex: number,
+  edgeIdPrefix: string,
+): PreviewEdgeSpec[] {
+  const pane = graphPane();
+  if (!pane) return [];
+
+  const defId = host.dataset.localDefId;
+  let fromEl: HTMLElement | null;
+  let toEl: HTMLElement | null;
+
+  if (defId) {
+    const site = bindingInitFor(symbolIndex, defId);
+    if (!site) return [];
+    toEl = host;
+    const traceKey = makeUsageTokenKey(
+      flowNodeId,
+      memberId,
+      site.lineNumber,
+      site.token,
+    );
+    fromEl = pane.querySelector<HTMLElement>(
+      `[data-trace-key="${CSS.escape(traceKey)}"]`,
+    );
+  } else {
+    const targetDefId = bindingDefForInit(symbolIndex, lineNumber, tokenIndex);
+    if (!targetDefId) return [];
+    fromEl = host;
+    toEl = findLocalDefElement(pane, targetDefId);
+  }
+
+  if (!fromEl || !toEl || fromEl === toEl) return [];
+
+  return [
+    {
+      id: `${edgeIdPrefix}-binding`,
+      from: { type: "element", el: fromEl },
+      to: { type: "element", el: toEl },
+      kind: "variable",
+      connectionKind: "binding",
+    },
+  ];
+}
+
+/**
+ * Control-flow fan-out: hovering the `switch`/`if` keyword or its
+ * discriminant/condition identifier wires to every case/else branch; hovering
+ * one branch (`case`/`else`) wires back to the head only. See
+ * connection-taxonomy.md § Control flow.
+ */
+export function buildControlFlowPreviewEdges(
+  host: HTMLElement,
+  controlFlowIndex: ControlFlowIndex,
+  flowNodeId: string,
+  memberId: string,
+  lineNumber: number,
+  tokenIndex: number,
+  edgeIdPrefix: string,
+): PreviewEdgeSpec[] {
+  const pane = graphPane();
+  if (!pane) return [];
+
+  const anchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, tokenIndex);
+  if (!anchor) return [];
+
+  const group = controlFlowGroup(controlFlowIndex, anchor.groupId);
+  if (!group) return [];
+
+  const elAt = (line: number, idx: number): HTMLElement | null =>
+    pane.querySelector<HTMLElement>(
+      `[data-trace-key="${CSS.escape(makeControlFlowKey(flowNodeId, memberId, line, idx))}"]`,
+    );
+
+  if (anchor.role === "branch") {
+    const headEl = elAt(group.headLine, group.headTokenIndex);
+    if (!headEl || headEl === host) return [];
+    return [
+      {
+        id: `${edgeIdPrefix}-branch`,
+        from: { type: "element", el: headEl },
+        to: { type: "element", el: host },
+        kind: "variable",
+        connectionKind: "branch",
+      },
+    ];
+  }
+
+  const edges: PreviewEdgeSpec[] = [];
+  for (const branch of group.branches) {
+    const branchEl = elAt(branch.lineNumber, branch.tokenIndex);
+    if (!branchEl || branchEl === host) continue;
+    edges.push({
+      id: `${edgeIdPrefix}-branch-${branch.lineNumber}-${branch.tokenIndex}`,
+      from: { type: "element", el: host },
+      to: { type: "element", el: branchEl },
+      kind: "variable",
+      connectionKind: "branch",
+    });
+  }
+  return edges;
 }
 
 function getClassNodeData(

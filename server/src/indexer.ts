@@ -289,7 +289,16 @@ function indexSourceFile(
 
   for (const iface of sf.getInterfaces()) {
     if (!isExportedDeclaration(iface)) continue;
-    addSymbol(index, iface.getName(), filePath, "interface", iface.getStartLineNumber());
+    const ifaceName = iface.getName();
+    addSymbol(index, ifaceName, filePath, "interface", iface.getStartLineNumber());
+
+    const ifaceId = classNodeId(filePath, ifaceName);
+    for (const prop of iface.getProperties()) {
+      addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber(), ifaceId);
+    }
+    for (const method of iface.getMethods()) {
+      addSymbol(index, method.getName(), filePath, "method", method.getStartLineNumber(), ifaceId);
+    }
   }
 
   for (const typeAlias of sf.getTypeAliases()) {

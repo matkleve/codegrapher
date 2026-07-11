@@ -16,6 +16,8 @@ import { useSimulationOptional } from "@/context/SimulationContext";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
+  buildBindingPreviewEdges,
+  buildControlFlowPreviewEdges,
   buildLocalPreviewEdges,
   connectionCountsForHost,
   isDefinitionSignatureLine,
@@ -24,9 +26,14 @@ import {
 } from "@/lib/linksForElement";
 import {
   defSiteFor,
+  bindingDefForInit,
   type MemberSymbolIndex,
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
+import {
+  controlFlowAnchorFor,
+  type ControlFlowIndex,
+} from "@/lib/controlFlowLinks";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import {
   isTypeAnnotationContext,
@@ -35,10 +42,15 @@ import {
   TOKEN_ANCHOR,
 } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
-import { makeMemberDefKey, makeUsageTokenKey, makeImportSpecKey } from "@/lib/traceKeys";
+import {
+  makeControlFlowKey,
+  makeMemberDefKey,
+  makeUsageTokenKey,
+  makeImportSpecKey,
+} from "@/lib/traceKeys";
 import { isImportModuleSpecifier } from "@/lib/importModuleTokens";
 import { resolveClientImportPath, normalizeLoadFilePath } from "@/lib/resolveImportPath";
-import { tokenizeLine } from "@/lib/tokenizeLine";
+import { blockCommentOpenAtLineStart, tokenizeLine } from "@/lib/tokenizeLine";
 import { cn } from "@/lib/utils";
 
 type CodeLineProps = {
@@ -50,6 +62,7 @@ type CodeLineProps = {
   filePath: string;
   definedInLabel: string;
   symbolIndex: MemberSymbolIndex;
+  controlFlowIndex: ControlFlowIndex;
   /** Raw member identifier — signature-line chips with this name are definitions. */
   memberSymbolName?: string;
   methodCode?: string;
@@ -66,6 +79,7 @@ export function CodeLine({
   filePath,
   definedInLabel,
   symbolIndex,
+  controlFlowIndex,
   memberSymbolName,
   methodCode,
   methodName,
@@ -93,7 +107,13 @@ export function CodeLine({
   const edgeKeyRef = useRef<string | null>(null);
   const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
 
-  const tokens = useMemo(() => tokenizeLine(line), [line]);
+  const tokens = useMemo(() => {
+    const inBlock =
+      methodCode != null
+        ? blockCommentOpenAtLineStart(methodCode, lineNumber)
+        : false;
+    return tokenizeLine(line, inBlock).tokens;
+  }, [line, lineNumber, methodCode]);
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
@@ -142,10 +162,46 @@ export function CodeLine({
 
       const entry = lookup(name);
       const kind = semanticFromChipElement(chipEl, entry);
-      const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
-      if (localEdges.length > 0) {
+      const tokenIndex = Number(chipKey.split("-").pop());
+      const bindingEdges =
+        Number.isFinite(tokenIndex)
+          ? buildBindingPreviewEdges(
+              chipEl,
+              symbolIndex,
+              sourceFlowId,
+              memberId,
+              lineNumber,
+              tokenIndex,
+              edgeKey,
+            )
+          : [];
+
+      if (
+        bindingEdges.length > 0 &&
+        Number.isFinite(tokenIndex) &&
+        bindingDefForInit(symbolIndex, lineNumber, tokenIndex)
+      ) {
         clearConnectionMenu();
-        beginTrace(tokenKey, localEdges);
+        beginTrace(tokenKey, bindingEdges);
+        return;
+      }
+
+      const controlFlowEdges = Number.isFinite(tokenIndex)
+        ? buildControlFlowPreviewEdges(
+            chipEl,
+            controlFlowIndex,
+            sourceFlowId,
+            memberId,
+            lineNumber,
+            tokenIndex,
+            edgeKey,
+          )
+        : [];
+
+      const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
+      if (localEdges.length > 0 || bindingEdges.length > 0 || controlFlowEdges.length > 0) {
+        clearConnectionMenu();
+        beginTrace(tokenKey, [...localEdges, ...bindingEdges, ...controlFlowEdges]);
         return;
       }
 
@@ -235,6 +291,8 @@ export function CodeLine({
       lineNumber,
       showUsageLoadMenu,
       sourceFlowId,
+      symbolIndex,
+      controlFlowIndex,
       symbols,
     ],
   );
@@ -270,6 +328,50 @@ export function CodeLine({
       showUsageLoadMenu(importName, "type", chipEl, cards);
     },
     [beginTrace, filePath, lineNumber, memberId, showUsageLoadMenu, sourceFlowId],
+  );
+
+  const controlFlowRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const fireControlFlowPreview = useCallback(
+    (cfLine: number, cfTokenIndex: number, hostEl: HTMLElement) => {
+      const edgeKey = ctrlPreviewEdgeId(
+        sourceFlowId,
+        `${memberId}::${cfLine}::cf-${cfTokenIndex}`,
+      );
+      const edges = buildControlFlowPreviewEdges(
+        hostEl,
+        controlFlowIndex,
+        sourceFlowId,
+        memberId,
+        cfLine,
+        cfTokenIndex,
+        edgeKey,
+      );
+      clearConnectionMenu();
+      beginTrace(
+        makeControlFlowKey(sourceFlowId, memberId, cfLine, cfTokenIndex),
+        edges,
+      );
+    },
+    [beginTrace, clearConnectionMenu, controlFlowIndex, memberId, sourceFlowId],
+  );
+
+  const buildControlFlowPinInfo = useCallback(
+    (token: string, role: "definition" | "usage", cfLine: number): ReturnType<typeof makeTokenInfo> =>
+      makeTokenInfo({
+        token,
+        kind: "variable",
+        connectionCount: 0,
+        projectConnectionCount: 0,
+        definedIn: definedInLabel,
+        filePath,
+        line: cfLine,
+        sourceFlowId,
+        sourceGraphNodeId,
+        role,
+        pinned: true,
+      }),
+    [definedInLabel, filePath, sourceFlowId, sourceGraphNodeId],
   );
 
   const showDefLoadMenu = useCallback(
@@ -542,6 +644,72 @@ export function CodeLine({
         }
 
         if (token.kind !== "identifier") {
+          const cfAnchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, i);
+          if (cfAnchor && cfAnchor.role !== "condition") {
+            const cfKey = makeControlFlowKey(sourceFlowId, memberId, lineNumber, i);
+            const cfRefKey = `${lineNumber}-${i}`;
+            return (
+              <span
+                key={`${lineNumber}-${i}`}
+                ref={(el) => {
+                  if (el) controlFlowRefs.current.set(cfRefKey, el);
+                  else controlFlowRefs.current.delete(cfRefKey);
+                }}
+                data-trace-key={cfKey}
+                className="code-kw hoverable cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  scheduleHoverFire(
+                    cfKey,
+                    () => fireControlFlowPreview(lineNumber, i, el),
+                    clearHover,
+                  );
+                }}
+                onMouseLeave={() => scheduleHoverClear(cfKey, clearHover)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  commitTokenPin({
+                    pinTrace,
+                    showTokenInfo,
+                    tokenKey: cfKey,
+                    onFire: () => fireControlFlowPreview(lineNumber, i, e.currentTarget),
+                    buildPinInfo: () =>
+                      buildControlFlowPinInfo(
+                        token.text,
+                        cfAnchor.role === "head" ? "definition" : "usage",
+                        lineNumber,
+                      ),
+                    animateEl: e.currentTarget,
+                    event: e,
+                    shiftKey: e.shiftKey,
+                  });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const el = controlFlowRefs.current.get(cfRefKey);
+                  if (!el) return;
+                  commitTokenPin({
+                    pinTrace,
+                    showTokenInfo,
+                    tokenKey: cfKey,
+                    onFire: () => fireControlFlowPreview(lineNumber, i, el),
+                    buildPinInfo: () =>
+                      buildControlFlowPinInfo(
+                        token.text,
+                        cfAnchor.role === "head" ? "definition" : "usage",
+                        lineNumber,
+                      ),
+                    animateEl: el,
+                  });
+                }}
+              >
+                {token.text}
+              </span>
+            );
+          }
+
           return (
             <span
               key={`${lineNumber}-${i}`}
