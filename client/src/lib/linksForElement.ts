@@ -1,4 +1,4 @@
-import { buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
+import { buildCallSiteLoadPreviewEdge, buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
 import { toFlowId } from "@/lib/graphIds";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
@@ -7,6 +7,8 @@ import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
+import type { ReferenceEntry } from "@/types";
+import type { ConnectionCounts } from "@/lib/projectReferences";
 import type { GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
 
@@ -23,6 +25,9 @@ export type DefinitionEdgeContext = {
     sourceFlowId: string,
     sourceMemberId?: string,
   ) => UsageSiteRecord[];
+  /** Project-wide call sites from the server reference index. */
+  lookupProjectReferences?: (token: string) => ReferenceEntry[];
+  lookupOffCanvasCallSiteFiles?: (token: string) => ReferenceEntry[];
 };
 
 type UsageSite = {
@@ -363,15 +368,56 @@ export function buildDefinitionPreviewEdges(
           liveTo: { token, flowNodeId: context?.sourceFlowId ?? "", role: "usage" as const },
         }));
 
-  if (sites.length === 0) return [];
+  if (sites.length === 0) {
+    const offCanvas = context?.lookupOffCanvasCallSiteFiles?.(token) ?? [];
+    if (offCanvas.length > 0) {
+      const cards = offCanvas.map((site) => ({
+        symbolName: token,
+        filePath: site.filePath,
+        line: site.line,
+        occurrenceCount: 1,
+      }));
+      return [
+        buildCallSiteLoadPreviewEdge(
+          `callsite-load-${token}`,
+          cards,
+          definitionEl,
+          token,
+          kind,
+        ),
+      ];
+    }
+    return [];
+  }
 
-  return sites.map((site, index) => ({
+  const edges = sites.map((site, index) => ({
     id: `def-${token}-${index}`,
     from: { type: "element", el: definitionEl },
     to: site.anchor,
     kind,
     liveTo: site.liveTo,
   }));
+
+  const offCanvas = context?.lookupOffCanvasCallSiteFiles?.(token) ?? [];
+  if (offCanvas.length > 0) {
+    const cards = offCanvas.map((site) => ({
+      symbolName: token,
+      filePath: site.filePath,
+      line: site.line,
+      occurrenceCount: 1,
+    }));
+    edges.push(
+      buildCallSiteLoadPreviewEdge(
+        `callsite-load-${token}`,
+        cards,
+        definitionEl,
+        token,
+        kind,
+      ),
+    );
+  }
+
+  return edges;
 }
 
 export function connectionCountForHost(
@@ -379,19 +425,33 @@ export function connectionCountForHost(
   symbolName?: string,
   context?: DefinitionEdgeContext,
 ): number {
+  return connectionCountsForHost(host, symbolName, context).onCanvas;
+}
+
+export function connectionCountsForHost(
+  host: HTMLElement,
+  symbolName?: string,
+  context?: DefinitionEdgeContext,
+): ConnectionCounts {
   const local = linksForElement(host);
-  if (local.length > 0) return local.length;
-  if (!symbolName) return 0;
-  if (context?.graphData && context.getNode) {
-    return resolveDefinitionUsageSites(
-      symbolName,
-      host,
-      context.graphData,
-      context.getNode,
-      context.sourceFlowId,
-      context.sourceMemberId,
-      context,
-    ).length;
+  if (local.length > 0) {
+    return { onCanvas: local.length, inProject: local.length };
   }
-  return resolveUsageAnchors(symbolName, host).length;
+  if (!symbolName) return { onCanvas: 0, inProject: 0 };
+
+  const onCanvas =
+    context?.graphData && context.getNode
+      ? resolveDefinitionUsageSites(
+          symbolName,
+          host,
+          context.graphData,
+          context.getNode,
+          context.sourceFlowId,
+          context.sourceMemberId,
+          context,
+        ).length
+      : resolveUsageAnchors(symbolName, host).length;
+
+  const inProject = context?.lookupProjectReferences?.(symbolName)?.length ?? onCanvas;
+  return { onCanvas, inProject };
 }

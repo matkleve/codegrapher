@@ -77,6 +77,7 @@ export function MemberSignatureParamChip({
         token: paramName,
         kind: "variable",
         connectionCount: paramDef ? paramUsageCount(symbolIndex, paramDef.defId) : 0,
+        projectConnectionCount: paramDef ? paramUsageCount(symbolIndex, paramDef.defId) : 0,
         definedIn: classLabel,
         filePath,
         line: paramLine,

@@ -7,30 +7,37 @@ import {
   type ReactNode,
 } from "react";
 import { fetchProjectIndex } from "@/api";
-import type { ProjectIndexResponse, SymbolEntry } from "@/types";
+import type { ProjectIndexResponse, ReferenceEntry, SymbolEntry } from "@/types";
 
 type IndexContextValue = {
   folderPath: string | null;
   symbolCount: number;
+  referenceCount: number;
   indexing: boolean;
   symbols: Map<string, SymbolEntry[]>;
+  references: Map<string, ReferenceEntry[]>;
   loadIndex: (folderPath: string) => Promise<ProjectIndexResponse>;
   lookup: (name: string) => SymbolEntry | undefined;
   lookupAll: (name: string) => SymbolEntry[];
+  lookupReferences: (name: string) => ReferenceEntry[];
   hasSymbol: (name: string) => boolean;
   mergeSymbols: (incoming: Record<string, SymbolEntry[]>) => void;
 };
 
 const IndexContext = createContext<IndexContextValue | null>(null);
 
-function entriesToMap(symbols: Record<string, SymbolEntry[]>): Map<string, SymbolEntry[]> {
-  return new Map(Object.entries(symbols));
+function entriesToMap<T>(entries: Record<string, T[]>): Map<string, T[]> {
+  return new Map(Object.entries(entries));
 }
 
 export function IndexProvider({ children }: { children: ReactNode }) {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [symbolCount, setSymbolCount] = useState(0);
+  const [referenceCount, setReferenceCount] = useState(0);
   const [symbols, setSymbols] = useState<Map<string, SymbolEntry[]>>(new Map());
+  const [references, setReferences] = useState<Map<string, ReferenceEntry[]>>(
+    new Map(),
+  );
   const [indexing, setIndexing] = useState(false);
 
   const loadIndex = useCallback(async (path: string) => {
@@ -39,7 +46,9 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       const data = await fetchProjectIndex(path);
       setFolderPath(data.folderPath);
       setSymbolCount(data.symbolCount);
+      setReferenceCount(data.referenceCount ?? 0);
       setSymbols(entriesToMap(data.symbols));
+      setReferences(entriesToMap(data.references ?? {}));
       return data;
     } finally {
       setIndexing(false);
@@ -54,6 +63,11 @@ export function IndexProvider({ children }: { children: ReactNode }) {
   const lookupAll = useCallback(
     (name: string) => symbols.get(name) ?? [],
     [symbols],
+  );
+
+  const lookupReferences = useCallback(
+    (name: string) => references.get(name) ?? [],
+    [references],
   );
 
   const hasSymbol = useCallback(
@@ -88,22 +102,28 @@ export function IndexProvider({ children }: { children: ReactNode }) {
     () => ({
       folderPath,
       symbolCount,
+      referenceCount,
       indexing,
       symbols,
+      references,
       loadIndex,
       lookup,
       lookupAll,
+      lookupReferences,
       hasSymbol,
       mergeSymbols,
     }),
     [
       folderPath,
       symbolCount,
+      referenceCount,
       indexing,
       symbols,
+      references,
       loadIndex,
       lookup,
       lookupAll,
+      lookupReferences,
       hasSymbol,
       mergeSymbols,
     ],

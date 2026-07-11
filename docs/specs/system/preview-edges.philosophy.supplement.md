@@ -36,9 +36,9 @@ Parser only indexes class and method names today (`server/src/parser.ts`).
 
 ## Roadmap (variables/properties)
 
-Enabling data-flow edges requires:
+Enabling data-flow edges requires scoped identity in the index — now specified as a normative contract in [parser-index.md § Scoped identity contract](../service/parser-index.md#scoped-identity-contract-normative), not just this roadmap note:
 
-- Index properties, parameters, scope-aware locals in `parser.ts`
+- Index properties, parameters, scope-aware locals in `parser.ts` / `indexer.ts`
 - Identity MUST be `(filePath, enclosingSymbol, name)` — never bare `name`
 - Rendering already supports line anchors (`previewLineHandle`)
 

@@ -29,7 +29,7 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
 | 1 | Plain **hover** an indexed token (dwell) | Trace: edge **def → usage**, endpoints lit, rest dim | `hoverIntent` cold/warm |
-| 2 | Hover a **definition** (member/class name) | Fan-out edges to every in-graph usage | `linksForElement` reverse |
+| 2 | Hover a **definition** (member/class name) | Fan-out edges to in-graph usages; dashed **Load** for off-canvas caller files; counts show **on canvas · in project** | `linksForElement` + reference index |
 | 3 | Hover a **usage** | Single edge from its definition to this site | `linksForElement` forward |
 | 4 | Hold **Ctrl** (reveal, no pin) | Instant preview; all indexed tokens shimmer; syntax/keywords dampen | `graph-ctrl-preview` |
 | 5 | **Click** a token or wire hit-zone | **Pin** one trace + open info box (plain click replaces pin set; Shift+click accumulates) | `pinnedTraces` |
@@ -38,7 +38,7 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
 | 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas) | `mode:"external"` |
-| 11 | Click the **Load** pill | N=1: load immediately; N>1: open **LoadTargetPicker** (search when >6 files) | load |
+| 11 | Click the **Load** pill | N=1: load immediately; N>1: open **LoadTargetPicker** (search when >6 files). **callSite** direction loads a caller file | load |
 
 ## Interaction by keyword kind
 
@@ -87,7 +87,8 @@ graph-pane
 - [ ] Given a usage token, when hovered past the dwell, then one edge is drawn
   **from its definition to the token** and both endpoints light.
 - [ ] Given a definition, when hovered, then edges fan out to **every in-graph
-  usage** with arrowheads on the usages.
+  usage** with arrowheads on the usages; off-canvas caller files show a dashed
+  **Load** stub; the context bar reports **on canvas · in project** counts.
 - [ ] Given Ctrl held, when the pointer is idle, then all indexed tokens shimmer
   and non-token syntax dampens, with **no** pin created.
 - [ ] Given a token, when **clicked**, then the trace pins and the info box opens

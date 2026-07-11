@@ -32,6 +32,19 @@ function isTsFile(filePath: string): boolean {
   return /\.tsx?$/.test(filePath);
 }
 
+/** Graph-node id conventions shared with the symbol index (`indexer.ts` enclosingSymbol). */
+export function classNodeId(filePath: string, className: string): string {
+  return `class:${filePath}:${className}`;
+}
+
+export function methodNodeId(filePath: string, className: string, methodName: string): string {
+  return `method:${filePath}:${className}.${methodName}`;
+}
+
+export function functionNodeId(filePath: string, name: string): string {
+  return `function:${filePath}:${name}`;
+}
+
 export function resolveImportPath(fromFile: string, moduleSpecifier: string): string | null {
   const base = path.resolve(path.dirname(fromFile), moduleSpecifier);
   if (fs.existsSync(base) && fs.statSync(base).isFile()) {
@@ -130,7 +143,7 @@ function resolveTargetClassId(
   resolvedFile: string,
   symbolName: string,
 ): string | null {
-  const exact = `class:${resolvedFile}:${symbolName}`;
+  const exact = classNodeId(resolvedFile, symbolName);
   if (acc.nodeIds.has(exact)) return exact;
   const classes = getClassIdsForFile(acc, resolvedFile);
   return classes[0] ?? null;
@@ -224,7 +237,7 @@ function parseFileInto(
     if (acc.limitReached) break;
 
     const className = classDecl.getName() ?? "AnonymousClass";
-    const classId = `class:${filePath}:${className}`;
+    const classId = classNodeId(filePath, className);
 
     if (
       !addNode(
@@ -251,7 +264,7 @@ function parseFileInto(
       if (acc.limitReached) break;
 
       const methodName = method.getName();
-      const methodId = `method:${filePath}:${className}.${methodName}`;
+      const methodId = methodNodeId(filePath, className, methodName);
       const methodCode = method.getFullText();
 
       if (
@@ -289,7 +302,7 @@ function parseFileInto(
     moduleFunctions.push({
       name,
       code: func.getFullText(),
-      id: `function:${filePath}:${name}`,
+      id: functionNodeId(filePath, name),
     });
   }
 
@@ -306,7 +319,7 @@ function parseFileInto(
     moduleFunctions.push({
       name,
       code: varDecl.getFullText(),
-      id: `function:${filePath}:${name}`,
+      id: functionNodeId(filePath, name),
     });
   }
 

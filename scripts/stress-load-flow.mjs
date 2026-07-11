@@ -97,6 +97,13 @@ const symbolHits = get(`/api/index?path=${encodeURIComponent(`${ROOT}/fixtures/d
 const allSymbols = Object.keys(symbolHits.symbols ?? {});
 assert("demo index has multiple symbols", allSymbols.length >= 5, `count=${allSymbols.length}`);
 
+const chargeRefs = symbolHits.references?.charge ?? [];
+assert(
+  "index includes charge call-site references",
+  chargeRefs.length >= 1,
+  `count=${chargeRefs.length}`,
+);
+
 console.log(`\n${failures.length === 0 ? "All checks passed" : `${failures.length} failed`}`);
 if (failures.length > 0) {
   console.error(failures);

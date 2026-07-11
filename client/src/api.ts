@@ -1,32 +1,56 @@
 import type { GraphData, ProjectIndexResponse, TreeResponse } from "./types";
 
+async function parseJsonResponse<T>(
+  res: Response,
+  fallbackError: string,
+): Promise<T> {
+  const text = await res.text();
+  if (!text.trim()) {
+    throw new Error(
+      res.status === 502 || res.status === 503
+        ? "API server is not running — run npm run dev from the project root"
+        : fallbackError,
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(fallbackError);
+  }
+
+  if (!res.ok) {
+    const err = body as { error?: string };
+    throw new Error(err.error ?? fallbackError);
+  }
+
+  return body as T;
+}
+
 export async function fetchProjectIndex(folderPath: string): Promise<ProjectIndexResponse> {
   const res = await fetch(`/api/index?path=${encodeURIComponent(folderPath)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to index project");
-  return body as ProjectIndexResponse;
+  return parseJsonResponse(res, "Failed to index project");
 }
 
 export async function browseFolder(): Promise<{ path: string } | { cancelled: true }> {
   const res = await fetch("/api/browse-folder", { method: "POST" });
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to open folder picker");
+  const body = await parseJsonResponse<{ cancelled?: boolean; path?: string; error?: string }>(
+    res,
+    "Failed to open folder picker",
+  );
   if (body.cancelled) return { cancelled: true };
   return { path: body.path as string };
 }
 
 export async function fetchTree(dirPath: string): Promise<TreeResponse> {
   const res = await fetch(`/api/tree?path=${encodeURIComponent(dirPath)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to load folder");
-  return body as TreeResponse;
+  return parseJsonResponse(res, "Failed to load folder");
 }
 
 export async function fetchFileGraph(filePath: string): Promise<GraphData> {
   const res = await fetch(`/api/file-graph?path=${encodeURIComponent(filePath)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to parse file");
-  return body as GraphData;
+  return parseJsonResponse(res, "Failed to parse file");
 }
 
 export async function openFileInEditor(
@@ -36,16 +60,12 @@ export async function openFileInEditor(
   const res = await fetch(
     `/api/open?path=${encodeURIComponent(filePath)}&line=${encodeURIComponent(String(line))}`,
   );
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to open file in editor");
-  return body as { success: boolean };
+  return parseJsonResponse(res, "Failed to open file in editor");
 }
 
 export async function fetchFocus(filePath: string, depth = 1): Promise<GraphData> {
   const res = await fetch(
     `/api/focus?path=${encodeURIComponent(filePath)}&depth=${depth}`,
   );
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Failed to load focus");
-  return body as GraphData;
+  return parseJsonResponse(res, "Failed to load focus");
 }

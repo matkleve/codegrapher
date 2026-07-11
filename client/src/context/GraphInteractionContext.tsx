@@ -14,6 +14,13 @@ import { useReactFlow } from "@xyflow/react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useIndex } from "@/context/IndexContext";
 import {
+  enrichCallSites,
+  offCanvasCallSiteFiles,
+  projectReferencesForToken,
+  type CallSiteReference,
+} from "@/lib/projectReferences";
+import { collectGraphFilePaths } from "@/lib/graphFiles";
+import {
   findSemanticReferences,
   type TokenReference,
 } from "@/lib/semanticLookup";
@@ -49,7 +56,7 @@ import {
   type PinnedTrace,
 } from "@/lib/pinnedTraces";
 import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
-import type { GraphData } from "@/types";
+import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
 export { edgeTouchesHandle, refinePreviewEdge } from "@/lib/resolveLiveAnchor";
@@ -106,6 +113,9 @@ type GraphInteractionContextValue = {
   isTraceLineLit: (memberId: string) => boolean;
   isTraceNodeLit: (flowNodeId: string) => boolean;
   findReferences: (token: string) => TokenReference[];
+  findCallSites: (token: string) => CallSiteReference[];
+  lookupProjectReferences: (token: string) => ReferenceEntry[];
+  lookupOffCanvasCallSiteFiles: (token: string) => ReferenceEntry[];
   focusFlowNode: (flowNodeId: string) => void;
   onLoadFile: (filePath: string) => void | Promise<void>;
   /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
@@ -159,7 +169,7 @@ export function GraphInteractionProvider({
   const { isCtrlActive } = useCtrlKey();
   const isCtrlActiveRef = useRef(isCtrlActive);
   isCtrlActiveRef.current = isCtrlActive;
-  const { symbols } = useIndex();
+  const { symbols, references } = useIndex();
   const { setCenter, getNode } = useReactFlow();
 
   const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
@@ -435,6 +445,34 @@ export function GraphInteractionProvider({
     [graphData, symbols],
   );
 
+  const graphFilePaths = useMemo(
+    () => collectGraphFilePaths(graphData),
+    [graphData],
+  );
+
+  const lookupProjectReferences = useCallback(
+    (token: string) => projectReferencesForToken(references, token),
+    [references],
+  );
+
+  const lookupOffCanvasCallSiteFiles = useCallback(
+    (token: string) =>
+      offCanvasCallSiteFiles(
+        projectReferencesForToken(references, token),
+        graphFilePaths,
+      ),
+    [graphFilePaths, references],
+  );
+
+  const findCallSites = useCallback(
+    (token: string) =>
+      enrichCallSites(
+        projectReferencesForToken(references, token),
+        graphFilePaths,
+      ),
+    [graphFilePaths, references],
+  );
+
   const focusFlowNode = useCallback(
     (flowNodeId: string) => {
       const node = getNode(flowNodeId) ?? nodes.find((n) => n.id === flowNodeId);
@@ -707,6 +745,9 @@ export function GraphInteractionProvider({
       isTraceLineLit,
       isTraceNodeLit,
       findReferences,
+      findCallSites,
+      lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles,
       focusFlowNode,
       onLoadFile,
       refreshLoadTraces: applyLoadTraceRebuild,
@@ -745,6 +786,9 @@ export function GraphInteractionProvider({
       isTraceLineLit,
       isTraceNodeLit,
       findReferences,
+      findCallSites,
+      lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles,
       focusFlowNode,
       onLoadFile,
       applyLoadTraceRebuild,

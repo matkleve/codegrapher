@@ -8,7 +8,8 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
 import { openFileInEditor } from "@/api";
 import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
-import { fromTokenReferences } from "@/lib/loadTargets";
+import { fileBaseName, fromExternalCards, fromTokenReferences } from "@/lib/loadTargets";
+import { connectionCountLabel } from "@/lib/projectReferences";
 import type { TokenReference } from "@/lib/semanticLookup";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export function TokenContextBar() {
     tokenInfo,
     clearTokenInfo,
     findReferences,
+    findCallSites,
     focusFlowNode,
     pinnedTraces,
     activePinKey,
@@ -45,6 +47,8 @@ export function TokenContextBar() {
   const loadButtonRef = useRef<HTMLButtonElement>(null);
   const [loadPickerOpen, setLoadPickerOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const isDefinition = tokenInfo?.role === "definition";
 
   useEffect(() => {
     setExpanded(false);
@@ -65,8 +69,13 @@ export function TokenContextBar() {
   }, [canGoBackPin, clearTokenInfo, goBackPin, tokenInfo?.pinned]);
 
   const references = useMemo(
-    () => (tokenInfo ? findReferences(tokenInfo.token) : []),
-    [findReferences, tokenInfo],
+    () => (tokenInfo && !isDefinition ? findReferences(tokenInfo.token) : []),
+    [findReferences, isDefinition, tokenInfo],
+  );
+
+  const callSites = useMemo(
+    () => (tokenInfo && isDefinition ? findCallSites(tokenInfo.token) : []),
+    [findCallSites, isDefinition, tokenInfo],
   );
 
   const graphRefs = useMemo(
@@ -79,18 +88,44 @@ export function TokenContextBar() {
     [references],
   );
 
+  const externalCallSiteFiles = useMemo(() => {
+    const seen = new Set<string>();
+    return callSites.filter((site) => {
+      if (site.inGraph) return false;
+      if (seen.has(site.filePath)) return false;
+      seen.add(site.filePath);
+      return true;
+    });
+  }, [callSites]);
+
   const externalLoadTargets = useMemo(
-    () => fromTokenReferences(externalRefs),
-    [externalRefs],
+    () =>
+      isDefinition
+        ? fromExternalCards(
+            externalCallSiteFiles.map((site) => ({
+              symbolName: tokenInfo?.token ?? "",
+              filePath: site.filePath,
+              line: site.line,
+              occurrenceCount: 1,
+            })),
+          )
+        : fromTokenReferences(externalRefs),
+    [externalCallSiteFiles, externalRefs, isDefinition, tokenInfo?.token],
   );
 
   if (!tokenInfo) return null;
 
   const isPinned = tokenInfo.pinned;
-  const { token, kind, connectionCount, definedIn, role } = tokenInfo;
+  const { token, kind, connectionCount, projectConnectionCount, definedIn, role } =
+    tokenInfo;
   const swatch = TOKEN_EDGE_STROKE[kind];
   const def = definitionRef(references);
-  const canJumpDef = Boolean(def?.flowNodeId);
+  const canJumpDef = !isDefinition && Boolean(def?.flowNodeId);
+  const connectionLabel = connectionCountLabel({
+    onCanvas: connectionCount,
+    inProject: projectConnectionCount,
+  });
+  const listCount = isDefinition ? callSites.length : references.length;
 
   return (
     <div
@@ -177,7 +212,7 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {isPinned && connectionCount > 0 ? (
+          {isPinned && connectionLabel ? (
             <Button
               type="button"
               variant="outline"
@@ -185,7 +220,7 @@ export function TokenContextBar() {
               className="h-7 gap-1 text-[11px]"
               onClick={() => setExpanded((v) => !v)}
             >
-              {connectionCount} connection{connectionCount === 1 ? "" : "s"}
+              {connectionLabel}
               <ExpandChevron expanded={expanded} className="text-muted-foreground" />
             </Button>
           ) : null}
@@ -205,7 +240,7 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {isPinned && externalRefs.length > 0 ? (
+          {isPinned && externalLoadTargets.length > 0 ? (
             <Button
               ref={loadButtonRef}
               type="button"
@@ -213,15 +248,19 @@ export function TokenContextBar() {
               size="sm"
               className="h-7 text-[11px]"
               onClick={() => {
-                if (externalRefs.length === 1) {
-                  loadTarget(externalRefs[0]!.filePath);
+                if (externalLoadTargets.length === 1) {
+                  loadTarget(externalLoadTargets[0]!.filePath);
                   return;
                 }
                 setLoadPickerOpen(true);
               }}
             >
               + Load
-              {externalRefs.length > 1 ? ` · ${externalRefs.length} files` : " into graph"}
+              {externalLoadTargets.length > 1
+                ? ` · ${externalLoadTargets.length} files`
+                : isDefinition
+                  ? " caller"
+                  : " into graph"}
             </Button>
           ) : null}
 
@@ -239,56 +278,101 @@ export function TokenContextBar() {
         </div>
       </div>
 
-      {expanded && references.length > 0 ? (
+      {expanded && listCount > 0 ? (
         <div className="max-h-40 overflow-y-auto border-t border-border px-2 py-1.5">
           <ul className="flex flex-col gap-0.5">
-            {graphRefs.map((ref, idx) => (
-              <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
-                <button
-                  type="button"
-                  className={cn(INTERACTIVE_ROW_LEFT, "w-full gap-2 py-1.5 text-xs text-foreground")}
-                  onClick={() => {
-                    clearTokenInfo();
-                    focusFlowNode(ref.flowNodeId!);
-                  }}
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
-                    aria-hidden
-                  />
-                  <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                  <span className="min-w-0 truncate text-left">
-                    {ref.memberLabel
-                      ? `${ref.classLabel} → ${ref.memberLabel}`
-                      : ref.classLabel}
-                    <span className="text-muted-foreground"> · line {ref.line}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-            {externalRefs.map((ref, idx) => (
-              <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
-                <button
-                  type="button"
-                  className={cn(INTERACTIVE_ROW_LEFT, "w-full gap-2 py-1.5 text-xs text-foreground")}
-                  onClick={() => {
-                    loadTarget(ref.filePath);
-                  }}
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
-                    aria-hidden
-                  />
-                  <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                  <span className="min-w-0 truncate text-left">
-                    {ref.classLabel}
-                    <span className="text-muted-foreground"> · line {ref.line}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
+            {isDefinition
+              ? callSites.map((site, idx) => (
+                  <li key={`c-${site.filePath}-${site.line}-${idx}`}>
+                    <button
+                      type="button"
+                      className={cn(
+                        INTERACTIVE_ROW_LEFT,
+                        "w-full gap-2 py-1.5 text-xs text-foreground",
+                      )}
+                      onClick={() => {
+                        if (site.inGraph) {
+                          loadTarget(site.filePath);
+                          return;
+                        }
+                        loadTarget(site.filePath);
+                      }}
+                    >
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: swatch }}
+                        aria-hidden
+                      />
+                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                      <span className="min-w-0 truncate text-left">
+                        {fileBaseName(site.filePath)}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · line {site.line}
+                          {site.inGraph ? " · on canvas" : ""}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))
+              : null}
+            {!isDefinition
+              ? graphRefs.map((ref, idx) => (
+                  <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
+                    <button
+                      type="button"
+                      className={cn(
+                        INTERACTIVE_ROW_LEFT,
+                        "w-full gap-2 py-1.5 text-xs text-foreground",
+                      )}
+                      onClick={() => {
+                        clearTokenInfo();
+                        focusFlowNode(ref.flowNodeId!);
+                      }}
+                    >
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
+                        aria-hidden
+                      />
+                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                      <span className="min-w-0 truncate text-left">
+                        {ref.memberLabel
+                          ? `${ref.classLabel} → ${ref.memberLabel}`
+                          : ref.classLabel}
+                        <span className="text-muted-foreground"> · line {ref.line}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))
+              : null}
+            {!isDefinition
+              ? externalRefs.map((ref, idx) => (
+                  <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
+                    <button
+                      type="button"
+                      className={cn(
+                        INTERACTIVE_ROW_LEFT,
+                        "w-full gap-2 py-1.5 text-xs text-foreground",
+                      )}
+                      onClick={() => {
+                        loadTarget(ref.filePath);
+                      }}
+                    >
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: TOKEN_EDGE_STROKE[ref.kind] }}
+                        aria-hidden
+                      />
+                      <VscodeFileIcon icon="file-type-typescript-official" size={14} />
+                      <span className="min-w-0 truncate text-left">
+                        {ref.classLabel}
+                        <span className="text-muted-foreground"> · line {ref.line}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))
+              : null}
           </ul>
         </div>
       ) : null}

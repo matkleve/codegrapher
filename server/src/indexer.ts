@@ -16,6 +16,15 @@ export type SymbolKind =
   | "type"
   | "property";
 
+import {
+  buildProjectReferences,
+  countReferences,
+  serializeReferencesMap,
+  type ReferenceEntry,
+} from "./referenceIndexer";
+
+export type { ReferenceEntry };
+
 export type SymbolEntry = {
   filePath: string;
   kind: SymbolKind;
@@ -25,7 +34,9 @@ export type SymbolEntry = {
 export type ProjectIndex = {
   folderPath: string;
   symbolCount: number;
+  referenceCount: number;
   symbols: Map<string, SymbolEntry[]>;
+  references: Map<string, ReferenceEntry[]>;
 };
 
 const SKIP_DIRS = new Set([
@@ -343,7 +354,15 @@ export function buildProjectIndex(folderPath: string): ProjectIndex {
   let symbolCount = 0;
   for (const list of symbols.values()) symbolCount += list.length;
 
-  return { folderPath: folderRoot, symbolCount, symbols };
+  const references = buildProjectReferences(project, symbols);
+
+  return {
+    folderPath: folderRoot,
+    symbolCount,
+    referenceCount: countReferences(references),
+    symbols,
+    references,
+  };
 }
 
 export function mergeIndexMaps(
@@ -410,7 +429,9 @@ export function countSymbols(symbols: Map<string, SymbolEntry[]>): number {
 export function serializeIndex(index: ProjectIndex): {
   folderPath: string;
   symbolCount: number;
+  referenceCount: number;
   symbols: Record<string, SymbolEntry[]>;
+  references: Record<string, ReferenceEntry[]>;
 } {
   const symbols: Record<string, SymbolEntry[]> = {};
   for (const [name, entries] of index.symbols) {
@@ -419,6 +440,8 @@ export function serializeIndex(index: ProjectIndex): {
   return {
     folderPath: index.folderPath,
     symbolCount: index.symbolCount,
+    referenceCount: index.referenceCount,
     symbols,
+    references: serializeReferencesMap(index.references),
   };
 }

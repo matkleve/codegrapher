@@ -52,5 +52,12 @@ export type SymbolEntry = {
 export type ProjectIndexResponse = {
   folderPath: string;
   symbolCount: number;
+  referenceCount?: number;
   symbols: Record<string, SymbolEntry[]>;
+  references?: Record<string, ReferenceEntry[]>;
+};
+
+export type ReferenceEntry = {
+  filePath: string;
+  line: number;
 };

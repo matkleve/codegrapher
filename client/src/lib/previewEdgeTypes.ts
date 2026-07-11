@@ -28,6 +28,8 @@ export type PreviewEdgeSpec = {
     line: number;
     occurrenceCount: number;
     candidates: ExternalReferenceCard[];
+    /** definition = load decl file; callSite = load file containing a caller */
+    direction?: "definition" | "callSite";
   };
 };
 

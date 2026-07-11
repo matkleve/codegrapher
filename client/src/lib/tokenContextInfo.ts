@@ -8,6 +8,7 @@ export type TokenInfoState = {
   kind: SemanticTokenKind;
   pinned: boolean;
   connectionCount: number;
+  projectConnectionCount: number;
   definedIn: string;
   filePath: string;
   line: number;
@@ -48,6 +49,7 @@ export function makeTokenInfoFromJumpTarget(
     kind,
     pinned,
     connectionCount: connectionCountForHost(el, token),
+    projectConnectionCount: connectionCountForHost(el, token),
     definedIn,
     filePath,
     line,

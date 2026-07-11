@@ -11,7 +11,7 @@ import { useIndex } from "@/context/IndexContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
-  connectionCountForHost,
+  connectionCountsForHost,
   type DefinitionEdgeContext,
 } from "@/lib/linksForElement";
 import {
@@ -63,6 +63,8 @@ export function CollapsibleMemberRow({
     beginTrace,
     graphData,
     lookupIndexedUsageSites,
+    lookupProjectReferences,
+    lookupOffCanvasCallSiteFiles,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -93,8 +95,18 @@ export function CollapsibleMemberRow({
       sourceFlowId: flowNodeId,
       sourceMemberId: memberId,
       lookupIndexedUsageSites,
+      lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles,
     }),
-    [flowNodeId, getNode, graphData, lookupIndexedUsageSites, memberId],
+    [
+      flowNodeId,
+      getNode,
+      graphData,
+      lookupIndexedUsageSites,
+      lookupOffCanvasCallSiteFiles,
+      lookupProjectReferences,
+      memberId,
+    ],
   );
 
   const fireDefPreview = useCallback(() => {
@@ -111,15 +123,17 @@ export function CollapsibleMemberRow({
   }, [beginTrace, defEdgeContext, defKind, defTokenKey, traceName, traceable]);
 
   const buildDefPinInfo = useCallback(
-    () =>
-      makeTokenInfo({
+    () => {
+      const counts = connectionCountsForHost(
+        labelRef.current!,
+        traceName,
+        defEdgeContext,
+      );
+      return makeTokenInfo({
         token: traceName,
         kind: defKind!,
-        connectionCount: connectionCountForHost(
-          labelRef.current!,
-          traceName,
-          defEdgeContext,
-        ),
+        connectionCount: counts.onCanvas,
+        projectConnectionCount: counts.inProject,
         definedIn: classLabel,
         filePath,
         line: 1,
@@ -127,7 +141,8 @@ export function CollapsibleMemberRow({
         sourceGraphNodeId: graphNodeId,
         role: "definition",
         pinned: true,
-      }),
+      });
+    },
     [
       classLabel,
       defEdgeContext,

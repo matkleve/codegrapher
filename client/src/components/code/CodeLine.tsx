@@ -11,7 +11,7 @@ import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
   buildLocalPreviewEdges,
-  connectionCountForHost,
+  connectionCountsForHost,
   isDefinitionSignatureLine,
   resolveLocalTargetId,
   type DefinitionEdgeContext,
@@ -72,6 +72,8 @@ export function CodeLine({
     pinTrace,
     showTokenInfo,
     lookupIndexedUsageSites,
+    lookupProjectReferences,
+    lookupOffCanvasCallSiteFiles,
   } = useGraphInteraction();
   const { lineLit } = useTraceAppearance({ memberId });
 
@@ -87,8 +89,10 @@ export function CodeLine({
       sourceFlowId,
       sourceMemberId: memberId,
       lookupIndexedUsageSites,
+      lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles,
     }),
-    [getNode, graphData, lookupIndexedUsageSites, memberId, sourceFlowId],
+    [getNode, graphData, lookupIndexedUsageSites, lookupOffCanvasCallSiteFiles, lookupProjectReferences, memberId, sourceFlowId],
   );
 
   const clearHover = useCallback(() => {
@@ -207,14 +211,16 @@ export function CodeLine({
     (name: string, el: HTMLElement, isDefinition: boolean) => {
       const entry = lookup(name);
       const kind = semanticFromChipElement(el, entry);
+      const counts = connectionCountsForHost(
+        el,
+        hasSymbol(name) ? name : undefined,
+        isDefinition ? defEdgeContext : undefined,
+      );
       return makeTokenInfo({
         token: name,
         kind,
-        connectionCount: connectionCountForHost(
-          el,
-          hasSymbol(name) ? name : undefined,
-          isDefinition ? defEdgeContext : undefined,
-        ),
+        connectionCount: counts.onCanvas,
+        projectConnectionCount: counts.inProject,
         definedIn: definedInLabel,
         filePath,
         line: lineNumber,
@@ -403,6 +409,7 @@ export function CodeLine({
                       token: token.text.replace(/^['"]|['"]$/g, ""),
                       kind: "type",
                       connectionCount: 0,
+                      projectConnectionCount: 0,
                       definedIn: definedInLabel,
                       filePath: resolveClientImportPath(filePath, token.text),
                       line: lineNumber,

@@ -95,7 +95,44 @@ export function buildLoadPreviewEdge(
       line: primary.line,
       occurrenceCount: cards.length,
       candidates: cards,
+      direction: "definition",
     },
     liveTo: liveToFromUsageEl(token, usageEl),
+  };
+}
+
+/** Dashed load stub beside a definition — pull in files that call it. */
+export function buildCallSiteLoadPreviewEdge(
+  edgeId: string,
+  sites: ExternalReferenceCard[],
+  definitionEl: HTMLElement,
+  token: string,
+  kind: SemanticTokenKind,
+): PreviewEdgeSpec {
+  const primary = sites[0];
+  if (!primary) {
+    throw new Error("buildCallSiteLoadPreviewEdge requires at least one site");
+  }
+
+  return {
+    id: edgeId,
+    from: { type: "element", el: definitionEl },
+    to: { type: "element", el: definitionEl },
+    kind,
+    load: {
+      token,
+      filePath: primary.filePath,
+      line: primary.line,
+      occurrenceCount: sites.length,
+      candidates: sites,
+      direction: "callSite",
+    },
+    liveFrom: {
+      token,
+      flowNodeId:
+        definitionEl.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ??
+        "",
+      role: "definition",
+    },
   };
 }

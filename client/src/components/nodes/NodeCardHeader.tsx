@@ -8,7 +8,7 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
-import { buildDefinitionPreviewEdges, connectionCountForHost, type DefinitionEdgeContext } from "@/lib/linksForElement";
+import { buildDefinitionPreviewEdges, connectionCountsForHost, type DefinitionEdgeContext } from "@/lib/linksForElement";
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
@@ -37,7 +37,7 @@ export function NodeCardHeader({
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, graphData, lookupIndexedUsageSites } =
+  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles } =
     useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -55,8 +55,10 @@ export function NodeCardHeader({
       getNode,
       sourceFlowId: flowNodeId,
       lookupIndexedUsageSites,
+      lookupProjectReferences,
+      lookupOffCanvasCallSiteFiles,
     }),
-    [flowNodeId, getNode, graphData, lookupIndexedUsageSites],
+    [flowNodeId, getNode, graphData, lookupIndexedUsageSites, lookupOffCanvasCallSiteFiles, lookupProjectReferences],
   );
 
   const fireDefPreview = useCallback(() => {
@@ -77,14 +79,16 @@ export function NodeCardHeader({
 
   const buildTitlePinInfo = useCallback(() => {
     const symEntry = lookup(symbolName!);
+    const counts = connectionCountsForHost(
+      titleRef.current!,
+      symbolName!,
+      defEdgeContext,
+    );
     return makeTokenInfo({
       token: symbolName!,
       kind: symbolKindToSemantic(symEntry!.kind),
-      connectionCount: connectionCountForHost(
-        titleRef.current!,
-        symbolName!,
-        defEdgeContext,
-      ),
+      connectionCount: counts.onCanvas,
+      projectConnectionCount: counts.inProject,
       definedIn: symbolName!,
       filePath,
       line: symEntry!.line,

@@ -52,6 +52,7 @@ type LoadChipProps = {
 
 function LoadChip({ spec, onActivate, onEnter, chipRef }: LoadChipProps) {
   const count = spec.load?.candidates.length ?? spec.load?.occurrenceCount ?? 1;
+  const isCallSite = spec.load?.direction === "callSite";
   const label = count > 1 ? `Load · ${count} files` : "Load";
 
   return (
@@ -69,8 +70,12 @@ function LoadChip({ spec, onActivate, onEnter, chipRef }: LoadChipProps) {
       className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2"
       title={
         count > 1
-          ? `Choose which file to load (${count} definitions in repo)`
-          : "Load definition into graph"
+          ? isCallSite
+            ? `Choose which caller file to load (${count} in project)`
+            : `Choose which file to load (${count} definitions in repo)`
+          : isCallSite
+            ? "Load file with a call site"
+            : "Load definition into graph"
       }
       onMouseEnter={onEnter}
       onPointerDown={(e) => {
