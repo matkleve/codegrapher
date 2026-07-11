@@ -84,11 +84,15 @@ Off-graph callee policy: **pause and prompt** — offer Load via existing `useLo
 - [x] Variable panel lists name → display value; changed names visually marked per step
 - [ ] Step-into on call to on-canvas method moves highlight into callee; step-over skips callee body
 - [ ] Step-into on off-canvas callee pauses with Load prompt (no silent skip)
-- [x] Argument/return steps trigger a visible pulse along the matching preview-edge path
+- [x] Call/return steps pulse from the current line to the callee: calls resolve the on-canvas definition (`resolveVisibleTarget`) and pulse to its handle; returns (and off-canvas callees) pulse out to the owning node header; unresolved steps emit no pulse (no degenerate self-edge)
 - [x] Esc or Exit clears sim mode; plain hover trace works again
 - [x] `graph-sim-active` distinguishes sim from `graph-trace-pinned` / `graph-ctrl-preview`
-- [x] Loops: play mode stops after **100 iterations** per loop body with "cap reached" notice
+- [x] Play auto-advances through the finite recorded step list and stops at the last step. Option A does not expand loops, so there is no per-iteration cap — a real cap + "cap reached" notice is deferred with step-into (loop-aware walk)
 - [x] `await` / async calls: step shows `await …` as unevaluated; does not hang play mode
+
+Per-step variable snapshots are selected by **source line number** (`scopeAtStep(code, lineNumber, …)`),
+walking the whole body from its first line so locals declared above the trace start stay in scope and a
+trace that starts mid-method still maps each step to the correct statement.
 
 ## Open questions
 

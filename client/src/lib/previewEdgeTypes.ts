@@ -12,6 +12,8 @@ export type LiveAnchorHint = {
   memberId?: string;
   lineNumber?: number;
   role: "usage" | "definition";
+  /** Stable host id — signature tags and other non-line keys. */
+  traceKey?: string;
 };
 
 export type PreviewEdgeSpec = {

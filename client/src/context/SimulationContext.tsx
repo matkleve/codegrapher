@@ -8,9 +8,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useReactFlow } from "@xyflow/react";
 import { buildStepList } from "@/lib/staticWalk/buildStepList";
 import { extractParamNames, scopeAtStep } from "@/lib/staticWalk/scopeAtStep";
-import { previewLineHandle } from "@/lib/ctrlPreviewHandles";
+import { previewLineHandle, previewTargetTop } from "@/lib/ctrlPreviewHandles";
+import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
+import type { AnchorRef } from "@/lib/previewEdgeTypes";
 import type {
   PlaybackSpeed,
   SimSession,
@@ -18,6 +21,7 @@ import type {
   SimValue,
 } from "@/lib/staticWalk/types";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useIndex } from "@/context/IndexContext";
 
 type SimAnchor = {
   flowNodeId: string;
@@ -57,7 +61,7 @@ type SimulationContextValue = {
 
 const SimulationContext = createContext<SimulationContextValue | null>(null);
 
-const LOOP_CAP = 100;
+const PLAY_INTERVAL_MS = 600;
 
 function buildSession(
   anchor: SimAnchor,
@@ -66,14 +70,14 @@ function buildSession(
 ): SimSession {
   const parsed = buildStepList(anchor.code, anchor.startLine, endLine);
   const paramNames = extractParamNames(anchor.signatureLine);
-  const steps: SimStep[] = parsed.map((stmt, index) => ({
+  const steps: SimStep[] = parsed.map((stmt) => ({
     lineNumber: stmt.lineNumber,
     text: stmt.text,
     kind: stmt.kind,
-    scopeSnapshot: scopeAtStep(anchor.code, index, inputs, paramNames),
+    scopeSnapshot: scopeAtStep(anchor.code, stmt.lineNumber, inputs, paramNames),
     edgePulse:
       stmt.kind === "call" || stmt.kind === "return"
-        ? { fromLine: stmt.lineNumber, token: stmt.text.match(/\.(\w+)\s*\(/)?.[1] }
+        ? { fromLine: stmt.lineNumber, token: stmt.text.match(/(\w+)\s*\(/)?.[1] }
         : undefined,
   }));
 
@@ -90,7 +94,9 @@ function buildSession(
 }
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
-  const { setPulseEdges, endHoverPreview } = useGraphInteraction();
+  const { setPulseEdges, endHoverPreview, graphData } = useGraphInteraction();
+  const { symbols } = useIndex();
+  const { getNode } = useReactFlow();
   const [simActive, setSimActive] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [session, setSession] = useState<SimSession | null>(null);
@@ -112,24 +118,47 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       setPulseEdges([]);
       return;
     }
+    // Value-flow pulse travels from the current call/return line to the callee
+    // it targets: calls pulse to the resolved on-canvas definition; returns
+    // (and calls whose callee is off-canvas) pulse out to the owning node
+    // header. If nothing resolves there is no path, so emit no pulse rather
+    // than a degenerate self-edge.
+    const from: AnchorRef = {
+      type: "handle",
+      handle: previewLineHandle(session.memberId, step.lineNumber),
+    };
+    const callee = step.edgePulse.token
+      ? resolveVisibleTarget(
+          step.edgePulse.token,
+          symbols,
+          graphData,
+          getNode,
+          session.flowNodeId,
+        )
+      : null;
+    let to: AnchorRef | null =
+      callee && callee.mode === "graph"
+        ? { type: "handle", handle: callee.targetHandle }
+        : null;
+    if (!to && step.kind === "return") {
+      to = { type: "handle", handle: previewTargetTop(session.flowNodeId) };
+    }
+    if (!to) {
+      setPulseEdges([]);
+      return;
+    }
     setPulseEdges([
       {
         id: `sim-pulse-${session.currentIndex}`,
-        from: {
-          type: "handle",
-          handle: previewLineHandle(session.memberId, step.edgePulse.fromLine),
-        },
-        to: {
-          type: "handle",
-          handle: previewLineHandle(session.memberId, step.lineNumber),
-        },
+        from,
+        to,
         edgeType: "composition",
         strokeStyle: "solid",
         arrowhead: "open",
         pulse: true,
       },
     ]);
-  }, [session, simActive, setPulseEdges]);
+  }, [session, simActive, setPulseEdges, symbols, graphData, getNode]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("graph-sim-active", simActive);
@@ -228,13 +257,9 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let iterations = 0;
+    // The static walk is a finite statement list (no loop expansion), so play
+    // just advances one recorded step per tick and stops at the last one.
     playLoopRef.current = window.setInterval(() => {
-      iterations++;
-      if (iterations > LOOP_CAP) {
-        setPlaying(false);
-        return;
-      }
       setSession((prev) => {
         if (!prev || prev.currentIndex >= prev.steps.length - 1) {
           setPlaying(false);
@@ -242,7 +267,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         }
         return { ...prev, currentIndex: prev.currentIndex + 1 };
       });
-    }, 600 / playbackSpeed);
+    }, PLAY_INTERVAL_MS / playbackSpeed);
 
     return () => window.clearInterval(playLoopRef.current);
   }, [playing, playbackSpeed, session]);

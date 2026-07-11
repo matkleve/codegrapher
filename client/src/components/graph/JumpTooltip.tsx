@@ -46,7 +46,7 @@ export function JumpTooltip() {
   return createPortal(
     <div
       ref={tipRef}
-      className="jump-tip pointer-events-none fixed z-[60] flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-card px-2 py-1 text-[11.5px] font-medium text-foreground shadow-md"
+      className="jump-tip pointer-events-none fixed z-[60] flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-card px-2 py-1 text-caption font-medium text-foreground shadow-md"
       style={
         position
           ? { left: position.left, top: position.top, visibility: "visible" }
@@ -61,7 +61,7 @@ export function JumpTooltip() {
         aria-hidden
       />
       <b>{token}</b>
-      <span className="font-mono text-[10.5px] text-muted-foreground">{kind}</span>
+      <span className="font-mono text-2xs text-muted-foreground">{kind}</span>
     </div>,
     document.body,
   );

@@ -3,6 +3,7 @@ import {
   buildDefinitionFanOutEdges,
   buildLoadPreviewEdge,
   buildUsagePreviewEdge,
+  liveToFromUsageEl,
 } from "@/lib/buildPreviewEdges";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import type { GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
@@ -64,6 +65,21 @@ describe("buildLoadPreviewEdge", () => {
     expect(edge.liveFrom?.flowNodeId).toBe("flow-b");
     expect(edge.liveTo?.flowNodeId).toBe("flow-a");
     expect(edge.load).toBeUndefined();
+  });
+
+  it("parses signature type trace keys without coercing sig-type to a line", () => {
+    const usageEl = document.createElement("span");
+    usageEl.dataset.traceKey = "flow-a::member-1::sig-type::AddressFieldKind";
+
+    const hint = liveToFromUsageEl("AddressFieldKind", usageEl);
+    expect(hint).toEqual({
+      token: "AddressFieldKind",
+      flowNodeId: "flow-a",
+      memberId: "member-1",
+      role: "usage",
+      traceKey: "flow-a::member-1::sig-type::AddressFieldKind",
+    });
+    expect(hint?.lineNumber).toBeUndefined();
   });
 
   it("builds fan-out edges for each usage element", () => {

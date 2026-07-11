@@ -56,7 +56,7 @@ export function getFileTypeChipStyle(filePath: string): FileTypeChipStyle {
     return {
       vscodeIcon: "file-type-ng-service-ts",
       extension,
-      pillClass: ANGULAR_PILL,
+      pillClass: TS_PILL,
     };
   }
   if (lower.endsWith(".module.ts")) {

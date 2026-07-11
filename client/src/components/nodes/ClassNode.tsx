@@ -124,6 +124,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
                   classLabel={nodeData.label}
+                  isReadingFocus={nodeData.readingFocusMemberId === p.id}
                 />
               ))}
             </MemberSection>
@@ -153,6 +154,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   graphNodeId={nodeData.graphNodeId}
                   filePath={nodeData.filePath}
                   classLabel={nodeData.label}
+                  isReadingFocus={nodeData.readingFocusMemberId === m.id}
                 />
               ))}
             </MemberSection>

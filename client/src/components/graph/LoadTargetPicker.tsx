@@ -89,7 +89,7 @@ export function LoadTargetPicker({
     >
       <div className="border-b border-border px-3 py-2">
         <p className="font-mono text-xs font-semibold text-foreground">{token}</p>
-        <p className="text-[10px] leading-none text-muted-foreground">
+        <p className="text-2xs leading-none text-muted-foreground">
           Choose a file to load into the graph
         </p>
       </div>
@@ -106,7 +106,7 @@ export function LoadTargetPicker({
               placeholder="Filter files…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-7 pl-8 text-xs"
+              className="h-[var(--control-height-sm)] pl-8 text-xs"
               autoFocus
             />
           </div>

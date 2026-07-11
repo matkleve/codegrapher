@@ -10,7 +10,7 @@ const interactiveStates =
 const buttonVariants = cva(
   cn(
     "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border bg-clip-padding font-medium whitespace-nowrap outline-none select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-    "h-[var(--control-height-md)] gap-[var(--control-gap-md)] px-[var(--control-padding-x-md)] text-[length:var(--font-size-sm)]",
+    "h-[var(--control-height-md)] gap-[var(--control-gap)] px-[var(--control-padding-x-md)] text-[length:var(--font-size-sm)]",
     "[&_svg:not([class*='size-'])]:size-[var(--icon-size-md)]",
     interactiveStates,
   ),

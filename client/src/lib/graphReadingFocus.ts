@@ -130,13 +130,14 @@ export function applyReadingFocusToNodes(
       return {
         ...n,
         selected: false,
-        data: { ...data, selected: false },
+        data: { ...data, selected: false, readingFocusMemberId: undefined },
       };
     }
 
     const patch: Partial<ClassNodeData> = {
       selected: true,
       collapsed: false,
+      readingFocusMemberId: focus.memberId,
     };
 
     if (focus.memberId) {
@@ -166,6 +167,14 @@ export function applyReadingFocusToNodes(
       width,
       height,
     );
+  });
+}
+
+export function clearReadingFocusFromNodes(nodes: Node[]): Node[] {
+  return nodes.map((n) => {
+    const data = n.data as ClassNodeData;
+    if (!data.readingFocusMemberId) return n;
+    return { ...n, data: { ...data, readingFocusMemberId: undefined } };
   });
 }
 

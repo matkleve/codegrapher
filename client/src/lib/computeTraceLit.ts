@@ -250,6 +250,7 @@ function absorbLiveHint(
   hint: LiveAnchorHint,
   state: LitCollections,
   asEndpoint: boolean,
+  activeTokenKey: string,
 ): void {
   if (hint.role === "usage" && hint.memberId && hint.lineNumber != null) {
     const usageKey = makeUsageTokenKey(
@@ -275,7 +276,12 @@ function absorbLiveHint(
     state.litFlowNodeIds.add(hint.flowNodeId);
 
     const label = elementForTraceKey(defKey);
-    if (label) absorbToken(label, state, asEndpoint);
+    if (label) {
+      absorbToken(label, state, asEndpoint);
+      if (kindFromElement(label) === "function") {
+        spreadFunctionMember(hint.memberId, activeTokenKey, state);
+      }
+    }
   }
 }
 
@@ -344,11 +350,16 @@ export function computeTraceLit(
       state.endpointTokenKeys.add(ep.traceKey);
       if (ep.kind) state.tokenKinds.set(ep.traceKey, ep.kind);
       if (ep.flowNodeId) state.litFlowNodeIds.add(ep.flowNodeId);
-      if (ep.memberId) state.litLineMemberIds.add(ep.memberId);
+      if (ep.memberId) {
+        state.litLineMemberIds.add(ep.memberId);
+        if (ep.kind === "function") {
+          spreadFunctionMember(ep.memberId, activeTokenKey, state);
+        }
+      }
     }
 
-    if (edge.liveFrom) absorbLiveHint(edge.liveFrom, state, true);
-    if (edge.liveTo) absorbLiveHint(edge.liveTo, state, true);
+    if (edge.liveFrom) absorbLiveHint(edge.liveFrom, state, true, activeTokenKey);
+    if (edge.liveTo) absorbLiveHint(edge.liveTo, state, true, activeTokenKey);
   }
 
   spreadLocalLinkChain(activeTokenKey, state);

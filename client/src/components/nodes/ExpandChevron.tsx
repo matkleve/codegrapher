@@ -34,7 +34,7 @@ export function ExpandChevron({
   return (
     <span
       className={cn(
-        "expand-chevron relative inline-flex h-[1em] w-[0.65rem] shrink-0 self-center items-center justify-center text-[10px] leading-none",
+        "expand-chevron relative inline-flex h-[1em] w-[0.65rem] shrink-0 self-center items-center justify-center text-2xs leading-none",
         className,
       )}
       aria-hidden

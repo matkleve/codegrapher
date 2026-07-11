@@ -38,6 +38,8 @@ export type ClassNodeData = {
     propertiesSectionCollapsed: boolean;
     methodsSectionCollapsed: boolean;
   };
+  /** Member row highlighted for reading focus (?focus= URL / jump). */
+  readingFocusMemberId?: string;
 };
 
 export type FileNodeData = {

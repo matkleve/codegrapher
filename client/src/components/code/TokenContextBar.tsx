@@ -148,7 +148,7 @@ export function TokenContextBar() {
                 key={trace.tokenKey}
                 type="button"
                 className={cn(
-                  "rounded-md px-2 py-0.5 font-mono text-[10px] font-medium transition-colors",
+                  "rounded-md px-2 py-0.5 font-mono text-2xs font-medium transition-colors",
                   active
                     ? "border border-brand-border bg-brand-surface text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -171,7 +171,7 @@ export function TokenContextBar() {
           <span className="min-w-0 shrink truncate font-mono text-sm font-semibold text-foreground">
             {token}
           </span>
-          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
             {KIND_LABEL[kind] ?? kind}
           </span>
           <span className="hidden min-w-0 truncate text-xs text-muted-foreground sm:inline">
@@ -202,7 +202,7 @@ export function TokenContextBar() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5 text-[11px]"
+              className="gap-1.5 text-caption"
               onClick={() => {
                 if (def?.flowNodeId) {
                   clearTokenInfo();
@@ -220,7 +220,7 @@ export function TokenContextBar() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1 text-[11px]"
+              className="gap-1 text-caption"
               onClick={() => setExpanded((v) => !v)}
             >
               {connectionLabel}
@@ -233,7 +233,7 @@ export function TokenContextBar() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5 text-[11px]"
+              className="gap-1.5 text-caption"
               onClick={() => {
                 void openFileInEditor(def.filePath, def.line);
               }}
@@ -249,7 +249,7 @@ export function TokenContextBar() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 text-[11px]"
+              className="text-caption"
               onClick={() => {
                 if (externalLoadTargets.length === 1) {
                   loadTarget(externalLoadTargets[0]!.filePath);

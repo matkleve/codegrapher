@@ -240,7 +240,7 @@ flowchart TB
 | Ctrl + trace | shimmer stays on for every indexed token (Ctrl always wins) | faint + shimmer | no tint |
 | Pinned | pinned trace lit + optional hover preview | faint until dwell (or immediately if Ctrl held) | no tint |
 
-**Active chips (`token-chip-on`):** inset `0.5px` ring at ~76% semantic `currentColor`; pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use brand inset ring.
+**Active chips (`token-chip-on`):** semantic tint fill (`color-mix` ~12% `--token-edge-*` into `--background`), **no inset ring**; pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use `--brand-surface` fill.
 
 **Sockets (`FlowAnchor`):** bloom on endpoints only (`token-chip-on`); soft glow via `currentColor` + tight box-shadow (not oversized blur).
 

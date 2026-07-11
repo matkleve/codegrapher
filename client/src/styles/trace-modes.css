@@ -38,7 +38,7 @@
   color: var(--faint-ctrl) !important;
 }
 
-.graph-pane.graph-ctrl-preview .member-sig-value:has(.member-sig-type--primitive) {
+.graph-pane.graph-ctrl-preview .member-sig-value {
   background: var(--muted) !important;
 }
 
@@ -56,6 +56,10 @@
 
 .graph-pane.graph-ctrl-preview .code-line :where(:not(.token-chip):not(.token-chip *)) {
   color: inherit !important;
+}
+
+.graph-pane.graph-ctrl-preview .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
+  background: color-mix(in oklch, var(--foreground) 3%, var(--card)) !important;
 }
 
 .graph-pane.graph-ctrl-preview .react-flow__node.class-node-root {
@@ -153,7 +157,8 @@
 }
 
 .graph-trace-active .react-flow__node.class-node-root,
-.graph-trace-active .member-row {
+.graph-trace-active .member-row,
+.graph-pane.graph-ctrl-preview .member-row {
   transition:
     border-color 0s,
     box-shadow 0s,
@@ -265,13 +270,12 @@
 }
 
 .graph-trace-active .trace-member-lit,
-.graph-trace-active .trace-member-owner-lit {
-  background: color-mix(in oklch, var(--foreground) 5%, var(--card)) !important;
-}
-
-.graph-trace-active .trace-member-owner-lit {
-  border-color: var(--border);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--border) 80%, transparent);
+.graph-trace-active .trace-member-owner-lit,
+.graph-pane.graph-ctrl-preview .trace-member-lit,
+.graph-pane.graph-ctrl-preview .trace-member-owner-lit {
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-function) 55%, var(--border));
 }
 
 .graph-trace-active .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
@@ -336,8 +340,8 @@
 
 .graph-trace-active .member-row-header.hoverable:hover,
 .graph-trace-active .member-row-header.hoverable[aria-expanded="true"]:hover {
-  background-color: transparent;
-  border-color: transparent;
+  background-color: transparent !important;
+  border-color: transparent !important;
   color: inherit !important;
 }
 

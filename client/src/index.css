@@ -51,18 +51,22 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --text-2xs: var(--font-size-2xs);
   --text-xs: var(--font-size-xs);
+  --text-caption: var(--font-size-caption);
   --text-sm: var(--font-size-sm);
   --text-base: var(--font-size-md);
 }
 
 :root {
   --radius: 0.625rem;
-  /* Typography (rem) */
+  /* Typography (rem) — 2xs/caption are the only sub-xs sizes */
+  --font-size-2xs: 0.625rem;
+  --font-size-caption: 0.6875rem;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
-  /* Icons (rem) */
+  /* Icons (rem) — mirror typography scale */
   --icon-size-xs: 0.75rem;
   --icon-size-sm: 0.875rem;
   --icon-size-md: 1rem;
@@ -71,22 +75,21 @@
   --control-height-sm: 1.75rem;
   --control-height-md: 2rem;
   --control-height-lg: 2.25rem;
-  /* Horizontal padding (rem) */
+  /* Horizontal padding + gap (rem) */
   --control-padding-x-compact: 0.375rem;
   --control-padding-x-sm: 0.5rem;
   --control-padding-x-md: 0.625rem;
-  --control-gap-compact: 0.375rem;
-  --control-gap-md: 0.375rem;
+  --control-gap: 0.375rem;
   /* Token chips — inline code uses tight pad; def labels use control sm pad */
-  --token-chip-pad-y: 1px;
-  --token-chip-pad-x: 4px;
+  --token-chip-pad-y: 0.0625rem;
+  --token-chip-pad-x: 0.25rem;
   --token-def-label-pad-y: 0.125rem;
   --token-def-label-pad-x: var(--control-padding-x-sm);
-  --token-chip-radius: 5px;
-  --connector-chip-load-pad-y: 5px;
-  --connector-chip-load-pad-x: 12px;
+  --token-chip-radius: 0.3125rem;
+  --connector-chip-load-pad-y: 0.3125rem;
+  --connector-chip-load-pad-x: 0.75rem;
   --connector-chip-load-radius: var(--radius-sm);
-  --connector-chip-load-font-size: 11px;
+  --connector-chip-load-font-size: var(--font-size-caption);
   --token-def-label-radius: var(--radius-sm);
   --background: oklch(0.99 0.005 250);
   --foreground: oklch(0.18 0.03 260);
@@ -128,20 +131,24 @@
   --edge-composition: oklch(0.46 0.15 25);
   --edge-import: oklch(0.50 0.06 250);
   --code-type-primitive: oklch(0.52 0.05 258);
-  --member-sig-bg-in: color-mix(in oklch, var(--foreground) 4%, var(--card));
-  --member-sig-bg-out: color-mix(in oklch, var(--foreground) 6%, var(--card));
+  --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
+  --member-sig-bg-out: var(--surface-neutral-strong);
+  --member-row-property-bg: var(--surface-neutral);
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 10%, var(--background));
+  --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 40%, var(--border));
+  --surface-neutral: oklch(0.965 0.001 0);
+  --surface-neutral-strong: oklch(0.955 0.001 0);
   --code-keyword: oklch(0.42 0.14 295);
   --code-string: oklch(0.46 0.11 55);
   --code-number: oklch(0.48 0.14 300);
   --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
-  --surface-hover: color-mix(in oklch, var(--primary) 10%, var(--secondary));
   --explorer-file-in-graph: oklch(0.46 0.17 278);
   --file-chip-ts: oklch(0.52 0.14 250);
   --file-chip-react: oklch(0.72 0.12 220);
-  --file-chip-angular: oklch(0.50 0.22 25);
+  --file-chip-angular: oklch(0.52 0.14 250);
   --file-chip-test: oklch(0.68 0.16 75);
-  --radius-node: 13px;
+  --radius-node: calc(var(--radius) + 0.1875rem);
   /* Brand gold hover accent — clearly interactive, distinct from primary periwinkle */
   --brand: oklch(0.52 0.13 88);
   --brand-surface: oklch(0.96 0.03 88);
@@ -238,14 +245,18 @@ html.dark {
   --edge-composition: oklch(0.72 0.12 25);
   --edge-import: oklch(0.62 0.05 250);
   --code-type-primitive: oklch(0.62 0.04 258);
-  --member-sig-bg-in: color-mix(in oklch, var(--foreground) 4%, var(--card));
-  --member-sig-bg-out: color-mix(in oklch, var(--foreground) 6%, var(--card));
+  --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 12%, var(--background));
+  --member-sig-bg-out: var(--surface-neutral-strong);
+  --member-row-property-bg: var(--surface-neutral);
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 14%, var(--background));
+  --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 45%, var(--border));
+  --surface-neutral: oklch(0.24 0.004 0);
+  --surface-neutral-strong: oklch(0.28 0.005 0);
   --code-keyword: oklch(0.78 0.10 295);
   --code-string: oklch(0.80 0.09 55);
   --code-number: oklch(0.78 0.11 300);
   --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
   --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
-  --surface-hover: color-mix(in oklch, var(--primary) 14%, var(--secondary));
   --explorer-file-in-graph: oklch(0.72 0.12 255);
   /* Brand gold hover accent on dark surfaces */
   --brand: oklch(0.78 0.12 88);
@@ -348,7 +359,7 @@ html.dark {
 }
 
 .sidebar-collapse-warning__label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-caption);
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0.01em;
@@ -362,6 +373,78 @@ html.dark {
   50% {
     opacity: 1;
   }
+}
+
+/* Simulation panel resize handle (mirrors sidebar, left edge) */
+.sim-panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  z-index: 50;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sim-panel-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background-color: transparent;
+  transition: background-color var(--motion-hover-surface) var(--ease);
+}
+
+.sim-panel-resize-handle:hover::after,
+.sim-panel-resize-handle--active::after,
+.sim-panel-resizing .sim-panel-resize-handle::after {
+  background-color: var(--brand);
+}
+
+.sim-panel-resizing,
+.sim-panel-resizing * {
+  cursor: col-resize !important;
+}
+
+.sim-panel-collapse-warning {
+  border-left-color: var(--brand-border);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.sim-panel-collapse-warning__content {
+  opacity: 0.35;
+  filter: saturate(0.6);
+  pointer-events: none;
+  transition: opacity 120ms var(--ease), filter 120ms var(--ease);
+}
+
+.sim-panel-collapse-warning__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  text-align: center;
+  color: var(--brand);
+  background: color-mix(in oklch, var(--brand-surface) 72%, transparent);
+  pointer-events: none;
+  animation: sidebar-collapse-warning-pulse 900ms ease-in-out infinite;
+}
+
+.sim-panel-collapse-warning__label {
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
 }
 
 .graph-pane {
@@ -387,13 +470,20 @@ html.dark {
   font-size: var(--font-size-xs);
   line-height: 1;
   border-radius: var(--radius-sm);
-  gap: var(--control-gap-compact);
+  gap: var(--control-gap);
 }
 
-.control-row-compact svg:not([class*="size-"]),
+.control-row-compact svg:not([class*="size-"]):not(.connection-legend-swatch),
 .control-row-compact [data-icon] {
   width: var(--icon-size-sm);
   height: var(--icon-size-sm);
+}
+
+.connection-legend-swatch {
+  width: 2.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 /* Two-line menu rows — same xs / line-height: 1 tokens as explorer, auto height for 2 lines */
@@ -401,7 +491,7 @@ html.dark {
   height: auto;
   padding-block: 0.25rem;
   padding-inline: var(--control-padding-x-compact);
-  gap: var(--control-gap-compact);
+  gap: var(--control-gap);
   align-items: center;
   font-size: var(--font-size-xs);
   line-height: 1;
@@ -454,6 +544,13 @@ html.dark {
   stroke: var(--brand);
 }
 
+/* Member rows — grey/blue fills only; never brand hover wash on header or sig controls */
+.member-row .hoverable:hover,
+.member-row .hoverable:focus-visible {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
 /* Read-only rows (legend, labels) — muted hover without brand accent */
 .hoverable-neutral {
   transition:
@@ -467,6 +564,23 @@ html.dark {
   background-color: var(--muted);
   border-color: var(--border);
   color: var(--foreground);
+}
+
+/* Passive / deactivated read-only rows — grey at rest, slightly deepened on hover */
+.list-row-passive {
+  border: 1px solid var(--border);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease);
+}
+
+.list-row-passive:hover {
+  background-color: color-mix(in oklch, var(--muted) 88%, var(--foreground));
+  border-color: color-mix(in oklch, var(--border) 70%, var(--muted-foreground));
+  color: var(--muted-foreground);
 }
 
 /* Context bar — neutral hover; brand on chips reads as warning */

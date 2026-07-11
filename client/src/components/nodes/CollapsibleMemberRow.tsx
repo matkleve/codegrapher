@@ -26,7 +26,6 @@ import {
   loadTargetsFromCallSiteRefs,
 } from "@/lib/connectionMenu";
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
-import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import { findMethodOverride } from "@/lib/overrideInfo";
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
@@ -46,6 +45,7 @@ type CollapsibleMemberRowProps = {
   graphNodeId: string;
   filePath: string;
   classLabel: string;
+  isReadingFocus?: boolean;
 };
 
 export function CollapsibleMemberRow({
@@ -60,6 +60,7 @@ export function CollapsibleMemberRow({
   graphNodeId,
   filePath,
   classLabel,
+  isReadingFocus = false,
 }: CollapsibleMemberRowProps) {
   const lines = code.split("\n");
   const memberHandleId = previewMemberHandle(memberId);
@@ -257,6 +258,7 @@ export function CollapsibleMemberRow({
       data-member-id={memberId}
       className={cn(
         "member-row nodrag relative overflow-visible rounded-md bg-muted",
+        isReadingFocus && "member-row--reading-focus",
       )}
       onDoubleClick={onReadingFocusDoubleClick}
     >
@@ -278,7 +280,6 @@ export function CollapsibleMemberRow({
         type="button"
         className={cn(
           "member-row-header",
-          INTERACTIVE_SURFACE,
           "flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 border-x-0 border-t-0 px-2 py-1.5 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
@@ -356,7 +357,7 @@ export function CollapsibleMemberRow({
         {overrideInfo ? (
           <button
             type="button"
-            className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand"
+            className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-2xs text-muted-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand"
             onClick={(e) => {
               e.stopPropagation();
               if (!labelRef.current) return;

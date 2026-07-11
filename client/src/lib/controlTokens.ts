@@ -29,5 +29,9 @@ export const INTERACTIVE_ROW_NODRAG = `${INTERACTIVE_ROW} nodrag`;
 export const INTERACTIVE_ROW_STATIC_LEFT =
   "hoverable-neutral control-row-compact flex w-full cursor-default items-center border border-transparent justify-start text-left";
 
+/** Read-only passive row — grey surface + border at rest (hidden/disabled legend items) */
+export const INTERACTIVE_ROW_PASSIVE_LEFT =
+  "list-row-passive control-row-compact flex w-full cursor-default items-center justify-start text-left";
+
 /** Graph map / toolbar toggle when aria-pressed */
 export const INTERACTIVE_TOGGLE_ACTIVE = "interactive-toggle--active";

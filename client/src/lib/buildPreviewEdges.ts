@@ -2,17 +2,32 @@ import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { ExternalReferenceCard, GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
-function liveToFromUsageEl(token: string, usageEl: HTMLElement): LiveAnchorHint | undefined {
+export function liveToFromUsageEl(
+  token: string,
+  usageEl: HTMLElement,
+): LiveAnchorHint | undefined {
   const traceKey = usageEl.dataset.traceKey;
   if (!traceKey) return undefined;
   const parts = traceKey.split("::");
+  if (parts.length === 4 && parts[2] === "sig-type") {
+    return {
+      token: parts[3] ?? token,
+      flowNodeId: parts[0]!,
+      memberId: parts[1]!,
+      role: "usage",
+      traceKey,
+    };
+  }
   if (parts.length < 4) return undefined;
+  const lineNumber = Number(parts[2]);
+  if (!Number.isFinite(lineNumber)) return undefined;
   return {
     token,
     flowNodeId: parts[0]!,
     memberId: parts[1],
-    lineNumber: Number(parts[2]),
+    lineNumber,
     role: "usage",
+    traceKey,
   };
 }
 

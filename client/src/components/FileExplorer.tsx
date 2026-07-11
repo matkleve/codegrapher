@@ -7,6 +7,7 @@ import { TreeNode } from "@/components/explorer/FileTree";
 import { RecentFilesSection } from "@/components/explorer/RecentFilesSection";
 import { RecentFoldersDropdown } from "@/components/explorer/RecentFoldersDropdown";
 import { EXPLORER_X_PAD } from "@/components/explorer/explorerRowStyles";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useFolderExplorer } from "@/components/explorer/useFolderExplorer";
 import { useSidebarLayout } from "@/context/SidebarLayoutContext";
 import { cn } from "@/lib/utils";
@@ -143,6 +144,11 @@ export default function FileExplorer({
           </div>
         </div>
       </ScrollArea>
+
+      <Separator className="bg-sidebar-border" />
+      <div className={cn("pointer-events-auto shrink-0 py-3", EXPLORER_X_PAD)}>
+        <ThemeToggle />
+      </div>
     </aside>
   );
 }

@@ -74,14 +74,33 @@ One hue per indexed symbol kind — chips, preview edges, and lit trace endpoint
 
 Syntax literals (non-indexed): `--code-keyword`, `--code-string`, `--code-number`.
 
+### Achromatic surfaces (property rows, signature pills)
+
+| Token | Role |
+| ----- | ---- |
+| `--surface-neutral` | Property member row resting fill |
+| `--surface-neutral-strong` | Return pill, code body hover |
+
+### Method member rows
+
+| Token / surface | Role |
+| ------------- | ---- |
+| `bg-muted` on `.member-row` | Resting fill for all member rows (blue-grey `--muted`) |
+| `--member-sig-bg-in` | Param pill fill — `color-mix` of function blue into `--background` |
+| `--member-sig-bg-out` | Return pill fill (`--surface-neutral-strong`) |
+| `--member-row-trace-lit-bg` | Lit member row during trace hover — function blue mixed into `--background` |
+| `--member-row-trace-lit-border` | Lit row border (pairs with inset ring in `trace-modes.css`) |
+
+Do **not** `color-mix` chromatic tokens into `--card` (chroma 0 breaks oklch hue toward red). Mix into `--background` or `--muted` instead.
+
 ### Signature chips
 
 | Token | Role |
 | ----- | ---- |
-| `--member-sig-bg-in` | Param value fill (neutral grey from foreground → card) |
-| `--member-sig-bg-out` | Return value fill (slightly darker neutral grey) |
+| `--member-sig-bg-in` | Param value fill (`--surface-neutral`) |
+| `--member-sig-bg-out` | Return value fill (`--surface-neutral-strong`) |
 
-Borderless; semantic ink on indexed types; primitives use `--code-type-primitive`. Container fills are achromatic — no semantic hue tint. No `--brand` on signature surfaces.
+Borderless; param names use variable ink; indexed types use semantic ink only when **connectable**. No `--brand` on signature surfaces.
 
 ### Structural connection edges (`--edge-*`)
 
@@ -119,9 +138,29 @@ Applied via `.file-type-chip--*` classes in `nodes.css`.
 
 | Token | Role |
 | ----- | ---- |
-| `--radius` | Base scale (10px) |
-| `--radius-node` | Class node card (13px prototype) |
-| `--token-chip-radius` | Inline code chips (5px) |
+| `--radius` | Base scale (0.625rem) |
+| `--radius-sm` … `--radius-xl` | Derived corner radii |
+| `--radius-node` | Class node card (`calc(--radius + 0.1875rem)`) |
+| `--token-chip-radius` | Inline code chips (0.3125rem) |
+
+## Typography & control sizes (canonical scale)
+
+Emitted once in `:root` (`index.css`). **Do not** use arbitrary `text-[Npx]` or `h-7`/`h-8` in app components — run `npm run lint:tokens`.
+
+| Token | rem | Tailwind bridge | Role |
+| ----- | --- | --------------- | ---- |
+| `--font-size-2xs` | 0.625 | `text-2xs` | Micro labels (chevrons, badges) |
+| `--font-size-caption` | 0.6875 | `text-caption` | Load connector, compact toolbar |
+| `--font-size-xs` | 0.75 | `text-xs` | Explorer rows, code lines, menus |
+| `--font-size-sm` | 0.875 | `text-sm` | Node titles, buttons |
+| `--font-size-md` | 1 | `text-base` | Body default |
+| `--control-height-compact` | 1.375 | — | Explorer / menu row height |
+| `--control-height-sm` | 1.75 | — | Small buttons, compact inputs |
+| `--control-height-md` | 2 | — | Default buttons |
+| `--control-height-lg` | 2.25 | — | Icon-only large controls |
+| `--control-gap` | 0.375 | — | Button / row internal gap |
+
+**Component pattern** (see `button.tsx`): `h-[var(--control-height-sm)]`, `text-[length:var(--font-size-xs)]`, `px-[var(--control-padding-x-sm)]`. Tailwind bridge classes (`text-xs`, `text-caption`) resolve to the same tokens via `@theme inline`.
 
 ## Toggle / pressed chrome
 

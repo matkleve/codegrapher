@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run lint:tokens",
+    "lint:tokens": "node ../scripts/lint-tokens.mjs",
     "lint:file-length": "node ../scripts/lint-file-length.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   INTERACTIVE_ROW_DOUBLE,
   INTERACTIVE_ROW_LEFT,
+  INTERACTIVE_ROW_PASSIVE_LEFT,
   INTERACTIVE_ROW_STATIC_LEFT,
 } from "@/lib/controlTokens";
 import { TOKEN_EDGE_STROKE, type SemanticTokenKind } from "@/lib/tokenColors";
@@ -17,10 +18,12 @@ export type InteractiveListRowProps = {
   actionLabel?: string;
   onClick?: () => void;
   className?: string;
-  /** `comfortable` = two-line menu row; `compact` = single-line explorer density */
-  density?: "comfortable" | "compact";
+  /** `comfortable` = two-line menu row; `compact` = single-line explorer density; `plain` = simple label */
+  density?: "comfortable" | "compact" | "plain";
   /** Muted hover, no button — legend rows, labels */
   interactive?: boolean;
+  /** `passive` = grey resting surface (hidden/disabled items) */
+  tone?: "default" | "passive";
 };
 
 export function SemanticConnectionDot({
@@ -44,12 +47,27 @@ export function InteractiveListRowText({
   subtitle,
   align = "left",
   density = "comfortable",
+  tone = "default",
 }: {
   title: string;
   subtitle?: string;
   align?: "left" | "right";
-  density?: "comfortable" | "compact";
+  density?: "comfortable" | "compact" | "plain";
+  tone?: "default" | "passive";
 }) {
+  if (density === "plain") {
+    return (
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-left text-xs font-normal",
+          tone === "passive" ? "text-muted-foreground" : "text-foreground",
+        )}
+      >
+        {title}
+      </span>
+    );
+  }
+
   if (density === "compact") {
     return (
       <span
@@ -95,12 +113,18 @@ export function InteractiveListRow({
   className,
   density = "comfortable",
   interactive = true,
+  tone = "default",
 }: InteractiveListRowProps) {
   const rowClass = interactive
     ? density === "comfortable"
       ? INTERACTIVE_ROW_DOUBLE
-      : cn(INTERACTIVE_ROW_LEFT, "control-row-compact")
-    : INTERACTIVE_ROW_STATIC_LEFT;
+      : cn(INTERACTIVE_ROW_LEFT, density === "compact" && "control-row-compact")
+    : tone === "passive"
+      ? INTERACTIVE_ROW_PASSIVE_LEFT
+      : cn(
+          INTERACTIVE_ROW_STATIC_LEFT,
+          density !== "plain" && density === "compact" && "control-row-compact",
+        );
 
   const trailingNode =
     trailing ??
@@ -122,6 +146,7 @@ export function InteractiveListRow({
         title={title}
         subtitle={subtitle}
         density={density}
+        tone={tone}
       />
       {trailingNode ? (
         <span className="ml-1 flex shrink-0 items-center">{trailingNode}</span>

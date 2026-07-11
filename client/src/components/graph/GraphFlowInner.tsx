@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphPane } from "@/components/graph/GraphPane";
@@ -40,6 +39,7 @@ import { GraphInteractionProvider } from "@/context/GraphInteractionContext";
 import { SimulationProvider } from "@/context/SimulationContext";
 import { SimulationPanel, SimulationPreflight } from "@/components/simulation/SimulationPanel";
 import { SimulationToolbar } from "@/components/simulation/SimulationToolbar";
+import { SimulationPanelToggle } from "@/components/simulation/SimulationPanelToggle";
 import { JumpTooltipProvider } from "@/context/JumpTooltipContext";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { FIT_VIEW_PADDING, layoutFlowElements } from "@/lib/flowLayout";
@@ -61,6 +61,7 @@ import {
 } from "@/lib/graphGrid";
 import {
   applyReadingFocusToNodes,
+  clearReadingFocusFromNodes,
   clearFocusFromUrl,
   computeReadingWidth,
   findFocusTargetElement,
@@ -449,10 +450,11 @@ export function GraphFlowInner({
   useEffect(() => {
     if (!readingFocus) {
       clearFocusFromUrl();
+      setNodes((nds) => clearReadingFocusFromNodes(nds));
       return;
     }
     writeFocusToUrl(readingFocus);
-  }, [readingFocus]);
+  }, [readingFocus, setNodes]);
 
   useEffect(() => {
     if (!readingFocus) return;
@@ -494,49 +496,6 @@ export function GraphFlowInner({
 
   return (
     <div className="pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <span
-              aria-hidden
-              className="size-2 shrink-0 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]"
-            />
-            Graph
-          </h2>
-          <p className="text-xs text-muted-foreground">{GRAPH_SUBTITLE}</p>
-        </div>
-        <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={!canGoBack}
-            onClick={handleLastGraph}
-            title="Last graph"
-            aria-label="Last graph"
-          >
-            <ChevronLeft data-icon="inline-start" />
-            Last graph
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={!canGoForward}
-            onClick={handleNextGraph}
-            title="Next graph"
-            aria-label="Next graph"
-          >
-            Next graph
-            <ChevronRight data-icon="inline-end" />
-          </Button>
-          <ThemeToggle />
-        </div>
-        {loading && (
-          <span className="shrink-0 text-sm text-muted-foreground">Loading…</span>
-        )}
-      </div>
-
       {graphError && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {graphError}
@@ -564,6 +523,49 @@ export function GraphFlowInner({
           onFocusReadingMember={focusReadingMember}
         >
           <SimulationProvider>
+            <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]"
+                  />
+                  Graph
+                </h2>
+                <p className="text-xs text-muted-foreground">{GRAPH_SUBTITLE}</p>
+              </div>
+              <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canGoBack}
+                  onClick={handleLastGraph}
+                  title="Last graph"
+                  aria-label="Last graph"
+                >
+                  <ChevronLeft data-icon="inline-start" />
+                  Last graph
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canGoForward}
+                  onClick={handleNextGraph}
+                  title="Next graph"
+                  aria-label="Next graph"
+                >
+                  Next graph
+                  <ChevronRight data-icon="inline-end" />
+                </Button>
+                <SimulationPanelToggle />
+              </div>
+              {loading && (
+                <span className="shrink-0 text-sm text-muted-foreground">Loading…</span>
+              )}
+            </div>
+
             <div className="flex min-h-0 min-w-0 flex-1">
               <GraphPane
             ref={graphPaneRef}

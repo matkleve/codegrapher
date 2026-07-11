@@ -26,10 +26,14 @@ function parseInitializer(expr: string, inputs: Record<string, string>): SimValu
 
 export function scopeAtStep(
   code: string,
-  stepIndex: number,
+  currentLine: number,
   inputs: Record<string, string>,
   paramNames: string[] = [],
 ): Map<string, SimValue> {
+  // Walk the whole body from its first line so locals declared *above* the
+  // trace start line stay in scope, and select by source line number rather
+  // than step index — a trace that starts mid-method slices the step list, so
+  // an index would no longer line up with the statement it names.
   const steps = buildStepList(code);
   const scope = new Map<string, SimValue>();
 
@@ -37,8 +41,9 @@ export function scopeAtStep(
     scope.set(name, inputs[name] != null ? displayValue(inputs[name]!) : { display: "?", kind: "unknown" });
   }
 
-  for (let i = 0; i <= stepIndex && i < steps.length; i++) {
-    const line = steps[i]!.text.trim();
+  for (const stmt of steps) {
+    if (stmt.lineNumber > currentLine) break;
+    const line = stmt.text.trim();
     const decl = DECL_RE.exec(line);
     if (decl) {
       scope.set(decl[1]!, parseInitializer(decl[2]!, inputs));

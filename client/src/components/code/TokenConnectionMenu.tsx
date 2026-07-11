@@ -141,7 +141,7 @@ function TokenConnectionMenuPanel({
     >
       <div className="border-b border-border px-3 py-2">
         <p className="font-mono text-xs font-semibold text-foreground">{menu.token}</p>
-        <p className="text-[10px] leading-none text-muted-foreground">{subtitle}</p>
+        <p className="text-2xs leading-none text-muted-foreground">{subtitle}</p>
       </div>
 
       {showSearch ? (
@@ -156,7 +156,7 @@ function TokenConnectionMenuPanel({
               placeholder="Filter connections…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-7 pl-8 text-xs"
+              className="h-[var(--control-height-sm)] pl-8 text-xs"
               autoFocus={menu.variant === "context"}
             />
           </div>
@@ -219,7 +219,7 @@ function TokenConnectionMenuPanel({
       </div>
 
       {menu.showRightClickHint ? (
-        <p className="border-t border-border px-3 py-2 text-center text-[10px] leading-snug text-muted-foreground">
+        <p className="border-t border-border px-3 py-2 text-center text-2xs leading-snug text-muted-foreground">
           Right-click for all connections · jump · open in editor
         </p>
       ) : null}

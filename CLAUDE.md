@@ -36,7 +36,7 @@ When behavior changes, update the owning spec in the same change.
   wrong node. Path coordinates are local to the overlay svg (client rect minus svg
   origin).
 - Theming: light is the `:root` default, dark is the `.dark` class; the toggle
-  (`ThemeToggle` in the graph header) persists to `localStorage["codegrapher:theme"]`.
+  (`ThemeToggle`, pinned to the file-explorer footer) persists to `localStorage["codegrapher:theme"]`.
   Colors used from JS (e.g. `TOKEN_EDGE_STROKE`) must be CSS variables applied via
   `style`, not hex literals or SVG presentation attributes.
 - Interactive hover: see `docs/specs/system/interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
@@ -56,8 +56,12 @@ When behavior changes, update the owning spec in the same change.
   agent can load one file and edit it precisely; split rather than grow. Also enforced:
   no `any`, `consistent-type-imports`, no unused imports/vars (all error, autofixable
   except `any`); return types + magic numbers are warn-only. Warnings don't fail the
-  build; there are currently ~10 files over 200 lines flagged for splitting.
-- No test suite yet; verification is manual via the browser preview (see below).
+  build; there are currently ~20 files over 200 lines flagged for splitting (the largest
+  are `GraphInteractionContext.tsx` and `GraphFlowInner.tsx` — split candidates).
+- Unit tests run under Vitest: `npm test` (root, proxies to `client`) or `npm run test:watch`
+  in `client/`. Coverage is focused on `client/src/lib/**` (trace/edge/layout/static-walk
+  logic); there are no component or server tests yet, so interaction and parser behavior
+  is still verified manually via the browser preview (see below).
 
 ## Driving the app headless (AI testing guide)
 

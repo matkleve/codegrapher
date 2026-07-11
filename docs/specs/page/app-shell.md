@@ -6,7 +6,7 @@ Root layout: resizable file explorer (left), graph canvas (right), theme toggle,
 
 ## What It Looks Like
 
-Split pane with folder path input, file tree, recent files. Right side is React Flow graph with header controls (Back, fit, theme). Empty graph shows hint text.
+Split pane with folder path input, file tree, recent files, and the theme toggle pinned to the explorer footer. Right side is React Flow graph with header controls (Last graph, Next graph, simulation toggle); a Fit-to-screen control lives in the canvas graph controls. Empty graph shows hint text.
 
 ## Where It Lives
 
@@ -22,7 +22,7 @@ Split pane with folder path input, file tree, recent files. Right side is React 
 | 2 | Clicks leaf file | Replace graph | `/api/file-graph` — see ego-graph-model |
 | 3 | Drags file to canvas | Merge graph | `/api/focus` |
 | 4 | Clicks Browse for folder | Native OS dialog | `POST /api/browse-folder` — **never headless** |
-| 5 | Toggles theme | Persist `localStorage["codegrapher:theme"]` | `ThemeToggle` |
+| 5 | Toggles theme (explorer footer) | Persist `localStorage["codegrapher:theme"]` | `ThemeToggle` |
 | 6 | Resizes sidebar divider | Update sidebar width; below warn width shows collapse hint; release below threshold collapses | `useResizableSidebar` |
 | 7 | Double-clicks anywhere in a member row on canvas | Reading focus — expand, scroll, persist `?focus=nodeId\|memberId` | `focusReadingMember` — see class-node |
 | 8 | Clicks reading-focus control (canvas) | Re-run reading layout for current `?focus=` selection | `GraphFlowInner` |
@@ -39,9 +39,10 @@ App
 │   └── FileExplorer
 │       ├── path input + Open
 │       ├── FileTree
-│       └── RecentFilesSection
+│       ├── RecentFilesSection
+│       └── ThemeToggle (footer)
 └── GraphFlowInner
-    ├── header (Back, ThemeToggle, …)
+    ├── header (Last graph, Next graph, SimulationPanelToggle)
     └── GraphFlowCanvas
 ```
 

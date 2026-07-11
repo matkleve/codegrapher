@@ -91,7 +91,7 @@
 }
 
 .member-row-header {
-  background-color: transparent;
+  background-color: transparent !important;
   border-left-color: transparent;
   border-right-color: transparent;
   border-top-color: transparent;
@@ -156,11 +156,11 @@
 }
 
 .member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
-  background-color: color-mix(in oklch, var(--foreground) 3%, var(--background));
+  background-color: var(--surface-neutral-strong);
 }
 
 .dark .member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {
-  background-color: color-mix(in oklch, var(--foreground) 5%, var(--card));
+  background-color: var(--surface-neutral-strong);
 }
 
 .member-signature-tags {
@@ -179,8 +179,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
   color: var(--muted-foreground);
   line-height: 0;
 }
@@ -302,7 +302,7 @@
 .member-sig-sep {
   width: 1px;
   align-self: stretch;
-  min-height: 0.75rem;
+  min-height: var(--icon-size-xs);
   margin-inline: 0.125rem;
   background: color-mix(in oklch, var(--border) 85%, transparent);
 }

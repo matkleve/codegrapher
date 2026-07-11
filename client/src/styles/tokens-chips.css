@@ -1,6 +1,8 @@
 /**
  * Indexed token chips — resting ink, chip-on, load connector shell.
  * Proto mapping: .tok / .member-head .name → .token-chip / .token-def-label
+ *
+ * Ink only on text — chip-on uses semantic fill wash, never inset ring.
  */
 
 .token-chip,
@@ -20,8 +22,7 @@
   transition:
     background-color var(--motion-chip-surface) var(--ease),
     box-shadow var(--motion-chip-surface) var(--ease),
-    color var(--motion-chip-color) var(--ease),
-    filter var(--motion-chip-surface) var(--ease);
+    color var(--motion-chip-color) var(--ease);
 }
 
 .token-def-label {
@@ -81,31 +82,27 @@
 
 .token-chip.token-chip-on,
 .token-def-label.token-chip-on {
-  filter: brightness(1.16) saturate(1.12);
+  box-shadow: none;
 }
 
 .token-chip.token-chip-on[data-token-kind="class"],
 .token-def-label.token-chip-on[data-token-kind="class"] {
-  background: color-mix(in oklch, var(--token-edge-class) 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-class) 76%, transparent);
+  background: color-mix(in oklch, var(--token-edge-class) 12%, var(--background));
 }
 
 .token-chip.token-chip-on[data-token-kind="function"],
 .token-def-label.token-chip-on[data-token-kind="function"] {
-  background: color-mix(in oklch, var(--token-edge-function) 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-function) 76%, transparent);
+  background: color-mix(in oklch, var(--token-edge-function) 12%, var(--background));
 }
 
 .token-chip.token-chip-on[data-token-kind="type"],
 .token-def-label.token-chip-on[data-token-kind="type"] {
-  background: color-mix(in oklch, var(--token-edge-type) 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-type) 76%, transparent);
+  background: color-mix(in oklch, var(--token-edge-type) 12%, var(--background));
 }
 
 .token-chip.token-chip-on[data-token-kind="variable"],
 .token-def-label.token-chip-on[data-token-kind="variable"] {
-  background: color-mix(in oklch, var(--token-edge-variable) 15%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--token-edge-variable) 76%, transparent);
+  background: color-mix(in oklch, var(--token-edge-variable) 12%, var(--background));
 }
 
 /* Pinned trace source — lock semantic ink while hovering a foreign preview */
@@ -138,15 +135,15 @@
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:hover,
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-source:focus-visible {
   color: inherit !important;
-  filter: none;
   background-image: none;
   -webkit-text-fill-color: currentColor;
 }
 
-/* Ephemeral hover preview endpoint — brand accent while pin stays semantic */
+/* Ephemeral hover preview endpoint — brand fill while pin stays semantic */
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview,
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview {
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklch, var(--brand) 68%, transparent);
+  background: var(--brand-surface);
+  box-shadow: none;
 }
 
 /* Shared connector chip shell (inline tokens + overlay Load) */
@@ -187,5 +184,5 @@
 }
 
 .connector-chip--load:hover {
-  background: var(--brand-surface);
+  background: var(--surface-neutral-strong);
 }

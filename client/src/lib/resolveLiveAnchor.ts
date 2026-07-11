@@ -145,6 +145,10 @@ function resolveHint(
   getNode: (id: string) => Node | undefined,
 ): AnchorRef {
   if (hint.role === "usage") {
+    if (hint.traceKey) {
+      const host = getByTraceKey(hint.traceKey);
+      if (host?.isConnected) return { type: "element", el: host };
+    }
     if (!hint.memberId || hint.lineNumber == null) {
       return { type: "handle", handle: previewMemberHandle(hint.memberId ?? "") };
     }
