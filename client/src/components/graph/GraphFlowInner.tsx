@@ -27,6 +27,7 @@ import { Container } from "@/components/ui/Container";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
+import { GraphPane } from "@/components/graph/GraphPane";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
@@ -66,6 +67,7 @@ import {
   writeFocusToUrl,
   type ReadingFocus,
 } from "@/lib/graphReadingFocus";
+import { clearElementRegistry } from "@/lib/elementRegistry";
 import { cn } from "@/lib/utils";
 import type { GraphData } from "@/types";
 
@@ -463,6 +465,7 @@ export function GraphFlowInner({
   useEffect(() => {
     urlFocusAppliedRef.current = false;
     setReadingFocus(null);
+    clearElementRegistry();
   }, [graphResetKey]);
 
   useEffect(() => {
@@ -549,45 +552,44 @@ export function GraphFlowInner({
         </p>
       )}
 
-      <div
-        ref={graphPaneRef}
-        className="graph-pane relative min-h-0 flex-1 bg-background"
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
-        }}
-        onDrop={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (dropLockRef.current || loading) return;
-          const filePath =
-            e.dataTransfer.getData(DRAG_FILEPATH_KEY) ||
-            e.dataTransfer.getData("text/plain");
-          if (!filePath.trim()) return;
-          dropLockRef.current = true;
-          try {
-            await Promise.resolve(onFileDrop(filePath));
-          } finally {
-            dropLockRef.current = false;
-          }
-        }}
-      >
-        <div
-          ref={gridRef}
-          aria-hidden
-          className={cn(
-            "graph-canvas-grid pointer-events-none absolute inset-0 z-0",
-            !showGrid && "hidden",
-          )}
-        />
-        <JumpTooltipProvider>
-          <GraphInteractionProvider
-            graphData={graphData}
-            nodes={nodes}
-            setNodes={setNodes}
-            onLoadFile={onLoadFile}
-            onFocusReadingMember={focusReadingMember}
+      <JumpTooltipProvider>
+        <GraphInteractionProvider
+          graphData={graphData}
+          nodes={nodes}
+          setNodes={setNodes}
+          onLoadFile={onLoadFile}
+          onFocusReadingMember={focusReadingMember}
+        >
+          <GraphPane
+            ref={graphPaneRef}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (dropLockRef.current || loading) return;
+              const filePath =
+                e.dataTransfer.getData(DRAG_FILEPATH_KEY) ||
+                e.dataTransfer.getData("text/plain");
+              if (!filePath.trim()) return;
+              dropLockRef.current = true;
+              try {
+                await Promise.resolve(onFileDrop(filePath));
+              } finally {
+                dropLockRef.current = false;
+              }
+            }}
           >
+            <div
+              ref={gridRef}
+              aria-hidden
+              className={cn(
+                "graph-canvas-grid pointer-events-none absolute inset-0 z-0",
+                !showGrid && "hidden",
+              )}
+            />
             <GraphFlowCanvas
               nodes={nodes}
               edges={edges}
@@ -598,20 +600,20 @@ export function GraphFlowInner({
               onPaneClick={onPaneClick}
               onMove={onMove}
             />
-          </GraphInteractionProvider>
-        </JumpTooltipProvider>
-        {!hasGraph && !loading && (
-          <div className="pointer-events-none absolute inset-0 z-[5] flex flex-col items-center justify-center gap-4 px-6 text-center">
-            <div className="grid size-14 place-items-center rounded-2xl border border-border bg-card/70 text-muted-foreground shadow-[var(--node-shadow)] backdrop-blur-sm">
-              <Waypoints className="size-6" strokeWidth={1.5} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <p className="text-base font-medium text-foreground">{emptyTitle}</p>
-              <p className="max-w-xs text-sm text-muted-foreground">{emptyHint}</p>
-            </div>
-          </div>
-        )}
-      </div>
+            {!hasGraph && !loading && (
+              <div className="pointer-events-none absolute inset-0 z-[5] flex flex-col items-center justify-center gap-4 px-6 text-center">
+                <div className="grid size-14 place-items-center rounded-2xl border border-border bg-card/70 text-muted-foreground shadow-[var(--node-shadow)] backdrop-blur-sm">
+                  <Waypoints className="size-6" strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-base font-medium text-foreground">{emptyTitle}</p>
+                  <p className="max-w-xs text-sm text-muted-foreground">{emptyHint}</p>
+                </div>
+              </div>
+            )}
+          </GraphPane>
+        </GraphInteractionProvider>
+      </JumpTooltipProvider>
 
       {contextMenu && (
         <div

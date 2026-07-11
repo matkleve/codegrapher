@@ -16,10 +16,19 @@ const SAME_ROW_THRESHOLD = 10;
 const MIN_ARC_BULGE = 22;
 const MAX_ARC_BULGE = 48;
 
+import {
+  getByHandle,
+  getByMemberId,
+  getByTraceKey,
+} from "@/lib/elementRegistry";
+
 function findTargetAnchor(
   handleId: string,
   side: "left" | "right",
 ): HTMLElement | null {
+  const fromRegistry = getByHandle(handleId, side);
+  if (fromRegistry) return fromRegistry;
+
   return document.querySelector<HTMLElement>(
     `[data-flow-anchor-target="${CSS.escape(handleId)}"][data-flow-anchor="${side}"]`,
   );

@@ -5,10 +5,11 @@ import { useJumpTooltip } from "@/context/JumpTooltipContext";
 import { useJumpClick } from "@/hooks/useJumpClick";
 import { jumpTargetForWireEnd, jumpTargetLabel } from "@/lib/resolveJumpTarget";
 import {
-  syncWireDom,
-  updateWireGeometry,
-  type WireElements,
-} from "@/lib/previewEdgeDom";
+  createWireEngine,
+  registerWireEngine,
+  type WireEngine,
+} from "@/lib/wireEngine";
+import { syncWireDom, type WireElements } from "@/lib/previewEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 
 export function PreviewEdgeOverlay() {
@@ -21,6 +22,7 @@ export function PreviewEdgeOverlay() {
   const wiresRef = useRef<Map<string, WireElements>>(new Map());
   const specsRef = useRef<PreviewEdgeSpec[]>([]);
   const prevEdgeCountRef = useRef(0);
+  const engineRef = useRef<WireEngine | null>(null);
 
   const bindHitHandlers = (wire: WireElements) => {
     const spec = wire.spec;
@@ -55,6 +57,22 @@ export function PreviewEdgeOverlay() {
   };
 
   useLayoutEffect(() => {
+    const engine = createWireEngine({
+      getSvg: () => svgRef.current,
+      getSpecs: () => specsRef.current,
+      getWires: () => wiresRef.current,
+      getNode,
+    });
+    engineRef.current = engine;
+    registerWireEngine(engine);
+    return () => {
+      engine.dispose();
+      engineRef.current = null;
+      registerWireEngine(null);
+    };
+  }, [getNode]);
+
+  useLayoutEffect(() => {
     specsRef.current = previewEdges;
     const svg = svgRef.current;
     if (!svg || previewEdges.length === 0) {
@@ -77,25 +95,8 @@ export function PreviewEdgeOverlay() {
     for (const wire of wiresRef.current.values()) {
       bindHitHandlers(wire);
     }
+    engineRef.current?.tickOnce();
   }, [previewEdges, isWarm]);
-
-  useLayoutEffect(() => {
-    if (previewEdges.length === 0) return;
-
-    let raf = 0;
-    const tick = () => {
-      const svg = svgRef.current;
-      if (!svg) return;
-      const box = svg.getBoundingClientRect();
-      for (const spec of specsRef.current) {
-        const wire = wiresRef.current.get(spec.id);
-        if (wire) updateWireGeometry(wire, box, getNode);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(raf);
-  }, [getNode, previewEdges.length]);
 
   return (
     <svg

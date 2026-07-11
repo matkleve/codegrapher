@@ -174,7 +174,7 @@ flowchart TD
   E --> H[Chip lit + socket on + wire on chip anchor]
 ```
 
-Implementation: `client/src/lib/computeTraceLit.ts`, `GraphInteractionContext` `revealRevision` dep.
+Implementation: `client/src/lib/computeTraceLit.ts` (lit sets), `client/src/lib/traceLitController.ts` (imperative DOM classes), `GraphInteractionContext` `revealRevision` dep.
 
 ---
 

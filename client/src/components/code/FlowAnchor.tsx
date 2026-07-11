@@ -1,5 +1,6 @@
-import { forwardRef } from "react";
+import { forwardRef, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useFlowAnchorRegistration } from "@/hooks/useElementRegistry";
 
 export type FlowAnchorSide = "left" | "right";
 
@@ -37,10 +38,17 @@ export const FlowAnchor = forwardRef<HTMLSpanElement, FlowAnchorProps>(
   ) {
     const { diameter, offset } = DOT[size];
     const show = visible && highlighted;
+    const innerRef = useRef<HTMLSpanElement>(null);
+    const setRef = (el: HTMLSpanElement | null) => {
+      innerRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    };
+    useFlowAnchorRegistration(innerRef);
 
     return (
       <span
-        ref={ref}
+        ref={setRef}
         aria-hidden
         data-flow-anchor={side}
         {...(targetId ? { "data-flow-anchor-target": targetId } : {})}

@@ -1,4 +1,10 @@
 import {
+  getByLocalDefId,
+  getByLocalTargetId,
+  getByMemberId,
+  getByTraceKey,
+} from "@/lib/elementRegistry";
+import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
@@ -111,6 +117,10 @@ function kindFromElement(el: HTMLElement): SemanticTokenKind | null {
 }
 
 function elementForTraceKey(key: string): HTMLElement | null {
+  const fromRegistry =
+    getByTraceKey(key) ?? getByLocalDefId(key) ?? getByLocalTargetId(key);
+  if (fromRegistry) return fromRegistry;
+
   return document.querySelector<HTMLElement>(
     `[data-trace-key="${CSS.escape(key)}"], [data-local-def-id="${CSS.escape(key)}"], [data-local-target-id="${CSS.escape(key)}"]`,
   );
@@ -152,6 +162,14 @@ function spreadLocalLinkChain(seedKey: string, state: LitCollections): void {
 }
 
 function flowNodeIdFromMemberId(memberId: string): string | null {
+  const fromRegistry = getByMemberId(memberId);
+  if (fromRegistry?.isConnected) {
+    return (
+      fromRegistry.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ??
+      null
+    );
+  }
+
   const el = document.querySelector<HTMLElement>(
     `[data-member-id="${CSS.escape(memberId)}"]`,
   );

@@ -56,6 +56,8 @@ import {
   type PinnedTrace,
 } from "@/lib/pinnedTraces";
 import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
+import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
+import { notifyWireTransform } from "@/lib/wireEngine";
 import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -106,12 +108,6 @@ type GraphInteractionContextValue = {
   showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
   clearTokenInfo: () => void;
   isTraceActive: boolean;
-  isTraceLit: (traceKey: string) => boolean;
-  isTraceEndpoint: (traceKey: string) => boolean;
-  isTraceMemberLit: (memberId: string) => boolean;
-  isTraceOwnerLit: (memberId: string) => boolean;
-  isTraceLineLit: (memberId: string) => boolean;
-  isTraceNodeLit: (flowNodeId: string) => boolean;
   findReferences: (token: string) => TokenReference[];
   findCallSites: (token: string) => CallSiteReference[];
   lookupProjectReferences: (token: string) => ReferenceEntry[];
@@ -642,12 +638,6 @@ export function GraphInteractionProvider({
     [usageSiteIndex],
   );
 
-  const [domRevision, setDomRevision] = useState(0);
-  useLayoutEffect(() => {
-    if (!traceTokenKey) return;
-    setDomRevision((r) => r + 1);
-  }, [revealRevision, traceTokenKey]);
-
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
     for (const edge of previewEdges) {
@@ -656,7 +646,7 @@ export function GraphInteractionProvider({
       if (to.type === "handle") map.set(to.handle, edge.kind);
     }
     return map;
-  }, [domRevision, getNode, previewEdges, revealRevision]);
+  }, [getNode, previewEdges, revealRevision]);
 
   const isHandleActive = useCallback(
     (handle: string) => activeHandleKinds.has(handle),
@@ -678,7 +668,7 @@ export function GraphInteractionProvider({
       );
     }
     return lit;
-  }, [domRevision, getNode, pinnedTraces, revealRevision]);
+  }, [getNode, pinnedTraces, revealRevision]);
 
   const hoverTraceLit = useMemo(() => {
     if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
@@ -687,7 +677,6 @@ export function GraphInteractionProvider({
     }
     return computeTraceLit(hoveredTokenKey, hoverPreviewEdges, getNode);
   }, [
-    domRevision,
     getNode,
     hoverPreviewEdges,
     hoveredTokenKey,
@@ -700,30 +689,22 @@ export function GraphInteractionProvider({
     [hoverTraceLit, pinnedTraceLit],
   );
 
-  const isTraceLit = useCallback(
-    (traceKey: string) => traceLit.litTokenKeys.has(traceKey),
-    [traceLit.litTokenKeys],
+  const pinnedTokenKeySet = useMemo(
+    () => new Set(pinnedKeys(pinnedTraces)),
+    [pinnedTraces],
   );
-  const isTraceEndpoint = useCallback(
-    (traceKey: string) => traceLit.endpointTokenKeys.has(traceKey),
-    [traceLit.endpointTokenKeys],
-  );
-  const isTraceMemberLit = useCallback(
-    (memberId: string) => traceLit.litMemberIds.has(memberId),
-    [traceLit.litMemberIds],
-  );
-  const isTraceOwnerLit = useCallback(
-    (memberId: string) => traceLit.ownerLitMemberIds.has(memberId),
-    [traceLit.ownerLitMemberIds],
-  );
-  const isTraceLineLit = useCallback(
-    (memberId: string) => traceLit.litLineMemberIds.has(memberId),
-    [traceLit.litLineMemberIds],
-  );
-  const isTraceNodeLit = useCallback(
-    (flowNodeId: string) => traceLit.litFlowNodeIds.has(flowNodeId),
-    [traceLit.litFlowNodeIds],
-  );
+
+  useLayoutEffect(() => {
+    if (!traceTokenKey) {
+      clearTraceLit();
+      return;
+    }
+    applyTraceLit(traceLit, {
+      pinnedTokenKeys: pinnedTokenKeySet,
+      hoveredTokenKey,
+    });
+    notifyWireTransform();
+  }, [hoveredTokenKey, pinnedTokenKeySet, traceLit, traceTokenKey]);
 
   const value = useMemo(
     () => ({
@@ -742,12 +723,6 @@ export function GraphInteractionProvider({
       showTokenInfo,
       clearTokenInfo,
       isTraceActive,
-      isTraceLit,
-      isTraceEndpoint,
-      isTraceMemberLit,
-      isTraceOwnerLit,
-      isTraceLineLit,
-      isTraceNodeLit,
       findReferences,
       findCallSites,
       lookupProjectReferences,
@@ -784,12 +759,6 @@ export function GraphInteractionProvider({
       showTokenInfo,
       clearTokenInfo,
       isTraceActive,
-      isTraceLit,
-      isTraceEndpoint,
-      isTraceMemberLit,
-      isTraceOwnerLit,
-      isTraceLineLit,
-      isTraceNodeLit,
       findReferences,
       findCallSites,
       lookupProjectReferences,

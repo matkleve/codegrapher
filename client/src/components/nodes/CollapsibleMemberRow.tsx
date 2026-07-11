@@ -6,7 +6,7 @@ import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { CodeLine } from "@/components/code/CodeLine";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
-import { useTraceAppearance } from "@/hooks/useTraceAppearance";
+import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import {
@@ -56,6 +56,9 @@ export function CollapsibleMemberRow({
   const lines = code.split("\n");
   const memberHandleId = previewMemberHandle(memberId);
   const labelRef = useRef<HTMLSpanElement>(null);
+  const memberRowRef = useRef<HTMLDivElement>(null);
+  useTraceHostRegistration(labelRef);
+  useTraceHostRegistration(memberRowRef);
   const { lookup, hasSymbol } = useIndex();
   const {
     isHandleActive,
@@ -84,11 +87,6 @@ export function CollapsibleMemberRow({
     () => (showSignatureTags ? parseMethodSignature(code) : null),
     [code, showSignatureTags],
   );
-
-  const { lit, on, memberLit, ownerLit, pinnedSource, hoverPreview } = useTraceAppearance({
-    traceKey: traceable ? defTokenKey : undefined,
-    memberId,
-  });
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
@@ -194,11 +192,10 @@ export function CollapsibleMemberRow({
 
   return (
     <div
+      ref={memberRowRef}
       data-member-id={memberId}
       className={cn(
         "member-row nodrag relative overflow-visible rounded-md bg-muted",
-        memberLit && "trace-member-lit",
-        ownerLit && "trace-member-owner-lit",
       )}
       onDoubleClick={onReadingFocusDoubleClick}
     >
@@ -250,10 +247,6 @@ export function CollapsibleMemberRow({
           className={cn(
             "member-row-label nodrag relative inline-block w-fit max-w-full text-[length:var(--font-size-sm)] font-medium text-foreground",
             traceable && "token-def-label cursor-pointer",
-            lit && "token-chip-lit",
-            on && "token-chip-on",
-            on && pinnedSource && "token-chip-source",
-            on && hoverPreview && "token-chip-hover-preview",
           )}
           style={
             traceable
@@ -268,9 +261,9 @@ export function CollapsibleMemberRow({
           {defKind ? (
             <FlowAnchor
               side="right"
-              colorClass={on ? TOKEN_ANCHOR[defKind] : "bg-border"}
-              visible={on}
-              highlighted={on}
+              colorClass="bg-border"
+              visible={false}
+              highlighted={false}
               size="chip"
             />
           ) : null}

@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useImperativeHandle } from "react";
 import { ConnectorChip } from "@/components/code/ConnectorChip";
-import { useTraceAppearance } from "@/hooks/useTraceAppearance";
+import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
     ref,
   ) {
     const chipRef = useRef<HTMLSpanElement>(null);
-    const { lit, on, pinnedSource, hoverPreview } = useTraceAppearance({ traceKey });
+    useTraceHostRegistration(chipRef);
 
     useImperativeHandle(ref, () => ({
       getRightAnchor: () =>
@@ -61,8 +61,6 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
     }));
 
     const isDefinition = symbolRole === "definition" || !!localDefId;
-    const showIncoming = on && !isDefinition;
-    const showOutgoing = on && isDefinition;
 
     return (
       <ConnectorChip
@@ -70,9 +68,9 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         variant="inline"
         kind={semantic}
         label={text}
-        active={on}
-        showLeftSocket={showIncoming}
-        showRightSocket={showOutgoing}
+        active={false}
+        showLeftSocket={false}
+        showRightSocket={false}
         shimmerDelay={shimmerDelay}
         role={role}
         tabIndex={tabIndex}
@@ -81,13 +79,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         data-trace-key={traceKey}
         {...(localDefId ? { "data-local-def-id": localDefId } : {})}
         {...(localTargetId ? { "data-local-target-id": localTargetId } : {})}
-        className={cn(
-          chipClassName,
-          interactive && "cursor-pointer",
-          lit && "token-chip-lit",
-          on && pinnedSource && "token-chip-source",
-          on && hoverPreview && "token-chip-hover-preview",
-        )}
+        className={cn(chipClassName, interactive && "cursor-pointer")}
         textClassName="token-chip-text"
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

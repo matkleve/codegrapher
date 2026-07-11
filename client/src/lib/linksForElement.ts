@@ -211,30 +211,6 @@ export function resolveDefinitionUsageSites(
     targets.push(site);
   };
 
-  for (const el of resolveUsageAnchors(token, definitionEl)) {
-    const traceKey = el.dataset.traceKey ?? "";
-    const parts = traceKey.split("::");
-    if (parts.length >= 4) {
-      add({
-        anchor: { type: "element", el },
-        liveTo: {
-          token,
-          flowNodeId: parts[0]!,
-          memberId: parts[1],
-          lineNumber: Number(parts[2]),
-          role: "usage",
-        },
-      });
-      continue;
-    }
-    add({
-      anchor: { type: "element", el },
-      liveTo: { token, flowNodeId: sourceFlowId, role: "usage" },
-    });
-  }
-
-  if (!graphData && !context?.lookupIndexedUsageSites) return targets;
-
   const indexed =
     context?.lookupIndexedUsageSites?.(token, sourceFlowId, sourceMemberId) ??
     [];
@@ -263,6 +239,28 @@ export function resolveDefinitionUsageSites(
       });
     }
     return targets;
+  }
+
+  for (const el of resolveUsageAnchors(token, definitionEl)) {
+    const traceKey = el.dataset.traceKey ?? "";
+    const parts = traceKey.split("::");
+    if (parts.length >= 4) {
+      add({
+        anchor: { type: "element", el },
+        liveTo: {
+          token,
+          flowNodeId: parts[0]!,
+          memberId: parts[1],
+          lineNumber: Number(parts[2]),
+          role: "usage",
+        },
+      });
+      continue;
+    }
+    add({
+      anchor: { type: "element", el },
+      liveTo: { token, flowNodeId: sourceFlowId, role: "usage" },
+    });
   }
 
   if (!graphData) return targets;

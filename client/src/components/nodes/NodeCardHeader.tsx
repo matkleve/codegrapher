@@ -6,10 +6,10 @@ import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
-import { useTraceAppearance } from "@/hooks/useTraceAppearance";
+import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
 import { buildDefinitionPreviewEdges, connectionCountsForHost, type DefinitionEdgeContext } from "@/lib/linksForElement";
-import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { symbolKindToSemantic } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ export function NodeCardHeader({
   onToggleCollapsed,
 }: NodeCardHeaderProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
+  useTraceHostRegistration(titleRef);
   const { lookup, hasSymbol } = useIndex();
   const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles, cancelHoverLeaveGrace } =
     useGraphInteraction();
@@ -45,9 +46,6 @@ export function NodeCardHeader({
   const defTokenKey = symbolName ? makeClassDefKey(symbolName) : "";
   const entry = symbolName ? lookup(symbolName) : null;
   const defKind = entry ? symbolKindToSemantic(entry.kind) : null;
-  const { lit, on, pinnedSource, hoverPreview } = useTraceAppearance({
-    traceKey: indexed ? defTokenKey : undefined,
-  });
 
   const defEdgeContext = useMemo<DefinitionEdgeContext>(
     () => ({
@@ -176,10 +174,6 @@ export function NodeCardHeader({
             className={cn(
               "node-card-title nodrag relative inline-block min-w-0 w-fit max-w-full text-[length:var(--font-size-sm)] font-bold",
               indexed && "token-def-label cursor-pointer",
-              lit && "token-chip-lit",
-              on && "token-chip-on",
-              on && pinnedSource && "token-chip-source",
-              on && hoverPreview && "token-chip-hover-preview",
             )}
             style={
               indexed
@@ -194,9 +188,9 @@ export function NodeCardHeader({
             {defKind ? (
               <FlowAnchor
                 side="right"
-                colorClass={on ? TOKEN_ANCHOR[defKind] : "bg-border"}
-                visible={on}
-                highlighted={on}
+                colorClass="bg-border"
+                visible={false}
+                highlighted={false}
                 size="chip"
               />
             ) : null}

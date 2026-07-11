@@ -8,8 +8,6 @@ import {
   type ReactNode,
 } from "react";
 
-const CTRL_PREVIEW_CLASS = "graph-ctrl-preview";
-
 type CtrlKeyContextValue = {
   isCtrlActive: boolean;
 };
@@ -18,19 +16,8 @@ const CtrlKeyContext = createContext<CtrlKeyContextValue>({
   isCtrlActive: false,
 });
 
-function setCtrlPreviewDom(active: boolean): void {
-  document.documentElement.classList.toggle(CTRL_PREVIEW_CLASS, active);
-}
-
 export function CtrlKeyProvider({ children }: { children: ReactNode }) {
   const [physicalHeld, setPhysicalHeld] = useState(false);
-
-  // Single source of truth for the DOM class — every state transition below
-  // goes through setPhysicalHeld, never setCtrlPreviewDom directly, so the
-  // two can't drift apart.
-  useEffect(() => {
-    setCtrlPreviewDom(physicalHeld);
-  }, [physicalHeld]);
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key !== "Control" || e.repeat) return;
@@ -67,7 +54,6 @@ export function CtrlKeyProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("pointermove", onPointerMove);
-      setCtrlPreviewDom(false);
     };
   }, [onBlur, onKeyDown, onKeyUp, onPointerMove]);
 

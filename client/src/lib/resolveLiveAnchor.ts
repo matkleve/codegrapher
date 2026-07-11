@@ -4,6 +4,7 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
@@ -30,6 +31,15 @@ export function findMemberDefLabel(
   memberId: string,
   token: string,
 ): HTMLElement | null {
+  const defKey = `${flowNodeId}::${memberId}`;
+  const fromMember = getByMemberId(memberId);
+  if (fromMember?.isConnected) {
+    const label = fromMember.querySelector<HTMLElement>(
+      `.member-row-label[data-symbol-name="${CSS.escape(token)}"]`,
+    );
+    if (label?.isConnected) return label;
+  }
+
   const pane = graphPane();
   if (!pane) return null;
   return pane.querySelector<HTMLElement>(
@@ -51,9 +61,12 @@ function usageChipInGraph(
   lineNumber: number,
   token: string,
 ): HTMLElement | null {
+  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, token);
+  const fromRegistry = getByTraceKey(traceKey);
+  if (fromRegistry) return fromRegistry;
+
   const pane = graphPane();
   if (!pane) return null;
-  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, token);
   return pane.querySelector<HTMLElement>(
     `[data-trace-key="${CSS.escape(traceKey)}"]`,
   );

@@ -46,7 +46,7 @@ sequenceDiagram
 
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
-| 1 | Trace active | rAF measure + draw | `previewEdges.length > 0` |
+| 1 | Trace active | Measure + draw on spec/transform change; rAF while viewport moves | `previewEdges.length > 0` |
 | 2 | Member expands | Live hint upgrades handle → chip | `liveTo` refine |
 | 3 | Hovers path hit-zone | Jump tooltip | `JumpTooltip` |
 | 4 | Clicks path hit-zone | `pinTrace` + scroll + flash | overlay handler |
@@ -55,13 +55,13 @@ sequenceDiagram
 ## Component Hierarchy
 
 ```text
-GraphFlowCanvas
-├── graph-ctrl-preview | graph-trace-active | graph-trace-pinned
-├── ReactFlow
-└── PreviewEdgeOverlay
-    ├── <svg> paths + arrow marker
-    ├── JumpTooltip
-    └── TokenContextBar (sibling, pinned)
+GraphFlowInner
+└── GraphPane (.graph-pane — graph-ctrl-preview | graph-trace-active | graph-trace-pinned)
+    ├── ReactFlow
+    └── PreviewEdgeOverlay
+        ├── <svg> paths + arrow marker
+        ├── JumpTooltip
+        └── TokenContextBar (sibling, pinned)
 ```
 
 ## Data

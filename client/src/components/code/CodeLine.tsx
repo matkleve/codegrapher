@@ -4,7 +4,6 @@ import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { commitTokenPin } from "@/hooks/useTokenTrace";
-import { useTraceAppearance } from "@/hooks/useTraceAppearance";
 import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
@@ -75,7 +74,6 @@ export function CodeLine({
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
   } = useGraphInteraction();
-  const { lineLit } = useTraceAppearance({ memberId });
 
   const edgeKeyRef = useRef<string | null>(null);
   const chipRefs = useRef<Map<string, TokenChipHandle>>(new Map());
@@ -341,10 +339,7 @@ export function CodeLine({
 
   return (
     <div
-      className={cn(
-        "code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed",
-        lineLit && "trace-lit-line",
-      )}
+      className="code-line relative overflow-visible whitespace-pre-wrap font-mono text-xs leading-relaxed"
     >
       <Handle
         type="target"

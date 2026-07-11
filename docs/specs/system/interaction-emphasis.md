@@ -12,7 +12,7 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 
 - **CSS:** `client/src/index.css` (`.hoverable`), `connectors.css` (trace modes)
 - **JS:** `client/src/lib/controlTokens.ts`
-- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned`
+- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned` on `.graph-pane` (graph mood root)
 
 ## Emphasis stack
 
@@ -46,7 +46,7 @@ flowchart TB
 | Member row (lit) | subtle function tint | `trace-member-lit` | per trace lit set |
 | FlowAnchor socket | hidden | soft glow `currentColor` | hidden unless endpoint |
 
-Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`connectors.css`, scoped via `html:not(.graph-ctrl-preview) .graph-trace-active`).
+Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`connectors.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
 
 ## Component Hierarchy
 

@@ -13,7 +13,7 @@ import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
 import { LoadConnector } from "@/components/graph/LoadConnector";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { cn } from "@/lib/utils";
+import { notifyWireTransform } from "@/lib/wireEngine";
 import { useCallback } from "react";
 
 type GraphFlowCanvasProps = {
@@ -37,23 +37,23 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo, isTraceActive, isWarm, pinnedTraces } =
-    useGraphInteraction();
+  const { clearTokenInfo } = useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
     clearTokenInfo();
     onPaneClick();
   }, [clearTokenInfo, onPaneClick]);
 
+  const handleMove: OnMove = useCallback(
+    (...args) => {
+      notifyWireTransform();
+      onMove(...args);
+    },
+    [onMove],
+  );
+
   return (
-    <div
-      className={cn(
-        "relative h-full w-full",
-        isTraceActive && "graph-trace-active",
-        isTraceActive && isWarm && "graph-trace-warm",
-        pinnedTraces.length > 0 && "graph-trace-pinned",
-      )}
-    >
+    <div className="relative h-full w-full">
       <ReactFlow
         className="graph-flow-container"
         nodes={nodes}
@@ -64,8 +64,8 @@ export function GraphFlowCanvas({
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onPaneClick={handlePaneClick}
-        onMove={onMove}
-        onMoveEnd={onMove}
+        onMove={handleMove}
+        onMoveEnd={handleMove}
         minZoom={0.2}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
