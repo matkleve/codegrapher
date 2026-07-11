@@ -108,7 +108,13 @@ export function getByTraceKey(key: string): HTMLElement | null {
   if (label) return label;
 
   const el = traceKeys.get(key);
-  return el?.isConnected ? el : null;
+  if (el?.isConnected) return el;
+
+  const pane = document.querySelector(".graph-pane");
+  const fromDom = pane?.querySelector<HTMLElement>(
+    `[data-trace-key="${CSS.escape(key)}"]`,
+  );
+  return fromDom?.isConnected ? fromDom : null;
 }
 
 export function getByLocalDefId(id: string): HTMLElement | null {

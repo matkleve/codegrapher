@@ -12,7 +12,7 @@ import {
   type MemberSymbolIndex,
 } from "@/lib/localSymbolLinks";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
+import { makeSigParamDefKey } from "@/lib/traceKeys";
 
 type MemberSignatureParamChipProps = {
   paramName: string;
@@ -41,7 +41,7 @@ export function MemberSignatureParamChip({
 
   const paramDef = paramDefForName(symbolIndex, memberId, paramName);
   const paramLine = paramDef?.lineNumber ?? 1;
-  const tokenKey = makeUsageTokenKey(flowNodeId, memberId, paramLine, paramName);
+  const tokenKey = makeSigParamDefKey(flowNodeId, memberId, paramName);
   const enabled = Boolean(paramDef);
 
   const firePreview = useCallback(() => {

@@ -14,6 +14,7 @@ export type LiveAnchorHint = {
   flowNodeId: string;
   memberId?: string;
   lineNumber?: number;
+  tokenIndex?: number;
   role: "usage" | "definition";
   /** Stable host id — signature tags and other non-line keys. */
   traceKey?: string;

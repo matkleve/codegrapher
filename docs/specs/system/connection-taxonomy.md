@@ -11,6 +11,7 @@ Four independent visual dimensions combine per kind, so kinds never have to figh
 | Dimension | Values |
 | --------- | ------ |
 | Line style | solid · dashed · dotted |
+| Path geometry | cubic (data/value) · orthogonal (control flow) |
 | Color family | per-relationship-category hue (distinct from today's per-token-kind hue) |
 | Arrowhead | none · open · filled · hollow triangle (UML is-a) · filled diamond (UML has-a) |
 | Opacity / thickness | full for 1-hop; stepped decay for 2+ hop (transitive) relationships |
@@ -59,12 +60,12 @@ Connection kinds
 
 ## Data
 
-| Kind | Direction | Persistent? | Reuses token-kind color? |
-| ---- | --------- | ----------- | ------------------------- |
-| Usage | definition → usage | No (hover-gated) | Yes |
-| Binding | initializer → binding | No (hover-gated) | Yes — always `variable` |
-| Control flow | condition/keyword → branch | No (hover-gated) | No — dedicated hue (`--edge-control-flow`) |
-| Transitive | definition → N-hop usage | No (hover-gated) | Yes, decayed opacity |
+| Kind | Direction | Persistent? | Path geometry | Reuses token-kind color? |
+| ---- | --------- | ----------- | ------------- | ------------------------- |
+| Usage | definition → usage | No (hover-gated) | cubic | Yes |
+| Binding | initializer → binding | No (hover-gated) | cubic | Yes — always `variable` |
+| Control flow | condition/keyword → branch | No (hover-gated) | **orthogonal** | No — dedicated hue (`--edge-control-flow`) |
+| Transitive | definition → N-hop usage | No (hover-gated) | cubic | Yes, decayed opacity |
 | Inheritance | child → parent | **Yes** | No — dedicated hue |
 | Implementation | class → interface | **Yes** | No — dedicated hue |
 | Composition/DI | owner → dependency | **Yes** | No — dedicated hue |

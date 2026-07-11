@@ -1,4 +1,5 @@
 import { tokenizeLine } from "@/lib/tokenizeLine";
+import { templateInterpolationSites } from "@/lib/templateInterpolations";
 
 /** Stable id for a member-row definition (property or method name in header). */
 export function memberDefId(memberId: string): string {
@@ -68,6 +69,82 @@ function extractParams(
   }
 
   return out;
+}
+
+/** `for (const x of items)` loop variable. */
+function extractForOfBinding(
+  line: string,
+  memberId: string,
+  lineNumber: number,
+): { name: string; tokenIndex: number; defId: string } | null {
+  const tokens = tokenizeLine(line).tokens;
+  let inFor = false;
+  let inParen = false;
+  let decl: "const" | "let" | null = null;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.kind === "whitespace") continue;
+    if (t.text === "for") {
+      inFor = true;
+      continue;
+    }
+    if (!inFor) continue;
+    if (t.text === "(") {
+      inParen = true;
+      continue;
+    }
+    if (!inParen) continue;
+    if (t.text === ")") break;
+    if (t.text === "const" || t.text === "let") {
+      decl = t.text;
+      continue;
+    }
+    if (decl && t.kind === "identifier") {
+      const defId = localDefId(memberId, t.text, lineNumber, "local");
+      return { name: t.text, tokenIndex: i, defId };
+    }
+    if (t.text === "of") break;
+  }
+  return null;
+}
+
+/** `const { a, b } = expr` destructuring bindings on one line. */
+function recordDestructuringBindings(
+  lineNumber: number,
+  tokens: readonly { kind: string; text: string }[],
+  memberId: string,
+  defSites: Map<string, string>,
+  scope: Map<string, string>,
+): void {
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.text !== "const" && t.text !== "let") continue;
+
+    let j = i + 1;
+    while (j < tokens.length && tokens[j]!.kind === "whitespace") j++;
+    if (tokens[j]?.text !== "{") continue;
+
+    let depth = 0;
+    for (; j < tokens.length; j++) {
+      const tok = tokens[j]!;
+      if (tok.text === "{") depth++;
+      if (tok.text === "}") {
+        depth--;
+        if (depth === 0) break;
+        continue;
+      }
+      if (depth !== 1 || tok.kind !== "identifier") continue;
+      const prev = tokens
+        .slice(0, j)
+        .reverse()
+        .find((x) => x.kind !== "whitespace")?.text;
+      if (prev !== "{" && prev !== ",") continue;
+      const defId = localDefId(memberId, tok.text, lineNumber, "local");
+      scope.set(tok.text, defId);
+      defSites.set(`${lineNumber}:${j}`, defId);
+    }
+  }
 }
 
 /** Param on a signature continuation line (`name: Type,`) without `(`. */
@@ -182,16 +259,23 @@ export function buildMemberSymbolIndex(
         scope.set(p.name, p.defId);
         defSites.set(`${lineNumber}:${p.tokenIndex}`, p.defId);
       }
-    } else if (lineNumber === 1 || /^\w+\s*\??\s*:/.test(trimmed)) {
+    } else if (lineIdx === 0 || /^\w+\s*\??\s*:/.test(trimmed)) {
       for (const p of extractContinuationParams(line, memberId, lineNumber)) {
         scope.set(p.name, p.defId);
         defSites.set(`${lineNumber}:${p.tokenIndex}`, p.defId);
       }
     }
 
+    const forOf = extractForOfBinding(line, memberId, lineNumber);
+    if (forOf) {
+      scope.set(forOf.name, forOf.defId);
+      defSites.set(`${lineNumber}:${forOf.tokenIndex}`, forOf.defId);
+    }
+
     const tokenized = tokenizeLine(line, inBlockComment);
     inBlockComment = tokenized.inBlockComment;
     const tokens = tokenized.tokens;
+    recordDestructuringBindings(lineNumber, tokens, memberId, defSites, scope);
     let prev: string | null = null;
 
     for (let i = 0; i < tokens.length; i++) {
@@ -219,6 +303,13 @@ export function buildMemberSymbolIndex(
       }
 
       prev = t.text;
+    }
+
+    for (const site of templateInterpolationSites(line)) {
+      const defId = scope.get(site.name);
+      if (defId) {
+        usageTargets.set(`${lineNumber}:${site.tokenIndex}`, defId);
+      }
     }
 
     recordLineBinding(

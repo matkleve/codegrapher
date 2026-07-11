@@ -120,4 +120,37 @@ describe("applyTraceLit", () => {
     clearTraceLit();
     pane.remove();
   });
+
+  it("lights the right socket when a usage chip is the wire source", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    pane.innerHTML = `
+      <span class="token-chip" data-trace-key="flow::usage::field" data-local-target-id="def-a" data-token-kind="variable">
+        <span data-flow-anchor="left" class="flow-anchor-off bg-border"></span>
+        <span data-flow-anchor="right" class="flow-anchor-off bg-border"></span>
+      </span>
+    `;
+    document.body.append(pane);
+
+    const usage = pane.querySelector<HTMLElement>(".token-chip")!;
+    registerTraceHost(usage);
+
+    applyTraceLit(
+      {
+        ...EMPTY_TRACE_LIT,
+        litTokenKeys: new Set(["flow::usage::field"]),
+        endpointTokenKeys: new Set(["flow::usage::field"]),
+        endpointPortSide: new Map([["flow::usage::field", "right"]]),
+      },
+      { pinnedTokenKeys: new Set(), hoveredTokenKey: null },
+    );
+
+    const left = usage.querySelector<HTMLElement>('[data-flow-anchor="left"]')!;
+    const right = usage.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
+    expect(left.classList.contains("flow-anchor-on")).toBe(false);
+    expect(right.classList.contains("flow-anchor-on")).toBe(true);
+
+    clearTraceLit();
+    pane.remove();
+  });
 });

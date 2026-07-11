@@ -3,10 +3,13 @@ import type { Node } from "@xyflow/react";
 
 const WORD_RE = /\b([A-Za-z_][A-Za-z0-9_]*)\b/g;
 
+import { tokenizeLine } from "@/lib/tokenizeLine";
+
 export type UsageSiteRecord = {
   flowNodeId: string;
   memberId: string;
   lineNumber: number;
+  tokenIndex: number;
   line: string;
 };
 
@@ -55,18 +58,18 @@ export function buildUsageSiteIndex(
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i] ?? "";
         const lineNumber = i + 1;
-        WORD_RE.lastIndex = 0;
-        let match: RegExpExecArray | null;
-        const seenOnLine = new Set<string>();
-        while ((match = WORD_RE.exec(line)) !== null) {
-          const token = match[1]!;
-          if (!indexedSymbols.has(token) || seenOnLine.has(token)) continue;
+        const tokens = tokenizeLine(line).tokens;
+        for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
+          const tok = tokens[tokenIndex]!;
+          if (tok.kind !== "identifier") continue;
+          const token = tok.text;
+          if (!indexedSymbols.has(token)) continue;
           if (isLexicalDefinitionLine(line, token)) continue;
-          seenOnLine.add(token);
           add(token, {
             flowNodeId,
             memberId,
             lineNumber,
+            tokenIndex,
             line,
           });
         }

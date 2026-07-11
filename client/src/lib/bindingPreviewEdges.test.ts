@@ -28,7 +28,7 @@ describe("buildBindingPreviewEdges", () => {
     pane.className = "graph-pane";
 
     const addrDefId = `local-def::${MEMBER}::local::addr::2`;
-    const initTraceKey = makeUsageTokenKey(FLOW, MEMBER, 2, "address");
+    const initTraceKey = makeUsageTokenKey(FLOW, MEMBER, 2, addressIndex, "address");
 
     const initChip = document.createElement("span");
     initChip.dataset.traceKey = initTraceKey;

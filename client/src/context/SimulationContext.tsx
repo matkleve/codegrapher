@@ -94,7 +94,7 @@ function buildSession(
 }
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
-  const { setPulseEdges, endHoverPreview, graphData } = useGraphInteraction();
+  const { setPulseEdges, graphData } = useGraphInteraction();
   const { symbols } = useIndex();
   const { getNode } = useReactFlow();
   const [simActive, setSimActive] = useState(false);
@@ -164,10 +164,6 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("graph-sim-active", simActive);
     return () => document.documentElement.classList.remove("graph-sim-active");
   }, [simActive]);
-
-  useEffect(() => {
-    if (simActive) endHoverPreview();
-  }, [simActive, endHoverPreview]);
 
   const exitSimulation = useCallback(() => {
     setPlaying(false);

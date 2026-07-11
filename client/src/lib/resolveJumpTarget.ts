@@ -62,7 +62,7 @@ export function resolveJumpTargetElement(
     }
   }
 
-  if (hint?.role === "usage" && hint.memberId && hint.lineNumber != null) {
+  if (hint?.role === "usage" && hint.memberId && hint.lineNumber != null && hint.tokenIndex != null) {
     const classData = getClassNodeData(hint.flowNodeId, getNode);
     if (classData) {
       const resolved = resolveUsageSiteAnchor(
@@ -70,6 +70,7 @@ export function resolveJumpTargetElement(
         classData,
         hint.memberId,
         hint.lineNumber,
+        hint.tokenIndex,
         hint.token,
       );
       if (resolved.type === "element" && resolved.el.isConnected) return resolved.el;
@@ -98,8 +99,14 @@ export function traceKeyForJumpTarget(
   if (hint.role === "definition" && hint.memberId) {
     return makeMemberDefKey(hint.flowNodeId, hint.memberId);
   }
-  if (hint.role === "usage" && hint.memberId && hint.lineNumber != null) {
-    return makeUsageTokenKey(hint.flowNodeId, hint.memberId, hint.lineNumber, hint.token);
+  if (hint.role === "usage" && hint.memberId && hint.lineNumber != null && hint.tokenIndex != null) {
+    return makeUsageTokenKey(
+      hint.flowNodeId,
+      hint.memberId,
+      hint.lineNumber,
+      hint.tokenIndex,
+      hint.token,
+    );
   }
   return null;
 }

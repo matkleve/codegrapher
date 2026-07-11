@@ -4,6 +4,7 @@ import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
+import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
 import { normalizeFilePath } from "@/lib/graphFiles";
 import { graphNodeForEntry } from "@/lib/semanticLookup";
 import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
@@ -147,10 +148,11 @@ function buildMemberGraphTarget(
 
   const memberItem = members.find((m) => m.id === memberId);
   const codeLines = memberItem?.code.split("\n") ?? [];
-  let relativeLine = 1;
+  const startLine = memberItem?.startLine ?? 1;
+  let fileLine = startLine;
   for (let i = 0; i < codeLines.length; i++) {
     if (new RegExp(`\\b${escapeRegExp(token)}\\b`).test(codeLines[i]!)) {
-      relativeLine = i + 1;
+      fileLine = fileLineFromSnippetIndex(startLine, i);
       break;
     }
   }
@@ -159,11 +161,11 @@ function buildMemberGraphTarget(
     mode: "graph",
     level: "line",
     flowNodeId,
-    targetHandle: previewLineHandle(memberId, relativeLine),
-    label: String(relativeLine),
+    targetHandle: previewLineHandle(memberId, fileLine),
+    label: String(fileLine),
     kind,
     memberId,
-    lineNumber: relativeLine,
+    lineNumber: fileLine,
   };
 }
 

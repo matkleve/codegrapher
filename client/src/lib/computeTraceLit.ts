@@ -24,6 +24,8 @@ import {
 export type TraceLitState = {
   litTokenKeys: ReadonlySet<string>;
   endpointTokenKeys: ReadonlySet<string>;
+  /** Wire port side per endpoint trace key (`from` → right, `to` → left). */
+  endpointPortSide: ReadonlyMap<string, "left" | "right">;
   litMemberIds: ReadonlySet<string>;
   ownerLitMemberIds: ReadonlySet<string>;
   litLineMemberIds: ReadonlySet<string>;
@@ -34,6 +36,7 @@ export type TraceLitState = {
 export const EMPTY_TRACE_LIT: TraceLitState = {
   litTokenKeys: new Set(),
   endpointTokenKeys: new Set(),
+  endpointPortSide: new Map(),
   litMemberIds: new Set(),
   ownerLitMemberIds: new Set(),
   litLineMemberIds: new Set(),
@@ -46,6 +49,7 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
   return {
     litTokenKeys: new Set([...a.litTokenKeys, ...b.litTokenKeys]),
     endpointTokenKeys: new Set([...a.endpointTokenKeys, ...b.endpointTokenKeys]),
+    endpointPortSide: new Map([...a.endpointPortSide, ...b.endpointPortSide]),
     litMemberIds: new Set([...a.litMemberIds, ...b.litMemberIds]),
     ownerLitMemberIds: new Set([...a.ownerLitMemberIds, ...b.ownerLitMemberIds]),
     litLineMemberIds: new Set([...a.litLineMemberIds, ...b.litLineMemberIds]),
@@ -57,12 +61,22 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
 type LitCollections = {
   litTokenKeys: Set<string>;
   endpointTokenKeys: Set<string>;
+  endpointPortSide: Map<string, "left" | "right">;
   litMemberIds: Set<string>;
   ownerLitMemberIds: Set<string>;
   litLineMemberIds: Set<string>;
   litFlowNodeIds: Set<string>;
   tokenKinds: Map<string, SemanticTokenKind>;
 };
+
+function markEndpointPort(
+  el: HTMLElement,
+  side: "left" | "right",
+  state: LitCollections,
+): void {
+  const traceKey = traceKeyFromElement(el);
+  if (traceKey) state.endpointPortSide.set(traceKey, side);
+}
 
 type ResolvedEndpoint = {
   traceKey: string;
@@ -283,12 +297,18 @@ function absorbLiveHint(
   activeTokenKey: string,
 ): void {
   if (hint.role === "usage" && hint.memberId && hint.lineNumber != null) {
-    const usageKey = makeUsageTokenKey(
-      hint.flowNodeId,
-      hint.memberId,
-      hint.lineNumber,
-      hint.token,
-    );
+    const usageKey =
+      hint.traceKey ??
+      (hint.tokenIndex != null
+        ? makeUsageTokenKey(
+            hint.flowNodeId,
+            hint.memberId,
+            hint.lineNumber,
+            hint.tokenIndex,
+            hint.token,
+          )
+        : null);
+    if (!usageKey) return;
     state.litTokenKeys.add(usageKey);
     if (asEndpoint) state.endpointTokenKeys.add(usageKey);
     state.litLineMemberIds.add(hint.memberId);
@@ -343,6 +363,7 @@ export function computeTraceLit(
   const state: LitCollections = {
     litTokenKeys: new Set<string>([activeTokenKey]),
     endpointTokenKeys: new Set<string>([activeTokenKey]),
+    endpointPortSide: new Map<string, "left" | "right">(),
     litMemberIds: new Set<string>(),
     ownerLitMemberIds: new Set<string>(),
     litLineMemberIds: new Set<string>(),
@@ -364,9 +385,11 @@ export function computeTraceLit(
       : { from: edge.from, to: edge.to };
 
     if (fromRef.type === "element" && fromRef.el.isConnected) {
+      markEndpointPort(fromRef.el, "right", state);
       absorbToken(fromRef.el, state, true);
     }
     if (toRef.type === "element" && toRef.el.isConnected) {
+      markEndpointPort(toRef.el, "left", state);
       absorbToken(toRef.el, state, true);
       const usageMember = memberIdFromElement(toRef.el);
       if (usageMember) state.litLineMemberIds.add(usageMember);
@@ -416,6 +439,7 @@ export function computeTraceLit(
   return {
     litTokenKeys: state.litTokenKeys,
     endpointTokenKeys: state.endpointTokenKeys,
+    endpointPortSide: state.endpointPortSide,
     litMemberIds: state.litMemberIds,
     ownerLitMemberIds: state.ownerLitMemberIds,
     litLineMemberIds: state.litLineMemberIds,

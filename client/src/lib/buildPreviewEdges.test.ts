@@ -11,7 +11,7 @@ import type { GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
 describe("buildLoadPreviewEdge", () => {
   it("stores every unloadable candidate on the load spec", () => {
     const usageEl = document.createElement("span");
-    usageEl.dataset.traceKey = "flow-a::member::1::charge";
+    usageEl.dataset.traceKey = "flow-a::member::3::0::token";
 
     const edge = buildLoadPreviewEdge(
       "edge-1",
@@ -49,7 +49,7 @@ describe("buildLoadPreviewEdge", () => {
 
   it("builds usage edge with live anchors", () => {
     const usageEl = document.createElement("span");
-    usageEl.dataset.traceKey = "flow-a::member::3::token";
+    usageEl.dataset.traceKey = "flow-a::member::3::0::token";
 
     const target: GraphVisibleTarget = {
       mode: "graph",

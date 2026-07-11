@@ -4,8 +4,12 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
+import {
+  getByMemberId,
+  getByTraceKey,
+} from "@/lib/elementRegistry";
+import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
+import { makeUsageTokenKey, parseControlFlowKey, parseUsageTokenKey } from "@/lib/traceKeys";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
 
@@ -54,13 +58,43 @@ export function findClassDefLabel(flowNodeId: string, token: string): HTMLElemen
   );
 }
 
-function usageChipInGraph(
+function cfHostForTraceKey(traceKey: string): HTMLElement | null {
+  if (!traceKey.includes("::cf-")) return null;
+  const fromRegistry = getByTraceKey(traceKey);
+  if (fromRegistry?.isConnected) return fromRegistry;
+  const pane = graphPane();
+  if (!pane) return null;
+  return pane.querySelector<HTMLElement>(
+    `[data-trace-key="${CSS.escape(traceKey)}"]`,
+  );
+}
+
+function firstUsageChipOnLine(
   flowNodeId: string,
   memberId: string,
   lineNumber: number,
   token: string,
 ): HTMLElement | null {
-  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, token);
+  const pane = graphPane();
+  if (!pane) return null;
+  const prefix = `${flowNodeId}::${memberId}::${lineNumber}::`;
+  for (const el of pane.querySelectorAll<HTMLElement>("[data-trace-key]")) {
+    const key = el.dataset.traceKey;
+    if (!key?.startsWith(prefix)) continue;
+    const parsed = parseUsageTokenKey(key);
+    if (parsed?.token === token) return el;
+  }
+  return null;
+}
+
+function usageChipInGraph(
+  flowNodeId: string,
+  memberId: string,
+  lineNumber: number,
+  tokenIndex: number,
+  token: string,
+): HTMLElement | null {
+  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, tokenIndex, token);
   const fromRegistry = getByTraceKey(traceKey);
   if (fromRegistry) return fromRegistry;
 
@@ -77,9 +111,10 @@ export function resolveUsageSiteAnchor(
   classData: ClassNodeData,
   memberId: string,
   lineNumber: number,
+  tokenIndex: number,
   token: string,
 ): AnchorRef {
-  const chip = usageChipInGraph(flowNodeId, memberId, lineNumber, token);
+  const chip = usageChipInGraph(flowNodeId, memberId, lineNumber, tokenIndex, token);
   if (chip?.isConnected) return { type: "element", el: chip };
 
   const bodyExpanded = !(classData.collapsed ?? false);
@@ -122,11 +157,12 @@ export function resolveDefinitionSiteAnchor(
     const method = classData.methods.find((m) => m.id === memberId);
     const tokenRe = new RegExp(`\\b${escapeRegExp(token)}\\b`);
     if (method) {
+      const startLine = method.startLine ?? 1;
       const lines = method.code.split("\n");
       for (let i = 0; i < lines.length; i++) {
         if (!tokenRe.test(lines[i] ?? "")) continue;
-        const lineNumber = i + 1;
-        const chip = usageChipInGraph(flowNodeId, memberId, lineNumber, token);
+        const lineNumber = fileLineFromSnippetIndex(startLine, i);
+        const chip = firstUsageChipOnLine(flowNodeId, memberId, lineNumber, token);
         if (chip?.isConnected) return { type: "element", el: chip };
         return { type: "handle", handle: previewLineHandle(memberId, lineNumber) };
       }
@@ -144,12 +180,28 @@ function resolveHint(
   hint: LiveAnchorHint,
   getNode: (id: string) => Node | undefined,
 ): AnchorRef {
-  if (hint.role === "usage") {
-    if (hint.traceKey) {
-      const host = getByTraceKey(hint.traceKey);
-      if (host?.isConnected) return { type: "element", el: host };
+  if (hint.traceKey) {
+    const cfHost = cfHostForTraceKey(hint.traceKey);
+    if (cfHost) return { type: "element", el: cfHost };
+
+    const fromTraceKey = getByTraceKey(hint.traceKey);
+    if (fromTraceKey?.isConnected) return { type: "element", el: fromTraceKey };
+
+    const parsedUsage = parseUsageTokenKey(hint.traceKey);
+    if (parsedUsage) {
+      const usageChip = usageChipInGraph(
+        parsedUsage.flowNodeId,
+        parsedUsage.memberId,
+        parsedUsage.lineNumber,
+        parsedUsage.tokenIndex,
+        parsedUsage.token,
+      );
+      if (usageChip?.isConnected) return { type: "element", el: usageChip };
     }
-    if (!hint.memberId || hint.lineNumber == null) {
+  }
+
+  if (hint.role === "usage") {
+    if (!hint.memberId || hint.lineNumber == null || hint.tokenIndex == null) {
       return { type: "handle", handle: previewMemberHandle(hint.memberId ?? "") };
     }
     const classData = getClassNodeData(hint.flowNodeId, getNode);
@@ -161,8 +213,20 @@ function resolveHint(
       classData,
       hint.memberId,
       hint.lineNumber,
+      hint.tokenIndex,
       hint.token,
     );
+  }
+
+  if (hint.memberId && hint.lineNumber != null && hint.tokenIndex != null) {
+    const chip = usageChipInGraph(
+      hint.flowNodeId,
+      hint.memberId,
+      hint.lineNumber,
+      hint.tokenIndex,
+      hint.token,
+    );
+    if (chip?.isConnected) return { type: "element", el: chip };
   }
 
   return resolveDefinitionSiteAnchor(

@@ -120,12 +120,15 @@ function primaryHostInDefGroup(
   return null;
 }
 
-function applyEndpointSockets(host: HTMLElement, isSibling: boolean): HTMLElement[] {
+function applyEndpointSockets(
+  host: HTMLElement,
+  portSide: "left" | "right",
+  isSibling: boolean,
+): HTMLElement[] {
   const restore: HTMLElement[] = [];
-  const isDef = isDefinitionHost(host);
   const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
   const right = host.querySelector<HTMLElement>('[data-flow-anchor="right"]');
-  const socket = isDef ? right : left;
+  const socket = portSide === "right" ? right : left;
   if (!socket) return restore;
 
   restore.push(socket);
@@ -140,11 +143,24 @@ function applyEndpointSockets(host: HTMLElement, isSibling: boolean): HTMLElemen
   return restore;
 }
 
+function portSideForHost(
+  host: HTMLElement,
+  endpointPortSide: ReadonlyMap<string, "left" | "right">,
+): "left" | "right" {
+  const traceKey = traceKeyFromHost(host);
+  if (traceKey) {
+    const fromEdge = endpointPortSide.get(traceKey);
+    if (fromEdge) return fromEdge;
+  }
+  return isDefinitionHost(host) ? "right" : "left";
+}
+
 function applyEndpointHost(
   host: HTMLElement,
   isSibling: boolean,
   pinnedTokenKeys: ReadonlySet<string>,
   hoveredTokenKey: string | null,
+  endpointPortSide: ReadonlyMap<string, "left" | "right">,
 ): void {
   const traceKey = traceKeyFromHost(host);
   const extra: string[] = [CHIP_ON];
@@ -155,7 +171,11 @@ function applyEndpointHost(
   } else if (traceKey && hoveredTokenKey === traceKey) {
     extra.push(CHIP_HOVER_PREVIEW);
   }
-  const restoreAnchors = applyEndpointSockets(host, isSibling);
+  const restoreAnchors = applyEndpointSockets(
+    host,
+    portSideForHost(host, endpointPortSide),
+    isSibling,
+  );
   track(host, extra, restoreAnchors);
 }
 
@@ -198,14 +218,26 @@ export function applyTraceLit(
       const primary = primaryHostInDefGroup(group, hoveredTokenKey, pinnedTokenKeys);
       for (const litHost of group) {
         const isSibling = primary !== null ? litHost !== primary : true;
-        applyEndpointHost(litHost, isSibling, pinnedTokenKeys, hoveredTokenKey);
+        applyEndpointHost(
+          litHost,
+          isSibling,
+          pinnedTokenKeys,
+          hoveredTokenKey,
+          state.endpointPortSide,
+        );
       }
       continue;
     }
 
     if (processedHosts.has(host)) continue;
     processedHosts.add(host);
-    applyEndpointHost(host, false, pinnedTokenKeys, hoveredTokenKey);
+    applyEndpointHost(
+      host,
+      false,
+      pinnedTokenKeys,
+      hoveredTokenKey,
+      state.endpointPortSide,
+    );
   }
 
   for (const memberId of state.litMemberIds) {

@@ -20,6 +20,8 @@ export type ControlFlowGroup = {
 export type ControlFlowAnchor = {
   groupId: string;
   role: ControlFlowRole;
+  /** Populated for `condition` anchors — the identifier token text. */
+  token?: string;
 };
 
 export type ControlFlowIndex = {
@@ -76,7 +78,7 @@ function recordConditionAnchors(
       continue;
     }
     if (started && paren >= 1 && t.kind === "identifier") {
-      anchors.set(`${lineNumber}:${i}`, { groupId, role: "condition" });
+      anchors.set(`${lineNumber}:${i}`, { groupId, role: "condition", token: t.text });
     }
   }
 }

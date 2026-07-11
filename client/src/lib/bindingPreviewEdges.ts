@@ -33,6 +33,7 @@ export function buildBindingPreviewEdges(
       flowNodeId,
       memberId,
       site.lineNumber,
+      site.tokenIndex,
       site.token,
     );
     fromEl = pane.querySelector<HTMLElement>(

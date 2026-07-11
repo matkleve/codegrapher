@@ -1,5 +1,5 @@
-import { buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
-import { allLocalDefElements } from "@/lib/localDefElements";
+import { buildElementPreviewEdge, liveToFromUsageEl } from "@/lib/buildPreviewEdges";
+import { findLocalDefElement } from "@/lib/localDefElements";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { graphPane } from "@/lib/graphPaneDom";
@@ -9,8 +9,8 @@ export type LinkPair = { from: HTMLElement; to: HTMLElement };
 /**
  * Prototype `linksFor(host)` — def→usage pairs anchored on DOM elements.
  * Usage hosts carry `data-local-target-id`; definition hosts carry `data-local-def-id`.
- * Header chip + in-body param line share one `localDefId` — fan out from every def
- * sibling so both views wire to the same usages (same lexical binding).
+ * Header chip + in-body param share one `localDefId` — lit highlights every sibling,
+ * but wires use a single anchor per pair (hovered def, or preferred in-body def).
  */
 export function linksForElement(host: HTMLElement): LinkPair[] {
   const pane = graphPane();
@@ -18,24 +18,21 @@ export function linksForElement(host: HTMLElement): LinkPair[] {
 
   const targetId = host.dataset.localTargetId;
   if (targetId) {
-    const defs = allLocalDefElements(pane, targetId);
-    if (defs.length === 0) return [];
-    return defs.map((from) => ({ from, to: host }));
+    const from = findLocalDefElement(pane, targetId);
+    if (!from) return [];
+    return [{ from, to: host }];
   }
 
   const defId = host.dataset.localDefId;
   if (!defId) return [];
 
-  const defs = allLocalDefElements(pane, defId);
   const usages = pane.querySelectorAll<HTMLElement>(
     `[data-local-target-id="${CSS.escape(defId)}"]`,
   );
   const pairs: LinkPair[] = [];
-  for (const from of defs) {
-    for (const to of usages) {
-      if (to === from) continue;
-      pairs.push({ from, to });
-    }
+  for (const to of usages) {
+    if (to === host) continue;
+    pairs.push({ from: host, to });
   }
   return pairs;
 }

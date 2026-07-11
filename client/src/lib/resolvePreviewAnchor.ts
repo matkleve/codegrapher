@@ -14,13 +14,14 @@ export type EndpointRole = "from" | "to";
 const ANCHOR_OUTSET = 9;
 const CHIP_DOT_DIAMETER = 4;
 const CHIP_DOT_GAP = 4;
-const SAME_ROW_THRESHOLD = 10;
-const MIN_ARC_BULGE = 32;
-const MAX_ARC_BULGE = 72;
-const ARC_BULGE_DX_FACTOR = 0.2;
-const LANE_STAGGER = 12;
+const MIN_ARC_BULGE = 28;
+const MAX_ARC_BULGE = 64;
+const ARC_BULGE_DX_FACTOR = 0.14;
+const LANE_SPREAD = 14;
 /** Horizontal run-out from a port before the curve bends (px). */
-const MIN_HORIZONTAL_EXIT = 30;
+const MIN_HORIZONTAL_EXIT = 28;
+/** Shallow if vertical span is less than this fraction of horizontal run. */
+const SHALLOW_SLOPE_RATIO = 0.55;
 
 import { getByHandle } from "@/lib/elementRegistry";
 
@@ -74,7 +75,7 @@ function syntheticChipAnchor(
   };
 }
 
-/** Detour distance so a wire clears token chip labels between endpoints. */
+/** Bend distance for shallow wires — scales with chip height between endpoints. */
 export function chipClearance(
   fromEl: HTMLElement | null,
   toEl: HTMLElement | null,
@@ -84,7 +85,7 @@ export function chipClearance(
     if (!el?.isConnected) continue;
     maxH = Math.max(maxH, el.getBoundingClientRect().height);
   }
-  return Math.ceil(maxH / 2) + 16;
+  return Math.ceil(maxH / 2) + 12;
 }
 
 export function laneOffsetFromEdgeId(edgeId: string): number {
@@ -98,84 +99,7 @@ export function laneOffsetFromEdgeId(edgeId: string): number {
 export type CubicPathOptions = {
   clearance?: number;
   lane?: number;
-  obstacles?: ChipRect[];
 };
-
-export type ChipRect = {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-};
-
-/** Endpoint chip boxes in overlay-local coordinates (for skirt routing). */
-export function chipObstaclesInSvg(
-  fromEl: HTMLElement | null,
-  toEl: HTMLElement | null,
-  svgBox: DOMRect,
-): ChipRect[] {
-  const pad = 3;
-  const rects: ChipRect[] = [];
-  for (const el of [fromEl, toEl]) {
-    if (!el?.isConnected) continue;
-    const r = el.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) continue;
-    rects.push({
-      left: r.left - svgBox.left - pad,
-      top: r.top - svgBox.top - pad,
-      right: r.right - svgBox.left + pad,
-      bottom: r.bottom - svgBox.top + pad,
-    });
-  }
-  return rects;
-}
-
-function segmentIntersectsRect(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  rect: ChipRect,
-): boolean {
-  const minX = Math.min(x1, x2);
-  const maxX = Math.max(x1, x2);
-  const minY = Math.min(y1, y2);
-  const maxY = Math.max(y1, y2);
-  if (maxX < rect.left || minX > rect.right || maxY < rect.top || minY > rect.bottom) {
-    return false;
-  }
-  for (const t of [0.2, 0.4, 0.5, 0.6, 0.8]) {
-    const x = x1 + (x2 - x1) * t;
-    const y = y1 + (y2 - y1) * t;
-    if (
-      x >= rect.left &&
-      x <= rect.right &&
-      y >= rect.top &&
-      y <= rect.bottom
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function skirtDepth(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  obstacles: ChipRect[],
-  clearance: number,
-  sameRow: boolean,
-  lane: number,
-): number {
-  let depth = sameRow ? clearance * 0.85 : 0;
-  for (const rect of obstacles) {
-    if (!segmentIntersectsRect(x1, y1, x2, y2, rect)) continue;
-    depth = Math.max(depth, rect.bottom - Math.max(y1, y2) + 8);
-  }
-  return depth + Math.abs(lane) * 8;
-}
 
 function elementAnchor(
   el: HTMLElement,
@@ -236,9 +160,8 @@ export function resolvePreviewAnchor(
 }
 
 /**
- * Cubic wire — exits `from` on the right (outgoing), enters `to` on the left
- * (incoming). Shallow spans extend stubs left/right, then skirt below any chip
- * box the chord would cross so the stroke does not cover token labels.
+ * Cubic wire — exit/enter horizontally from each port, with shallow spans
+ * bending below the label row so the stroke does not cover token text.
  */
 export function cubicPath(
   x1: number,
@@ -255,44 +178,30 @@ export function cubicPath(
   const absDy = Math.abs(dy);
   const clearance = opts?.clearance ?? MIN_ARC_BULGE;
   const lane = opts?.lane ?? 0;
-  const laneShift = lane * LANE_STAGGER;
-  const obstacles = opts?.obstacles ?? [];
-  const sameRow = absDy < SAME_ROW_THRESHOLD;
-  const shallowSlope = sameRow || absDy < absDx * 0.5;
+  const shallow = absDx > 8 && absDy < absDx * SHALLOW_SLOPE_RATIO;
 
-  let c1x: number;
-  let c2x: number;
+  const spread = Math.max(
+    clearance,
+    MIN_ARC_BULGE,
+    Math.min(MAX_ARC_BULGE, absDx * ARC_BULGE_DX_FACTOR),
+  );
+  const exitSpread = fromSide === "right" ? spread : -spread;
+  const entrySpread = toSide === "left" ? -spread : spread;
+  const laneX = lane * 10;
+  const laneY = lane * LANE_SPREAD;
+
+  const c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT) + exitSpread + laneX;
+  const c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT) + entrySpread - laneX;
+
   let c1y = y1;
   let c2y = y2;
 
-  if (shallowSlope) {
-    const bulge =
-      Math.max(
-        clearance,
-        MIN_ARC_BULGE,
-        Math.min(MAX_ARC_BULGE, absDx * ARC_BULGE_DX_FACTOR),
-      ) + Math.abs(laneShift);
-    const exitBulge = fromSide === "right" ? bulge : -bulge;
-    const entryBulge = toSide === "left" ? -bulge : bulge;
-    if (sameRow && absDx < MIN_HORIZONTAL_EXIT * 2) {
-      c1x = x1 + dx * 0.45 + exitBulge * 0.35;
-      c2x = x2 - dx * 0.45 + entryBulge * 0.35;
-    } else {
-      c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT) + exitBulge;
-      c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT) + entryBulge;
-    }
-    const skirt = skirtDepth(x1, y1, x2, y2, obstacles, clearance, sameRow, lane);
-    if (skirt > 0) {
-      c1y = y1 + skirt;
-      c2y = y2 + skirt;
-    }
-  } else {
-    c1x = exitControlX(x1, fromSide, MIN_HORIZONTAL_EXIT);
-    c2x = entryControlX(x2, toSide, MIN_HORIZONTAL_EXIT);
-    const skirt = skirtDepth(x1, y1, x2, y2, obstacles, clearance, false, lane);
-    if (skirt > 0) {
-      c2y = y2 + skirt;
-    }
+  if (shallow) {
+    const bendY = Math.max(y1, y2) + clearance + Math.abs(laneY);
+    c1y = bendY;
+    c2y = bendY;
+  } else if (absDy < absDx) {
+    c2y = Math.max(y1, y2) + clearance * 0.55 + Math.abs(laneY);
   }
 
   return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;

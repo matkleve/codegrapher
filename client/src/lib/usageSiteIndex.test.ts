@@ -44,7 +44,7 @@ describe("buildUsageSiteIndex", () => {
     expect(index.has("run")).toBe(false);
   });
 
-  it("dedupes the same token on one line", () => {
+  it("indexes every occurrence of the same token on one line", () => {
     const nodes = [
       classNode("flow-1", [
         {
@@ -56,7 +56,7 @@ describe("buildUsageSiteIndex", () => {
       ]),
     ];
     const index = buildUsageSiteIndex(nodes, new Set(["charge"]));
-    expect(index.get("charge")).toHaveLength(1);
+    expect(index.get("charge")).toHaveLength(2);
   });
 
   it("scans property bodies", () => {

@@ -9,6 +9,7 @@ import {
 import { toFlowId } from "@/lib/graphIds";
 import { makeMemberDefKey, makeUsageTokenKey } from "@/lib/traceKeys";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
+import { tokenizeLine } from "@/lib/tokenizeLine";
 import type { GraphData, SymbolEntry } from "@/types";
 
 const FILE = "/svc.ts";
@@ -38,11 +39,12 @@ function mountUsageChip(
   pane: HTMLElement,
   memberId: string,
   lineNumber: number,
+  tokenIndex: number,
   token: string,
 ): HTMLElement {
   const el = document.createElement("span");
   el.className = "token-chip";
-  el.dataset.traceKey = makeUsageTokenKey(FLOW, memberId, lineNumber, token);
+  el.dataset.traceKey = makeUsageTokenKey(FLOW, memberId, lineNumber, tokenIndex, token);
   el.textContent = token;
   pane.append(el);
   return el;
@@ -61,7 +63,9 @@ describe("buildTransitiveEdges", () => {
 
     const label = pane.querySelector<HTMLElement>(".member-row-label")!;
     registerTraceHost(label);
-    mountUsageChip(pane, "m-sub", 2, "field");
+    const fieldLine = "  return field;";
+    const fieldIndex = tokenizeLine(fieldLine).tokens.findIndex((t) => t.text === "field");
+    mountUsageChip(pane, "m-sub", 2, fieldIndex, "field");
 
     const index = new Map<string, UsageSiteRecord[]>([
       [
@@ -71,6 +75,8 @@ describe("buildTransitiveEdges", () => {
             flowNodeId: FLOW,
             memberId: "m-score",
             lineNumber: 2,
+            tokenIndex: tokenizeLine("  const value = extractFieldValue(result, field);").tokens
+              .findIndex((t) => t.text === "extractFieldValue"),
             line: "  const value = extractFieldValue(result, field);",
           },
         ],
@@ -82,7 +88,8 @@ describe("buildTransitiveEdges", () => {
             flowNodeId: FLOW,
             memberId: "m-sub",
             lineNumber: 2,
-            line: "  return field;",
+            tokenIndex: fieldIndex,
+            line: fieldLine,
           },
         ],
       ],
@@ -145,7 +152,13 @@ describe("buildTransitiveEdges", () => {
     pane.className = "graph-pane";
     document.body.append(pane);
 
-    mountUsageChip(pane, OTHER_ID, 3, "process");
+    const runLine = "return process(charge(id));";
+    const runTokens = tokenizeLine(runLine).tokens;
+    const chargeIndex = runTokens.findIndex((t) => t.text === "charge");
+    const otherLine = "  return process(x);";
+    const processIndex = tokenizeLine(otherLine).tokens.findIndex((t) => t.text === "process");
+
+    mountUsageChip(pane, OTHER_ID, 3, processIndex, "process");
 
     const index = new Map<string, UsageSiteRecord[]>([
       [
@@ -155,7 +168,8 @@ describe("buildTransitiveEdges", () => {
             flowNodeId: FLOW,
             memberId: RUN_ID,
             lineNumber: 1,
-            line: "return process(charge(id));",
+            tokenIndex: chargeIndex,
+            line: runLine,
           },
         ],
       ],
@@ -166,7 +180,8 @@ describe("buildTransitiveEdges", () => {
             flowNodeId: FLOW,
             memberId: OTHER_ID,
             lineNumber: 3,
-            line: "  return process(x);",
+            tokenIndex: processIndex,
+            line: otherLine,
           },
         ],
       ],
@@ -236,7 +251,7 @@ describe("buildTransitiveEdges", () => {
     ]);
 
     const edges = buildTransitiveEdges(
-      makeUsageTokenKey(FLOW, CHARGE_ID, 1, "charge"),
+      makeUsageTokenKey(FLOW, CHARGE_ID, 1, chargeIndex, "charge"),
       graphData,
       index,
       2,

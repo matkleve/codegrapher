@@ -1,6 +1,9 @@
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { buildLocalPreviewEdges } from "@/lib/localDefLinks";
-import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
+import {
+  paramDefForName,
+  type MemberSymbolIndex,
+} from "@/lib/localSymbolLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
@@ -48,7 +51,10 @@ export function buildParamDefPreviewEdges(
   for (const [key, targetId] of symbolIndex.usageTargets) {
     if (targetId !== paramDefId) continue;
     const lineNumber = Number(key.split(":")[0]);
-    if (!Number.isFinite(lineNumber) || lineNumber < 1) continue;
+    const tokenIndex = Number(key.split(":")[1]);
+    if (!Number.isFinite(lineNumber) || !Number.isFinite(tokenIndex) || lineNumber < 1) {
+      continue;
+    }
 
     edges.push({
       id: `param-def-${paramName}-${idx}`,
@@ -58,14 +64,24 @@ export function buildParamDefPreviewEdges(
         classData,
         memberId,
         lineNumber,
+        tokenIndex,
         paramName,
       ),
       kind,
+      liveFrom: {
+        token: paramName,
+        flowNodeId,
+        memberId,
+        lineNumber: paramDefForName(symbolIndex, memberId, paramName)?.lineNumber,
+        role: "definition",
+        traceKey: definitionEl.dataset.traceKey,
+      },
       liveTo: {
         token: paramName,
         flowNodeId,
         memberId,
         lineNumber,
+        tokenIndex,
         role: "usage",
       },
     });

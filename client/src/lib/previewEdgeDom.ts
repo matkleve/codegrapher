@@ -1,12 +1,10 @@
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
-  chipClearance,
-  chipObstaclesInSvg,
-  cubicPath,
   laneOffsetFromEdgeId,
   resolvePreviewAnchor,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
+import { previewWirePath } from "@/lib/wirePaths";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
 import type { Node } from "@xyflow/react";
@@ -116,18 +114,19 @@ export function updateWireGeometry(
     }
 
     wire.group.style.display = "";
-    const clearance = chipClearance(fromPt.el, toPt.el);
-    const obstacles = chipObstaclesInSvg(fromPt.el, toPt.el, svgBox);
     const lane = laneOffsetFromEdgeId(spec.id);
-    const pathD = cubicPath(
-      fromPt.x,
-      fromPt.y,
-      toPt.x,
-      toPt.y,
-      fromPt.side,
-      toPt.side,
-      { clearance, lane, obstacles },
-    );
+    const pathD = previewWirePath({
+      connectionKind: spec.connectionKind,
+      x1: fromPt.x,
+      y1: fromPt.y,
+      x2: toPt.x,
+      y2: toPt.y,
+      fromSide: fromPt.side,
+      toSide: toPt.side,
+      fromEl: fromPt.el,
+      toEl: toPt.el,
+      lane,
+    });
     wire.path.setAttribute("d", pathD);
     wire.glow.setAttribute("d", pathD);
     const fullHit = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
@@ -151,17 +150,18 @@ export function updateWireGeometry(
   }
 
   wire.group.style.display = "";
-  const clearance = chipClearance(fromPt.el, toPt.el);
-  const obstacles = chipObstaclesInSvg(fromPt.el, toPt.el, svgBox);
-  const pathD = cubicPath(
-    fromPt.x,
-    fromPt.y,
-    toPt.x,
-    toPt.y,
-    fromPt.side,
-    toPt.side,
-    { clearance, lane: laneOffsetFromEdgeId(spec.id), obstacles },
-  );
+  const pathD = previewWirePath({
+    connectionKind: spec.connectionKind,
+    x1: fromPt.x,
+    y1: fromPt.y,
+    x2: toPt.x,
+    y2: toPt.y,
+    fromSide: fromPt.side,
+    toSide: toPt.side,
+    fromEl: fromPt.el,
+    toEl: toPt.el,
+    lane: laneOffsetFromEdgeId(spec.id),
+  });
   wire.path.setAttribute("d", pathD);
   wire.glow.setAttribute("d", pathD);
   wire.hitFrom.setAttribute(

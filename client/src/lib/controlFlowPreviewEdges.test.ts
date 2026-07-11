@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
 import { buildControlFlowIndex, controlFlowAnchorFor } from "@/lib/controlFlowLinks";
-import { makeControlFlowKey } from "@/lib/traceKeys";
+import { makeControlFlowKey, makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 
 const MEMBER = "method:file:Svc.extractFieldValue";
@@ -29,6 +29,28 @@ function mountAnchor(
 ): HTMLElement {
   const el = document.createElement("span");
   el.dataset.traceKey = makeControlFlowKey(flowNodeId, memberId, lineNumber, tokenIndex);
+  pane.append(el);
+  return el;
+}
+
+function mountUsageChip(
+  pane: HTMLElement,
+  flowNodeId: string,
+  memberId: string,
+  lineNumber: number,
+  tokenIndex: number,
+  token: string,
+): HTMLElement {
+  const el = document.createElement("span");
+  el.className = "token-chip";
+  el.dataset.traceKey = makeUsageTokenKey(
+    flowNodeId,
+    memberId,
+    lineNumber,
+    tokenIndex,
+    token,
+  );
+  el.dataset.symbolName = token;
   pane.append(el);
   return el;
 }
@@ -79,7 +101,7 @@ describe("buildControlFlowPreviewEdges", () => {
     pane.className = "graph-pane";
     document.body.append(pane);
 
-    const conditionEl = mountAnchor(pane, FLOW, MEMBER, switchLineNo, fieldIdx);
+    const conditionEl = mountUsageChip(pane, FLOW, MEMBER, switchLineNo, fieldIdx, "field");
     const anchor = controlFlowAnchorFor(index, switchLineNo, fieldIdx)!;
     const groupData = index.groups.get(anchor.groupId)!;
     for (const b of groupData.branches) {
@@ -96,15 +118,18 @@ describe("buildControlFlowPreviewEdges", () => {
       "edge",
     );
     expect(edges).toHaveLength(2);
+    expect(edges.every((e) => (e.from as { el: HTMLElement }).el === conditionEl)).toBe(
+      true,
+    );
 
     pane.remove();
   });
 
-  it("wires a single edge back to the head when hovering one branch", () => {
+  it("wires a single edge back to the condition when hovering one branch", () => {
     const index = buildControlFlowIndex(MEMBER, CODE);
     const lines = CODE.split("\n");
     const switchLineNo = lines.findIndex((l) => l.includes("switch (field)")) + 1;
-    const switchTokenIdx = idxOf(lines[switchLineNo - 1]!, "switch");
+    const fieldIdx = idxOf(lines[switchLineNo - 1]!, "field");
     const cityLineNo = lines.findIndex((l) => l.includes("case 'city'")) + 1;
     const caseTokenIdx = idxOf(lines[cityLineNo - 1]!, "case");
 
@@ -112,7 +137,7 @@ describe("buildControlFlowPreviewEdges", () => {
     pane.className = "graph-pane";
     document.body.append(pane);
 
-    const headEl = mountAnchor(pane, FLOW, MEMBER, switchLineNo, switchTokenIdx);
+    const conditionEl = mountUsageChip(pane, FLOW, MEMBER, switchLineNo, fieldIdx, "field");
     const branchEl = mountAnchor(pane, FLOW, MEMBER, cityLineNo, caseTokenIdx);
 
     const edges = buildControlFlowPreviewEdges(
@@ -126,7 +151,7 @@ describe("buildControlFlowPreviewEdges", () => {
     );
 
     expect(edges).toHaveLength(1);
-    expect((edges[0]!.from as { el: HTMLElement }).el).toBe(headEl);
+    expect((edges[0]!.from as { el: HTMLElement }).el).toBe(conditionEl);
     expect((edges[0]!.to as { el: HTMLElement }).el).toBe(branchEl);
 
     pane.remove();

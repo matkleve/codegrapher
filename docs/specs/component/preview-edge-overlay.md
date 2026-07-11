@@ -6,7 +6,7 @@ DOM/SVG layer above the React Flow canvas that measures anchor elements each fra
 
 ## What It Looks Like
 
-Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). Shallow spans extend stubs left/right and skirt below endpoint chip boxes so wires do not cover token text. No React Flow `<Edge>` elements for preview.
+Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). **Data** preview kinds (usage, binding, transitive, load) use cubic wires that skirt below labels; **control-flow** (`branch`) uses orthogonal (right-angle) wires. No React Flow `<Edge>` elements for preview.
 
 ## Where It Lives
 
@@ -21,7 +21,7 @@ flowchart LR
   subgraph rAF [Each animation frame]
     A[previewEdges from context] --> R[refinePreviewEdge live hints]
     R --> M[resolvePreviewAnchor DOM rects]
-    M --> P[cubicPath + glow path]
+    M --> P[previewWirePath cubic or orthogonal]
     P --> SVG[setState rendered edges]
   end
   Expand[Member expand / node resize] --> rAF
@@ -38,7 +38,7 @@ sequenceDiagram
   loop requestAnimationFrame
     O->>L: refinePreviewEdge per spec
     L->>D: query chips / FlowAnchor handles
-    O->>O: cubicPath + hit segments
+    O->>O: previewWirePath + hit segments
   end
 ```
 

@@ -4,6 +4,8 @@ import { escapeRegExp } from "@/lib/graphPaneDom";
 import type { AnchorRef, LiveAnchorHint } from "@/lib/previewEdgeTypes";
 import { resolveUsageAnchors } from "@/lib/resolveUsageAnchors";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
+import { parseUsageTokenKey } from "@/lib/traceKeys";
+import { tokenizeLine } from "@/lib/tokenizeLine";
 import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { GraphData, ReferenceEntry } from "@/types";
 import type { Node } from "@xyflow/react";
@@ -45,7 +47,16 @@ export function isDefinitionSignatureLine(
 }
 
 function usageSiteKey(site: UsageSite): string {
-  return `${site.liveTo.flowNodeId}::${site.liveTo.memberId}::${site.liveTo.lineNumber}`;
+  return `${site.liveTo.flowNodeId}::${site.liveTo.memberId}::${site.liveTo.lineNumber}::${site.liveTo.tokenIndex ?? ""}`;
+}
+
+function tokenIndexesOnLine(line: string, token: string): number[] {
+  const indices: number[] = [];
+  const tokens = tokenizeLine(line).tokens;
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i]?.text === token) indices.push(i);
+  }
+  return indices;
 }
 
 /** Def → usage anchors: visible chips first, then graph handles for collapsed sites. */
@@ -82,38 +93,44 @@ export function resolveDefinitionUsageSites(
       if (!rfNode || rfNode.type !== "class") continue;
       const classData = rfNode.data as ClassNodeData;
 
-      add({
-        anchor: resolveUsageSiteAnchor(
-          rec.flowNodeId,
-          classData,
-          rec.memberId,
-          rec.lineNumber,
-          token,
-        ),
-        liveTo: {
-          token,
-          flowNodeId: rec.flowNodeId,
-          memberId: rec.memberId,
-          lineNumber: rec.lineNumber,
-          role: "usage",
-        },
-      });
+      for (const tokenIndex of tokenIndexesOnLine(rec.line, token)) {
+        add({
+          anchor: resolveUsageSiteAnchor(
+            rec.flowNodeId,
+            classData,
+            rec.memberId,
+            rec.lineNumber,
+            tokenIndex,
+            token,
+          ),
+          liveTo: {
+            token,
+            flowNodeId: rec.flowNodeId,
+            memberId: rec.memberId,
+            lineNumber: rec.lineNumber,
+            tokenIndex,
+            role: "usage",
+          },
+        });
+      }
     }
     return targets;
   }
 
   for (const el of resolveUsageAnchors(token, definitionEl)) {
     const traceKey = el.dataset.traceKey ?? "";
-    const parts = traceKey.split("::");
-    if (parts.length >= 4) {
+    const parsed = parseUsageTokenKey(traceKey);
+    if (parsed) {
       add({
         anchor: { type: "element", el },
         liveTo: {
           token,
-          flowNodeId: parts[0]!,
-          memberId: parts[1],
-          lineNumber: Number(parts[2]),
+          flowNodeId: parsed.flowNodeId,
+          memberId: parsed.memberId,
+          lineNumber: parsed.lineNumber,
+          tokenIndex: parsed.tokenIndex,
           role: "usage",
+          traceKey,
         },
       });
       continue;
@@ -161,22 +178,26 @@ export function resolveDefinitionUsageSites(
           continue;
         }
 
-        add({
-          anchor: resolveUsageSiteAnchor(
-            flowNodeId,
-            classData,
-            method.id,
-            lineNumber,
-            token,
-          ),
-          liveTo: {
-            token,
-            flowNodeId,
-            memberId: method.id,
-            lineNumber,
-            role: "usage",
-          },
-        });
+        for (const tokenIndex of tokenIndexesOnLine(line, token)) {
+          add({
+            anchor: resolveUsageSiteAnchor(
+              flowNodeId,
+              classData,
+              method.id,
+              lineNumber,
+              tokenIndex,
+              token,
+            ),
+            liveTo: {
+              token,
+              flowNodeId,
+              memberId: method.id,
+              lineNumber,
+              tokenIndex,
+              role: "usage",
+            },
+          });
+        }
       }
     }
   }

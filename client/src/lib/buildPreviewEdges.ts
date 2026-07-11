@@ -2,6 +2,8 @@ import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { ExternalReferenceCard, GraphVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
+import { parseUsageTokenKey } from "@/lib/traceKeys";
+
 export function liveToFromUsageEl(
   token: string,
   usageEl: HTMLElement,
@@ -18,14 +20,23 @@ export function liveToFromUsageEl(
       traceKey,
     };
   }
-  if (parts.length < 4) return undefined;
-  const lineNumber = Number(parts[2]);
-  if (!Number.isFinite(lineNumber)) return undefined;
+  if (parts.length === 4 && parts[2] === "sig-param") {
+    return {
+      token: parts[3] ?? token,
+      flowNodeId: parts[0]!,
+      memberId: parts[1]!,
+      role: "usage",
+      traceKey,
+    };
+  }
+  const parsed = parseUsageTokenKey(traceKey);
+  if (!parsed) return undefined;
   return {
-    token,
-    flowNodeId: parts[0]!,
-    memberId: parts[1],
-    lineNumber,
+    token: parsed.token,
+    flowNodeId: parsed.flowNodeId,
+    memberId: parsed.memberId,
+    lineNumber: parsed.lineNumber,
+    tokenIndex: parsed.tokenIndex,
     role: "usage",
     traceKey,
   };
@@ -37,17 +48,23 @@ export function liveFromDefEl(
   flowNodeId?: string,
   memberId?: string,
 ): LiveAnchorHint {
+  const traceKey = definitionEl.dataset.traceKey;
+  const fromKey = traceKey ? liveToFromUsageEl(token, definitionEl) : undefined;
   return {
     token,
     flowNodeId:
       flowNodeId ??
+      fromKey?.flowNodeId ??
       definitionEl.closest<HTMLElement>("[data-flow-node-id]")?.dataset.flowNodeId ??
       "",
     memberId:
       memberId ??
+      fromKey?.memberId ??
       definitionEl.closest<HTMLElement>("[data-member-id]")?.dataset.memberId,
+    lineNumber: fromKey?.lineNumber,
+    tokenIndex: fromKey?.tokenIndex,
     role: "definition",
-    traceKey: definitionEl.dataset.traceKey,
+    traceKey,
   };
 }
 

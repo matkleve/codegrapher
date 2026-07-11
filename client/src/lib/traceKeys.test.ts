@@ -9,7 +9,7 @@ describe("memberIdFromUsageKey", () => {
   });
 
   it("parses body usage keys with line numbers", () => {
-    expect(memberIdFromUsageKey("flow-a::member-1::12::field")).toBe("member-1");
+    expect(memberIdFromUsageKey("flow-a::member-1::12::3::field")).toBe("member-1");
   });
 
   it("rejects malformed keys", () => {

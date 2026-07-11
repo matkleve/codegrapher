@@ -14,18 +14,18 @@ import {
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useSimulationOptional } from "@/context/SimulationContext";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
+import { registerTraceHost, unregisterElement } from "@/lib/elementRegistry";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import {
   isDefinitionSignatureLine,
   type DefinitionEdgeContext,
 } from "@/lib/resolveDefinitionUsageSites";
-import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
+import { assembleCodeLinePreviewEdges } from "@/lib/codeLineTraceEdges";
 import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
 import { buildLocalPreviewEdges, resolveLocalTargetId } from "@/lib/localDefLinks";
 import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   defSiteFor,
-  bindingDefForInit,
   type MemberSymbolIndex,
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
@@ -48,10 +48,15 @@ import {
   makeMemberDefKey,
   makeUsageTokenKey,
   makeImportSpecKey,
+  tokenIndexFromChipKey,
 } from "@/lib/traceKeys";
 import { isImportModuleSpecifier } from "@/lib/importModuleTokens";
 import { resolveClientImportPath, normalizeLoadFilePath } from "@/lib/resolveImportPath";
 import { blockCommentOpenAtLineStart, tokenizeLine } from "@/lib/tokenizeLine";
+import {
+  parseTemplateLiteralParts,
+  templateInterpolationSites,
+} from "@/lib/templateInterpolations";
 import { cn } from "@/lib/utils";
 
 type CodeLineProps = {
@@ -217,141 +222,48 @@ export function CodeLine({
 
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
-      const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+      const tokenIndex = tokenIndexFromChipKey(chipKey);
+      const tokenKey = makeUsageTokenKey(
+        sourceFlowId,
+        memberId,
+        lineNumber,
+        tokenIndex,
+        name,
+      );
       const edgeKey = ctrlPreviewEdgeId(sourceFlowId, `${memberId}::${lineNumber}::${name}`);
       edgeKeyRef.current = edgeKey;
 
       const entry = lookup(name);
       const kind = semanticFromChipElement(chipEl, entry);
-      const tokenIndex = Number(chipKey.split("-").pop());
       const cascadeEdges = buildReceiverCascadeEdges(tokenIndex, edgeKey);
-      const bindingEdges =
-        Number.isFinite(tokenIndex)
-          ? buildBindingPreviewEdges(
-              chipEl,
-              symbolIndex,
-              sourceFlowId,
-              memberId,
-              lineNumber,
-              tokenIndex,
-              edgeKey,
-            )
-          : [];
 
-      if (
-        bindingEdges.length > 0 &&
-        Number.isFinite(tokenIndex) &&
-        bindingDefForInit(symbolIndex, lineNumber, tokenIndex)
-      ) {
-        clearConnectionMenu();
-        beginTrace(tokenKey, [...bindingEdges, ...cascadeEdges]);
-        return;
-      }
-
-      const controlFlowEdges = Number.isFinite(tokenIndex)
-        ? buildControlFlowPreviewEdges(
-            chipEl,
-            controlFlowIndex,
-            sourceFlowId,
-            memberId,
-            lineNumber,
-            tokenIndex,
-            edgeKey,
-          )
-        : [];
-
-      const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
-      if (
-        localEdges.length > 0 ||
-        bindingEdges.length > 0 ||
-        controlFlowEdges.length > 0 ||
-        cascadeEdges.length > 0
-      ) {
-        clearConnectionMenu();
-        beginTrace(tokenKey, [...localEdges, ...bindingEdges, ...controlFlowEdges, ...cascadeEdges]);
-        return;
-      }
-
-      if (!hasSymbol(name) && !entry) {
-        const resolvedWithoutIndex = resolveVisibleTarget(
-          name,
-          symbols,
-          graphData,
-          getNode,
-          sourceFlowId,
-        );
-        if (!resolvedWithoutIndex) {
-          clearConnectionMenu();
-          beginTrace(tokenKey, cascadeEdges);
-          return;
-        }
-        if (resolvedWithoutIndex.mode === "external") {
-          if (resolvedWithoutIndex.cards.length === 0) {
-            clearConnectionMenu();
-            beginTrace(tokenKey, cascadeEdges);
-            return;
-          }
-          beginTrace(tokenKey, [
-            buildLoadPreviewEdge(
-              edgeKey,
-              resolvedWithoutIndex.cards,
-              chipEl,
-              name,
-              kind,
-            ),
-            ...cascadeEdges,
-          ]);
-          showUsageLoadMenu(name, kind, chipEl, resolvedWithoutIndex.cards);
-          return;
-        }
-        clearConnectionMenu();
-        beginTrace(tokenKey, [
-          buildUsagePreviewEdge(edgeKey, resolvedWithoutIndex, chipEl, name),
-          ...cascadeEdges,
-        ]);
-        return;
-      }
-
-      if (!hasSymbol(name) || !entry) {
-        clearConnectionMenu();
-        beginTrace(tokenKey, cascadeEdges);
-        return;
-      }
-
-      const resolved = resolveVisibleTarget(
+      const edges = assembleCodeLinePreviewEdges({
         name,
+        chipEl,
+        kind,
+        tokenIndex,
+        edgeKey,
+        symbolIndex,
+        controlFlowIndex,
+        sourceFlowId,
+        memberId,
+        lineNumber,
         symbols,
         graphData,
         getNode,
-        sourceFlowId,
-      );
+        hasSymbol,
+        lookup,
+        cascadeEdges,
+      });
 
-      if (!resolved) {
+      const loadEdge = edges.find((e) => e.load);
+      if (loadEdge?.load) {
+        showUsageLoadMenu(name, kind, chipEl, loadEdge.load.candidates);
+      } else {
         clearConnectionMenu();
-        beginTrace(tokenKey, cascadeEdges);
-        return;
       }
 
-      if (resolved.mode === "external") {
-        if (resolved.cards.length === 0) {
-          clearConnectionMenu();
-          beginTrace(tokenKey, cascadeEdges);
-          return;
-        }
-        const resolvedKind = semanticFromChipElement(chipEl, entry);
-        beginTrace(tokenKey, [
-          buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, resolvedKind),
-          ...cascadeEdges,
-        ]);
-        showUsageLoadMenu(name, resolvedKind, chipEl, resolved.cards);
-        return;
-      }
-
-      clearConnectionMenu();
-      beginTrace(tokenKey, [
-        buildUsagePreviewEdge(edgeKey, resolved, chipEl, name),
-        ...cascadeEdges,
-      ]);
+      beginTrace(tokenKey, edges);
     },
     [
       beginTrace,
@@ -543,9 +455,10 @@ export function CodeLine({
       const chip = chipRefs.current.get(chipKey);
       const chipEl = chip?.getChipElement();
       if (!chipEl) return;
+      const tokenIndex = tokenIndexFromChipKey(chipKey);
       const tokenKey = memberFanOut
         ? defTokenKey
-        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, tokenIndex, name);
       scheduleHoverFire(
         tokenKey,
         () =>
@@ -576,10 +489,11 @@ export function CodeLine({
   );
 
   const onIdentifierLeave = useCallback(
-    (name: string, memberFanOut: boolean) => {
+    (name: string, chipKey: string, memberFanOut: boolean) => {
+      const tokenIndex = tokenIndexFromChipKey(chipKey);
       const tokenKey = memberFanOut
         ? defTokenKey
-        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, tokenIndex, name);
       scheduleHoverClear(tokenKey, clearHover);
     },
     [clearHover, defTokenKey, lineNumber, memberId, scheduleHoverClear, sourceFlowId],
@@ -597,14 +511,16 @@ export function CodeLine({
   const onIdentifierClick = useCallback(
     (
       name: string,
+      chipKey: string,
       el: HTMLElement,
       isDefinition: boolean,
       memberFanOut: boolean,
       e?: React.MouseEvent,
     ) => {
+      const tokenIndex = tokenIndexFromChipKey(chipKey);
       const tokenKey = memberFanOut
         ? defTokenKey
-        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
+        : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, tokenIndex, name);
       commitTokenPin({
         pinTrace,
         showTokenInfo,
@@ -612,7 +528,7 @@ export function CodeLine({
         onFire: () =>
           memberFanOut
             ? fireDefPreview(name, el)
-            : firePreview(name, `${lineNumber}`, el),
+            : firePreview(name, chipKey, el),
         buildPinInfo: () => buildUsagePinInfo(name, el, isDefinition),
         animateEl: el,
         event: e,
@@ -755,8 +671,15 @@ export function CodeLine({
               <span
                 key={`${lineNumber}-${i}`}
                 ref={(el) => {
-                  if (el) controlFlowRefs.current.set(cfRefKey, el);
-                  else controlFlowRefs.current.delete(cfRefKey);
+                  const prev = controlFlowRefs.current.get(cfRefKey);
+                  if (prev && prev !== el) unregisterElement(prev);
+                  if (el) {
+                    controlFlowRefs.current.set(cfRefKey, el);
+                    registerTraceHost(el);
+                  } else {
+                    controlFlowRefs.current.delete(cfRefKey);
+                    if (prev) unregisterElement(prev);
+                  }
                 }}
                 data-trace-key={cfKey}
                 className="code-kw hoverable cursor-pointer"
@@ -820,6 +743,80 @@ export function CodeLine({
                 }}
               >
                 {token.text}
+              </span>
+            );
+          }
+
+          if (
+            token.kind === "string" &&
+            token.text.startsWith("`") &&
+            token.text.includes("${")
+          ) {
+            const parts = parseTemplateLiteralParts(token.text);
+            const interpSites = templateInterpolationSites(line);
+            let siteCursor = 0;
+            return (
+              <span
+                key={`${lineNumber}-${i}`}
+                className="code-string text-[color:var(--code-string)]"
+              >
+                {parts.map((part, partIdx) => {
+                  if (part.kind === "text") {
+                    return <span key={`${lineNumber}-${i}-t-${partIdx}`}>{part.text}</span>;
+                  }
+                  const site = interpSites[siteCursor++];
+                  const tokenIndex = site?.tokenIndex ?? i;
+                  const name = part.name;
+                  const rawTarget = usageTargetFor(symbolIndex, lineNumber, tokenIndex);
+                  const localTargetId = rawTarget
+                    ? resolveLocalTargetId(rawTarget, sourceFlowId)
+                    : null;
+                  if (!localTargetId && !hasSymbol(name)) {
+                    return (
+                      <span key={`${lineNumber}-${i}-v-${partIdx}`}>{part.raw}</span>
+                    );
+                  }
+                  const chipKey = `${lineNumber}-${tokenIndex}`;
+                  const tokenKey = makeUsageTokenKey(
+                    sourceFlowId,
+                    memberId,
+                    lineNumber,
+                    tokenIndex,
+                    name,
+                  );
+                  const entry = lookup(name);
+                  const semantic = semanticForCodeIdentifier(entry, null);
+                  return (
+                    <TokenChip
+                      key={`${lineNumber}-${i}-v-${partIdx}`}
+                      ref={(handle) => {
+                        if (handle) chipRefs.current.set(chipKey, handle);
+                        else chipRefs.current.delete(chipKey);
+                      }}
+                      text={name}
+                      semantic={semantic}
+                      traceKey={tokenKey}
+                      interactive
+                      localTargetId={localTargetId ?? undefined}
+                      symbolRole="usage"
+                      shimmerDelay={`-${((lineNumber * 7 + tokenIndex) * 0.37).toFixed(2)}s`}
+                      role="button"
+                      tabIndex={0}
+                      onMouseEnter={() =>
+                        onIdentifierEnter(name, chipKey, false, false)
+                      }
+                      onMouseLeave={() => onIdentifierLeave(name, chipKey, false)}
+                      onFocus={() =>
+                        onIdentifierFocus(name, chipKey, false, false)
+                      }
+                      onBlur={() => onIdentifierBlur(name, chipKey, false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onIdentifierClick(name, chipKey, e.currentTarget, false, false, e);
+                      }}
+                    />
+                  );
+                })}
               </span>
             );
           }
@@ -899,7 +896,7 @@ export function CodeLine({
         const chipKey = `${lineNumber}-${i}`;
         const tokenKey = memberFanOut
           ? defTokenKey
-          : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, token.text);
+          : makeUsageTokenKey(sourceFlowId, memberId, lineNumber, i, token.text);
 
         return (
           <TokenChip
@@ -921,14 +918,14 @@ export function CodeLine({
             onMouseEnter={() =>
               onIdentifierEnter(token.text, chipKey, isDefinition, memberFanOut)
             }
-            onMouseLeave={() => onIdentifierLeave(token.text, memberFanOut)}
+            onMouseLeave={() => onIdentifierLeave(token.text, chipKey, memberFanOut)}
             onFocus={() =>
               onIdentifierFocus(token.text, chipKey, isDefinition, memberFanOut)
             }
-            onBlur={() => onIdentifierBlur(token.text, memberFanOut)}
+            onBlur={() => onIdentifierBlur(token.text, chipKey, memberFanOut)}
             onClick={(e) => {
               e.stopPropagation();
-              onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut, e);
+              onIdentifierClick(token.text, chipKey, e.currentTarget, isDefinition, memberFanOut, e);
             }}
             onContextMenu={(e) => {
               openContextMenu(e, {
@@ -941,7 +938,7 @@ export function CodeLine({
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                onIdentifierClick(token.text, e.currentTarget, isDefinition, memberFanOut);
+                onIdentifierClick(token.text, chipKey, e.currentTarget, isDefinition, memberFanOut);
               }
             }}
           />

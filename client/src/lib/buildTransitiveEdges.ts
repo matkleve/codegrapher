@@ -26,6 +26,7 @@ function parseTraceToken(tokenKey: string): string | null {
   }
 
   const parts = tokenKey.split("::");
+  if (parts.length === 5) return parts[4] ?? null;
   if (parts.length === 4 && parts[2] === "sig-type") {
     return parts[3] ?? null;
   }
@@ -57,6 +58,7 @@ function usageChip(
     record.flowNodeId,
     record.memberId,
     record.lineNumber,
+    record.tokenIndex,
     token,
   );
   return document.querySelector<HTMLElement>(

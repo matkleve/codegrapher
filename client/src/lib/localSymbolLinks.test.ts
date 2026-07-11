@@ -49,6 +49,64 @@ describe("buildMemberSymbolIndex multiline params", () => {
     expect(defSiteFor(index, 2, resultIndex)).toBe(paramDef?.defId);
     expect(usageTargetFor(index, 2, resultIndex)).toBeUndefined();
   });
+
+  it("indexes continuation params when startLine is not 1", () => {
+    const code = `export function fn(
+  x: number,
+): void {
+  return x;
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, code, 40);
+    const paramDef = paramDefForName(index, MEMBER, "x");
+    expect(paramDef?.lineNumber).toBe(41);
+  });
+});
+
+describe("buildMemberSymbolIndex buildViewbox", () => {
+  const CODE = `export function buildViewbox(lat: number, lng: number): string {
+  const delta = 0.1;
+  return \`\${lng - delta},\${lat + delta},\${lng + delta},\${lat - delta}\`;
+}`;
+
+  it("indexes lng param and two usages on the return line", () => {
+    const index = buildMemberSymbolIndex(MEMBER, CODE, 41);
+    const lngDef = paramDefForName(index, MEMBER, "lng");
+    expect(lngDef?.lineNumber).toBe(41);
+
+    let lngUsages = 0;
+    for (const target of index.usageTargets.values()) {
+      if (target === lngDef?.defId) lngUsages++;
+    }
+    expect(lngUsages).toBe(2);
+  });
+});
+
+describe("buildMemberSymbolIndex destructuring and for-of", () => {
+  it("indexes destructuring bindings", () => {
+    const code = `fn(): void {
+  const { lat, lng } = point;
+  console.log(lat, lng);
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, code, 10);
+    expect(paramDefForName(index, MEMBER, "lat")).toBeNull();
+    const latLine = "  const { lat, lng } = point;";
+    const tokens = tokenizeLine(latLine).tokens;
+    const latIdx = tokens.findIndex((t) => t.kind === "identifier" && t.text === "lat");
+    expect(defSiteFor(index, 11, latIdx)).toContain("::local::lat::");
+  });
+
+  it("indexes for-of loop variables", () => {
+    const code = `fn(items: string[]): void {
+  for (const item of items) {
+    console.log(item);
+  }
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, code, 1);
+    const loopLine = "  for (const item of items) {";
+    const tokens = tokenizeLine(loopLine).tokens;
+    const itemIdx = tokens.findIndex((t) => t.kind === "identifier" && t.text === "item");
+    expect(defSiteFor(index, 2, itemIdx)).toContain("::local::item::");
+  });
 });
 
 describe("buildMemberSymbolIndex binding inits", () => {
