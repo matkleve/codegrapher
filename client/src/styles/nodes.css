@@ -152,7 +152,8 @@
 
 .member-body-wrap {
   border-radius: 0 0 var(--radius-md) var(--radius-md);
-  transition: background-color var(--motion-dim) var(--ease);
+  /* Tier A: header-hover wash. Reveal-mode fills snap via the Tier B rule. */
+  transition: background-color var(--motion-hover-surface) var(--ease);
 }
 
 .member-row-header:hover:not(:has(.member-row-label:hover)) + .member-body-wrap {

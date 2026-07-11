@@ -29,9 +29,17 @@ export const INTERACTIVE_ROW_NODRAG = `${INTERACTIVE_ROW} nodrag`;
 export const INTERACTIVE_ROW_STATIC_LEFT =
   "hoverable-neutral control-row-compact flex w-full cursor-default items-center border border-transparent justify-start text-left";
 
+/** Toggle / legend row — grey hover, clickable */
+export const INTERACTIVE_ROW_NEUTRAL_LEFT =
+  "hoverable-neutral control-row-compact pointer-events-auto flex w-full cursor-pointer items-center border border-transparent justify-start text-left";
+
 /** Read-only passive row — grey surface + border at rest (hidden/disabled legend items) */
 export const INTERACTIVE_ROW_PASSIVE_LEFT =
-  "list-row-passive control-row-compact flex w-full cursor-default items-center justify-start text-left";
+  "list-row-passive control-row-compact flex w-full items-center justify-start text-left";
+
+/** Passive toggle row — grey at rest, clickable */
+export const INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT =
+  `${INTERACTIVE_ROW_PASSIVE_LEFT} pointer-events-auto cursor-pointer`;
 
 /** Graph map / toolbar toggle when aria-pressed */
 export const INTERACTIVE_TOGGLE_ACTIVE = "interactive-toggle--active";

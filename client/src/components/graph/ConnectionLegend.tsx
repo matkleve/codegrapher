@@ -138,7 +138,10 @@ function LegendSwatch({
 
   return (
     <svg
-      className={cn("connection-legend-swatch", passive && "opacity-45")}
+      className={cn(
+        "connection-legend-swatch",
+        passive && "connection-legend-swatch--inactive opacity-45",
+      )}
       viewBox="0 0 44 12"
       aria-hidden
     >
@@ -172,7 +175,7 @@ function LegendSwatch({
 }
 
 export function ConnectionLegend() {
-  const { showImports, setShowImports } = useGraphInteraction();
+  const { isEdgeKindVisible, toggleEdgeKind } = useGraphInteraction();
   const [open, setOpen] = useState(false);
 
   return (
@@ -195,20 +198,22 @@ export function ConnectionLegend() {
         <div className="absolute right-0 top-full z-50 mt-1 min-w-[12rem] rounded-md border border-border bg-popover px-1.5 py-1.5 shadow-md">
           <ul className="flex flex-col gap-1">
             {LEGEND_ITEMS.map((item) => {
-              const passive = item.kind === "module-import" && !showImports;
+              const visible = isEdgeKindVisible(item.kind);
               return (
                 <li key={item.kind}>
                   <InteractiveListRow
-                    interactive={false}
+                    interactive
                     density="plain"
-                    tone={passive ? "passive" : "default"}
+                    contentTone={visible ? "default" : "muted"}
                     title={CONNECTION_KIND_LABEL[item.kind]}
+                    aria-pressed={visible}
+                    onClick={() => toggleEdgeKind(item.kind)}
                     leading={
                       <LegendSwatch
                         pathClass={item.pathClass}
                         arrowhead={item.arrowhead}
                         stroke={item.stroke}
-                        passive={passive}
+                        passive={!visible}
                       />
                     }
                   />
@@ -216,15 +221,6 @@ export function ConnectionLegend() {
               );
             })}
           </ul>
-          <label className="mt-2 flex cursor-pointer items-center gap-2 border-t border-border px-2 py-1.5 text-xs font-normal text-foreground">
-            <input
-              type="checkbox"
-              checked={showImports}
-              onChange={(e) => setShowImports(e.target.checked)}
-              className="accent-[color:var(--brand)]"
-            />
-            Show imports
-          </label>
         </div>
       )}
     </div>

@@ -3,7 +3,9 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   INTERACTIVE_ROW_DOUBLE,
   INTERACTIVE_ROW_LEFT,
+  INTERACTIVE_ROW_NEUTRAL_LEFT,
   INTERACTIVE_ROW_PASSIVE_LEFT,
+  INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT,
   INTERACTIVE_ROW_STATIC_LEFT,
 } from "@/lib/controlTokens";
 import { TOKEN_EDGE_STROKE, type SemanticTokenKind } from "@/lib/tokenColors";
@@ -22,8 +24,13 @@ export type InteractiveListRowProps = {
   density?: "comfortable" | "compact" | "plain";
   /** Muted hover, no button — legend rows, labels */
   interactive?: boolean;
-  /** `passive` = grey resting surface (hidden/disabled items) */
+  /** `passive` = grey resting surface (hidden/disabled items) — row chrome only */
   tone?: "default" | "passive";
+  /** `muted` = grey label only; row keeps normal chrome + brand hover */
+  contentTone?: "default" | "muted";
+  /** `neutral` = grey hover (legend toggles); default brand hover for menus */
+  hoverStyle?: "brand" | "neutral";
+  "aria-pressed"?: boolean;
 };
 
 export function SemanticConnectionDot({
@@ -48,19 +55,24 @@ export function InteractiveListRowText({
   align = "left",
   density = "comfortable",
   tone = "default",
+  contentTone = "default",
 }: {
   title: string;
   subtitle?: string;
   align?: "left" | "right";
   density?: "comfortable" | "compact" | "plain";
   tone?: "default" | "passive";
+  contentTone?: "default" | "muted";
 }) {
   if (density === "plain") {
     return (
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-left text-xs font-normal",
-          tone === "passive" ? "text-muted-foreground" : "text-foreground",
+          "min-w-0 flex-1 truncate text-left text-xs",
+          contentTone === "muted"
+            ? "font-normal text-muted-foreground"
+            : "font-medium text-foreground",
+          tone === "passive" && contentTone !== "muted" && "text-muted-foreground",
         )}
       >
         {title}
@@ -114,13 +126,20 @@ export function InteractiveListRow({
   density = "comfortable",
   interactive = true,
   tone = "default",
+  contentTone = "default",
+  hoverStyle = "brand",
+  "aria-pressed": ariaPressed,
 }: InteractiveListRowProps) {
   const rowClass = interactive
-    ? density === "comfortable"
-      ? INTERACTIVE_ROW_DOUBLE
-      : cn(INTERACTIVE_ROW_LEFT, density === "compact" && "control-row-compact")
+    ? tone === "passive"
+      ? INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT
+      : density === "comfortable"
+        ? INTERACTIVE_ROW_DOUBLE
+        : hoverStyle === "neutral"
+          ? INTERACTIVE_ROW_NEUTRAL_LEFT
+          : cn(INTERACTIVE_ROW_LEFT, density === "compact" && "control-row-compact")
     : tone === "passive"
-      ? INTERACTIVE_ROW_PASSIVE_LEFT
+      ? cn(INTERACTIVE_ROW_PASSIVE_LEFT, "cursor-default")
       : cn(
           INTERACTIVE_ROW_STATIC_LEFT,
           density !== "plain" && density === "compact" && "control-row-compact",
@@ -147,6 +166,7 @@ export function InteractiveListRow({
         subtitle={subtitle}
         density={density}
         tone={tone}
+        contentTone={contentTone}
       />
       {trailingNode ? (
         <span className="ml-1 flex shrink-0 items-center">{trailingNode}</span>
@@ -165,6 +185,7 @@ export function InteractiveListRow({
       type="button"
       className={cn(rowClass, "text-foreground", className)}
       onClick={onClick}
+      aria-pressed={ariaPressed}
     >
       {rowBody}
     </button>

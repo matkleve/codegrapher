@@ -155,11 +155,16 @@
   --brand-border: oklch(0.86 0.06 88);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
-  --motion-hover-surface: 320ms;
-  --motion-hover-color: 380ms;
-  --motion-dim: 200ms;
-  --motion-chip-surface: 220ms;
-  --motion-chip-color: 280ms;
+  /* Motion is two-tier (see docs/design/state-visuals.md → Motion philosophy):
+     Tier A — affordance (direct hover only): one fast clock, 120ms.
+     Tier B — reveal (trace / Ctrl / sim mode): instant, 0ms, so ink & fill
+     never crossfade or desync. The four affordance tokens share one value;
+     they stay split by property only so a single tier can be retuned later. */
+  --motion-hover-surface: 120ms;
+  --motion-hover-color: 120ms;
+  --motion-dim: 0ms;
+  --motion-chip-surface: 120ms;
+  --motion-chip-color: 120ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   /* Two dimming levels: --faint = hover/trace (prototype value); --faint-ctrl =

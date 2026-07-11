@@ -117,6 +117,10 @@
   animation: proto-flow 700ms linear infinite;
 }
 
+.hoverable:hover .connection-legend-swatch--inactive {
+  opacity: 1;
+}
+
 /* Connector sockets — .tok::before/::after → FlowAnchor */
 .flow-anchor-off {
   opacity: 0;

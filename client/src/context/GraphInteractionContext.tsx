@@ -63,9 +63,14 @@ import {
   mountedClassGraphIds,
 } from "@/lib/buildStructuralEdges";
 import { buildTransitiveEdges } from "@/lib/buildTransitiveEdges";
+import {
+  DEFAULT_VISIBLE_EDGE_KINDS,
+  structuralTypesForVisibleKinds,
+} from "@/lib/connectionVisibility";
+import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
-import type { GraphData, ReferenceEntry, StructuralEdgeType } from "@/types";
+import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
 export { edgeTouchesHandle, refinePreviewEdge } from "@/lib/resolveLiveAnchor";
@@ -96,8 +101,9 @@ type GraphInteractionContextValue = {
   previewEdges: PreviewEdgeSpec[];
   structuralEdges: StructuralEdgeSpec[];
   pulseEdges: StructuralEdgeSpec[];
-  showImports: boolean;
-  setShowImports: (show: boolean) => void;
+  visibleEdgeKinds: ReadonlySet<ConnectionKind>;
+  isEdgeKindVisible: (kind: ConnectionKind) => boolean;
+  toggleEdgeKind: (kind: ConnectionKind) => void;
   setPulseEdges: React.Dispatch<React.SetStateAction<StructuralEdgeSpec[]>>;
   transitiveHopDepth: number;
   isHandleActive: (handle: string) => boolean;
@@ -198,7 +204,9 @@ export function GraphInteractionProvider({
     null,
   );
   const [pinHistoryLength, setPinHistoryLength] = useState(0);
-  const [showImports, setShowImports] = useState(false);
+  const [visibleEdgeKinds, setVisibleEdgeKinds] = useState<Set<ConnectionKind>>(
+    () => new Set(DEFAULT_VISIBLE_EDGE_KINDS),
+  );
   const [pulseEdges, setPulseEdges] = useState<StructuralEdgeSpec[]>([]);
   const transitiveHopDepth = 2;
 
@@ -589,6 +597,8 @@ export function GraphInteractionProvider({
       }
     }
 
+    if (!visibleEdgeKinds.has("usage")) return [];
+
     return edges;
   }, [
     graphData,
@@ -600,6 +610,7 @@ export function GraphInteractionProvider({
     traceTokenKey,
     usageSiteIndex,
     symbols,
+    visibleEdgeKinds,
   ]);
 
   const mountedGraphIds = useMemo(() => {
@@ -607,16 +618,29 @@ export function GraphInteractionProvider({
     return mountedClassGraphIds(graphData, flowIds);
   }, [graphData, nodes]);
 
-  const visibleStructuralTypes = useMemo(() => {
-    const types = new Set<StructuralEdgeType>(["extends", "implements", "composition"]);
-    if (showImports) types.add("imports");
-    return types;
-  }, [showImports]);
+  const visibleStructuralTypes = useMemo(
+    () => structuralTypesForVisibleKinds(visibleEdgeKinds),
+    [visibleEdgeKinds],
+  );
 
   const structuralEdges = useMemo(
     () => buildStructuralEdges(graphData, mountedGraphIds, visibleStructuralTypes),
     [graphData, mountedGraphIds, visibleStructuralTypes],
   );
+
+  const isEdgeKindVisible = useCallback(
+    (kind: ConnectionKind) => visibleEdgeKinds.has(kind),
+    [visibleEdgeKinds],
+  );
+
+  const toggleEdgeKind = useCallback((kind: ConnectionKind) => {
+    setVisibleEdgeKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
+  }, []);
 
   const revealRevision = useMemo(() => {
     const parts: string[] = [];
@@ -785,8 +809,9 @@ export function GraphInteractionProvider({
       previewEdges,
       structuralEdges,
       pulseEdges,
-      showImports,
-      setShowImports,
+      visibleEdgeKinds,
+      isEdgeKindVisible,
+      toggleEdgeKind,
       transitiveHopDepth,
       setPulseEdges,
       isHandleActive,
@@ -830,7 +855,9 @@ export function GraphInteractionProvider({
       previewEdges,
       structuralEdges,
       pulseEdges,
-      showImports,
+      visibleEdgeKinds,
+      isEdgeKindVisible,
+      toggleEdgeKind,
       transitiveHopDepth,
       isHandleActive,
       edgeKindAtHandle,
