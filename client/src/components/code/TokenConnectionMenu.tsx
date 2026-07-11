@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Code2, Search } from "lucide-react";
+import { Code2, DownloadCloud, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { ConnectionMenuRow } from "@/components/graph/ConnectionMenuRow";
@@ -87,6 +87,19 @@ function TokenConnectionMenuPanel({
       }))
       .filter((section) => section.rows.length > 0);
   }, [menu.sections, query]);
+
+  const loadRows = useMemo(
+    () =>
+      filteredSections
+        .flatMap((s) => s.rows)
+        .filter((row) => row.action === "load" && row.filePath),
+    [filteredSections],
+  );
+
+  const handleLoadAll = () => {
+    for (const row of loadRows) loadTarget(row.filePath);
+    onClose();
+  };
 
   useMenuPosition(panelRef, menu.anchor, setPosition);
 
@@ -191,6 +204,17 @@ function TokenConnectionMenuPanel({
           allRows.length > 6 ? "max-h-48" : "",
         )}
       >
+        {loadRows.length > 1 ? (
+          <div className="mb-2">
+            <InteractiveListRow
+              title={`Load all · ${loadRows.length}`}
+              leading={<DownloadCloud className="size-3.5 shrink-0" aria-hidden />}
+              className="w-full font-medium"
+              onClick={handleLoadAll}
+            />
+          </div>
+        ) : null}
+
         {filteredSections.length === 0 ? (
           <p className="px-2 py-4 text-center text-xs text-muted-foreground">
             No matching connections

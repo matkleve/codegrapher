@@ -235,7 +235,9 @@ export function buildHoverLoadMenu(
   targets: LoadTargetItem[],
   contextFilePath?: string,
 ): TokenConnectionMenuState | null {
-  if (targets.length <= 1) return null;
+  // The hover dropdown is now the sole load surface (the floating Load pill was
+  // removed), so a single off-canvas target still gets a one-row menu.
+  if (targets.length === 0) return null;
   return {
     token,
     kind,

@@ -37,8 +37,8 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
-| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load** pill (N=1) or **TokenConnectionMenu** (N>1 off-canvas load rows) + footer hint; right-click opens full menu | `mode:"external"` |
-| 11 | Click the **Load** pill | N=1: load immediately; N>1: open picker (same rows as hover menu) | load |
+| 10 | Hover an **external** token (indexed, def not in graph) | **TokenConnectionMenu** (hover variant): off-canvas **Load** rows (one row for N=1, list for N≥2) + footer hint; right-click opens full menu. No floating Load pill or stub wire. | `mode:"external"` |
+| 11 | Click **Load all · N** (menu, shown when ≥2 load rows) | Load every off-canvas row into the graph in one merge (parallel; merge is a functional update so loads don't race) | `onLoadFile` per row |
 | 12 | Click a row in **TokenConnectionMenu** | Jump (on canvas), Load (off canvas), or Open in editor (context footer) | `onLoadFile` / `focusFlowNode` |
 | 13 | **Right-click** indexed token | **TokenConnectionMenu** (context variant): On canvas (Jump) + Off canvas (Load) + Open in editor footer — **does not pin** | context menu |
 | 14 | **Click** token | Pin trace + **TokenContextBar** (unchanged; coexists with right-click menu) | `pinnedTraces` |
@@ -65,10 +65,11 @@ graph-pane
 ├── NodeCardHeader title       (class definition)
 ├── PreviewEdgeOverlay         (wires + hit-zones + sockets)
 ├── TokenContextBar / info box (pinned + transient long-hover)
-├── TokenConnectionMenu        (hover external token → loadable classes)
-├── JumpTooltip                (wire "Jump to")
-└── LoadConnector              (external symbol → load)
-    └── LoadTargetPicker       (multi-file pick + filter)
+├── TokenConnectionMenu        (hover/right-click → load rows + Load all + jump)
+└── JumpTooltip                (wire "Jump to")
+
+LoadTargetPicker (multi-file pick + filter) is retained for TokenContextBar's
+pinned-token load flow; the hover Load pill / LoadConnector was removed.
 ```
 
 ## Data
@@ -101,15 +102,17 @@ graph-pane
 - [ ] Given an active wire, when the pointer enters its first ~cm, then a
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
-  hovered with **one** off-canvas target, then only the **Load** pill appears (no hover dropdown).
+  hovered with **one** off-canvas target, then **TokenConnectionMenu** (hover variant)
+  shows a single Load row (no floating Load pill or stub wire).
 - [ ] Given **two or more** off-canvas load targets, when hovered, then
-  **TokenConnectionMenu** (hover variant) lists load rows and shows a right-click hint footer.
+  **TokenConnectionMenu** (hover variant) lists load rows, a **Load all · N** action
+  above them, and a right-click hint footer.
 - [ ] Given an indexed token, when **right-clicked**, then the context
-  **TokenConnectionMenu** shows on-canvas Jump rows and off-canvas Load rows without pinning.
+  **TokenConnectionMenu** shows on-canvas Jump rows and off-canvas Load rows (with **Load all** when ≥2) without pinning.
 - [ ] Given a token, when **left-clicked**, then pin behavior is unchanged (coexists with right-click menu).
-- [ ] Given multiple off-graph definitions, when Load is clicked, then
-  **LoadTargetPicker** opens (search when >6 files); N=1 loads immediately.
-- [ ] After load, the stub upgrades to an in-graph preview wire when the
+- [ ] Given **Load all** is clicked, then every off-canvas row loads into the graph
+  (parallel; the merge is a functional update, so concurrent loads do not clobber).
+- [ ] After load, the row's target upgrades to an in-graph preview wire when the
   definition is on the canvas.
 - [ ] Given a variable endpoint, when traced, then enclosing functions stay dim
   (no upward cascade); a function endpoint lights its own body.

@@ -161,7 +161,8 @@
   .preview-edge-path,
   .preview-edge-glow,
   .connection-legend-swatch--flow,
-  .graph-pane.graph-ctrl-preview .token-shimmer-target::after,
+  .graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
+  .graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after,
   .graph-pane.graph-ctrl-preview .react-flow__node.class-node-root::after {
     animation: none !important;
   }

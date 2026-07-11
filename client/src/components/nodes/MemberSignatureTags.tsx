@@ -35,7 +35,7 @@ export function MemberSignatureTags({
   return (
     <span
       className={cn(
-        "member-signature-tags nodrag inline-flex min-w-0 flex-wrap items-center font-mono text-xs leading-relaxed",
+        "member-signature-tags nodrag inline-flex min-w-0 flex-wrap items-center font-mono text-xs leading-none",
         className,
       )}
       aria-label="Method signature"

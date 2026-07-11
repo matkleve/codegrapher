@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useMemberSignatureTypeTrace } from "@/hooks/useMemberSignatureTypeTrace";
@@ -20,28 +20,11 @@ type MemberSignatureTypeLabelProps = {
   shimmerDelay?: string;
 };
 
-function SignatureTypeText({
-  text,
-  connectable,
-  shimmerDelay,
-}: {
-  text: string;
-  connectable: boolean;
-  shimmerDelay?: string;
-}) {
-  if (!connectable) return text;
-  return (
-    <span
-      className="token-shimmer-target relative inline"
-      data-text={text}
-      style={
-        shimmerDelay
-          ? ({ "--shimmer-delay": shimmerDelay } as CSSProperties)
-          : undefined
-      }
-    >
-      {text}
-    </span>
+function primitiveTypeClassName(variant: "in" | "out"): string {
+  return cn(
+    "member-sig-type",
+    variant === "in" ? "member-sig-type--in" : "member-sig-type--out",
+    "member-sig-type--primitive",
   );
 }
 
@@ -60,7 +43,6 @@ export function MemberSignatureTypeLabel({
   const [expanded, setExpanded] = useState(false);
 
   const {
-    symbolName,
     semantic,
     tokenKey,
     connectable,
@@ -80,106 +62,83 @@ export function MemberSignatureTypeLabel({
   const expandable = signatureTypeIsExpandable(type);
   const { short } = truncateSignatureType(type);
   const lines = signatureTypeLines(type);
-  const indexed = Boolean(symbolName);
-  const primitive = !indexed || !connectable;
 
-  const className = cn(
-    "member-sig-type",
-    variant === "in" ? "member-sig-type--in" : "member-sig-type--out",
-    primitive ? "member-sig-type--primitive" : "member-sig-type--indexed",
-    connectable && "member-sig-type--connectable cursor-pointer",
-    expandable && INTERACTIVE_SURFACE,
-    expandable && "member-sig-type--expandable",
-    expanded && "member-sig-type--expanded",
+  const renderPlainType = (text: string, key?: string): ReactNode => (
+    <span key={key} className={primitiveTypeClassName(variant)}>
+      {text}
+    </span>
   );
 
-  const renderText = (text: string): ReactNode => (
-    <SignatureTypeText
-      text={text}
-      connectable={connectable}
-      shimmerDelay={shimmerDelay}
-    />
-  );
-
-  const traceHover = connectable
-    ? { onMouseEnter: onEnter, onMouseLeave: onLeave }
-    : {};
-
-  if (connectable && !expandable) {
-    return (
-      <span
-        className="member-sig-type-chip nodrag shrink-0"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <TokenChip
-          ref={chipRef}
-          text={type}
-          semantic={semantic}
-          traceKey={tokenKey}
-          interactive
-          symbolRole="usage"
-          shimmerDelay={shimmerDelay}
-          role="button"
-          tabIndex={0}
-          className="member-sig-type-chip"
-          onMouseEnter={onEnter}
-          onMouseLeave={onLeave}
-          onClick={(e) => {
+  const renderConnectableChip = (text: string, key?: string): ReactNode => (
+    <span
+      key={key}
+      className="member-sig-type-chip nodrag shrink-0"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <TokenChip
+        ref={key ? undefined : chipRef}
+        text={text}
+        semantic={semantic}
+        traceKey={tokenKey}
+        interactive
+        symbolRole="usage"
+        shimmerDelay={shimmerDelay}
+        role="button"
+        tabIndex={0}
+        className="member-sig-type-chip"
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        onClick={(e) => {
+          e.stopPropagation();
+          onPinClick(e);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
             e.stopPropagation();
-            onPinClick(e);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.stopPropagation();
-              onPinClick(e as unknown as React.MouseEvent);
-            }
-          }}
-        />
-      </span>
-    );
-  }
+            onPinClick(e as unknown as React.MouseEvent);
+          }
+        }}
+      />
+    </span>
+  );
+
+  const renderType = (text: string, key?: string): ReactNode =>
+    connectable ? renderConnectableChip(text, key) : renderPlainType(text, key);
 
   if (!expandable) {
-    return (
-      <span className={className} {...traceHover}>
-        {renderText(type)}
-      </span>
-    );
+    return renderType(type);
   }
 
   return (
     <button
       ref={hostRef}
       type="button"
-      className={className}
+      className={cn(
+        "member-sig-type member-sig-type-expand-host",
+        connectable ? "member-sig-type--indexed" : primitiveTypeClassName(variant),
+        INTERACTIVE_SURFACE,
+        "member-sig-type--expandable",
+        expanded && "member-sig-type--expanded",
+      )}
       title={expanded ? "Click to collapse" : type}
       aria-expanded={expanded}
       data-trace-key={connectable ? tokenKey : undefined}
       data-token-kind={connectable ? semantic : undefined}
-      data-symbol-name={connectable ? symbolName : undefined}
       data-symbol-role={connectable ? "usage" : undefined}
-      style={
-        connectable && shimmerDelay
-          ? ({ "--shimmer-delay": shimmerDelay } as CSSProperties)
-          : undefined
-      }
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
         setExpanded((open) => !open);
       }}
-      {...traceHover}
+      onMouseEnter={connectable ? onEnter : undefined}
+      onMouseLeave={connectable ? onLeave : undefined}
     >
       {expanded ? (
         <span className="member-sig-type-lines">
-          {lines.map((line, index) => (
-            <span key={index} className="member-sig-type-line">
-              {renderText(line)}
-            </span>
-          ))}
+          {lines.map((line, index) => renderType(line, `${index}`))}
         </span>
       ) : (
-        renderText(short)
+        renderType(short)
       )}
     </button>
   );

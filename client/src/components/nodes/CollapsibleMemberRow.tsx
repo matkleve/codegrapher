@@ -279,8 +279,8 @@ export function CollapsibleMemberRow({
       <button
         type="button"
         className={cn(
-          "member-row-header",
-          "flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 border-x-0 border-t-0 px-2 py-1.5 text-left",
+          "member-row-header hoverable",
+          "flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 border border-transparent px-2 py-1.5 text-left",
           expanded ? "member-row-header--expanded" : "member-row-header--collapsed",
         )}
         aria-expanded={expanded}

@@ -53,14 +53,6 @@
   color: var(--faint-ctrl) !important;
 }
 
-.graph-pane.graph-ctrl-preview .member-sig-type--connectable.member-sig-type--in {
-  color: var(--token-edge-type) !important;
-}
-
-.graph-pane.graph-ctrl-preview .member-sig-type--connectable.member-sig-type--out {
-  color: var(--token-edge-class) !important;
-}
-
 .graph-pane.graph-ctrl-preview .code-line {
   color: var(--faint-ctrl) !important;
 }
@@ -94,7 +86,8 @@
   box-shadow: none;
 }
 
-.graph-pane.graph-ctrl-preview .token-shimmer-target::after {
+.graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after {
   content: attr(data-text);
   position: absolute;
   left: 0;
@@ -339,6 +332,20 @@
   -webkit-text-fill-color: currentColor;
 }
 
+.graph-trace-active .member-row-header:hover + .member-body-wrap,
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-row-header:hover + .member-body-wrap {
+  background-color: var(--surface-neutral-strong) !important;
+  color: var(--muted-foreground) !important;
+}
+
+.graph-trace-active .member-row-header:hover + .member-body-wrap .code-line,
+.graph-trace-active .member-row-header:hover + .member-body-wrap .code-kw,
+.graph-trace-active .member-row-header:hover + .member-body-wrap .code-pn,
+.graph-trace-active .member-row-header:hover + .member-body-wrap .token-chip .token-chip-text {
+  color: var(--muted-foreground) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
 .graph-trace-active .hoverable:hover,
 .graph-trace-active .hoverable[aria-expanded="true"]:hover {
   border-color: var(--brand-border);
@@ -349,24 +356,21 @@
   background-color: var(--brand-surface);
 }
 
-.graph-trace-active .member-row-header.hoverable:hover,
-.graph-trace-active .member-row-header.hoverable[aria-expanded="true"]:hover {
-  background-color: transparent !important;
-  border-color: transparent !important;
-  color: inherit !important;
+.graph-trace-active .member-row.trace-member-lit .member-row-header:hover,
+.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover {
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
+  box-shadow: none;
 }
 
 .graph-trace-active .hoverable:hover .member-section-label,
 .graph-trace-active .hoverable:hover .member-section-bulk,
-.graph-trace-active .hoverable:hover .member-row-caret,
 .graph-trace-active .hoverable:hover .node-card-caret,
 .graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-label,
 .graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-bulk,
-.graph-trace-active .member-row-header.hoverable:hover .member-row-caret,
-.graph-trace-active .member-row-header.hoverable[aria-expanded="true"]:hover .member-row-caret,
-.graph-trace-active
-  .member-row-header:hover:not(:has(.member-row-label:hover))
-  .member-row-label:not(.token-chip-lit),
+.graph-trace-active .member-row-header:hover .member-row-caret,
+.graph-trace-active .member-row-header:hover .member-row-label,
+.graph-trace-active .member-row-header:hover .member-row-label .token-shimmer-target,
 .graph-trace-pinned .member-row-label.token-def-label:hover:not(.token-chip-lit),
 .graph-trace-pinned .node-card-title:hover:not(.token-chip-lit),
 .graph-trace-pinned .token-chip.interactive:hover:not(.token-chip-lit) .token-chip-text,
@@ -398,11 +402,6 @@
   filter: none;
   background: transparent;
   -webkit-text-fill-color: currentColor;
-}
-
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-signature-tags .member-sig-param-name,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-signature-tags .member-sig-type {
-  font-weight: 600;
 }
 
 .graph-trace-pinned .token-chip.cursor-pointer:not(.token-chip-lit),

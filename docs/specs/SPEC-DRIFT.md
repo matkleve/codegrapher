@@ -12,6 +12,7 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 
 | Item | Resolution |
 | ---- | ---------- |
+| Load pill removed; dropdown is sole load surface | Deleted `LoadConnector` (floating "Load · N" pill) + its stub wire; `buildHoverLoadMenu` now shows for N=1 too, so `TokenConnectionMenu` handles all loads. Added **Load all · N** to the menu. Supersedes the older "Load connector" row below. `token-interactions.md` updated. |
 | Static-walk scope indexing | `scopeAtStep` now selects by source line number and walks the whole body from line 1; per-step values are correct at any trace start line. Regression test added (`staticWalk.test.ts`). |
 | Value-flow pulse was degenerate | Pulse resolves the callee via `resolveVisibleTarget` and travels line→callee (returns → node header); unresolved steps emit no pulse instead of a self-edge. |
 | Loop cap mislabeled | Removed the bogus 100-tick cap; finite walk stops at the last recorded step. Spec AC reworded; per-iteration cap deferred with loop-aware walk. |

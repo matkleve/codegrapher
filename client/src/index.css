@@ -549,9 +549,9 @@ html.dark {
   stroke: var(--brand);
 }
 
-/* Member rows — grey/blue fills only; never brand hover wash on header or sig controls */
-.member-row .hoverable:hover,
-.member-row .hoverable:focus-visible {
+/* Member rows — sig chips / labels stay flat; header uses brand via .member-row-header */
+.member-row .hoverable:not(.member-row-header):hover,
+.member-row .hoverable:not(.member-row-header):focus-visible {
   background-color: transparent !important;
   border-color: transparent !important;
 }
