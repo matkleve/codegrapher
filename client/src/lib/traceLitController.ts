@@ -37,9 +37,7 @@ function clearPrevious(): void {
         if (!anchor.isConnected) continue;
         anchor.classList.remove(ANCHOR_ON);
         anchor.classList.add(ANCHOR_OFF, "bg-border");
-        for (const color of Object.values(TOKEN_ANCHOR)) {
-          anchor.classList.remove(color);
-        }
+        removeAnchorColorClasses(anchor);
       }
     }
   }
@@ -67,12 +65,20 @@ function isDefinitionHost(host: HTMLElement): boolean {
   );
 }
 
-function anchorColorClass(host: HTMLElement): string {
+function anchorColorClasses(host: HTMLElement): string[] {
   const kind = host.dataset.tokenKind as SemanticTokenKind | undefined;
   if (kind && kind in TOKEN_ANCHOR) {
-    return TOKEN_ANCHOR[kind];
+    return TOKEN_ANCHOR[kind].split(/\s+/).filter(Boolean);
   }
-  return "bg-border";
+  return ["bg-border"];
+}
+
+function removeAnchorColorClasses(anchor: HTMLElement): void {
+  for (const color of Object.values(TOKEN_ANCHOR)) {
+    for (const cls of color.split(/\s+/)) {
+      anchor.classList.remove(cls);
+    }
+  }
 }
 
 function applyEndpointSockets(host: HTMLElement): HTMLElement[] {
@@ -85,7 +91,7 @@ function applyEndpointSockets(host: HTMLElement): HTMLElement[] {
 
   restore.push(socket);
   socket.classList.remove(ANCHOR_OFF);
-  socket.classList.add(ANCHOR_ON, anchorColorClass(host));
+  socket.classList.add(ANCHOR_ON, ...anchorColorClasses(host));
   return restore;
 }
 

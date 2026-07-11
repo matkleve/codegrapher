@@ -6,6 +6,11 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { commitTokenPin } from "@/hooks/useTokenTrace";
 import { useIndex } from "@/context/IndexContext";
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
+import {
+  buildConnectionMenuState,
+  loadTargetsFromExternalCards,
+  loadTargetsFromCallSiteRefs,
+} from "@/lib/connectionMenu";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import {
   buildDefinitionPreviewEdges,
@@ -73,6 +78,8 @@ export function CodeLine({
     lookupIndexedUsageSites,
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
+    showConnectionMenu,
+    clearConnectionMenu,
   } = useGraphInteraction();
 
   const edgeKeyRef = useRef<string | null>(null);
@@ -98,6 +105,27 @@ export function CodeLine({
     endHoverPreview();
   }, [endHoverPreview]);
 
+  const showUsageLoadMenu = useCallback(
+    (
+      name: string,
+      kind: ReturnType<typeof semanticFromChipElement>,
+      chipEl: HTMLElement,
+      cards: Parameters<typeof loadTargetsFromExternalCards>[0],
+    ) => {
+      const menuState = buildConnectionMenuState(
+        name,
+        kind,
+        "usage",
+        chipEl,
+        loadTargetsFromExternalCards(cards),
+        filePath,
+      );
+      if (menuState) showConnectionMenu(menuState);
+      else clearConnectionMenu();
+    },
+    [clearConnectionMenu, filePath, showConnectionMenu],
+  );
+
   const firePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
       const tokenKey = makeUsageTokenKey(sourceFlowId, memberId, lineNumber, name);
@@ -108,11 +136,51 @@ export function CodeLine({
       const kind = semanticFromChipElement(chipEl, entry);
       const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
       if (localEdges.length > 0) {
+        clearConnectionMenu();
         beginTrace(tokenKey, localEdges);
         return;
       }
 
+      if (!hasSymbol(name) && !entry) {
+        const resolvedWithoutIndex = resolveVisibleTarget(
+          name,
+          symbols,
+          graphData,
+          getNode,
+          sourceFlowId,
+        );
+        if (!resolvedWithoutIndex) {
+          clearConnectionMenu();
+          beginTrace(tokenKey, []);
+          return;
+        }
+        if (resolvedWithoutIndex.mode === "external") {
+          if (resolvedWithoutIndex.cards.length === 0) {
+            clearConnectionMenu();
+            beginTrace(tokenKey, []);
+            return;
+          }
+          beginTrace(tokenKey, [
+            buildLoadPreviewEdge(
+              edgeKey,
+              resolvedWithoutIndex.cards,
+              chipEl,
+              name,
+              kind,
+            ),
+          ]);
+          showUsageLoadMenu(name, kind, chipEl, resolvedWithoutIndex.cards);
+          return;
+        }
+        clearConnectionMenu();
+        beginTrace(tokenKey, [
+          buildUsagePreviewEdge(edgeKey, resolvedWithoutIndex, chipEl, name),
+        ]);
+        return;
+      }
+
       if (!hasSymbol(name) || !entry) {
+        clearConnectionMenu();
         beginTrace(tokenKey, []);
         return;
       }
@@ -126,32 +194,38 @@ export function CodeLine({
       );
 
       if (!resolved) {
+        clearConnectionMenu();
         beginTrace(tokenKey, []);
         return;
       }
 
       if (resolved.mode === "external") {
         if (resolved.cards.length === 0) {
+          clearConnectionMenu();
           beginTrace(tokenKey, []);
           return;
         }
-        const kind = semanticFromChipElement(chipEl, entry);
+        const resolvedKind = semanticFromChipElement(chipEl, entry);
         beginTrace(tokenKey, [
-          buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, kind),
+          buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, resolvedKind),
         ]);
+        showUsageLoadMenu(name, resolvedKind, chipEl, resolved.cards);
         return;
       }
 
+      clearConnectionMenu();
       beginTrace(tokenKey, [buildUsagePreviewEdge(edgeKey, resolved, chipEl, name)]);
     },
     [
       beginTrace,
+      clearConnectionMenu,
       getNode,
       graphData,
       hasSymbol,
       lookup,
       memberId,
       lineNumber,
+      showUsageLoadMenu,
       sourceFlowId,
       symbols,
     ],
@@ -173,24 +247,38 @@ export function CodeLine({
         filePath,
         resolveClientImportPath(filePath, specifier),
       );
+      const importName = specifier.replace(/^['"]|['"]$/g, "");
+      const cards = [
+        {
+          symbolName: importName,
+          filePath: resolvedPath,
+          line: 1,
+          occurrenceCount: 1,
+        },
+      ];
       beginTrace(tokenKey, [
-        buildLoadPreviewEdge(
-          edgeKey,
-          [
-            {
-              symbolName: specifier.replace(/^['"]|['"]$/g, ""),
-              filePath: resolvedPath,
-              line: 1,
-              occurrenceCount: 1,
-            },
-          ],
-          chipEl,
-          specifier.replace(/^['"]|['"]$/g, ""),
-          "type",
-        ),
+        buildLoadPreviewEdge(edgeKey, cards, chipEl, importName, "type"),
       ]);
+      showUsageLoadMenu(importName, "type", chipEl, cards);
     },
-    [beginTrace, filePath, lineNumber, memberId, sourceFlowId],
+    [beginTrace, filePath, lineNumber, memberId, showUsageLoadMenu, sourceFlowId],
+  );
+
+  const showDefLoadMenu = useCallback(
+    (name: string, kind: ReturnType<typeof semanticFromChipElement>, chipEl: HTMLElement) => {
+      const sites = lookupOffCanvasCallSiteFiles(name);
+      const menuState = buildConnectionMenuState(
+        name,
+        kind,
+        "definition",
+        chipEl,
+        loadTargetsFromCallSiteRefs(name, sites),
+        filePath,
+      );
+      if (menuState) showConnectionMenu(menuState);
+      else clearConnectionMenu();
+    },
+    [clearConnectionMenu, filePath, lookupOffCanvasCallSiteFiles, showConnectionMenu],
   );
 
   const fireDefPreview = useCallback(
@@ -201,8 +289,9 @@ export function CodeLine({
         tokenKey,
         buildDefinitionPreviewEdges(name, kind, chipEl, defEdgeContext),
       );
+      showDefLoadMenu(name, kind, chipEl);
     },
-    [beginTrace, defEdgeContext, lookup, memberId, sourceFlowId],
+    [beginTrace, defEdgeContext, lookup, memberId, showDefLoadMenu, sourceFlowId],
   );
 
   const buildUsagePinInfo = useCallback(

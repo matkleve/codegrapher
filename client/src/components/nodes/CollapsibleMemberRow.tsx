@@ -21,6 +21,10 @@ import {
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeMemberDefKey } from "@/lib/traceKeys";
+import {
+  buildConnectionMenuState,
+  loadTargetsFromCallSiteRefs,
+} from "@/lib/connectionMenu";
 import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import { cn } from "@/lib/utils";
@@ -70,6 +74,8 @@ export function CollapsibleMemberRow({
     lookupOffCanvasCallSiteFiles,
     cancelHoverLeaveGrace,
     focusReadingMember,
+    showConnectionMenu,
+    clearConnectionMenu,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -120,7 +126,29 @@ export function CollapsibleMemberRow({
         defEdgeContext,
       ),
     );
-  }, [beginTrace, defEdgeContext, defKind, defTokenKey, traceName, traceable]);
+    const sites = lookupOffCanvasCallSiteFiles(traceName);
+    const menuState = buildConnectionMenuState(
+      traceName,
+      defKind,
+      "definition",
+      labelRef.current,
+      loadTargetsFromCallSiteRefs(traceName, sites),
+      filePath,
+    );
+    if (menuState) showConnectionMenu(menuState);
+    else clearConnectionMenu();
+  }, [
+    beginTrace,
+    clearConnectionMenu,
+    defEdgeContext,
+    defKind,
+    defTokenKey,
+    filePath,
+    lookupOffCanvasCallSiteFiles,
+    showConnectionMenu,
+    traceName,
+    traceable,
+  ]);
 
   const buildDefPinInfo = useCallback(
     () => {
@@ -258,14 +286,23 @@ export function CollapsibleMemberRow({
           onMouseLeave={onDefLeave}
           onClick={onDefClick}
         >
-          {defKind ? (
-            <FlowAnchor
-              side="right"
-              colorClass="bg-border"
-              visible={false}
-              highlighted={false}
-              size="chip"
-            />
+          {traceable && defKind ? (
+            <>
+              <FlowAnchor
+                side="left"
+                colorClass="bg-border"
+                visible={false}
+                highlighted={false}
+                size="chip"
+              />
+              <FlowAnchor
+                side="right"
+                colorClass="bg-border"
+                visible={false}
+                highlighted={false}
+                size="chip"
+              />
+            </>
           ) : null}
           <span className="token-shimmer-target" data-text={label}>
             {label}

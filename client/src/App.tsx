@@ -43,26 +43,8 @@ function AppContent() {
     [loadFileGraph],
   );
 
-  const handleFileDrop = useCallback(async (filePath: string) => {
-    const normalized = filePath.trim();
-    if (!normalized) return;
-    setLoading(true);
-    setError(null);
-    recordRecentFile(normalized, getActiveFolderRoot());
-    try {
-      const incoming = await fetchFileGraph(normalized);
-      graphRef.current?.pushHistoryBeforeChange();
-      setGraphData((prev) => mergeGraphData(prev, incoming));
-      saveLastFile(normalized);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to merge file");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleLoadFileIntoGraph = useCallback(
-    async (filePath: string) => {
+  const mergeFocusFileIntoGraph = useCallback(
+    async (filePath: string, errorMessage: string) => {
       const normalized = filePath.trim();
       if (!normalized) return;
       setLoading(true);
@@ -75,12 +57,24 @@ function AppContent() {
         setGraphData((prev) => mergeGraphData(prev, incoming));
         saveLastFile(normalized);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load file into graph");
+        setError(err instanceof Error ? err.message : errorMessage);
       } finally {
         setLoading(false);
       }
     },
     [mergeSymbols],
+  );
+
+  const handleFileDrop = useCallback(
+    (filePath: string) =>
+      mergeFocusFileIntoGraph(filePath, "Failed to merge file"),
+    [mergeFocusFileIntoGraph],
+  );
+
+  const handleLoadFileIntoGraph = useCallback(
+    (filePath: string) =>
+      mergeFocusFileIntoGraph(filePath, "Failed to load file into graph"),
+    [mergeFocusFileIntoGraph],
   );
 
   useEffect(() => {

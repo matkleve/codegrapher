@@ -1,17 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search } from "lucide-react";
-import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Input } from "@/components/ui/input";
+import { LoadTargetRow } from "@/components/graph/LoadTargetRow";
 import {
-  fileBaseName,
   filterLoadTargets,
   LOAD_PICKER_SEARCH_THRESHOLD,
   sortLoadTargets,
   type LoadTargetItem,
 } from "@/lib/loadTargets";
-import { INTERACTIVE_ROW_LEFT } from "@/lib/controlTokens";
-import { cn } from "@/lib/utils";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 
 const PICKER_WIDTH_PX = 300;
 const VIEWPORT_MARGIN = 8;
@@ -21,6 +19,8 @@ export type LoadTargetPickerProps = {
   targets: LoadTargetItem[];
   anchor: { x: number; y: number };
   contextFilePath?: string;
+  kind?: SemanticTokenKind;
+  dotSide?: "left" | "right";
   onSelect: (filePath: string) => void;
   onClose: () => void;
 };
@@ -30,6 +30,8 @@ export function LoadTargetPicker({
   targets,
   anchor,
   contextFilePath,
+  kind = "function",
+  dotSide = "right",
   onSelect,
   onClose,
 }: LoadTargetPickerProps) {
@@ -50,7 +52,9 @@ export function LoadTargetPicker({
   );
   const showSearch = targets.length > LOAD_PICKER_SEARCH_THRESHOLD;
 
-  openedAtRef.current = Date.now();
+  useEffect(() => {
+    openedAtRef.current = Date.now();
+  }, []);
 
   useLayoutPosition(panelRef, anchor, setPosition);
 
@@ -119,26 +123,16 @@ export function LoadTargetPicker({
         ) : (
           filtered.map((item) => (
             <li key={`${item.filePath}:${item.line}`}>
-              <button
-                type="button"
-                className={cn(INTERACTIVE_ROW_LEFT, "gap-2 rounded-md py-2 text-xs")}
-                onClick={() => {
+              <LoadTargetRow
+                item={item}
+                token={token}
+                kind={kind}
+                dotSide={dotSide}
+                onSelect={() => {
                   onSelect(item.filePath);
                   onClose();
                 }}
-              >
-                <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate font-medium text-foreground">
-                    {fileBaseName(item.filePath)}
-                  </span>
-                  <span className="block truncate text-[10px] text-muted-foreground">
-                    {item.subtitle ? `${item.subtitle} · ` : ""}
-                    line {item.line}
-                    {item.label !== token ? ` · ${item.label}` : ""}
-                  </span>
-                </span>
-              </button>
+              />
             </li>
           ))
         )}

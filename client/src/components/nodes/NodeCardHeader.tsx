@@ -12,6 +12,10 @@ import { buildDefinitionPreviewEdges, connectionCountsForHost, type DefinitionEd
 import { symbolKindToSemantic } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
+import {
+  buildConnectionMenuState,
+  loadTargetsFromCallSiteRefs,
+} from "@/lib/connectionMenu";
 import { cn } from "@/lib/utils";
 
 type NodeCardHeaderProps = {
@@ -38,7 +42,7 @@ export function NodeCardHeader({
   const titleRef = useRef<HTMLSpanElement>(null);
   useTraceHostRegistration(titleRef);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles, cancelHoverLeaveGrace } =
+  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles, cancelHoverLeaveGrace, showConnectionMenu, clearConnectionMenu } =
     useGraphInteraction();
   const { getNode } = useReactFlow();
 
@@ -73,7 +77,29 @@ export function NodeCardHeader({
         defEdgeContext,
       ),
     );
-  }, [beginTrace, defEdgeContext, defTokenKey, indexed, lookup, symbolName]);
+    const sites = lookupOffCanvasCallSiteFiles(symbolName);
+    const menuState = buildConnectionMenuState(
+      symbolName,
+      kind,
+      "definition",
+      titleRef.current,
+      loadTargetsFromCallSiteRefs(symbolName, sites),
+      filePath,
+    );
+    if (menuState) showConnectionMenu(menuState);
+    else clearConnectionMenu();
+  }, [
+    beginTrace,
+    clearConnectionMenu,
+    defEdgeContext,
+    defTokenKey,
+    filePath,
+    indexed,
+    lookup,
+    lookupOffCanvasCallSiteFiles,
+    showConnectionMenu,
+    symbolName,
+  ]);
 
   const buildTitlePinInfo = useCallback(() => {
     const symEntry = lookup(symbolName!);
@@ -185,14 +211,23 @@ export function NodeCardHeader({
             onMouseLeave={onTitleLeave}
             onClick={onTitleClick}
           >
-            {defKind ? (
-              <FlowAnchor
-                side="right"
-                colorClass="bg-border"
-                visible={false}
-                highlighted={false}
-                size="chip"
-              />
+            {indexed && defKind ? (
+              <>
+                <FlowAnchor
+                  side="left"
+                  colorClass="bg-border"
+                  visible={false}
+                  highlighted={false}
+                  size="chip"
+                />
+                <FlowAnchor
+                  side="right"
+                  colorClass="bg-border"
+                  visible={false}
+                  highlighted={false}
+                  size="chip"
+                />
+              </>
             ) : null}
             <span className="token-shimmer-target" data-text={title}>
               {title}

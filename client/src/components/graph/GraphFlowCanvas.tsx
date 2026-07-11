@@ -7,6 +7,7 @@ import {
   type useNodesState,
 } from "@xyflow/react";
 import { TokenContextBar } from "@/components/code/TokenContextBar";
+import { TokenConnectionMenu } from "@/components/code/TokenConnectionMenu";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
@@ -37,12 +38,13 @@ export function GraphFlowCanvas({
   onPaneClick,
   onMove,
 }: GraphFlowCanvasProps) {
-  const { clearTokenInfo } = useGraphInteraction();
+  const { clearTokenInfo, clearConnectionMenu } = useGraphInteraction();
 
   const handlePaneClick = useCallback(() => {
     clearTokenInfo();
+    clearConnectionMenu();
     onPaneClick();
-  }, [clearTokenInfo, onPaneClick]);
+  }, [clearConnectionMenu, clearTokenInfo, onPaneClick]);
 
   const handleMove: OnMove = useCallback(
     (...args) => {
@@ -84,6 +86,7 @@ export function GraphFlowCanvas({
       </ReactFlow>
       <GraphPinchZoomBoost />
       <TokenContextBar />
+      <TokenConnectionMenu />
       <JumpTooltip />
     </div>
   );

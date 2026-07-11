@@ -45,6 +45,12 @@
 - **Preview edge**  
   Transient dashed SVG edge summoned on token hover (or Ctrl reveal). Always **definition → usage**. Spec: [preview-edges.md](specs/system/preview-edges.md).
 
+- **Connection kind**  
+  One of the distinct relationship types two graph elements can have (usage, inheritance, composition, transitive reach, …), each with its own line style/color/arrowhead. Today only "usage" is implemented. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
+
+- **Structural edge**  
+  A connection kind (inheritance, implementation, composition/DI) that renders **persistently** once both endpoints are loaded, unlike preview edges — a deliberate, named exception to the on-demand rule. Not yet implemented.
+
 - **Anchor**  
   DOM target for an edge endpoint. Resolved per node expansion level: class header → member row → exact source line. IDs from `client/src/lib/ctrlPreviewHandles.ts`.
 

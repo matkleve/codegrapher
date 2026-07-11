@@ -8,7 +8,7 @@ export function useTraceHostRegistration(ref: RefObject<HTMLElement | null>): vo
     if (!el) return;
     registerTraceHost(el);
     return () => unregisterElement(el);
-  });
+  }, [ref]);
 }
 
 /** Register a FlowAnchor element for handle-based preview wires. */
@@ -18,5 +18,5 @@ export function useFlowAnchorRegistration(ref: RefObject<HTMLElement | null>): v
     if (!el) return;
     registerFlowAnchor(el);
     return () => unregisterElement(el);
-  });
+  }, [ref]);
 }

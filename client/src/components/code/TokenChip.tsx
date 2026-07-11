@@ -60,8 +60,6 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
       getChipElement: () => chipRef.current,
     }));
 
-    const isDefinition = symbolRole === "definition" || !!localDefId;
-
     return (
       <ConnectorChip
         ref={chipRef}

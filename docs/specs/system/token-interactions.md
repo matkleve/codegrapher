@@ -37,8 +37,9 @@ Every indexed token in a class node body (`CodeLine`), member row header
 | 7 | Hover a wire's **first ~cm** | "Jump to X" tip rides the cursor (overflow-aware) | `.preview-edge-hit` |
 | 8 | Click a wire **hit-zone** | Focus the far endpoint (jump) + pin + context bar | hit click |
 | 9 | **Long-hover** (extended dwell) | Info box opens transiently | `INFO_DELAY_MS` |
-| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas) | `mode:"external"` |
+| 10 | Hover an **external** token (indexed, def not in graph) | Dashed **Load connector** pill wired to the token (`Load · N files` = N index matches not yet on canvas); **TokenConnectionMenu** lists loadable classes/files anchored below the chip (directional connection dot per row: right for usage→definition, left for definition→caller) | `mode:"external"` |
 | 11 | Click the **Load** pill | N=1: load immediately; N>1: open **LoadTargetPicker** (search when >6 files). **callSite** direction loads a caller file | load |
+| 12 | Click a row in **TokenConnectionMenu** | Merge focus neighborhood for that file via `GET /api/focus?depth=1` | `onLoadFile` |
 
 ## Interaction by keyword kind
 
@@ -61,6 +62,7 @@ graph-pane
 ├── NodeCardHeader title       (class definition)
 ├── PreviewEdgeOverlay         (wires + hit-zones + sockets)
 ├── TokenContextBar / info box (pinned + transient long-hover)
+├── TokenConnectionMenu        (hover external token → loadable classes)
 ├── JumpTooltip                (wire "Jump to")
 └── LoadConnector              (external symbol → load)
     └── LoadTargetPicker       (multi-file pick + filter)
@@ -96,7 +98,8 @@ graph-pane
 - [ ] Given an active wire, when the pointer enters its first ~cm, then a
   cursor-following "Jump to X" tip appears and repositions to stay on screen.
 - [ ] Given an indexed token whose definition is **not** in the graph, when
-  hovered, then a **dashed Load connector** appears.
+  hovered, then a **dashed Load connector** appears and **TokenConnectionMenu**
+  lists off-canvas load targets (only when external targets exist).
 - [ ] Given multiple off-graph definitions, when Load is clicked, then
   **LoadTargetPicker** opens (search when >6 files); N=1 loads immediately.
 - [ ] After load, the stub upgrades to an in-graph preview wire when the

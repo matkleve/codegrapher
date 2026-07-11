@@ -9,9 +9,11 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, anchors, pin lock, live retarget
 - [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim modes
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
+- [connection-taxonomy](connection-taxonomy.md) — **design spec, not yet implemented.** Connection kinds beyond usage (inheritance, composition, transitive reach, …) and their visual language
 
 ## Rules
 
-- Preview connections are **on-demand only** — never a persistent edge layer.
-- Edge direction is always **definition → usage**.
-- Preview rendering is **overlay-only** (`PreviewEdgeOverlay`), not React Flow edges.
+- **Usage and transitive** preview connections are **on-demand only** — never a persistent edge layer. This applies specifically to kind "Usage" and "Transitive" in [connection-taxonomy.md](connection-taxonomy.md); it does not extend to structural kinds.
+- **Structural** connections (inheritance, implementation, composition/DI) are a deliberate, named exception: they render persistently once both endpoint classes are loaded, because they represent a permanent fact of the code rather than a question asked on hover. See [connection-taxonomy.md](connection-taxonomy.md).
+- Usage edge direction is always **definition → usage**. Structural edge direction is relationship-specific (e.g. child → parent for inheritance) — see the taxonomy's Data table.
+- Usage/transitive preview rendering is **overlay-only** (`PreviewEdgeOverlay`), not React Flow edges. Structural edge rendering mechanism is undecided — see connection-taxonomy's Where It Lives.

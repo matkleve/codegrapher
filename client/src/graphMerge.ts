@@ -24,5 +24,7 @@ export function mergeGraphData(existing: GraphData | null, incoming: GraphData):
   return {
     nodes: [...nodeMap.values()],
     edges: [...edgeMap.values()],
+    focusFile: incoming.focusFile ?? existing?.focusFile,
+    truncated: incoming.truncated ?? existing?.truncated,
   };
 }

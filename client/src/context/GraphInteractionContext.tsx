@@ -58,6 +58,7 @@ import {
 import { rebuildTraceEdgesForKey } from "@/lib/rebuildTraceEdges";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { notifyWireTransform } from "@/lib/wireEngine";
+import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
 import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -134,6 +135,9 @@ type GraphInteractionContextValue = {
   /** Undo one pin/clear action, restoring the selection it replaced. */
   goBackPin: () => void;
   canGoBackPin: boolean;
+  connectionMenu: TokenConnectionMenuState | null;
+  showConnectionMenu: (state: TokenConnectionMenuState) => void;
+  clearConnectionMenu: () => void;
 };
 
 type PinSnapshot = {
@@ -178,6 +182,9 @@ export function GraphInteractionProvider({
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
   const [isWarm, setIsWarm] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
+  const [connectionMenu, setConnectionMenu] = useState<TokenConnectionMenuState | null>(
+    null,
+  );
   const [pinHistoryLength, setPinHistoryLength] = useState(0);
 
   const hoverTimersRef = useRef<HoverIntentTimers>(emptyHoverTimers());
@@ -198,7 +205,16 @@ export function GraphInteractionProvider({
     setHoverPreviewEdges([]);
     setHoveredTokenKey(null);
     setIsWarm(false);
+    setConnectionMenu(null);
     clearJumpTooltip();
+  }, []);
+
+  const clearConnectionMenu = useCallback(() => {
+    setConnectionMenu(null);
+  }, []);
+
+  const showConnectionMenu = useCallback((state: TokenConnectionMenuState) => {
+    setConnectionMenu(state);
   }, []);
 
   const endHoverPreview = useCallback(() => {
@@ -206,6 +222,7 @@ export function GraphInteractionProvider({
       hoveredTokenKeyRef.current = null;
       setHoveredTokenKey(null);
       setHoverPreviewEdges([]);
+      setConnectionMenu(null);
       if (!tokenInfo?.pinned) setTokenInfo(null);
       return;
     }
@@ -427,7 +444,10 @@ export function GraphInteractionProvider({
   }, [scheduleHoverClear]);
 
   useEffect(() => {
-    if (!isCtrlActive) return;
+    if (!isCtrlActive) {
+      setConnectionMenu(null);
+      return;
+    }
     const timers = hoverTimersRef.current;
     if (!timers.fire) return;
     const pending = pendingFireRef.current;
@@ -742,6 +762,9 @@ export function GraphInteractionProvider({
       lookupIndexedUsageSites,
       goBackPin,
       canGoBackPin: pinHistoryLength > 0,
+      connectionMenu,
+      showConnectionMenu,
+      clearConnectionMenu,
     }),
     [
       previewEdges,
@@ -778,6 +801,9 @@ export function GraphInteractionProvider({
       lookupIndexedUsageSites,
       goBackPin,
       pinHistoryLength,
+      connectionMenu,
+      showConnectionMenu,
+      clearConnectionMenu,
     ],
   );
 
