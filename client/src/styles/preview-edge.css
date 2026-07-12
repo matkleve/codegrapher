@@ -118,7 +118,8 @@
   opacity: 0.14;
 }
 
-.preview-edge-path.preview-edge-branch-trunk.preview-edge-warm {
+.preview-edge-path.preview-edge-branch-trunk.preview-edge-warm,
+.preview-edge-path.preview-edge-fan-trunk.preview-edge-warm {
   animation: proto-flow 950ms linear infinite;
 }
 

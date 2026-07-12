@@ -106,7 +106,7 @@ export function useLegendDemoWire(
           fromEl,
           spurs,
           svgBox,
-        );
+        ).paths;
         const junction = branchJunctionPoint(
           from.x,
           from.y,

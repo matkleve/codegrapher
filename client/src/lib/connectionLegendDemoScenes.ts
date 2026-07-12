@@ -124,8 +124,8 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
     wire: {
       mode: "preview",
       kind: "typesetting",
-      from: { id: "sig-type", fromSide: "left" },
-      to: { id: "param", toSide: "right" },
+      from: { id: "sig-type", fromSide: "right" },
+      to: { id: "param", toSide: "left" },
     },
   },
   branch: {

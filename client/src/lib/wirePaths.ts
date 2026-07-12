@@ -139,14 +139,19 @@ export function branchSpurPath(
   ].join(" ");
 }
 
+export type FanPathLayout = {
+  paths: string[];
+  busX: number;
+};
+
 export function layoutBranchFanPaths(
   x1: number,
   y1: number,
   fromEl: HTMLElement | null,
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
-): string[] {
-  if (spurs.length === 0) return [];
+): FanPathLayout {
+  if (spurs.length === 0) return { paths: [], busX: 0 };
 
   const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
   const trunk = computeBranchTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
@@ -154,7 +159,70 @@ export function layoutBranchFanPaths(
     branchSpurPath(trunk.busX, spur.x2, spur.y2, spur.toEl, svgBox),
   );
 
-  return [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)];
+  return {
+    busX: trunk.busX,
+    paths: [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)],
+  };
+}
+
+/** Cubic approach into the shared bus column — same exit curve as solo preview wires. */
+function computeCubicFanTrunk(
+  x1: number,
+  y1: number,
+  fromEl: HTMLElement | null,
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+  trunkBottomY: number,
+): BranchTrunkGeometry {
+  const busX = computeBranchBusX(spurs, svgBox);
+  const lineRect = lineRectInSvg(fromEl, svgBox);
+  const busTopY = belowRectY(lineRect, y1);
+  const clearance = chipClearance(fromEl, spurs[0]?.toEl ?? null);
+  const approach = cubicPath(x1, y1, busX, busTopY, "right", "left", { clearance });
+
+  return {
+    startX: x1,
+    busX,
+    busTopY,
+    trunkPrefix: `${approach} L ${busX} ${trunkBottomY}`,
+  };
+}
+
+/** Cubic fan — shared cubic trunk + cubic spurs into each target. */
+export function cubicFanSpurPath(
+  busX: number,
+  spur: BranchSpurInput,
+  svgBox: DOMRect,
+  fromEl: HTMLElement | null,
+): string {
+  const toRect = elRectInSvg(spur.toEl, svgBox);
+  const entryX = (toRect?.left ?? spur.x2) - ORTHOGONAL_STUB;
+  const tail = cubicPath(entryX, spur.y2, spur.x2, spur.y2, "right", "left", {
+    clearance: chipClearance(fromEl, spur.toEl),
+  });
+  const curve = tail.match(/^M[\d.]+ [\d.]+ (C.+)$/);
+  return `M ${busX} ${spur.y2} L ${entryX} ${spur.y2} ${curve?.[1] ?? tail}`;
+}
+
+export function layoutCubicFanPaths(
+  x1: number,
+  y1: number,
+  fromEl: HTMLElement | null,
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+): FanPathLayout {
+  if (spurs.length === 0) return { paths: [], busX: 0 };
+
+  const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
+  const trunk = computeCubicFanTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
+  const spurPaths = spurs.map((spur) =>
+    cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl),
+  );
+
+  return {
+    busX: trunk.busX,
+    paths: [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)],
+  };
 }
 
 /**
@@ -169,7 +237,7 @@ export function branchOrthogonalPath(
   toEl: HTMLElement | null,
   svgBox: DOMRect,
 ): string {
-  const paths = layoutBranchFanPaths(x1, y1, fromEl, [{ x2, y2, toEl }], svgBox);
+  const { paths } = layoutBranchFanPaths(x1, y1, fromEl, [{ x2, y2, toEl }], svgBox);
   return paths[0] ?? "";
 }
 

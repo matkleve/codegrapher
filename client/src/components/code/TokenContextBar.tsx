@@ -276,7 +276,6 @@ export function TokenContextBar() {
               ? callSites.map((site, idx) => (
                   <li key={`c-${site.filePath}-${site.line}-${idx}`}>
                     <InteractiveListRow
-                      hoverStyle="neutral"
                       title={fileBaseName(site.filePath)}
                       subtitle={`line ${site.line}${site.inGraph ? " · on canvas" : ""}`}
                       leading={<ConnectionTargetLeading kind={kind} />}
@@ -289,7 +288,6 @@ export function TokenContextBar() {
               ? graphRefs.map((ref, idx) => (
                   <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
                     <InteractiveListRow
-                      hoverStyle="neutral"
                       title={
                         ref.memberLabel
                           ? `${ref.classLabel} → ${ref.memberLabel}`
@@ -309,7 +307,6 @@ export function TokenContextBar() {
               ? externalRefs.map((ref, idx) => (
                   <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
                     <InteractiveListRow
-                      hoverStyle="neutral"
                       title={ref.classLabel}
                       subtitle={`line ${ref.line}`}
                       leading={<ConnectionTargetLeading kind={ref.kind} />}

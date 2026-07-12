@@ -180,10 +180,12 @@ Emitted once in `:root` (`index.css`). **Do not** use arbitrary `text-[Npx]` or 
 | `--font-size-xs` | 0.75 | `text-xs` | Explorer rows, code lines, menus |
 | `--font-size-sm` | 0.875 | `text-sm` | Node titles, buttons |
 | `--font-size-md` | 1 | `text-base` | Body default |
-| `--control-height-compact` | 1.5 | — | Explorer / menu row height |
-| `--control-height-sm` | 1.75 | — | Small buttons, compact inputs |
+| `--control-height-compact` | 1.5 | — | Explorer / menu row height (`density="compact"`) |
+| `--control-height-sm` | 1.75 | — | Legend rows (`density="legend"`), small buttons |
 | `--control-height-md` | 2 | — | Default buttons |
 | `--control-height-lg` | 2.25 | — | Icon-only large controls |
+| `--legend-swatch-width` | 3.25 | — | Connection legend wire preview width |
+| `--legend-swatch-height` | 0.8125 | — | Connection legend wire preview height |
 | `--control-gap` | 0.375 | — | Button / row internal gap |
 
 **Component pattern** (see `button.tsx`): `h-[var(--control-height-sm)]`, `text-[length:var(--font-size-xs)]`, `px-[var(--control-padding-x-sm)]`. Tailwind bridge classes (`text-xs`, `text-caption`) resolve to the same tokens via `@theme inline`.

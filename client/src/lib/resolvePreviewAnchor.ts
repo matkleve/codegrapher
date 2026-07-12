@@ -134,18 +134,15 @@ function elementAnchor(
   return { x, y, side, el, token: el.dataset.symbolName };
 }
 
-/** Port sides for sig-type → param typesetting (face each other, never back through source). */
+/** Port sides for sig-type → param typesetting — type exits right, param enters left. */
 export function typesettingPortSides(
-  fromX: number,
-  toX: number,
-): { fromSide: "left" | "right"; toSide: "left" | "right" } {
-  if (toX + 1 < fromX) {
-    return { fromSide: "left", toSide: "right" };
-  }
+  _fromX: number,
+  _toX: number,
+): { fromSide: "right"; toSide: "left" } {
   return { fromSide: "right", toSide: "left" };
 }
 
-/** Typesetting anchors face inward (type→param), not default out/right ports. */
+/** Typesetting anchors on type right / param left; above-line route spans the signature row. */
 export function resolveTypesettingAnchors(
   fromRef: AnchorRef,
   toRef: AnchorRef,

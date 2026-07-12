@@ -16,6 +16,9 @@
   --control-height-sm: 1.75rem;
   --control-height-md: 2rem;
   --control-height-lg: 2.25rem;
+  /* Connection legend swatch (fits inside control-row-legend) */
+  --legend-swatch-width: 3.25rem;
+  --legend-swatch-height: 0.8125rem;
   /* Row typography — sm body for readable list labels (WCAG-friendly) */
   --control-row-font-size: var(--font-size-sm);
   --control-row-line-height: 1.25;

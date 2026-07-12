@@ -65,4 +65,42 @@ describe("buildDefRelativePreviewEdges", () => {
     expect(cityEdge?.hop).toBe(3);
     expect(cityEdge?.liveTo?.token).toBe("city");
   });
+
+  it("does not emit same-line receiver→property micro-wires", () => {
+    const multiPropCode = `export function extractFieldValue(
+  result: GeocoderSearchResult,
+): string | null {
+  const addr = result.address;
+  return addr.city ?? addr.town ?? addr.village;
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, multiPropCode, 10);
+    const paramDef = paramDefForName(index, MEMBER, "result");
+    const originEl = document.createElement("span");
+    originEl.dataset.localDefId = paramDef!.defId;
+
+    const edges = buildDefRelativePreviewEdges({
+      originDefId: paramDef!.defId,
+      originEl,
+      symbolIndex: index,
+      methodCode: multiPropCode,
+      methodStartLine: 10,
+      flowNodeId: FLOW,
+      memberId: MEMBER,
+      classData: {
+        ...CLASS_DATA,
+        methods: [{ ...CLASS_DATA.methods[0]!, code: multiPropCode }],
+      },
+      kind: "variable",
+      edgeIdPrefix: "test",
+    });
+
+    const propEdges = edges.filter((e) => e.id.includes("chain-p-"));
+    for (const edge of propEdges) {
+      const fromLine = edge.liveFrom?.lineNumber;
+      const toLine = edge.liveTo?.lineNumber;
+      if (fromLine != null && toLine != null) {
+        expect(fromLine).not.toBe(toLine);
+      }
+    }
+  });
 });

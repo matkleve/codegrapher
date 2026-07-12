@@ -1,12 +1,12 @@
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
-  laneOffsetFromEdgeId,
   resolvePreviewAnchor,
   resolveTypesettingAnchors,
   wireHitMidSegment,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
-import { branchJunctionPoint, layoutBranchFanPaths, previewWirePath } from "@/lib/wirePaths";
+import { branchJunctionPoint, previewWirePath } from "@/lib/wirePaths";
+import { getWireLayoutContext } from "@/lib/wireFanLayout";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import {
   previewWireClasses,
@@ -41,19 +41,19 @@ function applyWireMarkers(wire: WireElements, spec: PreviewEdgeSpec): void {
   else wire.path.removeAttribute("marker-start");
 }
 
-function setBranchJunction(
+function setWireJunction(
   wire: WireElements,
-  spec: PreviewEdgeSpec,
   junction: { x: number; y: number } | null,
+  stroke: string,
 ): void {
-  if (spec.connectionKind !== "branch" || !junction) {
+  if (!junction) {
     wire.junction.style.display = "none";
     return;
   }
   wire.junction.style.display = "";
   wire.junction.setAttribute("cx", String(junction.x));
   wire.junction.setAttribute("cy", String(junction.y));
-  wire.junction.style.fill = previewWireStroke(spec);
+  wire.junction.style.fill = stroke;
 }
 
 export function createWireGroup(
@@ -78,7 +78,7 @@ export function createWireGroup(
   }
 
   const junction = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  junction.setAttribute("r", "3.5");
+  junction.setAttribute("r", "4.5");
   junction.classList.add("preview-edge-junction");
   junction.style.display = "none";
 
@@ -109,91 +109,37 @@ export function setWireWarm(wire: WireElements, warm: boolean): void {
   wire.path.classList.toggle("preview-edge-warm", warm);
 }
 
-type BranchWireLayout = {
+type FanWireLayout = {
   pathD: string;
   fromX: number;
   fromY: number;
   toX: number;
   toY: number;
   drawHitFrom: boolean;
+  drawTrunkClass: boolean;
   junction: { x: number; y: number } | null;
 };
 
-function resolveBranchFanLayout(
-  spec: PreviewEdgeSpec,
-  allSpecs: PreviewEdgeSpec[],
-  svgBox: DOMRect,
-  getNode: (id: string) => Node | undefined,
-): BranchWireLayout | null {
-  const fan = spec.branchFan;
-  if (!fan || fan.count <= 1) return null;
-
-  const groupSpecs = allSpecs.filter(
-    (s) =>
-      s.connectionKind === "branch" &&
-      s.branchFan?.groupId === fan.groupId &&
-      s.branchFan.count > 1,
+function applyFanWireLayout(wire: WireElements, layout: FanWireLayout, stroke: string): void {
+  wire.path.setAttribute("d", layout.pathD);
+  wire.glow.setAttribute("d", layout.pathD);
+  wire.path.classList.toggle("preview-edge-fan-trunk", layout.drawTrunkClass);
+  wire.glow.classList.toggle("preview-edge-fan-trunk", layout.drawTrunkClass);
+  wire.hitFrom.setAttribute(
+    "d",
+    layout.drawHitFrom
+      ? wireHitSegment(layout.fromX, layout.fromY, layout.toX, layout.toY, "from")
+      : "",
   );
-  if (groupSpecs.length <= 1) return null;
-
-  groupSpecs.sort((a, b) => a.branchFan!.index - b.branchFan!.index);
-
-  const head = groupSpecs[0]!;
-  const { from } = refinePreviewEdge(head, getNode);
-  const fromPt = resolvePreviewAnchor(from, svgBox, "from");
-  if (!fromPt) return null;
-
-  const resolved = groupSpecs
-    .map((s) => {
-      const { to } = refinePreviewEdge(s, getNode);
-      const toPt = resolvePreviewAnchor(to, svgBox, "to");
-      if (!toPt) return null;
-      return { spec: s, toPt };
-    })
-    .filter((row): row is NonNullable<typeof row> => row != null);
-
-  if (resolved.length <= 1) return null;
-
-  const paths = layoutBranchFanPaths(
-    fromPt.x,
-    fromPt.y,
-    fromPt.el,
-    resolved.map((row) => ({
-      x2: row.toPt.x,
-      y2: row.toPt.y,
-      toEl: row.toPt.el,
-    })),
-    svgBox,
+  wire.hitTo.setAttribute(
+    "d",
+    wireHitSegment(layout.fromX, layout.fromY, layout.toX, layout.toY, "to"),
   );
-
-  const junction = branchJunctionPoint(
-    fromPt.x,
-    fromPt.y,
-    fromPt.el,
-    resolved.map((row) => ({
-      x2: row.toPt.x,
-      y2: row.toPt.y,
-      toEl: row.toPt.el,
-    })),
-    svgBox,
+  wire.hitMid.setAttribute(
+    "d",
+    wireHitMidSegment(layout.fromX, layout.fromY, layout.toX, layout.toY),
   );
-
-  const index = resolved.findIndex((row) => row.spec.id === spec.id);
-  if (index < 0) return null;
-
-  const row = resolved[index]!;
-  const pathD = paths[index];
-  if (!pathD) return null;
-
-  return {
-    pathD,
-    fromX: fromPt.x,
-    fromY: fromPt.y,
-    toX: row.toPt.x,
-    toY: row.toPt.y,
-    drawHitFrom: index === 0,
-    junction,
-  };
+  setWireJunction(wire, layout.junction, stroke);
 }
 
 export function updateWireGeometry(
@@ -203,6 +149,10 @@ export function updateWireGeometry(
   allSpecs: PreviewEdgeSpec[] = [],
 ): boolean {
   const spec = wire.spec;
+  const stroke = previewWireStroke(spec);
+  const layoutCtx = getWireLayoutContext(allSpecs, svgBox, getNode);
+  const fanLayout = layoutCtx.fanMembers.get(spec.id);
+
   if (spec.load) {
     const loadEl = document.querySelector<HTMLElement>(
       `[data-load-edge-id="${CSS.escape(spec.id)}"]`,
@@ -227,7 +177,7 @@ export function updateWireGeometry(
     }
 
     wire.group.style.display = "";
-    const lane = laneOffsetFromEdgeId(spec.id);
+    const lane = layoutCtx.lanes.get(spec.id) ?? 0;
     const pathD = previewWirePath({
       connectionKind: spec.connectionKind,
       x1: fromPt.x,
@@ -256,7 +206,13 @@ export function updateWireGeometry(
       "d",
       wireHitMidSegment(fromPt.x, fromPt.y, toPt.x, toPt.y),
     );
-    setBranchJunction(wire, spec, null);
+    setWireJunction(wire, null, stroke);
+    return true;
+  }
+
+  if (fanLayout) {
+    wire.group.style.display = "";
+    applyFanWireLayout(wire, fanLayout, stroke);
     return true;
   }
 
@@ -280,45 +236,7 @@ export function updateWireGeometry(
 
   wire.group.style.display = "";
 
-  const fanLayout = resolveBranchFanLayout(spec, allSpecs, svgBox, getNode);
-  if (fanLayout) {
-    wire.path.setAttribute("d", fanLayout.pathD);
-    wire.glow.setAttribute("d", fanLayout.pathD);
-    wire.hitFrom.setAttribute(
-      "d",
-      fanLayout.drawHitFrom
-        ? wireHitSegment(
-            fanLayout.fromX,
-            fanLayout.fromY,
-            fanLayout.toX,
-            fanLayout.toY,
-            "from",
-          )
-        : "",
-    );
-    wire.hitTo.setAttribute(
-      "d",
-      wireHitSegment(
-        fanLayout.fromX,
-        fanLayout.fromY,
-        fanLayout.toX,
-        fanLayout.toY,
-        "to",
-      ),
-    );
-    wire.hitMid.setAttribute(
-      "d",
-      wireHitMidSegment(
-        fanLayout.fromX,
-        fanLayout.fromY,
-        fanLayout.toX,
-        fanLayout.toY,
-      ),
-    );
-    setBranchJunction(wire, spec, fanLayout.junction);
-    return true;
-  }
-
+  const lane = layoutCtx.lanes.get(spec.id) ?? 0;
   const pathD = previewWirePath({
     connectionKind: spec.connectionKind,
     x1: fromPt.x,
@@ -330,10 +248,12 @@ export function updateWireGeometry(
     fromEl: fromPt.el,
     toEl: toPt.el,
     svgBox,
-    lane: laneOffsetFromEdgeId(spec.id),
+    lane,
   });
   wire.path.setAttribute("d", pathD);
   wire.glow.setAttribute("d", pathD);
+  wire.path.classList.remove("preview-edge-fan-trunk");
+  wire.glow.classList.remove("preview-edge-fan-trunk");
   wire.hitFrom.setAttribute(
     "d",
     wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "from"),
@@ -348,9 +268,8 @@ export function updateWireGeometry(
   );
 
   if (spec.connectionKind === "branch") {
-    setBranchJunction(
+    setWireJunction(
       wire,
-      spec,
       branchJunctionPoint(
         fromPt.x,
         fromPt.y,
@@ -358,9 +277,10 @@ export function updateWireGeometry(
         [{ x2: toPt.x, y2: toPt.y, toEl: toPt.el }],
         svgBox,
       ),
+      stroke,
     );
   } else {
-    setBranchJunction(wire, spec, null);
+    setWireJunction(wire, null, stroke);
   }
 
   return true;

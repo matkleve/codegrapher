@@ -249,7 +249,7 @@ function buildChainedEdge(
 function buildChainedDefEdge(
   ctx: RelativeWalkContext,
   fromEl: HTMLElement,
-  fromSite: Site,
+  fromSite: Site | undefined,
   defId: string,
   level: number,
   suffix: string,
@@ -428,11 +428,24 @@ export function buildDefRelativePreviewEdges(ctx: RelativeWalkContext): PreviewE
             usage,
           )) {
             const chainLevel = level === 1 && !ctx.includeDirectUsages ? 2 : level + 1;
+            const bindingEl = resolveDefChip(ctx, bindingDefId);
+            const bindingSite = defSiteKey(ctx.symbolIndex, bindingDefId);
+            const sameLineBinding =
+              bindingSite != null && bindingSite.lineNumber === usage.lineNumber;
+            const chainFromEl =
+              sameLineBinding && anchorEl.isConnected ? anchorEl : usageHost;
+            const chainFromSite = sameLineBinding ? undefined : usage;
             pushEdge(
-              buildChainedDefEdge(ctx, usageHost, usage, bindingDefId, chainLevel, `b-${chainLevel}-${bindingDefId}`),
+              buildChainedDefEdge(
+                ctx,
+                chainFromEl,
+                chainFromSite,
+                bindingDefId,
+                chainLevel,
+                `b-${chainLevel}-${bindingDefId}`,
+              ),
               `b:${bindingDefId}`,
             );
-            const bindingEl = resolveDefChip(ctx, bindingDefId);
             nextFrontier.push({
               defId: bindingDefId,
               anchorEl: bindingEl?.isConnected ? bindingEl : usageHost,
@@ -454,17 +467,38 @@ export function buildDefRelativePreviewEdges(ctx: RelativeWalkContext): PreviewE
           const receiverIdx = receivers[0];
           if (receiverIdx == null) continue;
           const receiverSite = { lineNumber: prop.lineNumber, tokenIndex: receiverIdx };
-          const receiverEl = resolveSiteChip(ctx, receiverSite);
+
           const propEl = resolveSiteChip(ctx, prop);
+          const receiverDefId = usageTargetFor(
+            ctx.symbolIndex,
+            receiverSite.lineNumber,
+            receiverSite.tokenIndex,
+          );
+
+          // Same-line `receiver.prop` micro-hops collapse into circular wires — route
+          // from the binding def on an earlier line instead (addr def → city, not addr → city).
+          let fromEl: HTMLElement | null;
+          let fromSite: Site | undefined;
+          if (receiverSite.lineNumber === prop.lineNumber) {
+            if (!receiverDefId || receiverDefId.startsWith("property::")) continue;
+            const defSite = defSiteKey(ctx.symbolIndex, receiverDefId);
+            if (!defSite || defSite.lineNumber === prop.lineNumber) continue;
+            fromEl = resolveDefChip(ctx, receiverDefId);
+            fromSite = undefined;
+          } else {
+            fromEl = resolveSiteChip(ctx, receiverSite);
+            fromSite = receiverSite;
+          }
+
           pushEdge(
             buildChainedEdge(
               ctx,
-              receiverEl ?? anchorEl,
+              fromEl ?? anchorEl,
               propEl,
               propLevel,
               `p-${propLevel}-${prop.lineNumber}-${prop.tokenIndex}`,
               prop,
-              receiverSite,
+              fromSite,
             ),
             `p:${prop.lineNumber}:${prop.tokenIndex}`,
           );

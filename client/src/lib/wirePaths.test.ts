@@ -104,7 +104,7 @@ describe("layoutBranchFanPaths", () => {
     );
     const caseA = mockEl({ left: 60, right: 110, top: 130, bottom: 148 });
     const caseB = mockEl({ left: 60, right: 110, top: 160, bottom: 178 });
-    const paths = layoutBranchFanPaths(
+    const { paths } = layoutBranchFanPaths(
       70,
       109,
       switchEl,
@@ -215,12 +215,12 @@ describe("previewWirePath", () => {
     );
     const path = previewWirePath({
       connectionKind: "typesetting",
-      x1: 275,
+      x1: 389,
       y1: 109,
-      x2: 135,
+      x2: 91,
       y2: 109,
-      fromSide: "left",
-      toSide: "right",
+      fromSide: "right",
+      toSide: "left",
       fromEl: from,
       toEl: to,
       svgBox: SVG_BOX,
@@ -236,12 +236,12 @@ describe("previewWirePath", () => {
     const to = mockEl({ left: 40, top: 48, right: 90, bottom: 64 });
     const path = previewWirePath({
       connectionKind: "typesetting",
-      x1: 215,
+      x1: 360,
       y1: 56,
-      x2: 95,
+      x2: 40,
       y2: 56,
-      fromSide: "left",
-      toSide: "right",
+      fromSide: "right",
+      toSide: "left",
       fromEl: from,
       toEl: to,
       svgBox: SVG_BOX,

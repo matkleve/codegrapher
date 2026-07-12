@@ -42,28 +42,6 @@
   border-color: transparent !important;
 }
 
-/* Read-only rows (legend, labels) — muted hover without brand accent */
-.hoverable-neutral {
-  transition:
-    background-color var(--motion-hover-surface) var(--ease),
-    border-color var(--motion-hover-surface) var(--ease),
-    color var(--motion-hover-color) var(--ease);
-  border: 1px solid transparent;
-}
-
-.hoverable-neutral:hover {
-  background-color: var(--muted);
-  border-color: var(--border);
-  color: var(--foreground);
-}
-
-.hoverable-neutral:hover .control-row-text-primary,
-.hoverable-neutral:hover .control-row-text-title,
-.hoverable-neutral:hover .control-row-text-secondary,
-.hoverable-neutral:hover .control-row-text-subtitle {
-  color: var(--foreground);
-}
-
 /* Passive / deactivated read-only rows — grey at rest, slightly deepened on hover */
 .list-row-passive {
   border: 1px solid var(--border);
@@ -88,7 +66,7 @@
   color: var(--muted-foreground);
 }
 
-/* Context bar rows use hoverStyle="neutral" on InteractiveListRow — no ancestor override. */
+/* Context bar list rows use default brand `.hoverable` hover on InteractiveListRow. */
 
 /* Explorer variant rows: muted/foreground at rest; expanded ≠ hovered */
 .list-row-explorer {

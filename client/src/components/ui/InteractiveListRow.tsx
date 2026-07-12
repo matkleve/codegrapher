@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   INTERACTIVE_ROW_DOUBLE,
   INTERACTIVE_ROW_LEFT,
-  INTERACTIVE_ROW_NEUTRAL_LEFT,
+  INTERACTIVE_ROW_LEGEND_LEFT,
   INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT,
 } from "@/lib/controlTokens";
 import { TOKEN_EDGE_STROKE, type SemanticTokenKind } from "@/lib/tokenColors";
@@ -32,11 +32,12 @@ export type InteractiveListRowProps = {
   actionLabel?: string;
   onClick?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
   onMouseEnter?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
+  onMouseMove?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
   onFocus?: FocusEventHandler<HTMLButtonElement | HTMLDivElement>;
   onPointerDown?: PointerEventHandler<HTMLButtonElement | HTMLDivElement>;
   className?: string;
-  /** `comfortable` = two-line menu row; `compact` | `plain` = single-line row height */
-  density?: "comfortable" | "compact" | "plain";
+  /** `comfortable` = two-line menu; `compact` | `plain` = 24px row; `legend` = taller toggle row */
+  density?: "comfortable" | "compact" | "plain" | "legend";
   /** Surface preset — explorer sidebar, class-node section chrome, etc. */
   variant?: ListRowVariant;
   /** Highlight when a connection kind is live on the canvas (legend) */
@@ -45,8 +46,6 @@ export type InteractiveListRowProps = {
   tone?: "default" | "passive";
   /** `muted` = grey label only; row keeps normal chrome + brand hover */
   contentTone?: "default" | "muted";
-  /** `neutral` = grey hover (legend toggles, context bar); default brand hover for menus */
-  hoverStyle?: "brand" | "neutral";
   /** Explorer file rows: ink when file is already on the canvas */
   inGraph?: boolean;
   /** Explorer file paths */
@@ -90,14 +89,14 @@ export function InteractiveListRowText({
   title: string;
   subtitle?: string;
   align?: "left" | "right";
-  density?: "comfortable" | "compact" | "plain";
+  density?: "comfortable" | "compact" | "plain" | "legend";
   tone?: "default" | "passive";
   contentTone?: "default" | "muted";
   mono?: boolean;
 }) {
   const monoClass = mono ? "font-mono" : undefined;
 
-  if (density === "plain" || density === "compact") {
+  if (density === "plain" || density === "compact" || density === "legend") {
     return (
       <span
         className={cn(
@@ -135,11 +134,14 @@ export function InteractiveListRowText({
 
 function compactRowClass(
   density: InteractiveListRowProps["density"],
-  hoverStyle: InteractiveListRowProps["hoverStyle"],
   fullWidth: boolean,
 ): string {
   if (density === "comfortable") return INTERACTIVE_ROW_DOUBLE;
-  if (hoverStyle === "neutral") return INTERACTIVE_ROW_NEUTRAL_LEFT;
+  if (density === "legend") {
+    return fullWidth
+      ? INTERACTIVE_ROW_LEGEND_LEFT
+      : INTERACTIVE_ROW_LEGEND_LEFT.replace("w-full", "w-auto");
+  }
   const base = cn(INTERACTIVE_ROW_LEFT, "control-row-compact");
   return fullWidth ? base : base.replace("w-full", "w-auto");
 }
@@ -174,6 +176,7 @@ export function InteractiveListRow({
   actionLabel,
   onClick,
   onMouseEnter,
+  onMouseMove,
   onFocus,
   onPointerDown,
   className,
@@ -182,7 +185,6 @@ export function InteractiveListRow({
   emphasis = "default",
   tone = "default",
   contentTone = "default",
-  hoverStyle = "brand",
   inGraph = false,
   mono = false,
   disabled = false,
@@ -195,8 +197,11 @@ export function InteractiveListRow({
 }: InteractiveListRowProps) {
   const rowClass =
     tone === "passive"
-      ? INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT
-      : compactRowClass(density, hoverStyle, fullWidth);
+      ? cn(
+          INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT,
+          density === "legend" && "control-row-legend",
+        )
+      : compactRowClass(density, fullWidth);
 
   const trailingNode =
     trailing ??
@@ -254,6 +259,7 @@ export function InteractiveListRow({
         className={cn(sharedClass, draggable && "active:cursor-grabbing")}
         onClick={disabled ? undefined : onClick}
         onMouseEnter={onMouseEnter}
+        onMouseMove={onMouseMove}
         onFocus={onFocus}
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}
@@ -274,6 +280,7 @@ export function InteractiveListRow({
       className={sharedClass}
       onClick={disabled ? undefined : onClick}
       onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
       onFocus={onFocus}
       onPointerDown={onPointerDown}
       disabled={disabled}

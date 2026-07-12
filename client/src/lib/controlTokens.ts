@@ -27,13 +27,9 @@ export const INTERACTIVE_ROW_DOUBLE =
 
 export const INTERACTIVE_ROW_NODRAG = `${INTERACTIVE_ROW} nodrag`;
 
-/** Read-only menu row — muted hover, no click affordance */
-export const INTERACTIVE_ROW_STATIC_LEFT =
-  "hoverable-neutral control-row-compact flex w-full cursor-default items-center border border-transparent justify-start text-left";
-
-/** Toggle / legend row — grey hover, clickable */
-export const INTERACTIVE_ROW_NEUTRAL_LEFT =
-  "hoverable-neutral control-row-compact pointer-events-auto flex w-full cursor-pointer items-center border border-transparent justify-start text-left";
+/** Connection legend — taller row, brand hover */
+export const INTERACTIVE_ROW_LEGEND_LEFT =
+  "hoverable control-row-legend pointer-events-auto flex w-full cursor-pointer items-center border border-transparent justify-start text-left";
 
 /** Read-only passive row — grey surface + border at rest (hidden/disabled legend items) */
 export const INTERACTIVE_ROW_PASSIVE_LEFT =

@@ -29,11 +29,22 @@
   height: var(--icon-size-sm);
 }
 
-.connection-legend-swatch {
-  width: 4.5rem;
-  height: 1.125rem;
-  flex-shrink: 0;
-  overflow: visible;
+/* Legend rows — taller than compact to fit wire swatches */
+.control-row-legend {
+  height: auto;
+  min-height: var(--control-height-sm);
+  padding-block: 0.1875rem;
+  padding-inline: var(--control-padding-x-compact);
+  font-size: var(--control-row-font-size);
+  line-height: var(--control-row-line-height);
+  border-radius: var(--radius-sm);
+  gap: var(--control-gap);
+}
+
+.control-row-legend svg:not([class*="size-"]):not(.connection-legend-swatch),
+.control-row-legend [data-icon] {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
 }
 
 /* Two-line menu rows — sm type, auto height for title + subtitle */

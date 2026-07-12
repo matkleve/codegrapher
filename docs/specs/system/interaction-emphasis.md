@@ -103,7 +103,7 @@ index.css (.hoverable)
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state
-- [ ] `.hoverable:hover` promotes `.control-row-text-*` labels to `--brand` (`hoverStyle="neutral"` / `tone="passive"` opt out)
+- [ ] `.hoverable:hover` promotes `.control-row-text-*` labels to `--brand` (`tone="passive"` opts out)
 - [ ] Token chip hover and `token-chip-on` use the same semantic fill — no brand gold, no border/box-shadow on the chip shell
 - [ ] `controlTokens.ts` and `index.css` stay in sync
 

@@ -121,6 +121,7 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 
 - **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
 - **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
+- **Fan/bus wayfinding:** [preview-edges.wayfinding.supplement.md](preview-edges.wayfinding.supplement.md)
 - **Connection kinds (incl. Typesetting):** [connection-taxonomy.md](connection-taxonomy.md)
 - **Accessibility (wire differentiation):** [../../design/accessibility.md](../../design/accessibility.md)
 - Philosophy: [preview-edges.philosophy.supplement.md](preview-edges.philosophy.supplement.md)

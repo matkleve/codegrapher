@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cubicPath } from "@/lib/resolvePreviewAnchor";
+import { cubicPath, typesettingPortSides } from "@/lib/resolvePreviewAnchor";
+
+describe("typesettingPortSides", () => {
+  it("always uses type right and param left for above-line routing", () => {
+    expect(typesettingPortSides(300, 50)).toEqual({ fromSide: "right", toSide: "left" });
+    expect(typesettingPortSides(50, 300)).toEqual({ fromSide: "right", toSide: "left" });
+  });
+});
 
 describe("cubicPath", () => {
   it("exits horizontally before bending on vertical spans", () => {

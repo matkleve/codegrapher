@@ -54,7 +54,7 @@ Normative contract: [state-visuals.md](state-visuals.md) · [interaction-emphasi
 | Class node resize handle (hover) | Brand | CSS in `index.css` |
 | Sidebar resize handle | Brand | CSS in `index.css` |
 | Token chips (trace/Ctrl) | Semantic | `--token-edge-*` — not brand |
-| TokenContextBar list rows | Neutral | `hoverStyle="neutral"` on `InteractiveListRow` |
+| TokenContextBar list rows | Brand | `InteractiveListRow` (default `.hoverable`) |
 | TokenContextBar chrome buttons | Neutral | `Button variant="ghost"` — not list rows |
 | Path highlight ring | Ring | `ring-ring` / `--ring` |
 | Focus-visible (keyboard) | Ring / primary | `ring-ring` or `ring-primary` on buttons |

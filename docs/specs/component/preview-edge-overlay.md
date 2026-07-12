@@ -10,9 +10,9 @@ Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wi
 
 | Kind | Path geometry |
 | ---- | ------------- |
-| Usage, Binding, Transitive, Load | Cubic — skirt below labels |
-| **Typesetting** | **Rounded orthogonal** Manhattan (`TYPESETTING_CORNER_RADIUS` = 6px) — sig-type → param def |
-| Control flow (`branch`) | Sharp orthogonal bus in the **left gutter** — down from decision, across below head line, down bus, taps right into branch anchors (first branch draws shared trunk) |
+| Usage, Binding, Transitive, Load | Cubic — or **fan/bus** when 2+ targets cluster (shared trunk + knot + cubic spurs) |
+| **Typesetting** | **Rounded orthogonal** Manhattan (`TYPESETTING_CORNER_RADIUS` = 6px) — sig-type → param def; member-scoped lanes |
+| Control flow (`branch`) | Sharp orthogonal bus in the **left gutter** — shared trunk, **junction knot**, faint bus guide when lit |
 
 ## Where It Lives
 

@@ -51,7 +51,7 @@ function LegendSwatch({
         visible && !firing && "connection-legend-swatch--idle",
         visible && firing && "connection-legend-swatch--firing",
       )}
-      viewBox="0 0 56 16"
+      viewBox="0 1 56 14"
       aria-hidden
     >
       <defs>
@@ -82,8 +82,8 @@ function LegendSwatch({
       {kind === "branch" ? (
         <circle
           cx={8}
-          cy={4}
-          r={2.5}
+          cy={5}
+          r={2}
           className="preview-edge-junction"
           fill={def.stroke}
         />
@@ -242,8 +242,7 @@ export function ConnectionLegend({
               return (
                 <li key={kind}>
                   <InteractiveListRow
-                    density="compact"
-                    hoverStyle="neutral"
+                    density="legend"
                     tone={visible ? "default" : "passive"}
                     emphasis={firing ? "live" : "default"}
                     className={cn(

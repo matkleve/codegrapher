@@ -54,10 +54,10 @@
 }
 
 .connection-legend-swatch {
-  width: 4.5rem;
-  height: 1.125rem;
+  width: var(--legend-swatch-width);
+  height: var(--legend-swatch-height);
   flex-shrink: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .connection-legend-swatch--inactive .connection-legend-swatch-line {
