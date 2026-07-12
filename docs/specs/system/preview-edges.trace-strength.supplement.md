@@ -75,8 +75,37 @@ flowchart LR
 | 2 | Hover/pin **param def** `field` in signature (header chip **or** inline signature line in expanded body) | Fan-out param def → **each** in-body usage | tier 1 each |
 | 2b | Same trace | sig-type → param def | tier 2 |
 | 2c | Same trace | type def → sig-type (or Load stub) | tier 3 |
-| 3 | Hover/pin **sig-type** `AddressFieldKind` only | Existing `buildSignatureTypeUsageEdges` wire (def → chip or Load stub) | tier 1 only — no forward cascade to param usages |
+| 3 | Hover/pin **sig-type** `GeocoderSearchResult` (header input tag **or** inline signature line) | Type def → sig-type (or Load stub) | tier 1 / tier 3 |
+| 3b | Same trace | **Typesetting** sig-type → co-located param def on the **same surface** | tier 2 |
+| 3c | Same trace | Chained usage wires param def → in-body usages/bindings (`result` → `result.address` → …) | tier 3 |
 | 4 | Hover/pin **local** `const x = …` usage | Usage wire binding def → usage (tier 1); binding wire initializer → binding when applicable (tier 1 binding kind) — **no** sig-type chain (locals have no signature type) |
+
+### Dual signature surfaces (header vs body line)
+
+Indexed params render twice when a method body is expanded:
+
+| Surface | DOM | Example trace keys |
+| ------- | --- | ------------------ |
+| **Header input/return tags** | `MemberSignatureTags` in the member row header | `…::sig-param::result`, `…::sig-type::GeocoderSearchResult` |
+| **Inline signature line** | `CodeLine` tokens on the source signature row | `…::{line}::{token}::result`, same for the type token |
+
+They are the **same logical slots** (one `localDefId` for the param; one indexed type usage) but **different physical anchors**. Provenance wires MUST stay on the surface the user hovered:
+
+- Header sig-type hover → tier-2 typesetting to the **header** `result` chip, then chained wires from that chip into the body.
+- Inline sig-type hover → same chain anchored on the **body signature line** chips.
+
+Implementation: `findParamDefCoLocated` / `findParamTypeChipCoLocated` in `paramTypeAnchors.ts`; `preferOriginEl: true` on `buildSignatureTypeParamCascade` so the body duplicate does not steal the chain origin.
+
+### Relative walk depth knobs
+
+Tunable in `client/src/lib/defRelativePreviewEdges.ts`:
+
+| Export | Default | Meaning |
+| ------ | ------- | ------- |
+| `TRACE_DEPTH_DOWN` / `RELATIVE_MAX_DEPTH` | 5 | Max hops **downstream** from a def (usages → bindings → member props) |
+| `TRACE_DEPTH_UP` / `BACKWARD_LEXICAL_MAX_DEPTH` | 5 | Max hops **upstream** from a usage |
+| `RELATIVE_FAN_OUT_CAP` | 24 | Max wires per relative walk |
+| `TRACE_VISUAL_HOP_MAX` | 3 | Opacity tiers (`hop: 2` ≈ half, `hop: 3` ≈ quarter) |
 
 ### Data
 
@@ -152,7 +181,7 @@ Indexed types in the same file as an on-canvas class (e.g. `export type AddressF
 - [ ] Given tier-2 sig-type endpoint, when lit, then chip uses `token-chip-endpoint-sibling` and socket uses `flow-anchor-endpoint-sibling`.
 - [ ] Given hover on body usage only, when trace is active, then other usages of `field` do **not** receive usage wires (counts/menu unchanged).
 - [ ] Given hover on param def `field`, when trace is active, then every in-body usage has a tier-1 wire and the type chain appears at tier 2/3 behind the param.
-- [ ] Given direct hover on sig-type `AddressFieldKind`, when trace fires, then behavior is unchanged (tier-1 only) — no reverse fan-out to param usages.
+- [ ] Given direct hover on sig-type `GeocoderSearchResult` in the **header** or on the **inline signature line**, when trace fires, then tier-2 typesetting connects to the co-located `result` param on that same surface and tier-3 chained wires continue into the body (`result` → `result.address` → …).
 - [ ] Given cascaded tier-3 Load stub, when user has not hovered the type chip directly, then `TokenConnectionMenu` does not open (menu only on primary hover or explicit sig-type hover).
 - [ ] Given Load on `AddressFieldKind` from stub/menu, when merge completes, then type alias node is on canvas and a re-hover resolves a solid tier-1 (or tier-3 in cascade) graph wire instead of stub only.
 - [ ] Given `switch (field)` in the same method, when `field` usage is hovered, then control-flow branch wires remain tier-1 `--edge-control-flow` green — not decayed to usage strength.

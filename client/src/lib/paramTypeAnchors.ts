@@ -36,6 +36,27 @@ export function typeTokenIndexOnParamSignature(
   return null;
 }
 
+/** Param name for `paramName: symbolName` on a signature source line (not return types). */
+export function paramNameForSignatureType(
+  signatureSource: string,
+  symbolName: string,
+): string | null {
+  const tokens = tokenizeLine(signatureSource).tokens;
+  for (let j = 0; j < tokens.length; j++) {
+    if (tokens[j]?.kind !== "identifier" || tokens[j]?.text !== symbolName) continue;
+    let k = j - 1;
+    while (k >= 0 && tokens[k]?.kind === "whitespace") k--;
+    if (tokens[k]?.text !== ":") continue;
+    k--;
+    while (k >= 0 && tokens[k]?.kind === "whitespace") k--;
+    const param = tokens[k];
+    if (param?.kind !== "identifier") continue;
+    if (param.text === ")" || param.text === "(") continue;
+    return param.text;
+  }
+  return null;
+}
+
 function findChipByTraceKey(
   pane: HTMLElement,
   traceKey: string,
@@ -143,4 +164,102 @@ export function findParamTypeChip(
     findBodyParamTypeChip(flowNodeId, memberId, paramName, symbolName, getNode) ??
     findHeaderParamTypeChip(flowNodeId, memberId, paramName, symbolName)
   );
+}
+
+export function isHeaderSignatureEl(el: HTMLElement): boolean {
+  return Boolean(el.closest(".member-signature-tags"));
+}
+
+/** Sig-type chip on the same surface as the hovered param (header summary vs body line). */
+export function findParamTypeChipCoLocated(
+  flowNodeId: string,
+  memberId: string,
+  paramName: string,
+  symbolName: string,
+  paramEl: HTMLElement,
+  getNode: (id: string) => Node | undefined,
+): HTMLElement | null {
+  if (isHeaderSignatureEl(paramEl)) {
+    return (
+      findSigTypeInSigValueGroup(paramEl, flowNodeId, memberId, symbolName) ??
+      findHeaderParamTypeChip(flowNodeId, memberId, paramName, symbolName)
+    );
+  }
+  return (
+    findBodyParamTypeChip(flowNodeId, memberId, paramName, symbolName, getNode) ??
+    findHeaderParamTypeChip(flowNodeId, memberId, paramName, symbolName)
+  );
+}
+
+/** Param def chip in the same header `name: Type` pill as `peerEl`. */
+export function findParamDefInSigValueGroup(
+  peerEl: HTMLElement,
+  flowNodeId: string,
+  memberId: string,
+  paramName: string,
+): HTMLElement | null {
+  const group = peerEl.closest(".member-sig-value--in");
+  if (!group) return null;
+  const paramKey = makeSigParamDefKey(flowNodeId, memberId, paramName);
+  return group.querySelector<HTMLElement>(
+    `[data-trace-key="${CSS.escape(paramKey)}"]`,
+  );
+}
+
+/** Sig-type chip in the same header `name: Type` pill as `peerEl`. */
+export function findSigTypeInSigValueGroup(
+  peerEl: HTMLElement,
+  flowNodeId: string,
+  memberId: string,
+  symbolName: string,
+): HTMLElement | null {
+  const group = peerEl.closest(".member-sig-value--in");
+  if (!group) return null;
+  const typeKey = makeSignatureTypeKey(flowNodeId, memberId, symbolName);
+  return group.querySelector<HTMLElement>(
+    `[data-trace-key="${CSS.escape(typeKey)}"]`,
+  );
+}
+
+/** Param def chip paired with a sig-type on the same surface (header vs body). */
+export function findParamDefCoLocated(
+  flowNodeId: string,
+  memberId: string,
+  paramName: string,
+  peerEl: HTMLElement,
+  paramDefId?: string,
+): HTMLElement | null {
+  if (isHeaderSignatureEl(peerEl)) {
+    return (
+      findParamDefInSigValueGroup(peerEl, flowNodeId, memberId, paramName) ??
+      (() => {
+        const pane = graphPane();
+        return pane
+          ? findChipByTraceKey(pane, makeSigParamDefKey(flowNodeId, memberId, paramName))
+          : null;
+      })()
+    );
+  }
+  const onLine = findParamDefOnCodeLine(peerEl, paramName, paramDefId);
+  if (onLine?.isConnected) return onLine;
+  return findParamDefChip(flowNodeId, memberId, paramName);
+}
+
+function findParamDefOnCodeLine(
+  peerEl: HTMLElement,
+  paramName: string,
+  paramDefId?: string,
+): HTMLElement | null {
+  const line = peerEl.closest(".code-line");
+  if (!line) return null;
+  if (paramDefId) {
+    const byId = line.querySelector<HTMLElement>(
+      `[data-local-def-id="${CSS.escape(paramDefId)}"]`,
+    );
+    if (byId?.isConnected) return byId;
+  }
+  for (const chip of line.querySelectorAll<HTMLElement>("[data-local-def-id]")) {
+    if (chip.dataset.symbolName === paramName) return chip;
+  }
+  return null;
 }

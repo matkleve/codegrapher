@@ -45,10 +45,10 @@ Today's usage preview edge (dashed, `--edge-usage` blue, open arrowhead, hover-s
 ```text
 Connection kinds
 ├── Preview (on-demand, hover-gated — existing contract, unchanged)
-│   ├── Usage            — dashed, `--edge-usage` blue, open arrow (def → usage)
-│   ├── Binding          — dotted, `--edge-binding` hue, open arrow (initializer → binding)
-│   ├── Typesetting      — dash-dot, `--edge-typesetting` (type teal), rounded orthogonal, open arrow (sig-type → param def)
-│   ├── Control flow      — dash-dot, dedicated green hue, filled arrow (condition → branch)
+│   ├── Usage            — dashed, `--edge-usage` blue, open chevron (def → usage)
+│   ├── Binding          — dotted, `--edge-binding` hue, bar cap (initializer → binding), forward dash flow
+│   ├── Typesetting      — dash-dot, `--edge-typesetting` (type teal), rounded orthogonal, bracket caps (sig-type ↔ param def), forward dash flow
+│   ├── Control flow      — dash-dot, dedicated green hue, filled triangle (condition → branch), junction disc at bus fork
 │   └── Transitive        — dashed, stepped opacity, same color family as Usage
 ├── Structural (persistent once both ends loaded — new, deliberate exception)
 │   ├── Inheritance        — solid, hollow triangle arrow

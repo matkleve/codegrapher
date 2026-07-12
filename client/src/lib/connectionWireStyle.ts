@@ -35,6 +35,10 @@ export const LEGEND_CONNECTION_KINDS: readonly LegendConnectionKind[] = [
 
 export type WireMarkerId =
   | "wire-arrow-open"
+  | "wire-arrow-bar"
+  | "wire-bracket-start"
+  | "wire-bracket-end"
+  | "wire-arrow-branch-filled"
   | "structural-arrow-triangle"
   | "structural-arrow-diamond";
 
@@ -47,7 +51,8 @@ type WireStyleDef = {
   stroke: string;
   pathClasses: readonly string[];
   markerId: WireMarkerId;
-  /** Preview kinds: legend always uses warm trace motion (same speed as map). */
+  markerStartId?: WireMarkerId;
+  /** Preview kinds: legend uses warm dash motion at map speeds. */
   legendFlow: boolean;
   /** Dotted structural kinds: legend marches the dash pattern (map is static unless pulse). */
   legendDottedFlow: boolean;
@@ -96,7 +101,7 @@ const WIRE_STYLE: Record<LegendConnectionKind, WireStyleDef> = {
     layer: "preview",
     stroke: "var(--edge-binding)",
     pathClasses: ["preview-edge-path", "preview-edge-binding"],
-    markerId: "wire-arrow-open",
+    markerId: "wire-arrow-bar",
     legendFlow: true,
     legendDottedFlow: false,
   },
@@ -105,20 +110,21 @@ const WIRE_STYLE: Record<LegendConnectionKind, WireStyleDef> = {
     layer: "preview",
     stroke: "var(--edge-typesetting)",
     pathClasses: ["preview-edge-path", "preview-edge-typesetting"],
-    markerId: "wire-arrow-open",
+    markerId: "wire-bracket-end",
+    markerStartId: "wire-bracket-start",
     legendFlow: true,
     legendDottedFlow: false,
-    legendPathD: "M 3 10 L 3 5 Q 3 3 5 3 L 38 3",
+    legendPathD: "M 8 14 L 8 7 Q 8 4 11 4 L 42 4",
   },
   branch: {
     label: "Control flow",
     layer: "preview",
     stroke: "var(--edge-control-flow)",
     pathClasses: ["preview-edge-path", "preview-edge-branch"],
-    markerId: "wire-arrow-open",
+    markerId: "wire-arrow-branch-filled",
     legendFlow: true,
     legendDottedFlow: false,
-    legendPathD: "M 3 10 L 3 3 L 38 3",
+    legendPathD: "M 8 14 L 8 4 L 42 4",
   },
   inheritance: {
     label: "Inheritance",
@@ -210,6 +216,28 @@ export function structuralMarkerId(arrowhead: StructuralArrowhead): WireMarkerId
   }
 }
 
+export function previewWireMarkerEnd(spec: PreviewEdgeSpec): WireMarkerId | null {
+  if (spec.load) return null;
+  const kind =
+    spec.connectionKind ?? (spec.hop != null && spec.hop >= 2 ? "transitive" : "usage");
+  switch (kind) {
+    case "binding":
+      return "wire-arrow-bar";
+    case "typesetting":
+      return "wire-bracket-end";
+    case "branch":
+      return "wire-arrow-branch-filled";
+    default:
+      return "wire-arrow-open";
+  }
+}
+
+export function previewWireMarkerStart(spec: PreviewEdgeSpec): WireMarkerId | null {
+  if (spec.connectionKind === "typesetting") return "wire-bracket-start";
+  return null;
+}
+
+/** @deprecated Use previewWireMarkerEnd(spec) */
 export function previewWireMarkerId(): WireMarkerId {
   return "wire-arrow-open";
 }
@@ -219,7 +247,7 @@ export function legendSwatchClasses(
   opts: { pulse: boolean },
 ): string[] {
   const def = WIRE_STYLE[kind];
-  const classes = [...def.pathClasses];
+  const classes = [...def.pathClasses, "connection-legend-swatch-line--animated"];
   if (def.legendFlow) {
     classes.push("preview-edge-warm");
   }
@@ -228,6 +256,9 @@ export function legendSwatchClasses(
   }
   if (def.legendDottedFlow && !opts.pulse) {
     classes.push("connection-legend-swatch-line--dotted-flow");
+  }
+  if (def.pathClasses.includes("structural-edge-path--solid")) {
+    classes.push("connection-legend-swatch-line--solid-legend");
   }
   return classes;
 }
@@ -251,6 +282,10 @@ export function previewWireClasses(
   if (spec.connectionKind === "branch") {
     path.push("preview-edge-branch");
     glow.push("preview-edge-branch");
+    if (spec.branchFan == null || spec.branchFan.index === 0) {
+      path.push("preview-edge-branch-trunk");
+      glow.push("preview-edge-branch-trunk");
+    }
   }
   if (warm) {
     path.push("preview-edge-warm");

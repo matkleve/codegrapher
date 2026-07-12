@@ -1,5 +1,6 @@
 import type {
   DragEventHandler,
+  FocusEventHandler,
   KeyboardEventHandler,
   MouseEventHandler,
   PointerEventHandler,
@@ -25,6 +26,8 @@ export type InteractiveListRowProps = {
   /** Visual outline badge (Jump, Load, …) — row click handles the action */
   actionLabel?: string;
   onClick?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
+  onMouseEnter?: MouseEventHandler<HTMLButtonElement | HTMLDivElement>;
+  onFocus?: FocusEventHandler<HTMLButtonElement | HTMLDivElement>;
   onPointerDown?: PointerEventHandler<HTMLButtonElement | HTMLDivElement>;
   className?: string;
   /** `comfortable` = two-line menu row; `compact` | `plain` = single-line row height */
@@ -139,6 +142,8 @@ export function InteractiveListRow({
   trailing,
   actionLabel,
   onClick,
+  onMouseEnter,
+  onFocus,
   onPointerDown,
   className,
   density = "comfortable",
@@ -223,6 +228,8 @@ export function InteractiveListRow({
         tabIndex={disabled ? -1 : 0}
         className={cn(sharedClass, draggable && "active:cursor-grabbing")}
         onClick={disabled ? undefined : onClick}
+        onMouseEnter={onMouseEnter}
+        onFocus={onFocus}
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}
         draggable={draggable}
@@ -241,6 +248,8 @@ export function InteractiveListRow({
       type="button"
       className={sharedClass}
       onClick={disabled ? undefined : onClick}
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
       onPointerDown={onPointerDown}
       disabled={disabled}
       aria-pressed={ariaPressed}

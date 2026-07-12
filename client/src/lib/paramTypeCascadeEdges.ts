@@ -5,7 +5,10 @@ import {
   liveFromDefEl,
   liveToFromUsageEl,
 } from "@/lib/buildPreviewEdges";
-import { findParamDefChip, findParamTypeChip } from "@/lib/paramTypeAnchors";
+import {
+  findParamDefCoLocated,
+  findParamTypeChipCoLocated,
+} from "@/lib/paramTypeAnchors";
 import { primaryIndexedSymbolInType } from "@/lib/formatSignatureType";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -13,7 +16,7 @@ import {
   buildExternalReferenceCards,
   resolveVisibleTarget,
 } from "@/lib/resolveVisibleTarget";
-import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { GraphData, SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
 
@@ -58,16 +61,6 @@ function paramTypeString(
   return signature.params.find((p) => p.name === paramName)?.type ?? null;
 }
 
-function findSigTypeChip(
-  flowNodeId: string,
-  memberId: string,
-  paramName: string,
-  symbolName: string,
-  getNode: (id: string) => Node | undefined,
-): HTMLElement | null {
-  return findParamTypeChip(flowNodeId, memberId, paramName, symbolName, getNode);
-}
-
 /**
  * Tier 2/3 provenance wires: sig-type → param def, then type def → sig-type (or Load stub).
  * See docs/specs/system/preview-edges.trace-strength.supplement.md
@@ -93,16 +86,27 @@ export function buildParamTypeCascadeEdges(
   const symbolName = primaryIndexedSymbolInType(typeStr, hasSymbol);
   if (!symbolName) return [];
 
-  const sigTypeEl = findSigTypeChip(flowNodeId, memberId, paramName, symbolName, getNode);
+  const sigTypeEl = findParamTypeChipCoLocated(
+    flowNodeId,
+    memberId,
+    paramName,
+    symbolName,
+    paramDefEl,
+    getNode,
+  );
   if (!sigTypeEl) return [];
 
-  const resolvedParamDef =
-    findParamDefChip(flowNodeId, memberId, paramName) ?? paramDefEl;
+  const resolvedParamDef = paramDefEl.isConnected
+    ? paramDefEl
+    : findParamDefCoLocated(
+        flowNodeId,
+        memberId,
+        paramName,
+        sigTypeEl,
+        paramDefEl.dataset.localDefId,
+      ) ?? paramDefEl;
 
-  const entry = symbols.get(symbolName)?.[0];
-  const typeKind: SemanticTokenKind = entry
-    ? symbolKindToSemantic(entry.kind)
-    : "type";
+  const typeKind: SemanticTokenKind = "type";
 
   const tier2: PreviewEdgeSpec = {
     id: `${edgeIdPrefix}-prov-type-param`,

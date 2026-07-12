@@ -27,8 +27,9 @@ Every **connection kind** MUST be identifiable with **at least two** independent
 1. **Text label** — `ConnectionLegend` lists every kind by name (`CONNECTION_KIND_LABEL`); toggles use `aria-pressed`.
 2. **Line geometry** — cubic curve vs orthogonal bus vs rounded Manhattan.
 3. **Dash / dot pattern** — dashed, dotted, dash-dot (see `preview-wires.css`).
-4. **Arrowhead** — open chevron, hollow triangle (inheritance/implementation), filled diamond (composition).
-5. **Hue** — secondary; reinforces but does not carry meaning alone.
+4. **Arrowhead** — open chevron (usage), bar cap (binding), bracket caps (typesetting), filled triangle (control flow), hollow triangle (inheritance/implementation), filled diamond (composition).
+5. **Motion** — forward dash march (usage/binding/typesetting/control flow), junction pulse (control-flow fork).
+6. **Hue** — secondary; reinforces but does not carry meaning alone.
 
 Trace **strength** (tier 1/2/3) uses opacity decay (`preview-wire--hop2/3`) **in addition to** kind encoding — never opacity alone across kinds.
 
@@ -40,10 +41,10 @@ Audit baseline: ~8% of men have some form of colour-vision deficiency (deuterano
 
 | Kind | Hue token | Non-color cues | Colorblind notes |
 | ---- | --------- | -------------- | ---------------- |
-| **Usage** | `--edge-usage` (function blue) | Cubic curve; long dash `10 4`; open arrow | Distinct from teal/cyan family |
-| **Binding** | `--edge-binding` (cyan **188°**) | Cubic curve; **tight dot** `2 4`; open arrow | Hue shifted away from typesetting; dots vs dash-dot |
-| **Typesetting** | `--edge-typesetting` (= `--token-edge-type`, teal **200°**) | **Rounded orthogonal** Manhattan; dash-dot `5 3 1 3`; open arrow | Corners visible at 6px fillet; shape ≠ cubic binding |
-| **Control flow** | `--edge-control-flow` (green **145°**) | **Sharp orthogonal** gutter bus; dash-dot `7 3 2 3`; open arrow | Green channel + L-path in legend |
+| **Usage** | `--edge-usage` (function blue) | Cubic curve; long dash `10 4`; **open chevron** arrow; forward dash flow | Distinct from teal/cyan family |
+| **Binding** | `--edge-binding` (cyan **188°**) | Cubic curve; **tight dot** `2 4`; **bar cap** at binding end; forward dash flow (initializer → binding) | Hue shifted away from typesetting; dots + bar vs brackets |
+| **Typesetting** | `--edge-typesetting` (= `--token-edge-type`, teal **200°**) | **Rounded orthogonal** Manhattan; dash-dot `5 3 1 3`; **bracket caps** (no arrow); forward dash flow | Corners visible at 6px fillet; shape ≠ cubic binding |
+| **Control flow** | `--edge-control-flow` (green **145°**) | **Sharp orthogonal** gutter bus; dash-dot `7 3 2 3`; **filled triangle** arrow; **junction disc** at bus fork | Green channel + L-path + fork node in legend |
 | **Transitive** | `--edge-usage` + hop opacity | Same cubic/dash as Usage; visibly faded | Strength tier, not a separate kind |
 | **Inheritance** | `--edge-inheritance` (purple) | **Solid** line; **hollow triangle** | Structural; persistent |
 | **Implementation** | `--edge-implementation` (mint) | **Dotted** line; hollow triangle | Dotted vs solid inheritance |

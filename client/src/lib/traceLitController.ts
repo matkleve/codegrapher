@@ -134,7 +134,7 @@ function primaryHostInDefGroup(
 function applyEndpointSockets(
   host: HTMLElement,
   portSides: ReadonlySet<"left" | "right">,
-  isSibling: boolean,
+  tier: TraceStrength,
 ): HTMLElement[] {
   const restore: HTMLElement[] = [];
   const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
@@ -147,18 +147,16 @@ function applyEndpointSockets(
     socket.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
     socket.classList.add(ANCHOR_ON);
     removeAnchorColorClasses(socket);
-    if (isSibling) {
-      socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "bg-border", "text-border");
-    } else {
-      socket.classList.add(...anchorColorClasses(host));
-    }
+    socket.classList.add(...anchorColorClasses(host));
+    if (tier === 3) socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "flow-anchor-hop3");
+    else if (tier === 2) socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "flow-anchor-hop2");
   }
   return restore;
 }
 
 function hopClasses(tier: TraceStrength): string[] {
-  if (tier === 3) return [CHIP_HOP3, CHIP_ENDPOINT_SIBLING];
-  if (tier === 2) return [CHIP_HOP2, CHIP_ENDPOINT_SIBLING];
+  if (tier === 3) return [CHIP_HOP3];
+  if (tier === 2) return [CHIP_HOP2];
   return [];
 }
 
@@ -212,7 +210,7 @@ function applyEndpointHost(
   const restoreAnchors = applyEndpointSockets(
     host,
     portSidesForHost(host, endpointPortSide),
-    tier >= 2,
+    tier,
   );
   track(host, extra, restoreAnchors);
 }

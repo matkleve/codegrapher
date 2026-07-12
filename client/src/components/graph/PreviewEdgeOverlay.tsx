@@ -3,7 +3,15 @@ import { useReactFlow } from "@xyflow/react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useJumpTooltip } from "@/context/JumpTooltipContext";
 import { useJumpClick } from "@/hooks/useJumpClick";
-import { jumpTargetForWireEnd, jumpTargetLabel } from "@/lib/resolveJumpTarget";
+import {
+  JUMP_TOOLTIP_DWELL_MS,
+  JUMP_TOOLTIP_DWELL_WARM_MS,
+} from "@/lib/hoverIntent";
+import {
+  jumpTargetForWireEnd,
+  jumpTargetLabel,
+  pickJumpWireEnd,
+} from "@/lib/resolveJumpTarget";
 import {
   createWireEngine,
   registerWireEngine,
@@ -25,10 +33,11 @@ export function PreviewEdgeOverlay() {
     structuralEdges,
     pulseEdges,
     isWarm,
+    traceTokenKey,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
   } = useGraphInteraction();
-  const { setJumpTooltip } = useJumpTooltip();
+  const { setJumpTooltip, setHoveredWireId, wireJumpRef } = useJumpTooltip();
   const { getNode } = useReactFlow();
   const onWireClick = useJumpClick();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -38,37 +47,94 @@ export function PreviewEdgeOverlay() {
   const structuralSpecsRef = useRef<StructuralEdgeSpec[]>([]);
   const prevEdgeCountRef = useRef(0);
   const engineRef = useRef<WireEngine | null>(null);
+  const traceTokenKeyRef = useRef(traceTokenKey);
+  traceTokenKeyRef.current = traceTokenKey;
+
+  wireJumpRef.current = (wireId, wireEnd) => {
+    const spec = specsRef.current.find((s) => s.id === wireId);
+    if (!spec) return;
+    onWireClick(spec, wireEnd)(new MouseEvent("click"));
+  };
 
   const bindHitHandlers = (wire: WireElements) => {
     const spec = wire.spec;
-    const onEnter = (end: "from" | "to") => (e: MouseEvent) => {
-      cancelHoverLeaveGrace();
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+    let armed = false;
+
+    const choiceForEnd = (end: "from" | "to") => {
       const { ref, hint } = jumpTargetForWireEnd(spec, end, getNode);
-      setJumpTooltip({
-        token: jumpTargetLabel(ref, hint, getNode),
+      return {
+        label: jumpTargetLabel(ref, hint, getNode),
         kind: spec.kind,
+        wireEnd: end,
+      };
+    };
+
+    const disarmWire = () => {
+      armed = false;
+      wire.hitMid.classList.remove("preview-edge-hit-armed");
+      wire.path.classList.remove("preview-edge-line-hover");
+      wire.glow.classList.remove("preview-edge-line-hover");
+    };
+
+    const showMidTooltip = (e: MouseEvent) => {
+      cancelHoverLeaveGrace();
+      setHoveredWireId(spec.id);
+      wire.path.classList.add("preview-edge-line-hover");
+      wire.glow.classList.add("preview-edge-line-hover");
+
+      const jumpEnd = pickJumpWireEnd(spec, traceTokenKeyRef.current, getNode);
+      setJumpTooltip({
+        wireId: spec.id,
         x: e.clientX,
         y: e.clientY,
+        mode: "single",
+        single: choiceForEnd(jumpEnd),
       });
     };
-    const onMove = (e: MouseEvent) => {
-      setJumpTooltip((prev) =>
-        prev ? { ...prev, x: e.clientX, y: e.clientY } : prev,
-      );
+
+    const armWire = (e: MouseEvent) => {
+      armed = true;
+      wire.hitMid.classList.add("preview-edge-hit-armed");
+      showMidTooltip(e);
     };
-    const onLeave = () => {
+
+    const hideMidTooltip = () => {
+      if (dwellTimer) {
+        clearTimeout(dwellTimer);
+        dwellTimer = null;
+      }
       setJumpTooltip(null);
+      setHoveredWireId(null);
+      disarmWire();
       scheduleHoverLeaveGrace();
     };
 
-    wire.hitFrom.onmouseenter = onEnter("from");
-    wire.hitFrom.onmousemove = onMove;
-    wire.hitFrom.onmouseleave = onLeave;
-    wire.hitFrom.onclick = onWireClick(spec, "from");
-    wire.hitTo.onmouseenter = onEnter("to");
-    wire.hitTo.onmousemove = onMove;
-    wire.hitTo.onmouseleave = onLeave;
-    wire.hitTo.onclick = onWireClick(spec, "to");
+    wire.hitMid.onmouseenter = (e: MouseEvent) => {
+      cancelHoverLeaveGrace();
+      if (dwellTimer) clearTimeout(dwellTimer);
+      const delay = isWarm ? JUMP_TOOLTIP_DWELL_WARM_MS : JUMP_TOOLTIP_DWELL_MS;
+      dwellTimer = setTimeout(() => {
+        dwellTimer = null;
+        armWire(e);
+      }, delay);
+    };
+    wire.hitMid.onmousemove = (e: MouseEvent) => {
+      if (!armed) return;
+      setJumpTooltip((prev) =>
+        prev?.wireId === spec.id ? { ...prev, x: e.clientX, y: e.clientY } : prev,
+      );
+    };
+    wire.hitMid.onmouseleave = hideMidTooltip;
+    wire.hitMid.onclick = (e: MouseEvent) => {
+      if (!armed) return;
+      e.stopPropagation();
+      const jumpEnd = pickJumpWireEnd(spec, traceTokenKeyRef.current, getNode);
+      onWireClick(spec, jumpEnd)(e);
+    };
+
+    wire.hitFrom.onclick = null;
+    wire.hitTo.onclick = null;
   };
 
   const allStructuralSpecs = [...structuralEdges, ...pulseEdges];
@@ -158,7 +224,7 @@ export function PreviewEdgeOverlay() {
   return (
     <svg
       ref={svgRef}
-      className="pointer-events-none absolute inset-0 z-40 overflow-visible"
+      className="pointer-events-none absolute inset-0 z-[48] overflow-visible"
       aria-hidden
     >
       <defs>

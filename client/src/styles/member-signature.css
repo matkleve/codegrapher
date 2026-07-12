@@ -83,6 +83,19 @@
   background: var(--member-sig-bg-out);
 }
 
+.member-sig-binding {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.member-sig-param-chip,
+.member-sig-type-chip {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+}
+
 /* Ctrl reveal — neutral grey pills (nodes.css loads after trace-modes) */
 .graph-pane.graph-ctrl-preview .member-sig-value--in,
 .graph-pane.graph-ctrl-preview .member-sig-value--out {

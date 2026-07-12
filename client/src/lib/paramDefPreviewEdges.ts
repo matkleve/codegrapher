@@ -1,4 +1,5 @@
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import { buildDefRelativePreviewEdges } from "@/lib/defRelativePreviewEdges";
 import { buildLocalPreviewEdges } from "@/lib/localDefLinks";
 import {
   paramDefForName,
@@ -10,6 +11,41 @@ import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { GraphData, SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
+
+function memberSnippet(
+  classData: ClassNodeData,
+  memberId: string,
+): { code: string; startLine: number } | null {
+  const method = classData.methods.find((m) => m.id === memberId);
+  if (!method?.code) return null;
+  return { code: method.code, startLine: method.startLine ?? 1 };
+}
+
+function relativeEdgesForParam(
+  paramDefId: string,
+  definitionEl: HTMLElement,
+  symbolIndex: MemberSymbolIndex,
+  flowNodeId: string,
+  memberId: string,
+  classData: ClassNodeData,
+  kind: SemanticTokenKind,
+  paramName: string,
+): PreviewEdgeSpec[] {
+  const snippet = memberSnippet(classData, memberId);
+  if (!snippet) return [];
+  return buildDefRelativePreviewEdges({
+    originDefId: paramDefId,
+    originEl: definitionEl,
+    symbolIndex,
+    methodCode: snippet.code,
+    methodStartLine: snippet.startLine,
+    flowNodeId,
+    memberId,
+    classData,
+    kind,
+    edgeIdPrefix: `param-def-${paramName}`,
+  });
+}
 
 function getClassNodeData(
   flowNodeId: string,
@@ -57,11 +93,25 @@ export function buildParamDefPreviewEdges(
     edgeIdPrefix: `param-def-${paramName}`,
   });
 
-  const local = buildLocalPreviewEdges(definitionEl, kind, `param-def-${paramName}`);
-  if (local.length > 0) return [...local, ...typeCascade];
-
   const classData = getClassNodeData(flowNodeId, getNode);
-  if (!classData) return [];
+  const relatives =
+    classData != null
+      ? relativeEdgesForParam(
+          paramDefId,
+          definitionEl,
+          symbolIndex,
+          flowNodeId,
+          memberId,
+          classData,
+          kind,
+          paramName,
+        )
+      : [];
+
+  const local = buildLocalPreviewEdges(definitionEl, kind, `param-def-${paramName}`);
+  if (local.length > 0) return [...local, ...relatives, ...typeCascade];
+
+  if (!classData) return [...relatives, ...typeCascade];
 
   const edges: PreviewEdgeSpec[] = [];
   let idx = 0;
@@ -104,5 +154,5 @@ export function buildParamDefPreviewEdges(
     });
     idx++;
   }
-  return [...edges, ...typeCascade];
+  return [...edges, ...relatives, ...typeCascade];
 }

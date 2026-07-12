@@ -11,6 +11,7 @@ import {
 import { allLocalDefElements, findLocalDefElement } from "@/lib/localDefElements";
 import { linksForElement } from "@/lib/localDefLinks";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
+import { typesettingPortSides } from "@/lib/resolvePreviewAnchor";
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import {
@@ -571,13 +572,26 @@ export function computeTraceLit(
       : { from: edge.from, to: edge.to };
 
     if (fromRef.type === "element" && fromRef.el.isConnected) {
-      markEndpointPort(fromRef.el, "right", state);
+      if (edge.connectionKind === "typesetting" && toRef.type === "element" && toRef.el.isConnected) {
+        const fromRect = fromRef.el.getBoundingClientRect();
+        const toRect = toRef.el.getBoundingClientRect();
+        const sides = typesettingPortSides(
+          fromRect.left + fromRect.width / 2,
+          toRect.left + toRect.width / 2,
+        );
+        markEndpointPort(fromRef.el, sides.fromSide, state);
+        markEndpointPort(toRef.el, sides.toSide, state);
+      } else {
+        markEndpointPort(fromRef.el, "right", state);
+      }
       absorbToken(fromRef.el, state, true);
       const fromKey = traceKeyFromElement(fromRef.el);
       if (fromKey) noteEndpointStrength(state, fromKey, activeTokenKey, hopTier);
     }
     if (toRef.type === "element" && toRef.el.isConnected) {
-      markEndpointPort(toRef.el, "left", state);
+      if (edge.connectionKind !== "typesetting") {
+        markEndpointPort(toRef.el, "left", state);
+      }
       absorbToken(toRef.el, state, true);
       const toKey = traceKeyFromElement(toRef.el);
       if (toKey) noteEndpointStrength(state, toKey, activeTokenKey, hopTier);

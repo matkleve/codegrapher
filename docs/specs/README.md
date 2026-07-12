@@ -11,7 +11,10 @@ Last updated: 2026-07-11
 | Resource | Purpose |
 | -------- | ------- |
 | [docs/glossary.md](../glossary.md) | Canonical terminology |
-| [docs/agent-workflows/element-spec-format.md](../agent-workflows/element-spec-format.md) | Spec template |
+| [docs/agent-playbook/README.md](../agent-playbook/README.md) | Portable agent kit (copy to new projects) |
+| [docs/agent-playbook/core/spec-format.md](../agent-playbook/core/spec-format.md) | Spec template |
+| [docs/agent-playbook/frameworks/react.md](../agent-playbook/frameworks/react.md) | React component folders |
+| [docs/project/restructure-plan.md](../project/restructure-plan.md) | Phased TSX split backlog |
 | [docs/design/tokens.md](../design/tokens.md) | Color/motion tokens |
 | [docs/design/brand-book.md](../design/brand-book.md) | Brand identity, accent matrix, consistency audit |
 | [docs/design/state-visuals.md](../design/state-visuals.md) | Hover/focus contract |
@@ -44,7 +47,7 @@ npm run lint:specs
 - Required sections: What It Is, What It Looks Like, Where It Lives, Actions, Component Hierarchy, Acceptance Criteria
 - Excluded from lint: `README.md`, `GOVERNANCE-*.md`, `SPEC-*.md`, `*.supplement.md`, `*.acceptance-criteria.md`
 
-Split strategy: see [element-spec-format.md](../agent-workflows/element-spec-format.md).
+Split strategy: specs → [spec-format.md](../agent-playbook/core/spec-format.md); code → [file-split-policy.md](../agent-playbook/core/file-split-policy.md) + [react.md](../agent-playbook/frameworks/react.md).
 
 ---
 

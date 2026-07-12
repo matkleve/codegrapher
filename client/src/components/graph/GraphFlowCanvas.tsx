@@ -13,7 +13,6 @@ import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
 import { LoadStubAnchors } from "@/components/graph/LoadStubAnchors";
 import { FlowPointOverlay } from "@/components/graph/FlowPointOverlay";
-import { ConnectionLegend } from "@/components/graph/ConnectionLegend";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { notifyWireTransform } from "@/lib/wireEngine";
@@ -103,9 +102,6 @@ export function GraphFlowCanvas({
         <FlowPointOverlay />
       </ReactFlow>
       <GraphPinchZoomBoost />
-      <div className="pointer-events-auto absolute right-3 top-3 z-50">
-        <ConnectionLegend />
-      </div>
       <TokenContextBar />
       <TokenConnectionMenu />
       <JumpTooltip />

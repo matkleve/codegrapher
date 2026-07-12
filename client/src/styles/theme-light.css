@@ -95,8 +95,8 @@
   --code-type-primitive: oklch(0.52 0.05 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);
-  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 16%, var(--background));
-  --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 40%, var(--border));
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 10%, var(--background));
+  --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 30%, var(--border));
   --surface-neutral-strong: oklch(0.955 0.001 0);
   --trace-dim-surface: color-mix(in oklch, var(--foreground) 3%, var(--card));
   --code-keyword: oklch(0.42 0.14 295);

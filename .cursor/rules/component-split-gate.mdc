@@ -1,0 +1,38 @@
+---
+description: Component file-size caps, folder placement, and split rules for React UI.
+alwaysApply: true
+---
+
+# Component split gate
+
+**Kit:** `docs/agent-playbook/README.md`  
+**Universal:** `docs/agent-playbook/core/file-split-policy.md`  
+**React:** `docs/agent-playbook/frameworks/react.md`  
+**Backlog:** `docs/project/restructure-plan.md`
+
+## Lint caps
+
+- File: **200** code lines · Function: **60** · Complexity: **15**
+- At **150** code lines: extract before growing.
+
+## Buckets (React)
+
+| Layer | Location |
+| ----- | -------- |
+| Render | `components/<domain>/*.tsx` |
+| Domain hook | `components/<domain>/use*.ts` |
+| Shared hook | `hooks/use*.ts` |
+| Provider | `context/use*Controller.ts` |
+| Pure logic | `lib/` — no JSX |
+
+## Domain folders
+
+`code/` · `explorer/` · `graph/` · `nodes/` · `simulation/` · `ui/`
+
+Root `components/*.tsx` = shell composers only.
+
+## Split order
+
+1. `lib/` → 2. hook/controller → 3. child components → 4. thin parent
+
+No `.html` in React — extract child `.tsx`.

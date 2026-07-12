@@ -32,7 +32,7 @@ codegrapher encodes a repeatable bootstrap: small files agents can load whole, s
     eslint.config.mjs
     src/index.ts
   scripts/                  ← lint-specs.mjs, lint-tokens.mjs
-  docs/                     ← glossary, design/, specs/, agent-workflows/
+  docs/                     ← glossary, design/, specs/, agent-playbook/, project/
   fixtures/                 ← sample data for manual / headless testing
   .cursor/rules/
   .claude/launch.json
@@ -50,7 +50,23 @@ codegrapher encodes a repeatable bootstrap: small files agents can load whole, s
 | `styles/` | Domain CSS files | One-off colors → `index.css` |
 | `server/src/` | HTTP API, indexing | React/canvas logic |
 
-**Split rule:** eslint warns at **200 code lines** — extract `useFooController.ts`, keep components render-only.
+**Split rule:** eslint warns at **200 code lines** — see
+[`agent-playbook/core/file-split-policy.md`](../agent-playbook/core/file-split-policy.md)
+and [`frameworks/react.md`](../agent-playbook/frameworks/react.md).
+
+### `components/` domain folders (codegrapher)
+
+| Folder | Owns |
+| ------ | ---- |
+| `code/` | Source lines, token chips, context bar |
+| `explorer/` | File tree, recent files |
+| `graph/` | Canvas, overlay, legend |
+| `nodes/` | Class/file nodes, member rows |
+| `simulation/` | Sim panel, gutter, ledger |
+| `ui/` | Shared primitives |
+
+Hooks: `hooks/` when shared across domains; `components/<domain>/use*.ts` when
+domain-local; `context/use*Controller.ts` for providers.
 
 ### Feldpost vs codegrapher
 
@@ -99,11 +115,12 @@ Feldpost runs `--max-warnings 0` and adds `design-system:check`, `i18n:check`, A
 ### `CLAUDE.md` sections
 
 1. Product one-liner
-2. Spec index + `element-spec-format.md` + `GOVERNANCE-MATRIX.md`
+2. Spec index + `docs/agent-playbook/core/spec-format.md` + `GOVERNANCE-MATRIX.md`
 3. Architecture (entries, ports, `npm run dev`)
 4. Conventions (lint caps, test focus, file-split rule)
 5. Domain pitfalls (product-specific)
 6. Link to **this doc** for bootstrapping siblings
+7. Link to **`docs/agent-playbook/README.md`** (portable agent kit)
 
 Feldpost adds: instruction-precedence stack, change classification (Trivial/Standard/Sensitive), RLS-first rules, `docs/ai-diary/`.
 
@@ -111,14 +128,21 @@ Feldpost adds: instruction-precedence stack, change classification (Trivial/Stan
 
 Start with one always-applied token rule — copy `tailwind-tokens-only.mdc` pattern: inventory in `docs/design/tokens.md`, emission in `index.css`, no one-off CSS vars.
 
-Add more as complexity grows (feldpost: `token-usage-gate`, `ui-state-machine`, `scss-ownership`, `component-reuse-gate`, `i18n-workflow`).
+Add more as complexity grows (feldpost: `token-usage-gate`, `ui-state-machine`, `scss-ownership`, `component-reuse-gate`, `i18n-workflow`). codegrapher: `component-split-gate` (always-applied; points at split playbook).
 
-### `docs/agent-workflows/` minimum
+### `docs/agent-playbook/` (copy to every new project)
 
-- `element-spec-format.md` — spec skeleton
+Portable kit — framework-agnostic core + per-stack guides. See `README.md` inside.
+
+### `docs/agent-workflows/` (optional, project-specific)
+
 - `project-bootstrap-from-codegrapher.md` — this file
 
-Optional later: `agent-quick-reference.md`, `implementation-checklist.md`, `agent-communication.md` (all exist in feldpost).
+### `docs/project/` (per-repo backlog)
+
+- `restructure-plan.md` — phased file splits for this codebase
+
+Feldpost optional: `agent-quick-reference.md`, `implementation-checklist.md` (exist in feldpost repo).
 
 ### `.claude/launch.json`
 
@@ -138,7 +162,8 @@ docs/glossary.md
 docs/specs/README.md
 docs/specs/GOVERNANCE-MATRIX.md   ← code path → spec folder
 docs/specs/{system,component,page,service}/README.md
-docs/agent-workflows/element-spec-format.md
+docs/agent-playbook/          ← portable kit (copy whole folder)
+docs/agent-workflows/element-spec-format.md  ← redirect stub; real file in agent-playbook
 ```
 
 **`npm run lint:specs`:** parent specs max **180** lines (warn **150**); required sections: What It Is, What It Looks Like, Where It Lives, Actions, Component Hierarchy, Acceptance Criteria. Splits → `*.supplement.md` / `*.acceptance-criteria.md`.
@@ -180,7 +205,7 @@ Feldpost adds `ng test`, Playwright e2e, and `*.service.spec.ts` beside each ser
 3. Copy `eslint.shared.mjs`; wire client + server eslint configs
 4. Create `client/src/` buckets: `components/`, `context/`, `hooks/`, `lib/`, `styles/`, `types/`
 5. Add `docs/glossary.md`, `docs/specs/README.md`, `GOVERNANCE-MATRIX.md`
-6. Copy `element-spec-format.md` + `scripts/lint-specs.mjs`; add `lint:specs`
+6. Copy entire `docs/agent-playbook/` folder; add `scripts/lint-specs.mjs`; add `lint:specs`
 7. Write `CLAUDE.md` (link this doc)
 8. Token rule + `index.css` emission when styling starts; add `lint:tokens`
 9. Vitest in client; first tests under `lib/`

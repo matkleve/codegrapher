@@ -2,11 +2,18 @@ import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import {
   laneOffsetFromEdgeId,
   resolvePreviewAnchor,
+  resolveTypesettingAnchors,
+  wireHitMidSegment,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
-import { layoutBranchFanPaths, previewWirePath } from "@/lib/wirePaths";
+import { branchJunctionPoint, layoutBranchFanPaths, previewWirePath } from "@/lib/wirePaths";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { previewWireClasses, previewWireMarkerId, previewWireStroke } from "@/lib/connectionWireStyle";
+import {
+  previewWireClasses,
+  previewWireMarkerEnd,
+  previewWireMarkerStart,
+  previewWireStroke,
+} from "@/lib/connectionWireStyle";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -14,9 +21,40 @@ export type WireElements = {
   group: SVGGElement;
   glow: SVGPathElement;
   path: SVGPathElement;
+  junction: SVGCircleElement;
   hitFrom: SVGPathElement;
   hitTo: SVGPathElement;
+  hitMid: SVGPathElement;
 };
+
+function applyWireMarkers(wire: WireElements, spec: PreviewEdgeSpec): void {
+  if (spec.load) {
+    wire.path.removeAttribute("marker-end");
+    wire.path.removeAttribute("marker-start");
+    return;
+  }
+  const end = previewWireMarkerEnd(spec);
+  const start = previewWireMarkerStart(spec);
+  if (end) wire.path.setAttribute("marker-end", `url(#${end})`);
+  else wire.path.removeAttribute("marker-end");
+  if (start) wire.path.setAttribute("marker-start", `url(#${start})`);
+  else wire.path.removeAttribute("marker-start");
+}
+
+function setBranchJunction(
+  wire: WireElements,
+  spec: PreviewEdgeSpec,
+  junction: { x: number; y: number } | null,
+): void {
+  if (spec.connectionKind !== "branch" || !junction) {
+    wire.junction.style.display = "none";
+    return;
+  }
+  wire.junction.style.display = "";
+  wire.junction.setAttribute("cx", String(junction.x));
+  wire.junction.setAttribute("cy", String(junction.y));
+  wire.junction.style.fill = previewWireStroke(spec);
+}
 
 export function createWireGroup(
   spec: PreviewEdgeSpec,
@@ -38,25 +76,32 @@ export function createWireGroup(
     path.style.opacity = String(spec.opacity);
     glow.style.opacity = String(spec.opacity * 0.12);
   }
-  if (!spec.load) {
-    path.setAttribute("marker-end", `url(#${previewWireMarkerId()})`);
-  }
+
+  const junction = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  junction.setAttribute("r", "3.5");
+  junction.classList.add("preview-edge-junction");
+  junction.style.display = "none";
 
   const hitFrom = document.createElementNS("http://www.w3.org/2000/svg", "path");
   hitFrom.setAttribute("fill", "none");
-  hitFrom.classList.add("preview-edge-hit");
+  hitFrom.classList.add("preview-edge-hit", "preview-edge-hit-end");
 
   const hitTo = document.createElementNS("http://www.w3.org/2000/svg", "path");
   hitTo.setAttribute("fill", "none");
-  hitTo.classList.add("preview-edge-hit");
+  hitTo.classList.add("preview-edge-hit", "preview-edge-hit-end");
+
+  const hitMid = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  hitMid.setAttribute("fill", "none");
+  hitMid.classList.add("preview-edge-hit", "preview-edge-hit-mid");
 
   const stroke = previewWireStroke(spec);
   glow.style.stroke = stroke;
   path.style.stroke = stroke;
 
-  group.append(glow, path, hitFrom, hitTo);
+  group.append(glow, path, junction, hitFrom, hitTo, hitMid);
+  applyWireMarkers({ spec, group, glow, path, junction, hitFrom, hitTo, hitMid }, spec);
 
-  return { spec, group, glow, path, hitFrom, hitTo };
+  return { spec, group, glow, path, junction, hitFrom, hitTo, hitMid };
 }
 
 export function setWireWarm(wire: WireElements, warm: boolean): void {
@@ -71,6 +116,7 @@ type BranchWireLayout = {
   toX: number;
   toY: number;
   drawHitFrom: boolean;
+  junction: { x: number; y: number } | null;
 };
 
 function resolveBranchFanLayout(
@@ -120,6 +166,18 @@ function resolveBranchFanLayout(
     svgBox,
   );
 
+  const junction = branchJunctionPoint(
+    fromPt.x,
+    fromPt.y,
+    fromPt.el,
+    resolved.map((row) => ({
+      x2: row.toPt.x,
+      y2: row.toPt.y,
+      toEl: row.toPt.el,
+    })),
+    svgBox,
+  );
+
   const index = resolved.findIndex((row) => row.spec.id === spec.id);
   if (index < 0) return null;
 
@@ -134,6 +192,7 @@ function resolveBranchFanLayout(
     toX: row.toPt.x,
     toY: row.toPt.y,
     drawHitFrom: index === 0,
+    junction,
   };
 }
 
@@ -193,12 +252,22 @@ export function updateWireGeometry(
       "d",
       wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to", fullHit),
     );
+    wire.hitMid.setAttribute(
+      "d",
+      wireHitMidSegment(fromPt.x, fromPt.y, toPt.x, toPt.y),
+    );
+    setBranchJunction(wire, spec, null);
     return true;
   }
 
   const { from, to } = refinePreviewEdge(wire.spec, getNode);
-  const fromPt = resolvePreviewAnchor(from, svgBox, "from");
-  const toPt = resolvePreviewAnchor(to, svgBox, "to");
+  const anchorPair =
+    spec.connectionKind === "typesetting"
+      ? resolveTypesettingAnchors(from, to, svgBox)
+      : null;
+  const fromPt =
+    anchorPair?.fromPt ?? resolvePreviewAnchor(from, svgBox, "from");
+  const toPt = anchorPair?.toPt ?? resolvePreviewAnchor(to, svgBox, "to");
   if (!fromPt || !toPt) {
     wire.group.style.display = "none";
     return false;
@@ -237,6 +306,16 @@ export function updateWireGeometry(
         "to",
       ),
     );
+    wire.hitMid.setAttribute(
+      "d",
+      wireHitMidSegment(
+        fanLayout.fromX,
+        fanLayout.fromY,
+        fanLayout.toX,
+        fanLayout.toY,
+      ),
+    );
+    setBranchJunction(wire, spec, fanLayout.junction);
     return true;
   }
 
@@ -263,6 +342,27 @@ export function updateWireGeometry(
     "d",
     wireHitSegment(fromPt.x, fromPt.y, toPt.x, toPt.y, "to"),
   );
+  wire.hitMid.setAttribute(
+    "d",
+    wireHitMidSegment(fromPt.x, fromPt.y, toPt.x, toPt.y),
+  );
+
+  if (spec.connectionKind === "branch") {
+    setBranchJunction(
+      wire,
+      spec,
+      branchJunctionPoint(
+        fromPt.x,
+        fromPt.y,
+        fromPt.el,
+        [{ x2: toPt.x, y2: toPt.y, toEl: toPt.el }],
+        svgBox,
+      ),
+    );
+  } else {
+    setBranchJunction(wire, spec, null);
+  }
+
   return true;
 }
 
@@ -296,13 +396,17 @@ export function syncWireDom(
     } else {
       wire.spec = spec;
       setWireWarm(wire, warm);
+      const { path: pathClasses, glow: glowClasses } = previewWireClasses(spec, warm);
+      wire.path.className.baseVal = pathClasses.join(" ");
+      wire.glow.className.baseVal = glowClasses.join(" ");
       if (hasLoad) {
         wire.path.classList.add("preview-edge-load");
-        wire.path.removeAttribute("marker-end");
       } else {
         wire.path.classList.remove("preview-edge-load");
-        wire.path.setAttribute("marker-end", `url(#${previewWireMarkerId()})`);
       }
+      applyWireMarkers(wire, spec);
+      wire.glow.style.stroke = previewWireStroke(spec);
+      wire.path.style.stroke = previewWireStroke(spec);
     }
   }
 

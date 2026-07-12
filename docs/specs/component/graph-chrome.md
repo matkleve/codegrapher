@@ -6,7 +6,7 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 ## What It Looks Like
 
-**ConnectionLegend** — `Waypoints` icon in the **bottom-right map control stack** (same secondary icon button as grid/fit). Opens upward. Each row: swatch, kind name, and one-line description; click toggles visibility. Typesetting and Control flow swatches use polyline paths as redundant cues beside hue. Kinds with live wires emphasize the swatch (not bold label text). Module import off by default.
+**ConnectionLegend** — `Waypoints` icon in the **bottom-right map control stack** (same secondary icon button as grid/fit). Opens upward: compact kind list with large animated swatches; click toggles visibility. **Detail panel** (description + **mini graph mock** with scaled class/module cards, member rows, and inline code chips) is a **cursor-anchored floating popup**; dismiss with click outside or Escape. Module import off by default.
 
 **TokenConnectionMenu** — anchored dropdown below a token chip on hover (external/off-canvas targets) or on right-click (full Jump + Load + Open in editor). Shows **Load all · N** when ≥2 off-canvas rows.
 

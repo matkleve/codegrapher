@@ -3,6 +3,9 @@ export const FIRE_COLD_MS = 150;
 export const FIRE_WARM_MS = 80;
 export const LEAVE_GRACE_MS = 150;
 export const INFO_DELAY_MS = 620;
+/** Wire hit-zone dwell before jump tooltip arms (keeps token clicks reachable). */
+export const JUMP_TOOLTIP_DWELL_MS = 450;
+export const JUMP_TOOLTIP_DWELL_WARM_MS = 280;
 
 export type HoverIntentTimers = {
   fire: ReturnType<typeof setTimeout> | null;

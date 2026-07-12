@@ -239,4 +239,74 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(cascade[0]?.connectionKind).toBe("typesetting");
     expect(cascade[1]?.load?.filePath).toBe("/proj/geo.ts");
   });
+
+  it("keeps param local wire when hovering spread initializer prev", () => {
+    const MEMBER = "fn:file:merge";
+    const FLOW = "flow:file:merge.ts";
+    const START = 7;
+    const CODE = `merge(prev: Record<string, string>): Record<string, string> {
+  const next = { ...prev };
+  return next;
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, CODE, START);
+    const prevParamDefId = `local-def::${MEMBER}::param::prev::${START}`;
+    const nextDefId = [...index.defSites.values()].find((id) => id.includes("::local::next::"))!;
+
+    const pane = document.querySelector(".graph-pane")!;
+    const bodyWrap = document.createElement("div");
+    bodyWrap.className = "member-body-wrap";
+    pane.appendChild(bodyWrap);
+
+    const spreadLine = CODE.split("\n")[1]!;
+    const prevSpreadIndex = tokenizeLine(spreadLine).tokens.findIndex((t) => t.text === "prev");
+
+    const paramDef = document.createElement("span");
+    paramDef.dataset.traceKey = makeUsageTokenKey(FLOW, MEMBER, START, 0, "prev");
+    paramDef.dataset.localDefId = prevParamDefId;
+    bodyWrap.appendChild(paramDef);
+    registerTraceHost(paramDef);
+
+    const nextDef = document.createElement("span");
+    nextDef.dataset.localDefId = nextDefId;
+    bodyWrap.appendChild(nextDef);
+
+    const spreadPrev = document.createElement("span");
+    spreadPrev.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      MEMBER,
+      START + 1,
+      prevSpreadIndex,
+      "prev",
+    );
+    spreadPrev.dataset.localTargetId = prevParamDefId;
+    bodyWrap.appendChild(spreadPrev);
+    registerTraceHost(spreadPrev);
+
+    const edges = assembleCodeLinePreviewEdges({
+      name: "prev",
+      chipEl: spreadPrev,
+      kind: "variable",
+      tokenIndex: prevSpreadIndex,
+      edgeKey: "test-spread-prev",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(MEMBER, CODE, START),
+      sourceFlowId: FLOW,
+      memberId: MEMBER,
+      lineNumber: START + 1,
+      methodCode: CODE,
+      methodStartLine: START,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () => undefined,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    const local = edges.filter((e) => !e.connectionKind || e.connectionKind === "usage");
+    const binding = edges.filter((e) => e.connectionKind === "binding");
+    expect(local.length).toBeGreaterThanOrEqual(1);
+    expect(binding.length).toBeGreaterThanOrEqual(1);
+    expect(local.some((e) => e.hop == null || e.hop === 1)).toBe(true);
+  });
 });

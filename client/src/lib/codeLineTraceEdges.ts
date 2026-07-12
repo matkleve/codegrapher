@@ -7,15 +7,108 @@ import {
   buildParamTypeCascadeEdges,
   paramNameFromDefId,
 } from "@/lib/paramTypeCascadeEdges";
+import { findLocalDefElement } from "@/lib/localDefElements";
+import { graphPane } from "@/lib/graphPaneDom";
 import { bindingDefForInit, type MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
 import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
-import type { SymbolEntry } from "@/types";
-import type { GraphData } from "@/types";
+import type { SymbolEntry, GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
+import { buildBackwardLexicalRelatives } from "@/lib/defRelativePreviewEdges";
+import { buildSignatureTypeParamCascade } from "@/lib/signatureTypeParamCascade";
+import { paramNameForSignatureType } from "@/lib/paramTypeAnchors";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import { tokenizeLine } from "@/lib/tokenizeLine";
+
+function getClassNodeData(
+  flowNodeId: string,
+  getNode: (id: string) => Node | undefined,
+): ClassNodeData | null {
+  const node = getNode(flowNodeId);
+  if (!node || node.type !== "class") return null;
+  return node.data as ClassNodeData;
+}
+
+function backwardLexicalEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
+  const {
+    chipEl,
+    kind,
+    tokenIndex,
+    symbolIndex,
+    sourceFlowId,
+    memberId,
+    lineNumber,
+    methodCode,
+    methodStartLine,
+    getNode,
+    edgeKey,
+  } = ctx;
+  if (!methodCode || methodStartLine == null || !Number.isFinite(tokenIndex)) return [];
+  const classData = getClassNodeData(sourceFlowId, getNode);
+  if (!classData) return [];
+
+  const lineText = methodCode.split("\n")[lineNumber - methodStartLine] ?? "";
+  const tokens = tokenizeLine(lineText).tokens;
+  let dotIdx = tokenIndex - 1;
+  while (dotIdx >= 0 && tokens[dotIdx]?.kind === "whitespace") dotIdx--;
+  const isMemberProp = dotIdx >= 0 && tokens[dotIdx]?.text === ".";
+
+  if (!isMemberProp && !chipEl.dataset.localTargetId) return [];
+
+  return buildBackwardLexicalRelatives({
+    originEl: chipEl,
+    symbolIndex,
+    methodCode,
+    methodStartLine,
+    flowNodeId: sourceFlowId,
+    memberId,
+    classData,
+    kind,
+    edgeIdPrefix: edgeKey,
+    startLine: lineNumber,
+    startTokenIndex: tokenIndex,
+  });
+}
+
+function signatureTypeRelativeEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
+  const {
+    name,
+    chipEl,
+    kind,
+    lineNumber,
+    methodCode,
+    methodStartLine,
+    memberId,
+    sourceFlowId,
+    symbolIndex,
+    symbols,
+    graphData,
+    getNode,
+  } = ctx;
+  if (!methodCode || methodStartLine == null) return [];
+  if (kind !== "type" && kind !== "class") return [];
+  const lineIdx = lineNumber - methodStartLine;
+  if (lineIdx < 0) return [];
+  const lineText = methodCode.split("\n")[lineIdx] ?? "";
+  const paramName = paramNameForSignatureType(lineText, name);
+  if (!paramName) return [];
+  return buildSignatureTypeParamCascade({
+    symbolName: name,
+    typeKind: kind,
+    sigTypeEl: chipEl,
+    paramName,
+    symbolIndex,
+    flowNodeId: sourceFlowId,
+    memberId,
+    symbols,
+    graphData,
+    getNode,
+    edgeIdPrefix: `sig-inline-${paramName}-${name}`,
+  });
+}
 
 export type CodeLineTraceContext = {
   name: string;
@@ -96,15 +189,26 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
   }
 
   let bindingCascade: PreviewEdgeSpec[] = [];
+  const initBindingDefId =
+    Number.isFinite(tokenIndex) && bindingEdges.length > 0
+      ? bindingDefForInit(symbolIndex, lineNumber, tokenIndex)
+      : undefined;
+  const pane = graphPane();
+  const bindingDefElForCascade =
+    initBindingDefId && pane
+      ? findLocalDefElement(pane, initBindingDefId)
+      : canonicalDef?.dataset.localDefId?.includes("::local::")
+        ? canonicalDef
+        : null;
+
   if (
     bindingEdges.length > 0 &&
-    localEdges.length > 0 &&
-    canonicalDef &&
+    bindingDefElForCascade &&
     methodCode &&
     methodStartLine != null
   ) {
     bindingCascade = buildBindingInitializerCascadeEdges({
-      bindingDefEl: canonicalDef,
+      bindingDefEl: bindingDefElForCascade,
       symbolIndex,
       flowNodeId: sourceFlowId,
       memberId,
@@ -116,15 +220,6 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       getNode,
       hasSymbol,
     });
-  }
-
-  if (
-    bindingEdges.length > 0 &&
-    Number.isFinite(tokenIndex) &&
-    bindingDefForInit(symbolIndex, lineNumber, tokenIndex) &&
-    localEdges.length === 0
-  ) {
-    return [...bindingEdges, ...cascadeEdges];
   }
 
   const skipControlFlow =
@@ -178,11 +273,14 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
         })
       : [];
 
+  const backwardEdges = backwardLexicalEdges(ctx);
+
   if (
     localEdges.length > 0 ||
     bindingEdges.length > 0 ||
     controlFlowEdges.length > 0 ||
-    cascadeEdges.length > 0
+    cascadeEdges.length > 0 ||
+    backwardEdges.length > 0
   ) {
     return [
       ...localEdges,
@@ -190,6 +288,7 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       ...bindingCascade,
       ...controlFlowEdges,
       ...cascadeEdges,
+      ...backwardEdges,
       ...typeCascade,
     ];
   }
@@ -204,26 +303,39 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       sourceFlowId,
     );
     if (!resolvedWithoutIndex || resolvedWithoutIndex.mode === "external") {
-      return cascadeEdges;
+      return [...cascadeEdges, ...backwardEdges, ...signatureTypeRelativeEdges(ctx)];
     }
     return [
       buildUsagePreviewEdge(edgeKey, resolvedWithoutIndex, chipEl, name),
       ...cascadeEdges,
+      ...backwardEdges,
+      ...signatureTypeRelativeEdges(ctx),
     ];
   }
 
-  if (!hasSymbol(name) || !entry) return cascadeEdges;
+  if (!hasSymbol(name) || !entry) {
+    return [...cascadeEdges, ...backwardEdges, ...signatureTypeRelativeEdges(ctx)];
+  }
 
   const resolved = resolveVisibleTarget(name, symbols, graphData, getNode, sourceFlowId);
-  if (!resolved) return cascadeEdges;
+  if (!resolved) return [...cascadeEdges, ...backwardEdges, ...signatureTypeRelativeEdges(ctx)];
 
   if (resolved.mode === "external") {
-    if (resolved.cards.length === 0) return cascadeEdges;
+    if (resolved.cards.length === 0) {
+      return [...cascadeEdges, ...backwardEdges, ...signatureTypeRelativeEdges(ctx)];
+    }
     return [
       buildLoadPreviewEdge(edgeKey, resolved.cards, chipEl, name, kind),
       ...cascadeEdges,
+      ...backwardEdges,
+      ...signatureTypeRelativeEdges(ctx),
     ];
   }
 
-  return [buildUsagePreviewEdge(edgeKey, resolved, chipEl, name), ...cascadeEdges];
+  return [
+    buildUsagePreviewEdge(edgeKey, resolved, chipEl, name),
+    ...cascadeEdges,
+    ...backwardEdges,
+    ...signatureTypeRelativeEdges(ctx),
+  ];
 }

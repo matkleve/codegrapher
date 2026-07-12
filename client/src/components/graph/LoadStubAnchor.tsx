@@ -64,39 +64,32 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
       data-token-kind={edge.kind}
       className={cn(
         floatingPanelClass(
-          "pointer-events-auto absolute z-[46] flex h-[var(--control-height-compact)] min-w-0 max-w-56 items-stretch p-0",
+          "pointer-events-auto absolute z-[46] h-[var(--control-height-compact)] min-w-0 max-w-56 p-0",
         ),
         faded && "opacity-70",
       )}
       style={{ visibility: "hidden" }}
       onMouseEnter={cancelHoverLeaveGrace}
     >
-      <div className="relative flex h-full min-w-0 flex-1 items-stretch">
-        <button
-          type="button"
-          className="hoverable flex min-w-0 flex-1 items-center gap-1 px-2 text-left"
-          onClick={onLoad}
-        >
-          <SemanticConnectionDot kind={edge.kind} />
-          <VscodeFileIcon icon="file-type-typescript-official" size={10} />
-          <span className="min-w-0 truncate text-xs font-medium text-foreground">
-            {load.token}
-          </span>
-        </button>
-        <button
-          type="button"
+      <button
+        type="button"
+        className="hoverable relative flex h-full w-full min-w-0 cursor-pointer items-center gap-1 px-2 pr-3 text-left"
+        onClick={onLoad}
+      >
+        <SemanticConnectionDot kind={edge.kind} />
+        <VscodeFileIcon icon="file-type-typescript-official" size={10} />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium">
+          {load.token}
+        </span>
+        <span
           className={cn(
-            buttonVariants({ variant: "ghost" }),
-            "!h-full min-h-0 shrink-0 self-stretch rounded-none rounded-r-[calc(var(--radius-xl)-1px)] border-l border-border px-1.5 py-0 text-2xs font-medium shadow-none",
-            "bg-transparent hover:bg-muted active:translate-y-0",
+            buttonVariants({ variant: "outline", size: "xs" }),
+            "pointer-events-none shrink-0 !h-auto min-h-0 border-border/80 py-px px-1 text-2xs leading-none shadow-none",
+            "hover:!border-border hover:!bg-background hover:!text-foreground",
           )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onLoad();
-          }}
         >
           Load
-        </button>
+        </span>
         <FlowAnchor
           side="right"
           colorClass={TOKEN_ANCHOR[edge.kind]}
@@ -104,7 +97,7 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
           highlighted
           size="chip"
         />
-      </div>
+      </button>
     </div>
   );
 }

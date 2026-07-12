@@ -134,6 +134,45 @@ function elementAnchor(
   return { x, y, side, el, token: el.dataset.symbolName };
 }
 
+/** Port sides for sig-type → param typesetting (face each other, never back through source). */
+export function typesettingPortSides(
+  fromX: number,
+  toX: number,
+): { fromSide: "left" | "right"; toSide: "left" | "right" } {
+  if (toX + 1 < fromX) {
+    return { fromSide: "left", toSide: "right" };
+  }
+  return { fromSide: "right", toSide: "left" };
+}
+
+/** Typesetting anchors face inward (type→param), not default out/right ports. */
+export function resolveTypesettingAnchors(
+  fromRef: AnchorRef,
+  toRef: AnchorRef,
+  svgBox: DOMRect,
+): { fromPt: ResolvedAnchor; toPt: ResolvedAnchor } | null {
+  const roughFrom = resolvePreviewAnchor(fromRef, svgBox, "from");
+  const roughTo = resolvePreviewAnchor(toRef, svgBox, "to");
+  if (!roughFrom || !roughTo) return null;
+  if (!roughFrom.el || !roughTo.el) {
+    return { fromPt: roughFrom, toPt: roughTo };
+  }
+
+  const sides = typesettingPortSides(roughFrom.x, roughTo.x);
+  const fromPt = resolvePreviewAnchor(
+    { type: "element", el: roughFrom.el, side: sides.fromSide },
+    svgBox,
+    "from",
+  );
+  const toPt = resolvePreviewAnchor(
+    { type: "element", el: roughTo.el, side: sides.toSide },
+    svgBox,
+    "to",
+  );
+  if (!fromPt || !toPt) return null;
+  return { fromPt, toPt };
+}
+
 export function resolvePreviewAnchor(
   ref: AnchorRef,
   svgBox: DOMRect,
@@ -235,4 +274,25 @@ export function wireHitSegment(
     return `M ${x1} ${y1} L ${x1 + ux * length} ${y1 + uy * length}`;
   }
   return `M ${x2} ${y2} L ${x2 - ux * length} ${y2 - uy * length}`;
+}
+
+/** Middle span for jump affordance — excludes endpoint caps near token chips. */
+export function wireHitMidSegment(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  endCap = 52,
+): string {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.hypot(dx, dy) || 1;
+  if (dist <= endCap * 2) return "";
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const sx = x1 + ux * endCap;
+  const sy = y1 + uy * endCap;
+  const ex = x2 - ux * endCap;
+  const ey = y2 - uy * endCap;
+  return `M ${sx} ${sy} L ${ex} ${ey}`;
 }

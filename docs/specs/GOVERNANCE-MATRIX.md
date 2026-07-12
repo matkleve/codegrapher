@@ -1,6 +1,6 @@
 # Master Ownership Matrix
 
-Last updated: 2026-07-10
+Last updated: 2026-07-12
 
 ## Scope matrix
 
@@ -10,6 +10,9 @@ Last updated: 2026-07-10
 | `client/src/components/nodes/` | Class/file nodes, member rows, resize | `component/` |
 | `client/src/components/code/` | Token chips, source lines, context bar | `component/`, `system/` |
 | `client/src/components/explorer/` | File tree, recent files/folders | `component/`, `page/` |
+| `client/src/components/simulation/` | Sim panel, gutter, ledger, transport | `system/` |
+| `client/src/components/ui/` | Cross-domain primitives (button, Container, …) | `design/` |
+| `client/src/hooks/` | Shared UI hooks (≥2 domains) | `system/` |
 | `client/src/context/` | Graph interaction, index, Ctrl key | `system/` |
 | `client/src/lib/` | Anchors, hover intent, layout, merge | `system/`, `service/` |
 | `server/src/` | Parser, symbol index, HTTP API | `service/` |

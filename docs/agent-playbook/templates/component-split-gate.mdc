@@ -1,0 +1,34 @@
+---
+description: Component file-size caps, folder placement, and split rules. Copy from agent-playbook/templates/.
+alwaysApply: true
+---
+
+# Component split gate
+
+**Playbook:** `docs/agent-playbook/README.md`  
+**Universal:** `docs/agent-playbook/core/file-split-policy.md`  
+**Framework:** `docs/agent-playbook/frameworks/<react|angular>.md`
+
+## Lint caps
+
+- File: **200** code lines · Function: **60** · Complexity: **15**
+- At **150** code lines: extract before growing.
+
+## Split order
+
+1. Pure helpers → 2. controller/hook/service → 3. markup slice → 4. thin parent
+
+## React (if applicable)
+
+- Render: `components/<domain>/*.tsx`
+- Shared hooks: `hooks/` · Domain hooks: `components/<domain>/use*.ts`
+- Providers: `context/use*Controller.ts`
+- No `.html` — extract child `.tsx`
+
+## Angular (if applicable)
+
+- `templateUrl` + `styleUrl` for non-trivial components
+- One SCSS file per component
+- Check `shared/` before new feature UI
+
+Adapt or remove the React/Angular section above to match your project stack.

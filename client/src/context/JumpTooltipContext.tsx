@@ -3,23 +3,38 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
+  type MutableRefObject,
   type ReactNode,
   type SetStateAction,
 } from "react";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
-export type JumpTooltipState = {
-  token: string;
+export type JumpWireEnd = "from" | "to";
+
+export type JumpChoice = {
+  label: string;
   kind: SemanticTokenKind;
+  wireEnd: JumpWireEnd;
+};
+
+export type JumpTooltipState = {
+  wireId: string;
   x: number;
   y: number;
+  mode: "single" | "choice";
+  single?: JumpChoice;
+  choices?: JumpChoice[];
 } | null;
 
 type JumpTooltipContextValue = {
   jumpTooltip: JumpTooltipState;
   setJumpTooltip: Dispatch<SetStateAction<JumpTooltipState>>;
+  hoveredWireId: string | null;
+  setHoveredWireId: Dispatch<SetStateAction<string | null>>;
+  wireJumpRef: MutableRefObject<((wireId: string, end: JumpWireEnd) => void) | null>;
 };
 
 const JumpTooltipContext = createContext<JumpTooltipContextValue | null>(null);
@@ -33,17 +48,22 @@ export function clearJumpTooltip(): void {
 
 export function JumpTooltipProvider({ children }: { children: ReactNode }) {
   const [jumpTooltip, setJumpTooltip] = useState<JumpTooltipState>(null);
+  const [hoveredWireId, setHoveredWireId] = useState<string | null>(null);
+  const wireJumpRef = useRef<((wireId: string, end: JumpWireEnd) => void) | null>(null);
 
   useEffect(() => {
-    clearJumpTooltipExternal = () => setJumpTooltip(null);
+    clearJumpTooltipExternal = () => {
+      setJumpTooltip(null);
+      setHoveredWireId(null);
+    };
     return () => {
       clearJumpTooltipExternal = null;
     };
   }, []);
 
   const value = useMemo(
-    () => ({ jumpTooltip, setJumpTooltip }),
-    [jumpTooltip],
+    () => ({ jumpTooltip, setJumpTooltip, hoveredWireId, setHoveredWireId, wireJumpRef }),
+    [jumpTooltip, hoveredWireId],
   );
 
   return (

@@ -11,6 +11,7 @@
 
 .structural-edge-path--dotted {
   stroke-dasharray: 2 3;
+  animation: proto-flow 1200ms linear infinite;
 }
 
 .structural-edge-path--imports {
@@ -27,17 +28,50 @@
 }
 
 /* Legend swatches — reuse map wire classes + always-on motion at map speeds */
+.connection-legend-swatch-line--animated {
+  stroke-width: 1.5;
+  animation: proto-flow 700ms linear infinite;
+}
+
+.connection-legend-swatch-line--solid-legend {
+  stroke-dasharray: 10 4;
+}
+
+.connection-legend-swatch-line.preview-edge-binding.connection-legend-swatch-line--animated {
+  animation: proto-flow 900ms linear infinite;
+}
+
+.connection-legend-swatch-line.preview-edge-typesetting.connection-legend-swatch-line--animated {
+  animation: proto-flow 850ms linear infinite;
+}
+
+.connection-legend-swatch-line.preview-edge-branch.connection-legend-swatch-line--animated {
+  animation: proto-flow 800ms linear infinite;
+}
+
 .connection-legend-swatch-line--dotted-flow {
   animation: proto-flow 700ms linear infinite;
 }
 
-.connection-legend-swatch--firing .connection-legend-swatch-line {
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
+.connection-legend-swatch {
+  width: 4.5rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.connection-legend-swatch--inactive .connection-legend-swatch-line {
+  animation-play-state: paused;
+  opacity: 0.45;
 }
 
 .connection-legend-swatch--idle .connection-legend-swatch-line {
-  opacity: 0.72;
+  opacity: 0.82;
+}
+
+.connection-legend-swatch--firing .connection-legend-swatch-line {
+  stroke-width: 1.65;
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
 }
 
 .connection-legend-row--firing .control-row-text-primary {
@@ -46,31 +80,182 @@
 }
 
 .connection-legend-panel {
-  width: min(18rem, calc(100vw - 1.5rem));
+  width: min(19rem, calc(100vw - 1.5rem));
 }
 
-.connection-legend-panel .control-row-double {
-  align-items: flex-start;
+.connection-legend-detail {
+  pointer-events: auto;
 }
 
-.connection-legend-panel .connection-legend-swatch {
-  margin-top: 0.1875rem;
-}
-
-.connection-legend-panel .control-row-text-title {
-  font-weight: 400;
+.connection-legend-detail-title {
+  margin: 0;
   font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--foreground);
 }
 
-.connection-legend-panel .control-row-text-subtitle {
+.connection-legend-detail-copy {
+  margin: 0.25rem 0 0.625rem;
   font-size: var(--font-size-2xs);
   line-height: 1.35;
-  white-space: normal;
+  color: var(--muted-foreground);
+}
+
+.connection-legend-row--focused {
+  background: color-mix(in oklch, var(--brand-surface) 65%, transparent);
 }
 
 .connection-legend-row--live .connection-legend-swatch-line {
-  stroke-width: 1.5;
+  stroke-width: 1.65;
   filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
+}
+
+.connection-legend-demo {
+  position: relative;
+  height: 7.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+}
+
+.connection-legend-demo--inactive {
+  opacity: 0.55;
+}
+
+.connection-legend-demo--inactive .connection-legend-demo-wire {
+  animation-play-state: paused;
+}
+
+.connection-legend-demo-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px);
+  background-size: 12px 12px;
+  pointer-events: none;
+}
+
+.connection-legend-demo-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.connection-legend-demo-wire {
+  stroke-width: 1.35;
+}
+
+.connection-legend-demo-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.connection-legend-demo-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 6%, transparent);
+  pointer-events: auto;
+}
+
+.connection-legend-demo-card--interface .connection-legend-demo-card-header {
+  color: color-mix(in oklch, var(--token-edge-type) 80%, var(--foreground));
+}
+
+.connection-legend-demo-card--module .connection-legend-demo-card-header {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-2xs);
+  font-weight: 500;
+}
+
+.connection-legend-demo-card-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0.1875rem 0.3125rem;
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.connection-legend-demo-member {
+  flex: 1;
+  min-height: 0;
+  background: var(--muted);
+}
+
+.connection-legend-demo-member-title {
+  padding: 0.125rem 0.3125rem 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-2xs);
+  font-weight: 500;
+  line-height: 1.2;
+  color: color-mix(in oklch, var(--token-edge-function) 75%, var(--foreground));
+}
+
+.connection-legend-demo-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.0625rem;
+  padding: 0.125rem 0.3125rem 0.25rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-2xs);
+  line-height: 1.25;
+}
+
+.connection-legend-demo-plain {
+  color: var(--muted-foreground);
+}
+
+.connection-legend-demo-chip,
+.connection-legend-demo-branch-tag {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-sm) - 1px);
+  background: var(--card);
+  padding: 0 0.1875rem;
+  font: inherit;
+  line-height: 1.25;
+  color: var(--foreground);
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-hover-surface) var(--ease),
+    background-color var(--motion-hover-surface) var(--ease);
+}
+
+.connection-legend-demo-chip--header {
+  font-weight: 600;
+}
+
+.connection-legend-demo-chip--type {
+  color: color-mix(in oklch, var(--token-edge-type) 85%, var(--foreground));
+}
+
+.connection-legend-demo-chip--branch,
+.connection-legend-demo-branch-tag {
+  color: color-mix(in oklch, var(--edge-control-flow) 85%, var(--foreground));
+}
+
+.connection-legend-demo-branch-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.connection-legend-demo-chip:hover,
+.connection-legend-demo-chip--lit,
+.connection-legend-demo-branch-tag:hover {
+  border-color: var(--brand-border);
+  background: var(--brand-surface);
 }
 
 .hoverable:hover .connection-legend-swatch--inactive {

@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { Waypoints } from "lucide-react";
+import { ConnectionLegendKindDemo } from "@/components/graph/ConnectionLegendKindDemo";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { WireMarkerDefs } from "@/components/graph/WireMarkerDefs";
@@ -16,6 +18,10 @@ import {
   type LegendConnectionKind,
 } from "@/lib/connectionWireStyle";
 import { cn } from "@/lib/utils";
+import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
+
+const DETAIL_CURSOR_PAD = 12;
+const DETAIL_WIDTH_PX = 304;
 
 type ConnectionLegendProps = {
   flashKey: string;
@@ -41,11 +47,11 @@ function LegendSwatch({
     <svg
       className={cn(
         "connection-legend-swatch",
-        !visible && "connection-legend-swatch--inactive opacity-45",
-        visible && !firing && "connection-legend-swatch--idle opacity-80",
+        !visible && "connection-legend-swatch--inactive",
+        visible && !firing && "connection-legend-swatch--idle",
         visible && firing && "connection-legend-swatch--firing",
       )}
-      viewBox="0 0 44 12"
+      viewBox="0 0 56 16"
       aria-hidden
     >
       <defs>
@@ -58,19 +64,74 @@ function LegendSwatch({
           className={cn("connection-legend-swatch-line", pathClass)}
           stroke={def.stroke}
           markerEnd={`url(#${def.markerId})`}
+          markerStart={
+            def.markerStartId ? `url(#${def.markerStartId})` : undefined
+          }
         />
       ) : (
         <line
-          x1={0}
-          y1={6}
-          x2={36}
-          y2={6}
+          x1={8}
+          y1={8}
+          x2={42}
+          y2={8}
           className={cn("connection-legend-swatch-line", pathClass)}
           stroke={def.stroke}
           markerEnd={`url(#${def.markerId})`}
         />
       )}
+      {kind === "branch" ? (
+        <circle
+          cx={8}
+          cy={4}
+          r={2.5}
+          className="preview-edge-junction"
+          fill={def.stroke}
+        />
+      ) : null}
     </svg>
+  );
+}
+
+function ConnectionLegendDetail({
+  kind,
+  active,
+  anchor,
+  panelRef,
+}: {
+  kind: LegendConnectionKind;
+  active: boolean;
+  anchor: { x: number; y: number };
+  panelRef: RefObject<HTMLDivElement | null>;
+}) {
+  const position = useViewportAnchoredPosition(panelRef, anchor, {
+    mode: "cursor",
+    pad: DETAIL_CURSOR_PAD,
+    viewportMargin: 8,
+  });
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className="connection-legend-detail rounded-md border border-border bg-popover px-3 py-2 shadow-md"
+      style={{
+        position: "fixed",
+        zIndex: 60,
+        width: DETAIL_WIDTH_PX,
+        left: position?.left ?? anchor.x + DETAIL_CURSOR_PAD,
+        top: position?.top ?? anchor.y + DETAIL_CURSOR_PAD,
+        visibility: position ? "visible" : "hidden",
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <p className="connection-legend-detail-title">
+        {CONNECTION_KIND_LABEL[kind]}
+      </p>
+      <p className="connection-legend-detail-copy">
+        {CONNECTION_KIND_DESCRIPTION[kind]}
+      </p>
+      <ConnectionLegendKindDemo kind={kind} active={active} />
+    </div>,
+    document.body,
   );
 }
 
@@ -87,6 +148,16 @@ export function ConnectionLegend({
     pulseEdges,
   } = useGraphInteraction();
   const [open, setOpen] = useState(false);
+  const [hoveredKind, setHoveredKind] = useState<LegendConnectionKind | null>(
+    null,
+  );
+  const [detailAnchor, setDetailAnchor] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const rootRef = useRef<HTMLDivElement>(null);
+  const legendPanelRef = useRef<HTMLDivElement>(null);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+  const openedAtRef = useRef(0);
 
   const activeKinds = useMemo(
     () => computeActiveConnectionKinds(previewEdges, structuralEdges, pulseEdges),
@@ -98,8 +169,50 @@ export function ConnectionLegend({
     [pulseEdges],
   );
 
+  const focusedVisible = hoveredKind ? isEdgeKindVisible(hoveredKind) : false;
+
+  const showDetail = (kind: LegendConnectionKind, x: number, y: number) => {
+    setHoveredKind(kind);
+    setDetailAnchor({ x, y });
+  };
+
+  useEffect(() => {
+    if (open) openedAtRef.current = Date.now();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (hoveredKind) {
+        setHoveredKind(null);
+        setDetailAnchor(null);
+        return;
+      }
+      setOpen(false);
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (Date.now() - openedAtRef.current < 120) return;
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (detailPanelRef.current?.contains(target)) return;
+      setOpen(false);
+      setHoveredKind(null);
+      setDetailAnchor(null);
+    };
+
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true });
+    };
+  }, [open, hoveredKind]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <GraphMapControlButton
         flashKey={flashKey}
         activeFlashKey={activeFlashKey}
@@ -116,6 +229,7 @@ export function ConnectionLegend({
       </GraphMapControlButton>
       {open ? (
         <div
+          ref={legendPanelRef}
           className="connection-legend-panel absolute right-0 bottom-full z-50 mb-2 rounded-md border border-border bg-popover px-1 py-1 shadow-md"
           role="dialog"
           aria-label="Connection kinds"
@@ -124,20 +238,31 @@ export function ConnectionLegend({
             {LEGEND_CONNECTION_KINDS.map((kind) => {
               const visible = isEdgeKindVisible(kind);
               const firing = activeKinds.has(kind);
+              const focused = hoveredKind === kind;
               return (
                 <li key={kind}>
                   <InteractiveListRow
                     interactive
-                    density="comfortable"
+                    density="compact"
                     hoverStyle="neutral"
                     contentTone={visible ? "default" : "muted"}
                     className={cn(
                       "connection-legend-row",
                       firing && "connection-legend-row--live",
+                      focused && "connection-legend-row--focused",
                     )}
                     title={CONNECTION_KIND_LABEL[kind]}
-                    subtitle={CONNECTION_KIND_DESCRIPTION[kind]}
                     aria-pressed={visible}
+                    onMouseEnter={(e) => showDetail(kind, e.clientX, e.clientY)}
+                    onMouseMove={(e) => {
+                      if (hoveredKind === kind) {
+                        setDetailAnchor({ x: e.clientX, y: e.clientY });
+                      }
+                    }}
+                    onFocus={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      showDetail(kind, rect.right, rect.top + rect.height / 2);
+                    }}
                     onClick={() => toggleEdgeKind(kind)}
                     leading={
                       <LegendSwatch
@@ -153,6 +278,14 @@ export function ConnectionLegend({
             })}
           </ul>
         </div>
+      ) : null}
+      {open && hoveredKind && detailAnchor ? (
+        <ConnectionLegendDetail
+          kind={hoveredKind}
+          active={focusedVisible}
+          anchor={detailAnchor}
+          panelRef={detailPanelRef}
+        />
       ) : null}
     </div>
   );

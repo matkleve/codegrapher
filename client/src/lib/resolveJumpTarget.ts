@@ -38,6 +38,61 @@ export function jumpTargetForWireEnd(
   };
 }
 
+function endpointTraceKey(
+  spec: PreviewEdgeSpec,
+  side: "from" | "to",
+  getNode: (id: string) => Node | undefined,
+): string | null {
+  const hint = side === "from" ? spec.liveFrom : spec.liveTo;
+  if (hint?.traceKey) return hint.traceKey;
+  const refined = refinePreviewEdge(spec, getNode);
+  const ref = side === "from" ? refined.from : refined.to;
+  const el = resolveJumpTargetElement(ref, hint, getNode);
+  if (!el) return null;
+  return traceKeyForJumpTarget(el, hint);
+}
+
+function lexicalPosition(hint: LiveAnchorHint | undefined): number | null {
+  if (hint?.lineNumber == null) return null;
+  return hint.lineNumber * 10_000 + (hint.tokenIndex ?? 0);
+}
+
+/**
+ * Pick which wire hit-zone end to activate so the jump lands **away** from the
+ * focused trace host — never back onto the hovered/pinned token. When focus is
+ * ambiguous, prefer downstream (child usage) over upstream (parent def).
+ */
+export function pickJumpWireEnd(
+  spec: PreviewEdgeSpec,
+  activeTraceKey: string | null,
+  getNode: (id: string) => Node | undefined,
+): "from" | "to" {
+  const fromKey = endpointTraceKey(spec, "from", getNode);
+  const toKey = endpointTraceKey(spec, "to", getNode);
+
+  if (activeTraceKey) {
+    const atFrom = fromKey != null && fromKey === activeTraceKey;
+    const atTo = toKey != null && toKey === activeTraceKey;
+    if (atFrom && !atTo) return "from";
+    if (atTo && !atFrom) return "to";
+  }
+
+  const fromPos = lexicalPosition(spec.liveFrom);
+  const toPos = lexicalPosition(spec.liveTo);
+  if (fromPos != null && toPos != null && fromPos !== toPos) {
+    return toPos > fromPos ? "from" : "to";
+  }
+
+  if (spec.liveTo?.role === "usage" && spec.liveFrom?.role === "definition") {
+    return "from";
+  }
+  if (spec.liveFrom?.role === "usage" && spec.liveTo?.role === "definition") {
+    return "to";
+  }
+
+  return spec.liveTo?.role === "usage" ? "from" : "to";
+}
+
 export function resolveJumpTargetElement(
   ref: AnchorRef,
   hint: LiveAnchorHint | undefined,

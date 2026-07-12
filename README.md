@@ -6,6 +6,8 @@ Ego-centric TypeScript graph explorer with a file tree, compound class container
 
 Behavior and interaction contracts live in **[docs/specs/](docs/specs/README.md)** (glossary, design tokens, lint via `npm run lint:specs`).
 
+**Agent playbook (copy to new projects):** [docs/agent-playbook/](docs/agent-playbook/README.md) · [restructure plan](docs/project/restructure-plan.md)
+
 ## Prerequisites
 
 - Node.js 18+

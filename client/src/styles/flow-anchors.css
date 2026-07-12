@@ -23,8 +23,15 @@
 }
 
 .flow-anchor-on.flow-anchor-endpoint-sibling {
-  background-color: var(--muted-foreground) !important;
-  color: var(--muted-foreground) !important;
+  filter: none;
+}
+
+.flow-anchor-on.flow-anchor-hop2 {
+  opacity: var(--trace-chip-hop2-opacity);
+}
+
+.flow-anchor-on.flow-anchor-hop3 {
+  opacity: var(--trace-chip-hop3-opacity);
 }
 
 .graph-trace-warm .flow-anchor-on {

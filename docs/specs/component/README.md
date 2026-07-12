@@ -2,6 +2,22 @@
 
 Reusable UI behavior contracts. Check here before adding net-new interaction patterns.
 
+**Folder layout & split rules:** [agent-playbook/frameworks/react.md](../../agent-playbook/frameworks/react.md)  
+**Restructure backlog:** [project/restructure-plan.md](../../project/restructure-plan.md)
+
+## `components/` domains
+
+| Folder | Owns |
+| ------ | ---- |
+| `graph/` | Canvas, overlay, legend, map controls |
+| `nodes/` | Class/file nodes, member rows, headers |
+| `code/` | Token chips, source lines, context bar |
+| `explorer/` | File tree, recent files |
+| `simulation/` | Sim panel, gutter, ledger |
+| `ui/` | Shared primitives |
+
+Root-level shells (`FileExplorer.tsx`, `GraphCanvas.tsx`) compose subfolders only.
+
 ## graph/
 
 - [class-node](class-node.md) — compound container, member expand, live resize

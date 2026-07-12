@@ -51,31 +51,35 @@ export function MemberSignatureTags({
               key={`${param.name}-${index}`}
               className="member-sig-value member-sig-value--in"
             >
-              <MemberSignatureParamChip
-                paramName={param.name}
-                memberId={memberId}
-                flowNodeId={flowNodeId}
-                graphNodeId={graphNodeId}
-                filePath={filePath}
-                classLabel={classLabel}
-                symbolIndex={symbolIndex}
-                shimmerDelay={`-${((memberId.length + index) * 0.37).toFixed(2)}s`}
-              />
-              {param.type ? (
-                <>
+              <span className="member-sig-binding">
+                <MemberSignatureParamChip
+                  paramName={param.name}
+                  memberId={memberId}
+                  flowNodeId={flowNodeId}
+                  graphNodeId={graphNodeId}
+                  filePath={filePath}
+                  classLabel={classLabel}
+                  symbolIndex={symbolIndex}
+                  shimmerDelay={`-${((memberId.length + index) * 0.37).toFixed(2)}s`}
+                />
+                {param.type ? (
                   <span className="member-sig-colon" aria-hidden>
                     :
                   </span>
-                  <MemberSignatureTypeLabel
-                    type={param.type}
-                    variant="in"
-                    memberId={memberId}
-                    flowNodeId={flowNodeId}
-                    graphNodeId={graphNodeId}
-                    filePath={filePath}
-                    shimmerDelay={`-${((memberId.length + index + 1) * 0.37).toFixed(2)}s`}
-                  />
-                </>
+                ) : null}
+              </span>
+              {param.type ? (
+                <MemberSignatureTypeLabel
+                  type={param.type}
+                  variant="in"
+                  memberId={memberId}
+                  flowNodeId={flowNodeId}
+                  graphNodeId={graphNodeId}
+                  filePath={filePath}
+                  paramName={param.name}
+                  symbolIndex={symbolIndex}
+                  shimmerDelay={`-${((memberId.length + index + 1) * 0.37).toFixed(2)}s`}
+                />
               ) : null}
             </span>
           ))}

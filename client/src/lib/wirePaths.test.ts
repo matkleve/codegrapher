@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  branchJunctionPoint,
   branchOrthogonalPath,
   computeBranchBusX,
   layoutBranchFanPaths,
@@ -200,5 +201,98 @@ describe("previewWirePath", () => {
     expect(path).toMatch(/^M /);
     expect(path).toMatch(/Q /);
     expect(path).not.toMatch(/C /);
+  });
+
+  it("typesetting on one signature line routes above the text", () => {
+    const lineRect = { left: 80, top: 100, right: 400, bottom: 118 };
+    const from = mockEl(
+      { left: 280, top: 104, right: 380, bottom: 114 },
+      { lineRect },
+    );
+    const to = mockEl(
+      { left: 100, top: 104, right: 140, bottom: 114 },
+      { lineRect },
+    );
+    const path = previewWirePath({
+      connectionKind: "typesetting",
+      x1: 275,
+      y1: 109,
+      x2: 135,
+      y2: 109,
+      fromSide: "left",
+      toSide: "right",
+      fromEl: from,
+      toEl: to,
+      svgBox: SVG_BOX,
+    });
+    const nums = path.match(/-?[\d.]+/g)!.map(Number);
+    const ys = nums.filter((_, i) => i % 2 === 1);
+    expect(Math.min(...ys)).toBeLessThan(100);
+    expect(path).toMatch(/\b92\b/);
+  });
+
+  it("typesetting on header signature row routes above chip tops", () => {
+    const from = mockEl({ left: 220, top: 48, right: 360, bottom: 64 });
+    const to = mockEl({ left: 40, top: 48, right: 90, bottom: 64 });
+    const path = previewWirePath({
+      connectionKind: "typesetting",
+      x1: 215,
+      y1: 56,
+      x2: 95,
+      y2: 56,
+      fromSide: "left",
+      toSide: "right",
+      fromEl: from,
+      toEl: to,
+      svgBox: SVG_BOX,
+    });
+    const nums = path.match(/-?[\d.]+/g)!.map(Number);
+    const ys = nums.filter((_, i) => i % 2 === 1);
+    expect(Math.min(...ys)).toBeLessThan(48);
+  });
+
+  it("usage wires stay cubic even when leaving a signature line", () => {
+    const sigLineRect = { left: 80, top: 100, right: 400, bottom: 118 };
+    const from = mockEl(
+      { left: 100, top: 104, right: 140, bottom: 114 },
+      { lineRect: sigLineRect },
+    );
+    const to = mockEl(
+      { left: 120, top: 130, right: 160, bottom: 148 },
+      { lineRect: { left: 80, top: 128, right: 400, bottom: 146 } },
+    );
+    const path = previewWirePath({
+      connectionKind: "usage",
+      x1: 105,
+      y1: 109,
+      x2: 125,
+      y2: 139,
+      fromSide: "left",
+      toSide: "left",
+      fromEl: from,
+      toEl: to,
+      svgBox: SVG_BOX,
+    });
+    expect(path).toMatch(/^M .+ C .+, .+, .+$/);
+    expect(path).not.toMatch(/Q /);
+  });
+
+  it("branchJunctionPoint returns bus fork coordinates", () => {
+    const fromEl = mockEl({ left: 100, top: 80, right: 160, bottom: 96 }, {
+      lineRect: { left: 80, top: 80, right: 400, bottom: 96 },
+    });
+    const spurEl = mockEl({ left: 220, top: 140, right: 280, bottom: 156 });
+
+    const junction = branchJunctionPoint(
+      150,
+      88,
+      fromEl,
+      [{ x2: 220, y2: 148, toEl: spurEl }],
+      SVG_BOX,
+    );
+
+    expect(junction).not.toBeNull();
+    expect(junction!.x).toBeGreaterThan(150);
+    expect(junction!.y).toBeGreaterThan(88);
   });
 });

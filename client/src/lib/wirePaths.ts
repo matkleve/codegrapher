@@ -48,6 +48,7 @@ function belowRectY(rect: { bottom: number } | null, fallback: number): number {
 export type BranchTrunkGeometry = {
   startX: number;
   busX: number;
+  busTopY: number;
   trunkPrefix: string;
 };
 
@@ -95,6 +96,7 @@ export function computeBranchTrunk(
   return {
     startX,
     busX,
+    busTopY,
     trunkPrefix: [
       `M ${startX} ${y1}`,
       `L ${startX} ${busTopY}`,
@@ -102,6 +104,20 @@ export function computeBranchTrunk(
       `L ${busX} ${trunkBottomY}`,
     ].join(" "),
   };
+}
+
+/** Fork-node position where the control-flow trunk meets the vertical bus. */
+export function branchJunctionPoint(
+  x1: number,
+  y1: number,
+  fromEl: HTMLElement | null,
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+): { x: number; y: number } | null {
+  if (spurs.length === 0) return null;
+  const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
+  const trunk = computeBranchTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
+  return { x: trunk.busX, y: trunk.busTopY };
 }
 
 /** Tap from the bus rightward in the gutter, stub into the branch left anchor. */
@@ -188,6 +204,95 @@ export function orthogonalPathPoints(
   ];
 }
 
+function sameCodeLine(
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
+  y1: number,
+  y2: number,
+): boolean {
+  const fromLine = lineRectInSvg(fromEl, svgBox);
+  const toLine = lineRectInSvg(toEl, svgBox);
+  if (fromLine && toLine) {
+    return (
+      Math.abs(fromLine.top - toLine.top) < 2 &&
+      Math.abs(fromLine.bottom - toLine.bottom) < 2
+    );
+  }
+  const fromChip = elRectInSvg(fromEl, svgBox);
+  const toChip = elRectInSvg(toEl, svgBox);
+  if (fromChip && toChip) {
+    return Math.abs(fromChip.top - toChip.top) < 3;
+  }
+  return Math.abs(y1 - y2) < 4;
+}
+
+function aboveLineY(
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
+  y1: number,
+  y2: number,
+  lane: number,
+): number {
+  const fromLine = lineRectInSvg(fromEl, svgBox);
+  const toLine = lineRectInSvg(toEl, svgBox);
+  let lineTop = Math.min(fromLine?.top ?? Infinity, toLine?.top ?? Infinity);
+  if (!Number.isFinite(lineTop)) {
+    for (const el of [fromEl, toEl]) {
+      const chip = elRectInSvg(el, svgBox);
+      if (chip) lineTop = Math.min(lineTop, chip.top);
+    }
+  }
+  if (!Number.isFinite(lineTop)) {
+    lineTop = Math.min(y1, y2);
+  }
+  return lineTop - ORTHOGONAL_LINE_PAD - Math.abs(lane * ORTHOGONAL_LANE);
+}
+
+/** Rise above a signature line, run over the tokens, drop into the target chip. */
+export function aboveLineRoutePoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  _toSide: "left" | "right",
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
+  opts?: OrthogonalPathOptions,
+): XY[] {
+  const lane = opts?.lane ?? 0;
+  const aboveY = aboveLineY(fromEl, toEl, svgBox, y1, y2, lane);
+
+  return [
+    { x: x1, y: y1 },
+    { x: x1, y: aboveY },
+    { x: x2, y: aboveY },
+    { x: x2, y: y2 },
+  ];
+}
+
+/** Typesetting on one signature line — route above the text, over the param slot. */
+export function typesettingPathPoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  fromSide: "left" | "right",
+  toSide: "left" | "right",
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
+  opts?: OrthogonalPathOptions,
+): XY[] {
+  if (!sameCodeLine(fromEl, toEl, svgBox, y1, y2)) {
+    return orthogonalPathPoints(x1, y1, x2, y2, fromSide, toSide, opts);
+  }
+
+  return aboveLineRoutePoints(x1, y1, x2, y2, toSide, fromEl, toEl, svgBox, opts);
+}
+
 /** Fillet sharp corners on an orthogonal polyline with quadratic beziers. */
 export function roundedPolylinePath(points: XY[], radius: number): string {
   const n = points.length;
@@ -251,10 +356,24 @@ export function typesettingOrthogonalPath(
   y2: number,
   fromSide: "left" | "right",
   toSide: "left" | "right",
+  fromEl: HTMLElement | null,
+  toEl: HTMLElement | null,
+  svgBox: DOMRect,
   opts?: OrthogonalPathOptions,
 ): string {
   return roundedPolylinePath(
-    orthogonalPathPoints(x1, y1, x2, y2, fromSide, toSide, opts),
+    typesettingPathPoints(
+      x1,
+      y1,
+      x2,
+      y2,
+      fromSide,
+      toSide,
+      fromEl,
+      toEl,
+      svgBox,
+      opts,
+    ),
     TYPESETTING_CORNER_RADIUS,
   );
 }
@@ -299,7 +418,18 @@ export function previewWirePath(input: PreviewWirePathInput): string {
   }
 
   if (connectionKind === "typesetting") {
-    return typesettingOrthogonalPath(x1, y1, x2, y2, fromSide, toSide, { lane });
+    return typesettingOrthogonalPath(
+      x1,
+      y1,
+      x2,
+      y2,
+      fromSide,
+      toSide,
+      fromEl,
+      toEl,
+      svgBox,
+      { lane },
+    );
   }
 
   const cubicOpts: CubicPathOptions = {

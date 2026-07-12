@@ -4,6 +4,8 @@ import {
   computePulsingConnectionKinds,
   legendSwatchClasses,
   previewWireClasses,
+  previewWireMarkerEnd,
+  previewWireMarkerStart,
   previewWireStroke,
   structuralWireClasses,
   wireStyleForKind,
@@ -69,16 +71,26 @@ describe("connectionWireStyle", () => {
     expect(legendSwatchClasses("binding", { pulse: false })).toEqual([
       "preview-edge-path",
       "preview-edge-binding",
+      "connection-legend-swatch-line--animated",
       "preview-edge-warm",
     ]);
-    expect(legendSwatchClasses("implementation", { pulse: false })).toEqual([
-      "structural-edge-path",
-      "structural-edge-path--dotted",
-      "connection-legend-swatch-line--dotted-flow",
+    expect(legendSwatchClasses("typesetting", { pulse: false })).toEqual([
+      "preview-edge-path",
+      "preview-edge-typesetting",
+      "connection-legend-swatch-line--animated",
+      "preview-edge-warm",
     ]);
     expect(legendSwatchClasses("inheritance", { pulse: false })).toEqual([
       "structural-edge-path",
       "structural-edge-path--solid",
+      "connection-legend-swatch-line--animated",
+      "connection-legend-swatch-line--solid-legend",
+    ]);
+    expect(legendSwatchClasses("implementation", { pulse: false })).toEqual([
+      "structural-edge-path",
+      "structural-edge-path--dotted",
+      "connection-legend-swatch-line--animated",
+      "connection-legend-swatch-line--dotted-flow",
     ]);
   });
 
@@ -107,7 +119,7 @@ describe("connectionWireStyle", () => {
     ).toBe("var(--edge-typesetting)");
   });
 
-  it("previewWireClasses matches warm typesetting edges", () => {
+  it("previewWireClasses includes warm motion on typesetting edges", () => {
     const edge = previewEdge({ id: "x", connectionKind: "typesetting", hop: 2 });
     expect(previewWireClasses(edge, true)).toEqual({
       path: [
@@ -123,6 +135,33 @@ describe("connectionWireStyle", () => {
         "preview-wire--hop2",
       ],
     });
+  });
+
+  it("previewWireClasses adds branch trunk class on fan index zero", () => {
+    const edge = previewEdge({
+      id: "x",
+      connectionKind: "branch",
+      branchFan: { index: 0, count: 2 },
+    });
+    expect(previewWireClasses(edge, true).path).toContain(
+      "preview-edge-branch-trunk",
+    );
+  });
+
+  it("previewWireMarkerEnd and Start follow connection kind", () => {
+    expect(
+      previewWireMarkerEnd(previewEdge({ id: "b", connectionKind: "binding" })),
+    ).toBe("wire-arrow-bar");
+    expect(
+      previewWireMarkerEnd(
+        previewEdge({ id: "s", connectionKind: "typesetting" }),
+      ),
+    ).toBe("wire-bracket-end");
+    expect(
+      previewWireMarkerStart(
+        previewEdge({ id: "s", connectionKind: "typesetting" }),
+      ),
+    ).toBe("wire-bracket-start");
   });
 
   it("typesetting legend swatch uses rounded orthogonal path", () => {

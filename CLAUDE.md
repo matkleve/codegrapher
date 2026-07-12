@@ -10,7 +10,10 @@ onto the canvas to merge them in.
 
 - Index: `docs/specs/README.md` — lint with `npm run lint:specs`
 - Glossary: `docs/glossary.md`
-- Template: `docs/agent-workflows/element-spec-format.md`
+- **Agent playbook (portable):** `docs/agent-playbook/README.md` — copy entire folder to new projects
+- Spec template: `docs/agent-playbook/core/spec-format.md`
+- React layout: `docs/agent-playbook/frameworks/react.md`
+- Restructure backlog: `docs/project/restructure-plan.md`
 - Key system specs: `docs/specs/system/preview-edges.md`, `ego-graph-model.md`, `interaction-emphasis.md`
 - Governance: `docs/specs/GOVERNANCE-MATRIX.md`
 
@@ -67,11 +70,11 @@ Patterns trace to feldpost; codegrapher is the slim React + Express variant.
   live in `eslint.shared.mjs` (`maintainabilityRules` + `codeQualityRules`, spread into
   both `client/eslint.config.js` and `server/eslint.config.mjs`). The key cap is
   `max-lines` warn at **200 code lines** — keep files small and single-purpose so an
-  agent can load one file and edit it precisely; split rather than grow. Also enforced:
-  no `any`, `consistent-type-imports`, no unused imports/vars (all error, autofixable
-  except `any`); return types + magic numbers are warn-only. Warnings don't fail the
-  build; there are currently ~20 files over 200 lines flagged for splitting (the largest
-  are `GraphInteractionContext.tsx` and `GraphFlowInner.tsx` — split candidates).
+  agent can load one file and edit it precisely; split rather than grow. **How to split:**
+  `docs/agent-playbook/core/file-split-policy.md` + `frameworks/react.md`; backlog:
+  `docs/project/restructure-plan.md`. Also enforced: no `any`,
+  `consistent-type-imports`, no unused imports/vars (all error, autofixable except `any`);
+  return types + magic numbers are warn-only. Warnings don't fail the build.
 - Unit tests run under Vitest: `npm test` (root, proxies to `client`) or `npm run test:watch`
   in `client/`. Coverage is focused on `client/src/lib/**` (trace/edge/layout/static-walk
   logic); there are no component or server tests yet, so interaction and parser behavior
@@ -101,6 +104,10 @@ Pitfalls learned the hard way:
 - Method rows expand on click (member row label inside `.react-flow__node`); node
   labels are camelCase-split for display ("mergeGraphData" renders as "merge Graph
   Data") — match accordingly.
+- **Component folder structure:** `components/<domain>/` (`code/`, `explorer/`, `graph/`,
+  `nodes/`, `simulation/`, `ui/`); shared hooks in `hooks/`; domain hooks colocated
+  (e.g. `useClassNodeController.ts` in `nodes/`). Root `components/*.tsx` = shell
+  composers only. Full rules: `docs/agent-playbook/frameworks/react.md`.
 - Class node logic is split out of `ClassNode.tsx` (thin render) into hooks:
   `useClassNodeCommit` (the single node writer), `useClassNodeMembers` (toggles),
   `useClassNodeResize` (snap resize), composed by `useClassNodeController`; the

@@ -5,6 +5,7 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { buildSignatureTypeUsageEdges } from "@/lib/signatureTypeEdges";
+import { buildSignatureTypeParamCascade } from "@/lib/signatureTypeParamCascade";
 import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   buildHoverLoadMenu,
@@ -13,8 +14,10 @@ import {
 import { primaryIndexedSymbolInType } from "@/lib/formatSignatureType";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
-import { symbolKindToSemantic } from "@/lib/tokenColors";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { makeSignatureTypeKey } from "@/lib/traceKeys";
+
+import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
 
 type UseMemberSignatureTypeTraceArgs = {
   type: string;
@@ -24,6 +27,9 @@ type UseMemberSignatureTypeTraceArgs = {
   filePath: string;
   chipRef: RefObject<TokenChipHandle | null>;
   hostRef: RefObject<HTMLButtonElement | null>;
+  /** Set for param input types (`result: GeocoderSearchResult`). */
+  paramName?: string;
+  symbolIndex?: MemberSymbolIndex;
 };
 
 export function useMemberSignatureTypeTrace({
@@ -34,8 +40,10 @@ export function useMemberSignatureTypeTrace({
   filePath,
   chipRef,
   hostRef,
+  paramName,
+  symbolIndex,
 }: UseMemberSignatureTypeTraceArgs) {
-  const { lookup, hasSymbol, symbols } = useIndex();
+  const { hasSymbol, symbols } = useIndex();
   const { getNode } = useReactFlow();
   const {
     beginTrace,
@@ -46,8 +54,8 @@ export function useMemberSignatureTypeTrace({
 
   const symbolName = primaryIndexedSymbolInType(type, hasSymbol);
   const indexed = Boolean(symbolName);
-  const entry = symbolName ? lookup(symbolName) : undefined;
-  const semantic = entry ? symbolKindToSemantic(entry.kind) : "type";
+  // Signature type position always uses type ink (teal) — see token-interactions.md.
+  const semantic: SemanticTokenKind = "type";
   const tokenKey = symbolName
     ? makeSignatureTypeKey(flowNodeId, memberId, symbolName)
     : "";
@@ -69,6 +77,23 @@ export function useMemberSignatureTypeTrace({
       flowNodeId,
       memberId,
     );
+    if (paramName && symbolIndex) {
+      edges.push(
+        ...buildSignatureTypeParamCascade({
+          symbolName,
+          typeKind: semantic,
+          sigTypeEl: chipEl,
+          paramName,
+          symbolIndex,
+          flowNodeId,
+          memberId,
+          symbols,
+          graphData,
+          getNode,
+          edgeIdPrefix: `sig-type-${paramName}`,
+        }),
+      );
+    }
     beginTrace(tokenKey, edges);
     if (edges.some((e) => e.load)) {
       const resolved = resolveVisibleTarget(
@@ -101,8 +126,10 @@ export function useMemberSignatureTypeTrace({
     getNode,
     graphData,
     memberId,
+    paramName,
     semantic,
     showConnectionMenu,
+    symbolIndex,
     symbolName,
     symbols,
     tokenKey,

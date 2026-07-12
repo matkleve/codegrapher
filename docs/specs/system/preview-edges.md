@@ -8,7 +8,7 @@ On-demand dashed SVG connections between indexed symbols. Summoned by hovering t
 
 ## What It Looks Like
 
-Preview wires vary by **connection kind** (see [connection-taxonomy.md](connection-taxonomy.md)): Usage and transitive use function-blue dashed **cubic** curves; Binding uses cyan dotted cubics; **Typesetting** uses type-teal dash-dot **rounded orthogonal** paths between sig-type and param chips; Control flow uses green dash-dot **sharp orthogonal** gutter buses. All kinds share animated dash flow, open arrowheads, and crisp endpoint sockets (`--spring`). Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
+Preview wires vary by **connection kind** (see [connection-taxonomy.md](connection-taxonomy.md)): Usage and transitive use function-blue dashed **cubic** curves with open chevron arrowheads and forward dash flow; Binding uses cyan dotted cubics with a **bar cap** at the binding end and forward dash flow (initializer → binding); **Typesetting** uses type-teal dash-dot **rounded orthogonal** paths with **bracket caps** (no arrow) and forward dash flow; Control flow uses green dash-dot **sharp orthogonal** gutter buses with a **filled triangle** at each branch and a **junction disc** at the bus fork. Crisp endpoint sockets (`--spring`). Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
 
 Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessibility.md).
 
