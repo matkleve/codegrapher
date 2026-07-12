@@ -8,7 +8,7 @@ Parent: [interaction-emphasis.md](interaction-emphasis.md). Verify manually on g
 - [ ] **No** `color` rules on `.token-chip` / `.cursor-pointer` `.token-def-label` in `trace-syntax.css`
 - [ ] New clickables use `.hoverable` or `controlTokens` — not `hover:bg-primary`
 - [ ] Trace dim is color-only on syntax/chrome — no container opacity / bg wash on code
-- [ ] Pin or dwell trace: strength unchanged when pointer leaves class card
+- [ ] Leave unpinned: wires fade with `retireWireGroup` (120ms) — no frozen dash then pop
 - [ ] Chip hover-preview uses hover curve on `--trace-strength`; element opacity stays 1
 - [ ] Wire path uses focus curve at rest; hover curve when emphasized
 - [ ] Hover branch brighter than same branch at focus for every hop (`traceDepth.test.ts`)

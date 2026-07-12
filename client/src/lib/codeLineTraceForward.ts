@@ -16,8 +16,31 @@ function getClassNodeData(
 export function forwardLexicalRelativesForParamDef(
   ctx: CodeLineTraceContext,
 ): PreviewEdgeSpec[] {
+  const paramDefId = ctx.chipEl.dataset.localDefId;
+  if (!paramDefId?.includes("::param::") || !ctx.methodCode || ctx.methodStartLine == null) {
+    return [];
+  }
+  return forwardLexicalRelativesForDef(ctx, paramDefId, ctx.chipEl);
+}
+
+/** Chained downstream relatives from a local binding def (initializer hover or binding LHS). */
+export function forwardLexicalRelativesForBindingDef(
+  ctx: CodeLineTraceContext,
+  bindingDefId: string,
+  originEl: HTMLElement,
+): PreviewEdgeSpec[] {
+  if (!bindingDefId.includes("::local::") || !ctx.methodCode || ctx.methodStartLine == null) {
+    return [];
+  }
+  return forwardLexicalRelativesForDef(ctx, bindingDefId, originEl);
+}
+
+function forwardLexicalRelativesForDef(
+  ctx: CodeLineTraceContext,
+  originDefId: string,
+  originEl: HTMLElement,
+): PreviewEdgeSpec[] {
   const {
-    chipEl,
     kind,
     symbolIndex,
     sourceFlowId,
@@ -27,14 +50,12 @@ export function forwardLexicalRelativesForParamDef(
     getNode,
     edgeKey,
   } = ctx;
-  const paramDefId = chipEl.dataset.localDefId;
-  if (!paramDefId?.includes("::param::") || !methodCode || methodStartLine == null) return [];
   const classData = getClassNodeData(sourceFlowId, getNode);
-  if (!classData) return [];
+  if (!classData || !methodCode || methodStartLine == null) return [];
 
   return buildDefRelativePreviewEdges({
-    originDefId: paramDefId,
-    originEl: chipEl,
+    originDefId,
+    originEl,
     symbolIndex,
     methodCode,
     methodStartLine,

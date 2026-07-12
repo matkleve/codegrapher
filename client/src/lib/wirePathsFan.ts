@@ -1,4 +1,3 @@
-import { chipClearance, cubicPath, cubicPortSides, treeSpinePath } from "@/lib/resolvePreviewAnchor";
 import {
   belowRectY,
   elRectInSvg,
@@ -18,12 +17,15 @@ export type BranchSpurInput = {
   x2: number;
   y2: number;
   toEl: HTMLElement | null;
+  toSide?: "left" | "right";
 };
 
 /** Same-line fan targets share one fork row (px). */
 export const FAN_CLUSTER_Y_SPREAD = 10;
 /** Extra gutter before a tight cluster so the knot forks left of the chips. */
 export const FAN_CLUSTER_BUS_EXTRA = 20;
+/** Vertical gap above a horizontal cluster before spurs split to each chip. */
+export const FAN_HORIZONTAL_SPLIT_ABOVE = 20;
 
 export type FanClusterKind = "solo" | "horizontal" | "vertical";
 
@@ -34,25 +36,54 @@ export function fanClusterKind(spurs: BranchSpurInput[]): FanClusterKind {
   return spread <= FAN_CLUSTER_Y_SPREAD ? "horizontal" : "vertical";
 }
 
+function fanClusterMinY(spurs: BranchSpurInput[]): number {
+  return Math.min(...spurs.map((spur) => spur.y2));
+}
+
+/** Horizontal targets with the source above — knot sits over cluster center, not left gutter. */
+export function fanUsesCenterAboveBus(
+  clusterKind: FanClusterKind,
+  sourceY: number,
+  spurs: BranchSpurInput[],
+): boolean {
+  if (clusterKind !== "horizontal") return false;
+  return sourceY < fanClusterMinY(spurs) - 4;
+}
+
+function fanClusterCenterX(spurs: BranchSpurInput[]): number {
+  const xs = spurs.map((spur) => spur.x2);
+  return (Math.min(...xs) + Math.max(...xs)) / 2;
+}
+
 /** Fork row (top of cluster) and how far the shared spine runs on wire 0. */
 export function fanSpineRange(
   spurs: BranchSpurInput[],
   clusterKind: FanClusterKind,
+  sourceY?: number,
 ): { forkY: number; spineEndY: number } {
   const ys = spurs.map((spur) => spur.y2);
-  const forkY = Math.min(...ys);
+  const minY = Math.min(...ys);
+  const centerAbove =
+    sourceY != null && fanUsesCenterAboveBus(clusterKind, sourceY, spurs);
+  const forkY = centerAbove ? minY - FAN_HORIZONTAL_SPLIT_ABOVE : minY;
   const spineEndY =
     clusterKind === "vertical" && spurs.length > 1 ? Math.max(...ys) : forkY;
   return { forkY, spineEndY };
 }
 
-function computeFanBusX(
+export function computeFanBusX(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
   kind: FanClusterKind,
+  sourceY?: number,
 ): number {
+  if (sourceY != null && fanUsesCenterAboveBus(kind, sourceY, spurs)) {
+    return fanClusterCenterX(spurs);
+  }
   const base = computeBranchBusX(spurs, svgBox);
-  return kind === "solo" ? base : base - FAN_CLUSTER_BUS_EXTRA;
+  if (kind === "solo") return base;
+  if (kind === "horizontal") return base - FAN_CLUSTER_BUS_EXTRA;
+  return base;
 }
 
 /** Left gutter column — left of every branch chip, never through token text. */
@@ -171,85 +202,6 @@ export function layoutBranchFanPaths(
   let path0 = `${trunk.trunkPrefix} ${spurPaths[0] ?? ""}`;
   if (spineEndY > forkY + 2) {
     path0 = `${path0} M ${trunk.busX} ${forkY} L ${trunk.busX} ${spineEndY}`;
-  }
-
-  return {
-    busX: trunk.busX,
-    clusterKind,
-    paths: [path0, ...spurPaths.slice(1)],
-  };
-}
-
-/** Cubic approach into the fork — one curve from source to the bus knot. */
-function computeCubicFanTrunk(
-  x1: number,
-  y1: number,
-  fromEl: HTMLElement | null,
-  spurs: BranchSpurInput[],
-  svgBox: DOMRect,
-  forkY: number,
-  clusterKind: FanClusterKind,
-): BranchTrunkGeometry {
-  const busX = computeFanBusX(spurs, svgBox, clusterKind);
-  const clearance = chipClearance(fromEl, spurs[0]?.toEl ?? null);
-  const approachSides = cubicPortSides(x1, busX);
-  const trunkPrefix = cubicPath(
-    x1,
-    y1,
-    busX,
-    forkY,
-    approachSides.fromSide,
-    approachSides.toSide,
-    { clearance },
-  );
-
-  return {
-    startX: x1,
-    busX,
-    busTopY: forkY,
-    trunkPrefix,
-  };
-}
-
-/** Cubic fan — shared cubic trunk + cubic spurs into each target. */
-export function cubicFanSpurPath(
-  busX: number,
-  spur: BranchSpurInput,
-  svgBox: DOMRect,
-  fromEl: HTMLElement | null,
-  _clusterKind: FanClusterKind,
-): string {
-  const clearance = chipClearance(fromEl, spur.toEl);
-  return cubicPath(busX, spur.y2, spur.x2, spur.y2, "right", "left", { clearance });
-}
-
-export function layoutCubicFanPaths(
-  x1: number,
-  y1: number,
-  fromEl: HTMLElement | null,
-  spurs: BranchSpurInput[],
-  svgBox: DOMRect,
-): FanPathLayout {
-  if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
-
-  const clusterKind = fanClusterKind(spurs);
-  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
-  const trunk = computeCubicFanTrunk(
-    x1,
-    y1,
-    fromEl,
-    spurs,
-    svgBox,
-    forkY,
-    clusterKind,
-  );
-  const spurPaths = spurs.map((spur) =>
-    cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl, clusterKind),
-  );
-
-  let path0 = `${trunk.trunkPrefix} ${spurPaths[0] ?? ""}`;
-  if (spineEndY > forkY + 2) {
-    path0 = `${path0} ${treeSpinePath(trunk.busX, forkY, spineEndY, "left")}`;
   }
 
   return {

@@ -52,6 +52,8 @@ Match surrounding code. Reuse existing abstractions. No drive-by refactors.
 
 When behavior changes, update the **spec** (and atlas if the map changed), not a long chat summary.
 
+**Trace wire bug pattern:** hop 2+ faint while hop 1 glows → check `previewEdges` vs `hoverPreviewEdgeIds` sync, not `traceDepth` hop cap ([token-hover.atlas.supplement.md](../../specs/system/token-hover.atlas.supplement.md) § pitfall).
+
 ---
 
 ## What agents need from the repo

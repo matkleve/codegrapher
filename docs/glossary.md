@@ -115,3 +115,6 @@
 
 - **Connection legend**  
   Canvas overlay control (`ConnectionLegend`) toggling visibility per connection kind. Default on for usage/binding/control-flow/structural; module import off.
+
+- **Floating panel**  
+  Elevated box above the canvas (`FloatingPanel` in `components/ui/floatingPanel.tsx`). `menu` variant — portaled connection menus / load pickers. `chrome` variant — graph map legend panels and hover peek labels.

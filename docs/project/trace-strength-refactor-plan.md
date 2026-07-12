@@ -155,7 +155,7 @@ Manual pass on multi-hop trace (e.g. `extractFieldValue` / `AddressFieldKind` ca
 | Lint / comment guard | No `color` on `.token-chip` in `trace-syntax.css` | Open |
 | Visual regression | idle / pending / active / ctrl / pinned on one fixture node | Open |
 
-**Depends on:** PR 1 (spec). Unblocks cleaner simulator/timeline emphasis reuse.
+**Depends on:** PR 1 (spec). **Full plan:** [trace-emphasis-implementation-plan.md](../project/trace-emphasis-implementation-plan.md).
 
 ---
 

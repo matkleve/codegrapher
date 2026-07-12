@@ -1,6 +1,22 @@
 import type { PreviewConnectionKind } from "@/lib/previewEdgeTypes";
-import { chipClearance, cubicPath, type CubicPathOptions } from "@/lib/resolvePreviewAnchor";
-import { branchOrthogonalPath } from "@/lib/wirePathsFan";
+import {
+  chipClearance,
+  cubicPath,
+  cubicPortSides,
+  straightPath,
+  treeSpinePath,
+  type CubicPathOptions,
+} from "@/lib/resolvePreviewAnchor";
+import {
+  branchOrthogonalPath,
+  branchSpurPath,
+  computeBranchTrunk,
+  computeFanBusX,
+  fanClusterKind,
+  fanSpineRange,
+  type BranchSpurInput,
+  type FanPathLayout,
+} from "@/lib/wirePathsFan";
 import { typesettingOrthogonalPath } from "@/lib/wirePathsOrthogonal";
 
 export type {
@@ -12,16 +28,17 @@ export type {
 export {
   FAN_CLUSTER_BUS_EXTRA,
   FAN_CLUSTER_Y_SPREAD,
+  FAN_HORIZONTAL_SPLIT_ABOVE,
   branchJunctionPoint,
   branchOrthogonalPath,
   branchSpurPath,
   computeBranchBusX,
   computeBranchTrunk,
-  cubicFanSpurPath,
+  computeFanBusX,
   fanClusterKind,
   fanSpineRange,
+  fanUsesCenterAboveBus,
   layoutBranchFanPaths,
-  layoutCubicFanPaths,
 } from "@/lib/wirePathsFan";
 export type { OrthogonalPathOptions } from "@/lib/wirePathsOrthogonal";
 export {
@@ -48,6 +65,8 @@ export type PreviewWirePathInput = {
   toEl: HTMLElement | null;
   svgBox: DOMRect;
   lane?: number;
+  /** Fan bus leg — branch uses trunk/spur segments; data kinds ignore and use point-to-point cubic. */
+  fanLeg?: "trunk" | "spur";
 };
 
 /**
@@ -69,9 +88,24 @@ export function previewWirePath(input: PreviewWirePathInput): string {
     toEl,
     svgBox,
     lane = 0,
+    fanLeg,
   } = input;
 
   if (connectionKind === "branch") {
+    if (fanLeg === "trunk") {
+      return computeBranchTrunk(
+        x1,
+        y1,
+        fromEl,
+        [{ x2, y2, toEl }],
+        svgBox,
+        y2,
+        x2,
+      ).trunkPrefix;
+    }
+    if (fanLeg === "spur") {
+      return branchSpurPath(x1, x2, y2, toEl, svgBox);
+    }
     return branchOrthogonalPath(x1, y1, x2, y2, fromEl, toEl, svgBox);
   }
 
@@ -96,3 +130,71 @@ export function previewWirePath(input: PreviewWirePathInput): string {
   };
   return cubicPath(x1, y1, x2, y2, fromSide, toSide, cubicOpts);
 }
+
+/** Fan layout — every leg calls `previewWirePath` with the group's `connectionKind`. */
+export function layoutFanPaths(
+  connectionKind: PreviewConnectionKind,
+  x1: number,
+  y1: number,
+  fromEl: HTMLElement | null,
+  fromSide: "left" | "right",
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+): FanPathLayout {
+  if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
+
+  const clusterKind = fanClusterKind(spurs);
+  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind, y1);
+  const busX = computeFanBusX(spurs, svgBox, clusterKind, y1);
+  const knotSides = cubicPortSides(x1, busX);
+
+  const trunkPrefix = previewWirePath({
+    connectionKind,
+    fanLeg: "trunk",
+    x1,
+    y1,
+    x2: busX,
+    y2: forkY,
+    fromSide,
+    toSide: knotSides.toSide,
+    fromEl,
+    toEl: spurs[0]?.toEl ?? null,
+    svgBox,
+  });
+
+  const spurPaths = spurs.map((spur) => {
+    const startY = clusterKind === "horizontal" ? forkY : spur.y2;
+    const spurSides = cubicPortSides(busX, spur.x2);
+    return previewWirePath({
+      connectionKind,
+      fanLeg: "spur",
+      x1: busX,
+      y1: startY,
+      x2: spur.x2,
+      y2: spur.y2,
+      fromSide: spurSides.fromSide,
+      toSide: spur.toSide ?? spurSides.toSide,
+      fromEl,
+      toEl: spur.toEl,
+      svgBox,
+    });
+  });
+
+  let path0 = `${trunkPrefix} ${spurPaths[0] ?? ""}`;
+  if (spineEndY > forkY + 2) {
+    const spine =
+      connectionKind === "branch"
+        ? straightPath(busX, forkY, busX, spineEndY)
+        : treeSpinePath(busX, forkY, spineEndY, "left");
+    path0 = `${path0} ${spine}`;
+  }
+
+  return {
+    busX,
+    clusterKind,
+    paths: [path0, ...spurPaths.slice(1)],
+  };
+}
+
+/** @deprecated Use `layoutFanPaths` */
+export const layoutCubicFanPaths = layoutFanPaths;

@@ -73,8 +73,8 @@ function mergeTraceDepth(
 ): Map<string, number> {
   const out = new Map<string, number>(a);
   for (const [key, depth] of b) {
-    const prev = out.get(key);
-    if (prev === undefined || depth < prev) out.set(key, depth);
+    if (out.has(key)) continue;
+    out.set(key, depth);
   }
   return out;
 }

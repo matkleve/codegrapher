@@ -57,6 +57,13 @@ describe("traceDepth", () => {
     expect(hover5).toBeCloseTo(TRACE_EMPHASIS_MIN_OPACITY, 2);
   });
 
+  it("pending chip strength sits below focus at hop 1", () => {
+    const pending = traceStrength("pending", "chip", 1);
+    const focus = traceStrength("focus", "chip", 1);
+    expect(pending).toBe(TRACE_TUNING.pending.chipAtPending);
+    expect(pending).toBeLessThan(focus);
+  });
+
   it("keeps hover color strength above focus at the same hop", () => {
     const rest3 = traceChipColorStrength(3, false, 5);
     const hover3 = traceChipColorStrength(3, true, 5);

@@ -145,6 +145,16 @@ sequenceDiagram
 - **Chip ink** never drops to `--faint` during pending or active trace — pending is `--trace-strength` on the focal chip only; commit promotes strength and lit classes.
 - **Row promotion** (`trace-member-lit`) applies on trace commit only — not during pending dwell.
 - **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); `LEAVE_GRACE_MS` only defers host `onClear` / ref cleanup for neighbor anti-flicker.
+## Leave (unpinned)
+
+| Surface | Behavior | Code |
+| ------- | -------- | ---- |
+| Surround | Eases back on `--motion-trace` | `graph-trace-leaving` → idle |
+| Lit DOM | `unwindTraceLit` then `clearTraceLit` @ 120ms | `traceLitApplySession.ts` |
+| Wires | `retireWireGroup` opacity fade @ 120ms; cancel WAAPI reveal | `usePreviewEdgeOverlay.ts`, `wireDomSync.ts` |
+| Refs / state | `LEAVE_GRACE_MS` 50ms then `endTrace` | `hoverIntent.ts` |
+
+All three share the **120ms** importance clock — no instant wire `remove()`.
 - **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
 - **Wire path + glow** share one dash-offset reveal in `playWireReveal`; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
 - **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.

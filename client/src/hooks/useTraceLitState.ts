@@ -20,6 +20,7 @@ type UseTraceLitStateArgs = {
   pinnedTraces: PinnedTrace[];
   pinnedTokenKeySet: ReadonlySet<string>;
   hoveredTokenKey: string | null;
+  emphasisTokenKey: string | null;
   traceTokenKey: string | null;
   visibleEdgeKinds: ReadonlySet<ConnectionKind>;
   getNode: (id: string) => Node | undefined;
@@ -38,6 +39,7 @@ export function useTraceLitState({
   pinnedTraces,
   pinnedTokenKeySet,
   hoveredTokenKey,
+  emphasisTokenKey,
   traceTokenKey,
   visibleEdgeKinds,
   getNode,
@@ -53,8 +55,11 @@ export function useTraceLitState({
   useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
 
   useLayoutEffect(() => {
-    syncHoverPreviewEdgeIds(hoveredTokenKey, hoverPreviewEdges);
-  }, [hoverPreviewEdges, hoveredTokenKey]);
+    syncHoverPreviewEdgeIds(
+      emphasisTokenKey ?? hoveredTokenKey,
+      previewEdges,
+    );
+  }, [emphasisTokenKey, hoveredTokenKey, previewEdges]);
 
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
@@ -132,6 +137,7 @@ export function useTraceLitState({
     applyActiveTraceLit({
       traceTokenKey,
       hoveredTokenKey,
+      emphasisTokenKey,
       traceLit,
       pinnedTokenKeySet,
       previewEdges,
@@ -144,6 +150,7 @@ export function useTraceLitState({
   }, [
     getNode,
     hoveredTokenKey,
+    emphasisTokenKey,
     pinnedTokenKeySet,
     previewEdges,
     traceLit,

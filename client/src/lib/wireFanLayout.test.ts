@@ -5,7 +5,7 @@ import {
   partitionFanClusters,
   resetWireLayoutCache,
 } from "@/lib/wireFanLayout";
-import { layoutCubicFanPaths } from "@/lib/wirePaths";
+import { layoutFanPaths } from "@/lib/wirePaths";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 
 const SVG_BOX = { left: 0, top: 0, width: 800, height: 600 } as DOMRect;
@@ -52,13 +52,15 @@ function mockEl(rect: DOMRectInit, opts?: { lineRect?: DOMRectInit }): HTMLEleme
   } as HTMLElement;
 }
 
-describe("layoutCubicFanPaths", () => {
+describe("layoutFanPaths", () => {
   it("builds a shared trunk and cubic spurs for clustered targets", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
-    const { paths } = layoutCubicFanPaths(
+    const { paths } = layoutFanPaths(
+      "usage",
       240,
       109,
       defEl,
+      "right",
       [
         { x2: 420, y2: 130, toEl: mockEl({ left: 400, right: 440, top: 122, bottom: 138 }) },
         { x2: 420, y2: 170, toEl: mockEl({ left: 400, right: 440, top: 162, bottom: 178 }) },

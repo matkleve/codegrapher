@@ -24,6 +24,7 @@ export type HoverFireContext = {
   isCtrlActive: boolean;
   isTokenPinned: (tokenKey: string) => boolean;
   setHoveredTokenKey: (tokenKey: string | null) => void;
+  setEmphasisTokenKey: (tokenKey: string | null) => void;
   setIsWarm: (warm: boolean) => void;
 };
 
@@ -49,6 +50,7 @@ export function scheduleHoverFireIntent(
 
   ctx.pendingFireRef.current = { tokenKey, onFire };
   ctx.hoverClearRef.current = { tokenKey, onClear };
+  ctx.setEmphasisTokenKey(tokenKey);
 
   const runFire = () => {
     clearPendingTraceHost();
@@ -69,7 +71,9 @@ export function scheduleHoverFireIntent(
   if (delay === 0) {
     runFire();
   } else {
-    setPendingTraceHost(options?.traceHost ?? null);
+    if (!ctx.isWarm) {
+      setPendingTraceHost(options?.traceHost ?? null);
+    }
     timers.fire = setTimeout(runFire, delay);
   }
 
@@ -91,7 +95,9 @@ export type HoverClearContext = {
   pendingFireRef: { current: PendingFire };
   hoverClearRef: { current: HoverClearTarget };
   hoveredTokenKeyRef: { current: string | null };
+  isWarm: boolean;
   onVisualLeave: () => void;
+  setEmphasisTokenKey: (tokenKey: string | null) => void;
 };
 
 export function scheduleHoverClearIntent(
@@ -108,16 +114,20 @@ export function scheduleHoverClearIntent(
 
   const traceHadFired = ctx.hoveredTokenKeyRef.current != null;
   if (traceHadFired) {
-    ctx.hoveredTokenKeyRef.current = null;
+    ctx.setEmphasisTokenKey(null);
     ctx.onVisualLeave();
   } else {
     ctx.pendingFireRef.current = null;
+    ctx.setEmphasisTokenKey(null);
   }
 
-  const grace = leaveGraceMs(traceHadFired);
+  const grace = leaveGraceMs(traceHadFired, ctx.isWarm);
 
   const commitClear = () => {
     if (!shouldCommitHoverClear(tokenKey, ctx.hoverClearRef.current)) {
+      return;
+    }
+    if (ctx.pendingFireRef.current) {
       return;
     }
     clearTimeout(timers.fire ?? undefined);
@@ -126,6 +136,7 @@ export function scheduleHoverClearIntent(
     ctx.hoveredTokenKeyRef.current = null;
     ctx.pendingFireRef.current = null;
     ctx.hoverClearRef.current = null;
+    ctx.setEmphasisTokenKey(null);
     clearPendingTraceHost();
     onClear();
   };
@@ -146,6 +157,7 @@ export function firePendingCtrlHover(
   timers: HoverIntentTimers,
   pendingFireRef: { current: PendingFire },
   hoveredTokenKeyRef: { current: string | null },
+  setEmphasisTokenKey: (tokenKey: string | null) => void,
 ): void {
   if (!timers.fire) return;
   const pending = pendingFireRef.current;
@@ -155,6 +167,7 @@ export function firePendingCtrlHover(
   timers.fire = null;
   clearPendingTraceHost();
   hoveredTokenKeyRef.current = pending.tokenKey;
+  setEmphasisTokenKey(pending.tokenKey);
   pending.onFire();
   pendingFireRef.current = null;
 }
@@ -164,11 +177,13 @@ export function resetHoverIntentState(
   pendingFireRef: { current: PendingFire },
   hoveredTokenKeyRef: { current: string | null },
   hoverClearRef: { current: HoverClearTarget },
+  setEmphasisTokenKey: (tokenKey: string | null) => void,
 ): void {
   clearPendingHoverTimers(timers);
   pendingFireRef.current = null;
   hoveredTokenKeyRef.current = null;
   hoverClearRef.current = null;
+  setEmphasisTokenKey(null);
   clearPendingTraceHost();
   clearTraceAnchorHost();
 }

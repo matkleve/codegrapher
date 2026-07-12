@@ -61,6 +61,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       pinnedTokenKeySet: pin.pinnedTokenKeySet,
       activePinKey: pin.activePinKey,
       hoveredTokenKey: hover.hoveredTokenKey,
+      emphasisTokenKey: hover.emphasisTokenKey,
       hoveredTokenKeyRef: hover.hoveredTokenKeyRef,
       traceAnchorState,
       pinnedTracesRef: pin.pinnedTracesRef,

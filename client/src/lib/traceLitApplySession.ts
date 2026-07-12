@@ -17,6 +17,7 @@ type LastApply = { fingerprint: string; hovered: string; strength: number };
 export type TraceLitApplyArgs = {
   traceTokenKey: string | null;
   hoveredTokenKey: string | null;
+  emphasisTokenKey: string | null;
   traceLit: TraceLitState;
   pinnedTokenKeySet: ReadonlySet<string>;
   previewEdges: PreviewEdgeSpec[];
@@ -31,6 +32,7 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
   const {
     traceTokenKey,
     hoveredTokenKey,
+    emphasisTokenKey,
     traceLit,
     pinnedTokenKeySet,
     previewEdges,
@@ -45,13 +47,13 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
     if (!fadingLitRef.current) {
       fadingLitRef.current = true;
       setTraceLitFading(true);
-      setTraceSessionActive(false);
       setWireHoveredTokenKey(null);
       setHoverPreviewEdgeIds(new Set());
       unwindTraceLit();
       clearLitTimerRef.current = window.setTimeout(() => {
         lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
         clearTraceLit();
+        setTraceSessionActive(false);
         fadingLitRef.current = false;
         setTraceLitFading(false);
         clearLitTimerRef.current = 0;
@@ -65,9 +67,10 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
   window.clearTimeout(clearLitTimerRef.current);
   clearLitTimerRef.current = 0;
   setTraceSessionActive(true);
-  setWireHoveredTokenKey(hoveredTokenKey);
+  const pointerKey = emphasisTokenKey ?? hoveredTokenKey;
+  setWireHoveredTokenKey(pointerKey);
   const fingerprint = traceLitFingerprint(traceLit);
-  const hovered = hoveredTokenKey ?? "";
+  const hovered = pointerKey ?? "";
   if (
     fingerprint === lastApplyRef.current.fingerprint &&
     hovered === lastApplyRef.current.hovered &&
@@ -80,6 +83,7 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
   applyTraceLit(traceLit, {
     pinnedTokenKeys: pinnedTokenKeySet,
     hoveredTokenKey,
+    emphasisTokenKey,
     previewEdges,
     getNode,
   });
@@ -87,13 +91,11 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
 }
 
 export function syncHoverPreviewEdgeIds(
-  hoveredTokenKey: string | null,
-  hoverPreviewEdges: PreviewEdgeSpec[],
+  pointerKey: string | null,
+  edges: PreviewEdgeSpec[],
 ): void {
   setHoverPreviewEdgeIds(
-    hoveredTokenKey != null
-      ? new Set(hoverPreviewEdges.map((edge) => edge.id))
-      : new Set(),
+    pointerKey != null ? new Set(edges.map((edge) => edge.id)) : new Set(),
   );
 }
 

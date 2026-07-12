@@ -6,6 +6,7 @@
     "dev": "concurrently -n server,client -c blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "lint": "npm run lint --prefix client && npm run lint --prefix server",
     "lint:specs": "node scripts/lint-specs.mjs",
+    "lint:trace-css": "node scripts/lint-trace-css.mjs",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:file-length": "node scripts/lint-file-length.mjs",
     "test": "npm run test --prefix client",

@@ -1,45 +1,64 @@
 # Token hover — atlas (start here)
 
-**Agents:** read this once, then open **one** layer spec. Do not restate in chat ([working-with-agents.md](../../agent-playbook/core/working-with-agents.md)).
+**Agents:** one lifecycle table below; detail in linked specs. Do not restate in chat ([working-with-agents.md](../../agent-playbook/core/working-with-agents.md)).
+
+**Implement:** [trace-emphasis-implementation-plan.md](../../project/trace-emphasis-implementation-plan.md) · **Verify:** [interaction-emphasis.acceptance-criteria.md](interaction-emphasis.acceptance-criteria.md)
 
 ---
 
-## Layers
+## Full lifecycle (normative summary)
+
+One clock for surround + lit unwind + wire retire: **`--motion-trace` (120ms)**. Wire stroke **draw** on commit: 240ms WAAPI (independent).
+
+| When | Pane mood | Class card | Member rows | Syntax / chrome | Indexed chips | Wires |
+| ---- | --------- | ---------- | ----------- | --------------- | ------------- | ----- |
+| **Idle** | — | white; title normal | `bg-muted` | full color | resting ink | hidden |
+| **Enter / pending** (0–40ms) | `graph-trace-pending` | white; title → `--faint` | non-lit → `--trace-dim-surface` | `--faint-*` | ink **unchanged**; focal pending strength | hidden |
+| **Commit / active** (dwell) | `graph-trace-active` | white; title faint | lit path → blue wash; others dim | `--faint-*` on non-lit lines | path: lit + fill; off-path: resting ink | draw 240ms → march |
+| **Ctrl held** (stacks) | `+ graph-ctrl-preview` | unchanged | dim surface | **`--faint-ctrl`** (wins) | shimmer + resting ink | instant commit if hover |
+| **Pointer on path** (active) | active | — | — | — | hover strength bump | touched wires emphasize |
+| **Pin** | `+ graph-trace-pinned` | — | per merged lit | per merged lit | `token-chip-source` | persist |
+| **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | **retire** 120ms fade (not instant remove) |
+| **Leave timing** | `onVisualLeave` immediate; 50ms grace for refs only | | | | | cancel WAAPI reveal on retire |
+
+**Invariants:** chip emphasis only goes **up** (never `--faint` then relight). Dwell gates **commit** (wires, row blue, lit DOM) — not chip ink. Row blue on **commit only**, not pending.
+
+---
+
+## Layers (where detail lives)
 
 | Layer | Spec | Code |
 | ----- | ---- | ---- |
-| Gesture | [token-interactions.md](token-interactions.md) | `useTokenTraceState`, edge builders |
-| Clock | [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) | `hoverIntent.ts`, `beginTrace` |
-| Pixels | [interaction-emphasis.md](interaction-emphasis.md) | see implementation supplement |
+| Gestures | [token-interactions.md](token-interactions.md) | `useTokenTraceState` |
+| Clock / state machine | [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) | `hoverIntent.ts`, `beginTrace` |
+| Pixels | [interaction-emphasis.md](interaction-emphasis.md) | [implementation supplement](interaction-emphasis.implementation.supplement.md) |
 | Brightness | [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md) | `traceDepth.ts`, `traceLitApply.ts` |
-| Wire kind | [connection-taxonomy.md](connection-taxonomy.md) | edge builders |
-
-**Implement trace CSS:** [interaction-emphasis.implementation.supplement.md](interaction-emphasis.implementation.supplement.md) (ownership table).
-
-**Verify:** [interaction-emphasis.acceptance-criteria.md](interaction-emphasis.acceptance-criteria.md).
+| Wire kind + geometry | [connection-taxonomy.md](connection-taxonomy.md) · [wayfinding supplement](preview-edges.wayfinding.supplement.md) | edge builders, `wireDomSync.ts` |
 
 ---
 
-## Phases
+## CSS ownership
 
-| Phase | Surround | Chips | Commits |
-| ----- | -------- | ----- | ------- |
-| Pending | dim | ink unchanged; focal pending strength | — |
-| Active | dim | off-path resting; path lit | wires, rows, sockets |
-| Pin | merged lit | `token-chip-source` | Esc clears |
+| Owns | Files |
+| ---- | ----- |
+| Surround dim (syntax, titles, carets) | `trace-syntax.css` |
+| Member row shells | `trace-member.css` |
+| Chip ink / fill / pending | `tokens-chips*.css`, `trace-chip-lit.css` |
+| Ctrl explore | `trace-ctrl.css` |
+| Wire draw / retire / march | `preview-edge.css`, `wireReveal.ts`, `wireDomSync.ts` |
+| Pane mood classes | `GraphPane.tsx` |
 
-**Invariants:** emphasis on chips only **up**; dwell gates commit; no chip `color` in `trace-syntax.css`.
-
-Ctrl = explore axis (`graph-ctrl-preview`). Timeline: interactions supplement § Visual commit timeline.
+**Never:** `.token-chip` color rules in `trace-syntax.css`.
 
 ---
 
-## Agent edit checklist
+## Agent pitfall — wire hover vs focus+hover
 
-1. Atlas → pick layer spec  
-2. Touch **one** CSS bucket per [implementation supplement](interaction-emphasis.implementation.supplement.md)  
-3. Update spec if behavior changes  
-4. Run `npm run lint:specs` + manual hover on `fixtures/demo`
+**Not a hop-2 math cap.** Two edge lists: `hoverPreviewEdges` (from `beginTrace`) vs `previewEdges` (drawn, + transitive hop 2+). Wire hover used to sync IDs from the **short** list only → hop 1 looked hover, hop 2+ stayed focus.
+
+**Rule:** pointer on trace → register **all** `previewEdges` in `syncHoverPreviewEdgeIds` (`emphasisTokenKey ?? hoveredTokenKey`). Chips use `emphasisTokenKey` on enter; wires must use the same pointer + full edge list.
+
+**Hover-only “works”** because both lists are the same. **Focus+hover** broke when they diverged.
 
 ---
 

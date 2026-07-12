@@ -1,6 +1,7 @@
 import { forwardRef, type ReactNode } from "react";
 import type { ComponentProps } from "react";
 import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
+import { FloatingPanel } from "@/components/ui/floatingPanel";
 import { cn } from "@/lib/utils";
 
 type GraphMapControlButtonProps = ComponentProps<typeof GraphMapControlButton>;
@@ -10,7 +11,7 @@ export type GraphMapControlSlotProps = Omit<GraphMapControlButtonProps, "childre
   icon: ReactNode;
   /** `passive` — muted ink when shown on hover (e.g. disabled reading focus). */
   labelTone?: "default" | "passive";
-  /** `hidden` while a popover is open (legend). Default: show on hover/focus only. */
+  /** `hidden` while a floating panel is open (legend). Default: show on hover/focus only. */
   labelVisibility?: "hover" | "hidden";
   children?: ReactNode;
   slotClassName?: string;
@@ -48,14 +49,17 @@ export const GraphMapControlSlot = forwardRef<HTMLDivElement, GraphMapControlSlo
           {icon}
         </GraphMapControlButton>
         {showLabel ? (
-          <span
+          <FloatingPanel
+            as="span"
+            variant="chrome"
             className={cn(
               "graph-map-control-label",
-              labelTone === "passive" && "graph-map-control-label--passive",
+              "px-2 py-1 text-xs font-medium leading-[var(--control-row-line-height)] text-foreground",
+              labelTone === "passive" && "font-normal text-muted-foreground",
             )}
           >
             {label}
-          </span>
+          </FloatingPanel>
         ) : null}
         {children}
       </div>

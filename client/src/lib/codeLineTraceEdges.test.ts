@@ -385,6 +385,92 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(edges.some((e) => e.liveTo?.token === "city")).toBe(true);
   });
 
+  it("chains binding initializer hover down to member-access relatives", () => {
+    const EXTRACT_MEMBER = "method:file:Geo.extractFieldValue";
+    const EXTRACT_CODE = `export function extractFieldValue(
+  result: GeocoderSearchResult,
+  field: AddressFieldKind,
+): string | null {
+  const addr = result.address;
+  if (!addr) return null;
+  return addr.city;
+}`;
+    const EXTRACT_START = 52;
+    const index = buildMemberSymbolIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START);
+    const declLine = EXTRACT_CODE.split("\n")[4]!;
+    const declLineNo = EXTRACT_START + 4;
+    const tokens = tokenizeLine(declLine).tokens;
+    const addressIdx = tokens.findIndex(
+      (t, i) => t.kind === "identifier" && t.text === "address" && tokens[i - 1]?.text === ".",
+    );
+    const addrDefId = [...index.defSites.values()].find((id) => id.includes("::local::addr::"))!;
+    expect(addressIdx).toBeGreaterThan(-1);
+
+    const pane = document.querySelector(".graph-pane")!;
+
+    const addressEl = document.createElement("span");
+    addressEl.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      EXTRACT_MEMBER,
+      declLineNo,
+      addressIdx,
+      "address",
+    );
+    pane.appendChild(addressEl);
+
+    const addrDefEl = document.createElement("span");
+    addrDefEl.dataset.localDefId = addrDefId;
+    pane.appendChild(addrDefEl);
+
+    const classData: ClassNodeData = {
+      label: "Geo",
+      filePath: "/geo.ts",
+      expandedMethodIds: [EXTRACT_MEMBER],
+      methods: [
+        {
+          id: EXTRACT_MEMBER,
+          label: "extractFieldValue",
+          symbolName: "extractFieldValue",
+          code: EXTRACT_CODE,
+          startLine: EXTRACT_START,
+        },
+      ],
+      properties: [],
+    };
+
+    const edges = assembleCodeLinePreviewEdges({
+      name: "address",
+      chipEl: addressEl,
+      kind: "variable",
+      tokenIndex: addressIdx,
+      edgeKey: "test-address-init",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START),
+      sourceFlowId: FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: declLineNo,
+      methodCode: EXTRACT_CODE,
+      methodStartLine: EXTRACT_START,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () =>
+        ({
+          id: FLOW,
+          type: "class",
+          position: { x: 0, y: 0 },
+          data: classData,
+        }) as Node,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    expect(edges.some((e) => e.connectionKind === "binding")).toBe(true);
+    expect(edges.some((e) => e.id.includes("chain-p-") && e.liveTo?.token === "city")).toBe(true);
+    const cityEdge = edges.find((e) => e.liveTo?.token === "city");
+    expect(cityEdge?.hop).toBe(3);
+  });
+
   it("binds field init -> value and does not cascade param chain from value usage", () => {
     const EXTRACT_MEMBER = "method:file:Geo.extractFieldValue";
     const EXTRACT_CODE = `extractFieldValue(field: AddressFieldKind): string | null {

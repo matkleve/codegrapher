@@ -106,17 +106,6 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-/* Title hover/trace — function-blue row container (existing trace-lit tokens) */
-.member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
-  .member-row-label:hover,
-  .member-row-label:focus-visible,
-  .member-row-label.token-chip-on,
-  .member-row-label.token-chip-hover-preview
-) {
-  background: var(--member-row-trace-lit-bg);
-  border-color: var(--member-row-trace-lit-border);
-}
-
 .member-row-header:hover {
   background-color: var(--brand-surface) !important;
   border-color: var(--brand-border) !important;

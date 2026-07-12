@@ -35,6 +35,7 @@ export function useTraceHoverState(
   const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
   const [anchorTrace, setAnchorTrace] = useState<AnchorTrace | null>(null);
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
+  const [emphasisTokenKey, setEmphasisTokenKey] = useState<string | null>(null);
   const [isWarm, setIsWarm] = useState(false);
   const [connectionMenu, setConnectionMenu] = useState<TokenConnectionMenuState | null>(
     null,
@@ -67,6 +68,7 @@ export function useTraceHoverState(
     setAnchorTrace(null);
     clearLastTraceRefs();
     setHoveredTokenKey(null);
+    setEmphasisTokenKey(null);
     setIsWarm(false);
     setConnectionMenu(null);
     clearTraceAnchorHost();
@@ -108,13 +110,13 @@ export function useTraceHoverState(
   const beginHoverVisualLeave = useCallback(() => {
     if (pinnedTracesRef.current.length > 0) {
       setHoveredTokenKey(null);
+      setEmphasisTokenKey(null);
       setHoverPreviewEdges([]);
       setConnectionMenu(null);
       return;
     }
-    setHoveredTokenKey(null);
-    setHoverPreviewEdges([]);
-    setAnchorTrace(null);
+    // Warm neighbor pass-over: drop pointer emphasis only; trace clears on grace commit.
+    setEmphasisTokenKey(null);
     clearJumpTooltip();
   }, [pinnedTracesRef]);
 
@@ -131,6 +133,7 @@ export function useTraceHoverState(
     hoveredTokenKey,
     isTokenPinned: isPinnedTokenKey,
     setHoveredTokenKey,
+    setEmphasisTokenKey,
     setIsWarm,
     onCtrlRelease: clearConnectionMenu,
     onVisualLeave: beginHoverVisualLeave,
@@ -140,6 +143,7 @@ export function useTraceHoverState(
     if (pinnedTracesRef.current.length > 0) {
       hoveredTokenKeyRef.current = null;
       setHoveredTokenKey(null);
+      setEmphasisTokenKey(null);
       setHoverPreviewEdges([]);
       setConnectionMenu(null);
       clearUnpinnedTokenInfo();
@@ -153,6 +157,7 @@ export function useTraceHoverState(
     hoverPreviewEdges,
     anchorTrace,
     hoveredTokenKey,
+    emphasisTokenKey,
     hoveredTokenKeyRef,
     isWarm,
     connectionMenu,

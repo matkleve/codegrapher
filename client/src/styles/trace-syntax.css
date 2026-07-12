@@ -30,10 +30,9 @@
     opacity var(--motion-trace) var(--ease);
 }
 
-.graph-trace-active .react-flow__node.class-node-root,
-.graph-trace-active .member-row,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving) .react-flow__node.class-node-root,
 .graph-pane.graph-ctrl-preview .member-row,
-.graph-pane.graph-trace-pending .member-row {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving) .member-row {
   transition:
     border-color var(--motion-trace) var(--ease),
     box-shadow var(--motion-trace) var(--ease),
@@ -89,78 +88,53 @@
 }
 
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-kw,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .control-flow-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .control-flow-chip-text {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-kw,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .control-flow-chip-text {
   color: var(--faint-kw) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-pn,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-pn {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-pn {
   color: var(--faint-pn) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-comment,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-comment {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-comment {
   color: var(--faint-comment) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-string,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-string {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-string {
   color: var(--faint-string) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-number,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-number {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-number {
   color: var(--faint-number) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-type,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-type {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .code-type {
   color: var(--faint-type) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-body-wrap,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-body-wrap {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-body-wrap {
   color: var(--faint-body) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .file-type-chip,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .file-type-chip,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .list-row-graph-chrome,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .list-row-graph-chrome,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-value,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-kind-icon,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-kind-icon,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-colon,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-colon,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-param-name,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-param-name,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--in,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--in,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--out,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--out,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--primitive,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--primitive,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .node-card-title,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-title,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .node-card-caret,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-caret,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-row-caret,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-caret {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .file-type-chip,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .list-row-graph-chrome,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-value,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-kind-icon,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-colon,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-param-name,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-type,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-type--in,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-type--out,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-type--primitive,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .node-card-title,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .node-card-caret,
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-row-caret {
   color: var(--faint) !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit):not(.cursor-pointer),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit):not(.cursor-pointer),
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview)
-  .member-row-label:not(.token-chip-lit):not(.cursor-pointer)
-  .token-shimmer-target,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit):not(.cursor-pointer),
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview)
   .member-row-label:not(.token-chip-lit):not(.cursor-pointer)
   .token-shimmer-target {
   color: var(--faint) !important;
@@ -168,51 +142,50 @@
 }
 
 /* Sig param/return hover: title stays dim unless it is the lit trace endpoint */
-.graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
   .member-row-label:not(.token-chip-lit):not(.cursor-pointer),
-.graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
   .member-row-label:not(.token-chip-lit):not(.cursor-pointer)
   .token-shimmer-target {
   color: var(--faint) !important;
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-value,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value {
+.graph-pane:is(.graph-trace-pending, .graph-trace-active, .graph-trace-leaving):not(.graph-ctrl-preview) .member-sig-value {
   background: transparent !important;
 }
 
 /* Chip ink/fill: tokens-chips*.css only — no .token-chip color rules here (interaction-emphasis.implementation.supplement.md). */
 
-.graph-pane.graph-ctrl-preview.graph-trace-active
+.graph-pane.graph-ctrl-preview:is(.graph-trace-active, .graph-trace-leaving)
   .member-signature-tags
   .token-chip.member-sig-token-chip.cursor-pointer
   .token-chip-text,
-.graph-pane.graph-ctrl-preview.graph-trace-active
+.graph-pane.graph-ctrl-preview:is(.graph-trace-active, .graph-trace-leaving)
   .member-signature-tags
   .token-chip.member-sig-type-chip.cursor-pointer
   .token-chip-text {
   font-weight: 600;
 }
 
-.graph-pane.graph-ctrl-preview.graph-trace-active
+.graph-pane.graph-ctrl-preview:is(.graph-trace-active, .graph-trace-leaving)
   .member-signature-tags
   .token-chip.member-sig-token-chip.cursor-pointer
   .token-chip-text {
   color: var(--token-edge-variable) !important;
 }
 
-.graph-pane.graph-trace-active
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving)
   .member-signature-tags
   .token-chip.member-sig-token-chip.token-chip-lit
   .token-chip-text,
-.graph-pane.graph-trace-active
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving)
   .member-signature-tags
   .token-chip.member-sig-type-chip.token-chip-lit
   .token-chip-text {
   font-weight: 600;
 }
 
-.graph-trace-active .react-flow__node.class-node-root {
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .react-flow__node.class-node-root {
   border-color: var(--border);
 }

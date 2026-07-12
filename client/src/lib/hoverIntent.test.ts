@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fireDelayMs, leaveGraceMs, shouldCommitHoverClear } from "@/lib/hoverIntent";
+import {
+  fireDelayMs,
+  LEAVE_GRACE_WARM_MS,
+  leaveGraceMs,
+  shouldCommitHoverClear,
+} from "@/lib/hoverIntent";
 
 describe("fireDelayMs", () => {
   it("fires instantly when Ctrl is held", () => {
@@ -23,6 +28,10 @@ describe("leaveGraceMs", () => {
 
   it("applies grace after a trace fired", () => {
     expect(leaveGraceMs(true)).toBe(50);
+  });
+
+  it("extends grace during a warm trace handoff", () => {
+    expect(leaveGraceMs(true, true)).toBe(LEAVE_GRACE_WARM_MS);
   });
 });
 

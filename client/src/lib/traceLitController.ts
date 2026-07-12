@@ -38,6 +38,7 @@ import type { Node } from "@xyflow/react";
 export type TraceLitApplyOptions = {
   pinnedTokenKeys: ReadonlySet<string>;
   hoveredTokenKey: string | null;
+  emphasisTokenKey: string | null;
   previewEdges?: PreviewEdgeSpec[];
   getNode?: (id: string) => Node | undefined;
 };
@@ -45,8 +46,15 @@ export type TraceLitApplyOptions = {
 /** Apply trace-lit classes imperatively — diffs against prior apply. */
 export function applyTraceLit(
   state: TraceLitState,
-  { pinnedTokenKeys, hoveredTokenKey, previewEdges = [], getNode }: TraceLitApplyOptions,
+  { pinnedTokenKeys, hoveredTokenKey, emphasisTokenKey, previewEdges = [], getNode }: TraceLitApplyOptions,
 ): void {
+  const pointerKey = emphasisTokenKey ?? hoveredTokenKey;
+  const boostKey =
+    emphasisTokenKey != null &&
+    hoveredTokenKey != null &&
+    emphasisTokenKey !== hoveredTokenKey
+      ? hoveredTokenKey
+      : pointerKey;
   const next = new Map<HTMLElement, HostState>();
 
   for (const key of state.litTokenKeys) {
@@ -93,7 +101,7 @@ export function applyTraceLit(
           litHost,
           depthForKey(state, key, isSibling),
           pinnedTokenKeys,
-          hoveredTokenKey,
+          pointerKey,
           state.endpointPortSide,
         );
       }
@@ -109,7 +117,7 @@ export function applyTraceLit(
       processedDefIds.add(defId);
 
       const group = litHostsForEndpoint(host);
-      const primary = primaryHostInDefGroup(group, hoveredTokenKey, pinnedTokenKeys);
+      const primary = primaryHostInDefGroup(group, pointerKey, pinnedTokenKeys);
       for (const litHost of group) {
         const isSibling = primary !== null ? litHost !== primary : true;
         applyEndpointHost(
@@ -117,7 +125,7 @@ export function applyTraceLit(
           litHost,
           depthForKey(state, traceKeyFromHost(litHost), isSibling),
           pinnedTokenKeys,
-          hoveredTokenKey,
+          pointerKey,
           state.endpointPortSide,
         );
       }
@@ -134,7 +142,7 @@ export function applyTraceLit(
       host,
       depthForKey(state, traceKey, isProvenanceSibling),
       pinnedTokenKeys,
-      hoveredTokenKey,
+      pointerKey,
       state.endpointPortSide,
     );
   }
@@ -165,14 +173,14 @@ export function applyTraceLit(
     setDepth(lineState, depth);
   }
 
-  applyHoverFocusBoost(next, state, hoveredTokenKey, pinnedTokenKeys);
+  applyHoverFocusBoost(next, state, boostKey, pinnedTokenKeys);
   if (getNode && previewEdges.length > 0) {
     applyHoveredWireEndpointBoost(
       next,
       state,
       previewEdges,
       getNode,
-      hoveredTokenKey,
+      pointerKey,
       pinnedTokenKeys,
     );
     applyWireHoverBoost(next, state, previewEdges, getNode, pinnedTokenKeys);

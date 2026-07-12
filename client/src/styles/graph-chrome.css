@@ -110,25 +110,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background-color: var(--popover);
-  padding: 0.25rem 0.5rem;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  line-height: var(--control-row-line-height);
-  color: var(--foreground);
-  box-shadow: var(--node-shadow);
   opacity: 0;
   transition: opacity var(--motion-hover-color) var(--ease);
 }
 
 .graph-map-control-slot:hover .graph-map-control-label,
-.graph-map-control-slot:focus-within .graph-map-control-label {
+.graph-map-control-slot:has(.graph-map-control-btn:focus-visible) .graph-map-control-label {
   opacity: 1;
-}
-
-.graph-map-control-label--passive {
-  color: var(--muted-foreground);
-  font-weight: 400;
 }

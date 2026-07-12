@@ -4,6 +4,7 @@ export function WireMarkerDefs() {
     <>
       <marker
         id="wire-arrow-open"
+        markerUnits="userSpaceOnUse"
         markerWidth="6"
         markerHeight="6"
         refX="6"
@@ -19,6 +20,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="wire-arrow-bar"
+        markerUnits="userSpaceOnUse"
         markerWidth="6"
         markerHeight="8"
         refX="3"
@@ -35,6 +37,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="wire-bracket-start"
+        markerUnits="userSpaceOnUse"
         markerWidth="5"
         markerHeight="10"
         refX="1"
@@ -51,6 +54,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="wire-bracket-end"
+        markerUnits="userSpaceOnUse"
         markerWidth="5"
         markerHeight="10"
         refX="1"
@@ -67,6 +71,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="wire-arrow-branch-filled"
+        markerUnits="userSpaceOnUse"
         markerWidth="7"
         markerHeight="7"
         refX="7"
@@ -77,6 +82,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="structural-arrow-triangle"
+        markerUnits="userSpaceOnUse"
         markerWidth="8"
         markerHeight="8"
         refX="8"
@@ -92,6 +98,7 @@ export function WireMarkerDefs() {
       </marker>
       <marker
         id="structural-arrow-diamond"
+        markerUnits="userSpaceOnUse"
         markerWidth="8"
         markerHeight="8"
         refX="8"

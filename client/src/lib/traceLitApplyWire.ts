@@ -3,7 +3,6 @@ import {
   boostChipForTraceKey,
 } from "@/lib/traceLitApplyHost";
 import {
-  edgeTouchesHoveredToken,
   getWireHoveredEdgeId,
   isHoverPreviewEdge,
   traceKeysFromWire,
@@ -12,7 +11,7 @@ import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
 import type { HostState } from "@/lib/traceLitApplyDom";
 
-/** Brighten both ends of wires attached to the hovered chip. */
+/** Brighten endpoints on parallel hover-preview edges only — not every wire touching the cursor. */
 export function applyHoveredWireEndpointBoost(
   next: Map<HTMLElement, HostState>,
   state: TraceLitState,
@@ -23,8 +22,7 @@ export function applyHoveredWireEndpointBoost(
 ): void {
   if (!hoveredTokenKey) return;
   for (const spec of previewEdges) {
-    const touchesHover = edgeTouchesHoveredToken(spec, getNode, hoveredTokenKey);
-    if (!touchesHover && !isHoverPreviewEdge(spec.id)) continue;
+    if (!isHoverPreviewEdge(spec.id)) continue;
     for (const key of traceKeysFromWire(spec, getNode)) {
       boostChipForTraceKey(next, state, key, pinnedTokenKeys);
     }

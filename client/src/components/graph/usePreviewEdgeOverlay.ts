@@ -19,6 +19,7 @@ import {
 } from "@/lib/wireEngine";
 import {
   syncWireDom,
+  retireWireGroup,
   updateWireGeometry,
   refreshWireDepthOpacity,
   refreshOneWireDepthOpacity,
@@ -41,6 +42,7 @@ export function usePreviewEdgeOverlay() {
     isWarm,
     traceTokenKey,
     hoveredTokenKey,
+    emphasisTokenKey,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
   } = useGraphInteraction();
@@ -190,17 +192,18 @@ export function usePreviewEdgeOverlay() {
   }, [getNode]);
 
   useLayoutEffect(() => {
-    setWireHoveredTokenKey(hoveredTokenKey);
+    setWireHoveredTokenKey(emphasisTokenKey ?? hoveredTokenKey);
     refreshWireDepthOpacity(wiresRef.current, getNode);
     engineRef.current?.tickOnce();
-  }, [getNode, hoveredTokenKey]);
+  }, [emphasisTokenKey, getNode, hoveredTokenKey]);
 
   useLayoutEffect(() => {
     specsRef.current = previewEdges;
     const svg = svgRef.current;
     if (!svg || previewEdges.length === 0) {
-      for (const wire of wiresRef.current.values()) wire.group.remove();
-      wiresRef.current.clear();
+      for (const wire of wiresRef.current.values()) {
+        retireWireGroup(wire, wiresRef.current);
+      }
       prevEdgeCountRef.current = 0;
     } else {
       let layer = svg.querySelector<SVGGElement>("[data-preview-wires]");

@@ -100,6 +100,9 @@ export function applyWireDepthOpacity(
   getNode?: (id: string) => Node | undefined,
 ): void {
   const group = path.parentElement as SVGGElement | null;
+  if (group?.dataset.retiring === "1") {
+    return;
+  }
   if (group && isWireRevealing(group)) {
     return;
   }

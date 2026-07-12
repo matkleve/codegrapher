@@ -4,7 +4,7 @@ import {
   branchOrthogonalPath,
   computeBranchBusX,
   layoutBranchFanPaths,
-  layoutCubicFanPaths,
+  layoutFanPaths,
   orthogonalPath,
   previewWirePath,
   roundedPolylinePath,
@@ -123,13 +123,15 @@ describe("layoutBranchFanPaths", () => {
   });
 });
 
-describe("layoutCubicFanPaths", () => {
+describe("layoutFanPaths", () => {
   it("fans curved spurs from a shared trunk for same-line targets", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
-    const { paths, clusterKind } = layoutCubicFanPaths(
+    const { paths, clusterKind } = layoutFanPaths(
+      "usage",
       240,
       109,
       defEl,
+      "right",
       [
         { x2: 420, y2: 130, toEl: mockEl({ left: 400, right: 440, top: 122, bottom: 138 }) },
         { x2: 520, y2: 130, toEl: mockEl({ left: 500, right: 540, top: 122, bottom: 138 }) },
@@ -144,10 +146,12 @@ describe("layoutCubicFanPaths", () => {
 
   it("extends the shared spine through vertical clusters on wire zero", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
-    const { paths, busX, clusterKind } = layoutCubicFanPaths(
+    const { paths, busX, clusterKind } = layoutFanPaths(
+      "usage",
       240,
       109,
       defEl,
+      "right",
       [
         { x2: 420, y2: 130, toEl: mockEl({ left: 400, right: 440, top: 122, bottom: 138 }) },
         { x2: 420, y2: 190, toEl: mockEl({ left: 400, right: 440, top: 182, bottom: 198 }) },
@@ -159,13 +163,40 @@ describe("layoutCubicFanPaths", () => {
     expect(paths[1]).toMatch(new RegExp(`^M ${busX} 190 C `));
   });
 
+  it("places the knot above the center when the source is above a horizontal cluster", () => {
+    const defEl = mockEl({ left: 80, right: 140, top: 40, bottom: 58 });
+    const city = mockEl({ left: 200, right: 230, top: 122, bottom: 138 });
+    const town = mockEl({ left: 260, right: 290, top: 122, bottom: 138 });
+    const village = mockEl({ left: 320, right: 360, top: 122, bottom: 138 });
+    const { paths, busX, clusterKind } = layoutFanPaths(
+      "usage",
+      110,
+      49,
+      defEl,
+      "right",
+      [
+        { x2: 215, y2: 130, toEl: city },
+        { x2: 275, y2: 130, toEl: town },
+        { x2: 340, y2: 130, toEl: village },
+      ],
+      SVG_BOX,
+    );
+    expect(clusterKind).toBe("horizontal");
+    expect(busX).toBeCloseTo(277.5, 0);
+    expect(paths[0]).toMatch(/^M 110 49 C .+ 277\.5 110 M /);
+    expect(paths[1]).toMatch(/^M 277\.5 110 C /);
+    expect(paths[2]).toMatch(/^M 277\.5 110 C /);
+  });
+
   it("aims the fan trunk toward the gutter when the bus is left of the source", () => {
     const lineRect = { left: 80, top: 100, right: 400, bottom: 118 };
     const defEl = mockEl({ left: 200, right: 280, top: 104, bottom: 114 }, { lineRect });
-    const { paths } = layoutCubicFanPaths(
+    const { paths } = layoutFanPaths(
+      "usage",
       240,
       109,
       defEl,
+      "right",
       [
         {
           x2: 300,
@@ -183,6 +214,30 @@ describe("layoutCubicFanPaths", () => {
     const firstCubic = paths[0]!.match(/C ([\d.-]+) ([\d.-]+),/);
     expect(firstCubic).toBeTruthy();
     expect(Number(firstCubic![1])).toBeLessThan(240);
+  });
+
+  it("routes branch fans through previewWirePath trunk and spurs", () => {
+    const switchEl = mockEl(
+      { left: 80, right: 160, top: 100, bottom: 118 },
+      { lineRect: { left: 40, right: 320, top: 98, bottom: 122 } },
+    );
+    const caseA = mockEl({ left: 60, right: 110, top: 130, bottom: 148 });
+    const caseB = mockEl({ left: 60, right: 110, top: 160, bottom: 178 });
+    const { paths } = layoutFanPaths(
+      "branch",
+      70,
+      109,
+      switchEl,
+      "left",
+      [
+        { x2: 65, y2: 139, toEl: caseA },
+        { x2: 65, y2: 169, toEl: caseB },
+      ],
+      SVG_BOX,
+    );
+    expect(paths[0]).toContain("L 24 139");
+    expect(paths[0]).toContain("L 24 169");
+    expect(paths[1]).toMatch(/^M 24 169/);
   });
 });
 

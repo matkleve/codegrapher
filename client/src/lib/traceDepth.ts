@@ -16,6 +16,9 @@ export const TRACE_TUNING = {
     wireGlowAtFocus: 0.12,
     chipAtFocus: 1,
   },
+  pending: {
+    chipAtPending: 0.35,
+  },
   glow: {
     baselineRatio: 0.08,
     pathRatio: 0.08,
@@ -24,7 +27,7 @@ export const TRACE_TUNING = {
   },
 } as const;
 
-export type TraceSituation = "focus" | "hover";
+export type TraceSituation = "pending" | "focus" | "hover";
 export type TraceSurface = "wire" | "wireGlow" | "chip";
 
 /** @deprecated Use `TRACE_TUNING.focus.floor` — keep in sync with `--trace-depth-min-opacity`. */
@@ -108,6 +111,9 @@ export function traceStrength(
   const clamped = clampTraceDepth(depth, maxDepth);
 
   if (surface === "chip") {
+    if (situation === "pending") {
+      return TRACE_TUNING.pending.chipAtPending;
+    }
     if (situation === "hover") {
       if (clamped <= 1) return TRACE_TUNING.hover.chipAtFocus;
       return hoverPathCurve(clamped, maxDepth);

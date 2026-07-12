@@ -36,7 +36,13 @@ export function retireWireGroup(
 ): void {
   const id = wire.spec.id;
   if (wire.group.dataset.retiring === "1") return;
+  wire.path.getAnimations?.().forEach((a) => a.cancel());
+  wire.glow.getAnimations?.().forEach((a) => a.cancel());
+  wire.path.classList.remove("preview-edge-drawing");
+  wire.glow.classList.remove("preview-edge-glow-drawing");
   wire.group.dataset.retiring = "1";
+  delete wire.group.dataset.revealStarted;
+  delete wire.group.dataset.revealed;
   wire.group.style.transition = `opacity ${MOTION_TRACE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
   wire.group.style.opacity = "0";
   window.setTimeout(() => {

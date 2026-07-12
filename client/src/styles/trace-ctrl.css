@@ -119,11 +119,11 @@
 
 /* Ctrl + trace: ctrl keyword brightness (--faint-ctrl) wins over plain trace dim.
    Trace lit/hover/pin layers stack on chips, wires, and member rows separately. */
-.graph-pane.graph-ctrl-preview.graph-trace-active .code-line:not(.trace-lit-line) {
+.graph-pane.graph-ctrl-preview:is(.graph-trace-active, .graph-trace-leaving) .code-line:not(.trace-lit-line) {
   color: var(--faint-ctrl) !important;
 }
 
-.graph-pane.graph-ctrl-preview.graph-trace-active
+.graph-pane.graph-ctrl-preview:is(.graph-trace-active, .graph-trace-leaving)
   .code-line:not(.trace-lit-line)
   :where(:not(.token-chip):not(.token-chip *)) {
   color: inherit !important;

@@ -10,8 +10,7 @@ import { fanJunctionBearing } from "@/lib/previewEdgeJunction";
 import {
   fanClusterKind,
   fanSpineRange,
-  layoutBranchFanPaths,
-  layoutCubicFanPaths,
+  layoutFanPaths,
   type BranchSpurInput,
 } from "@/lib/wirePaths";
 import type { Node } from "@xyflow/react";
@@ -44,10 +43,6 @@ export type WireLayoutContext = {
 };
 
 const ORTHOGONAL_LANE_KINDS = new Set<PreviewConnectionKind>(["branch", "typesetting"]);
-
-function isBranchFanKind(kind: PreviewConnectionKind): boolean {
-  return kind === "branch";
-}
 
 function canDynamicFan(kind: PreviewConnectionKind): boolean {
   return kind === "branch" || kind === "usage" || kind === "binding" || kind === "transitive";
@@ -166,14 +161,21 @@ function layoutFanGroup(
     x2: w.toPt.x,
     y2: w.toPt.y,
     toEl: w.toPt.el,
+    toSide: w.toPt.side,
   }));
 
   const kind = connectionKindOf(head.spec);
   const clusterKind = fanClusterKind(spurs);
-  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
-  const layout = isBranchFanKind(kind)
-    ? layoutBranchFanPaths(head.fromPt.x, head.fromPt.y, head.fromPt.el, spurs, svgBox)
-    : layoutCubicFanPaths(head.fromPt.x, head.fromPt.y, head.fromPt.el, spurs, svgBox);
+  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind, head.fromPt.y);
+  const layout = layoutFanPaths(
+    kind,
+    head.fromPt.x,
+    head.fromPt.y,
+    head.fromPt.el,
+    head.fromPt.side,
+    spurs,
+    svgBox,
+  );
 
   wires.forEach((wire, index) => {
     const pathD = layout.paths[index];

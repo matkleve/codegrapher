@@ -2,6 +2,8 @@
 export const FIRE_COLD_MS = 40;
 export const FIRE_WARM_MS = 40;
 export const LEAVE_GRACE_MS = 50;
+/** Warm trace — longer grace so pointer can cross chip gaps without tearing down mood. */
+export const LEAVE_GRACE_WARM_MS = 150;
 export const INFO_DELAY_MS = 300;
 /** Re-exported for docs: hover → first pixel ≈ FIRE_COLD_MS + layout; full draw adds WIRE_REVEAL_MS. */
 export { WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/wireReveal";
@@ -38,8 +40,9 @@ export function fireDelayMs(
 }
 
 /** Grace only after a trace actually fired; pending dwell clears instantly. */
-export function leaveGraceMs(traceHadFired: boolean): number {
-  return traceHadFired ? LEAVE_GRACE_MS : 0;
+export function leaveGraceMs(traceHadFired: boolean, isWarm = false): number {
+  if (!traceHadFired) return 0;
+  return isWarm ? LEAVE_GRACE_WARM_MS : LEAVE_GRACE_MS;
 }
 
 /** Leave-clear runs when this token is still the latest pointer-leave target. */

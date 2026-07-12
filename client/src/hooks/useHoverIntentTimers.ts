@@ -20,9 +20,10 @@ type UseHoverIntentTimersArgs = {
   hoveredTokenKey: string | null;
   isTokenPinned: (tokenKey: string) => boolean;
   setHoveredTokenKey: (tokenKey: string | null) => void;
+  setEmphasisTokenKey: (tokenKey: string | null) => void;
   setIsWarm: (warm: boolean) => void;
   onCtrlRelease: () => void;
-  /** Drop trace visuals immediately on leave; grace only defers host cleanup. */
+  /** Drop pointer emphasis on leave; committed trace clears on grace commit. */
   onVisualLeave: () => void;
 };
 
@@ -37,6 +38,7 @@ export function useHoverIntentTimers({
   hoveredTokenKey,
   isTokenPinned,
   setHoveredTokenKey,
+  setEmphasisTokenKey,
   setIsWarm,
   onCtrlRelease,
   onVisualLeave,
@@ -59,6 +61,7 @@ export function useHoverIntentTimers({
     isCtrlActive: isCtrlActiveRef.current,
     isTokenPinned,
     setHoveredTokenKey,
+    setEmphasisTokenKey,
     setIsWarm,
   });
 
@@ -67,7 +70,9 @@ export function useHoverIntentTimers({
     pendingFireRef,
     hoverClearRef,
     hoveredTokenKeyRef,
+    isWarm,
     onVisualLeave,
+    setEmphasisTokenKey,
   });
 
   const resetHoverIntent = useCallback(() => {
@@ -76,6 +81,7 @@ export function useHoverIntentTimers({
       pendingFireRef,
       hoveredTokenKeyRef,
       hoverClearRef,
+      setEmphasisTokenKey,
     );
   }, []);
 
@@ -89,14 +95,14 @@ export function useHoverIntentTimers({
     ) => {
       scheduleHoverFireIntent(fireContext(), tokenKey, onFire, onClear, onInfo, options);
     },
-    [hoveredTokenKey, isTokenPinned, isWarm, setHoveredTokenKey, setIsWarm],
+    [hoveredTokenKey, isTokenPinned, isWarm, setEmphasisTokenKey, setHoveredTokenKey, setIsWarm],
   );
 
   const scheduleHoverClear = useCallback(
     (tokenKey: string, onClear: () => void) => {
       scheduleHoverClearIntent(clearContext(), tokenKey, onClear);
     },
-    [onVisualLeave],
+    [isWarm, onVisualLeave, setEmphasisTokenKey],
   );
 
   const cancelHoverLeaveGrace = useCallback(() => {
@@ -119,8 +125,9 @@ export function useHoverIntentTimers({
       hoverTimersRef.current,
       pendingFireRef,
       hoveredTokenKeyRef,
+      setEmphasisTokenKey,
     );
-  }, [isCtrlActive, onCtrlRelease]);
+  }, [isCtrlActive, onCtrlRelease, setEmphasisTokenKey]);
 
   return {
     hoveredTokenKeyRef,

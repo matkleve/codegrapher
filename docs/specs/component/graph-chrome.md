@@ -8,7 +8,9 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 **ConnectionLegend** — `Waypoints` icon in the **bottom-right map control stack** (same secondary icon button as grid/fit). **Hover label** appears in a compact popover chip to the left (shared `GraphMapControlSlot` with other map controls). Opens upward: compact kind list with large animated swatches; click toggles visibility. **Detail panel** (description + **mini graph mock** using real class-node / member-row / code-line chrome; wires measured from chip DOM via the same path builders as the map) is a **cursor-anchored floating popup**; dismiss with click outside or Escape. Module import off by default.
 
-**GraphMapControlSlot** — `relative` wrapper around each map icon button: `GraphMapControlButton` + legend-style label chip (`graph-map-control-label`). Labels show on hover/focus only (`hidden` while legend panel is open).
+**GraphMapControlSlot** — `relative` wrapper around each map icon button: `GraphMapControlButton` + hover **peek label** (`FloatingPanel` `variant="chrome"`). Labels show on hover or keyboard `:focus-visible` only (`hidden` while legend panel is open).
+
+**Floating panel** (`components/ui/floatingPanel.tsx`) — shared elevated box above the canvas. Variants: `menu` (portaled connection menus, card + blur) · `chrome` (map legend panels, control peek labels, popover surface). Not a Radix popover — positioning and dismiss are owned by each caller.
 
 **Map control stack** (bottom-right): legend, grid toggle, **Focus selection for reading**, center view, fit to screen. Reading focus is **two-step**: click a class node or member on the canvas to **select** a target (`selectReadingFocus`); the toolbar button then **scroll-aligns** the viewport (no class-node width resize). `?focus=` is written only when layout runs, not on selection alone. Jump menu **Jump** still selects + scroll-aligns in one step (`focusReadingMember`).
 

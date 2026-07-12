@@ -81,6 +81,9 @@ export type GraphInteractionContextValue = {
   setActivePinKey: (tokenKey: string) => void;
   isPinnedTokenKey: (tokenKey: string) => boolean;
   hoveredTokenKey: string | null;
+  /** Pointer under cursor — may lead committed trace; updates before dwell. */
+  emphasisTokenKey: string | null;
+  traceTokenKey: string | null;
   lookupIndexedUsageSites: (
     token: string,
     sourceFlowId: string,

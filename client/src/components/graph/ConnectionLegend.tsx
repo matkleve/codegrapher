@@ -4,6 +4,7 @@ import { Waypoints } from "lucide-react";
 import { ConnectionLegendKindDemo } from "@/components/graph/ConnectionLegendKindDemo";
 import { GraphMapControlSlot } from "@/components/graph/GraphMapControlSlot";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
+import { FloatingPanel } from "@/components/ui/floatingPanel";
 import { WireMarkerDefs } from "@/components/graph/WireMarkerDefs";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
@@ -119,9 +120,10 @@ function ConnectionLegendDetail({
   );
 
   return createPortal(
-    <div
+    <FloatingPanel
       ref={panelRef}
-      className="connection-legend-detail rounded-md border border-border bg-popover px-3 py-2 shadow-md"
+      variant="chrome"
+      className="connection-legend-detail px-3 py-2"
       style={{
         position: "fixed",
         zIndex: 60,
@@ -139,7 +141,7 @@ function ConnectionLegendDetail({
         {CONNECTION_KIND_DESCRIPTION[kind]}
       </p>
       <ConnectionLegendKindDemo kind={kind} active={active} />
-    </div>,
+    </FloatingPanel>,
     document.body,
   );
 }
@@ -244,9 +246,10 @@ export function ConnectionLegend({
       onClick={() => setOpen((v) => !v)}
     >
       {open ? (
-        <div
+        <FloatingPanel
           ref={legendPanelRef}
-          className="connection-legend-panel absolute right-0 bottom-full z-50 mb-2 rounded-md border border-border bg-popover px-1 py-1 shadow-md"
+          variant="chrome"
+          className="connection-legend-panel absolute right-0 bottom-full z-50 mb-2 px-1 py-1"
           role="dialog"
           aria-label="Connection kinds"
         >
@@ -283,7 +286,7 @@ export function ConnectionLegend({
               );
             })}
           </ul>
-        </div>
+        </FloatingPanel>
       ) : null}
       {open && hoveredKind && detailAnchor ? (
         <ConnectionLegendDetail

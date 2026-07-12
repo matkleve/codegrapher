@@ -14,7 +14,10 @@ import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { previewHopFromDepth } from "@/lib/traceDepth";
 import { backwardLexicalEdges } from "@/lib/codeLineTraceBackward";
-import { forwardLexicalRelativesForParamDef } from "@/lib/codeLineTraceForward";
+import {
+  forwardLexicalRelativesForBindingDef,
+  forwardLexicalRelativesForParamDef,
+} from "@/lib/codeLineTraceForward";
 import { symbolIndexedTraceEdges } from "@/lib/codeLineTraceSymbolResolve";
 import { traceBindingInitCascadeEdges } from "@/lib/traceEdgesForOrigin";
 import type { CodeLineTraceContext } from "@/lib/codeLineTraceContext";
@@ -169,7 +172,21 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       : [];
 
   const backwardEdges = backwardLexicalEdges(ctx);
-  const forwardRelatives = isParamDefHost ? forwardLexicalRelativesForParamDef(ctx) : [];
+  const bindingForwardDefId =
+    initBindingDefId ??
+    (localDefId?.includes("::local::") ? localDefId : undefined);
+  const bindingForwardEl =
+    bindingDefElForCascade ??
+    (bindingForwardDefId && localDefId === bindingForwardDefId ? chipEl : null);
+  const forwardRelatives = isParamDefHost
+    ? forwardLexicalRelativesForParamDef(ctx)
+    : bindingForwardDefId &&
+        bindingForwardEl &&
+        bindingEdges.length > 0 &&
+        methodCode &&
+        methodStartLine != null
+      ? forwardLexicalRelativesForBindingDef(ctx, bindingForwardDefId, bindingForwardEl)
+      : [];
 
   if (
     localEdges.length > 0 ||
