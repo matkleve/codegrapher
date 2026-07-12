@@ -169,9 +169,9 @@
 
 /* Sig param/return hover: title stays dim unless it is the lit trace endpoint */
 .graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
-  .member-row-label:not(.token-chip-lit),
+  .member-row-label:not(.token-chip-lit):not(.cursor-pointer),
 .graph-trace-active .member-row-header:hover:has(.member-sig-token-chip:hover, .member-sig-type-chip:hover)
-  .member-row-label:not(.token-chip-lit)
+  .member-row-label:not(.token-chip-lit):not(.cursor-pointer)
   .token-shimmer-target {
   color: var(--faint) !important;
   -webkit-text-fill-color: currentColor;
@@ -182,22 +182,7 @@
   background: transparent !important;
 }
 
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview)
-  .token-chip:not(.token-chip-lit):not(.cursor-pointer)
-  .token-chip-text,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
-  .token-chip:not(.token-chip-lit):not(.cursor-pointer)
-  .token-chip-text,
-.graph-pane.graph-trace-pending:not(.graph-ctrl-preview)
-  .token-def-label:not(.token-chip-lit):not(.cursor-pointer),
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview)
-  .token-def-label:not(.token-chip-lit):not(.cursor-pointer) {
-  color: var(--faint) !important;
-  font-weight: 600;
-  background: transparent;
-  filter: none;
-  box-shadow: none;
-}
+/* Chip ink/fill: tokens-chips*.css only — no .token-chip color rules here (interaction-emphasis.implementation.supplement.md). */
 
 .graph-pane.graph-ctrl-preview.graph-trace-active
   .member-signature-tags

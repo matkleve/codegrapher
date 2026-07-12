@@ -171,6 +171,9 @@ export function applyReadingFocusToNodes(
 }
 
 export function clearReadingFocusFromNodes(nodes: Node[]): Node[] {
+  if (!nodes.some((n) => (n.data as ClassNodeData).readingFocusMemberId)) {
+    return nodes;
+  }
   return nodes.map((n) => {
     const data = n.data as ClassNodeData;
     if (!data.readingFocusMemberId) return n;
