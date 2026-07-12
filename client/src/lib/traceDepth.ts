@@ -6,6 +6,10 @@ export const TRACE_DEPTH_MIN_OPACITY = 0.2;
 /** Lit tier-1 chips/wires dimmed only while pointer emphasizes another trace member. */
 export const TRACE_UNINVOLVED_IN_TRACE = 0.68;
 
+/** Non-emphasized wires recede while pointer is on a direct branch. */
+export const TRACE_WIRE_BACKDROP_PATH_OPACITY = 0.5;
+export const TRACE_WIRE_BACKDROP_GLOW_OPACITY = 0.08;
+
 /** Wire path + glow when pointer is on the wire or its endpoint chip. */
 export const TRACE_WIRE_EMPHASIS_PATH_OPACITY = 1;
 export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.36;
@@ -85,12 +89,12 @@ export function traceGlowOpacity(
   return tracePathOpacity(depth, maxDepth, mode) * ratio;
 }
 
-/** Explicit wire opacities for emphasized vs chain. */
+/** Explicit wire opacities for emphasized vs backdrop vs baseline. */
 export function traceWireOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  mode: TraceStrengthMode = "baseline",
   emphasized = false,
+  backdrop = false,
 ): { path: number; glow: number } {
   if (emphasized) {
     return {
@@ -98,6 +102,16 @@ export function traceWireOpacity(
       glow: TRACE_WIRE_EMPHASIS_GLOW_OPACITY,
     };
   }
-  const path = tracePathOpacity(depth, maxDepth, mode);
-  return { path, glow: traceGlowOpacity(depth, maxDepth, mode) };
+  if (backdrop) {
+    const path =
+      depth <= 1
+        ? TRACE_WIRE_BACKDROP_PATH_OPACITY
+        : tracePathOpacity(depth, maxDepth, "baseline") * 0.72;
+    return {
+      path,
+      glow: Math.max(path * TRACE_GLOW_BASELINE_RATIO, TRACE_WIRE_BACKDROP_GLOW_OPACITY),
+    };
+  }
+  const path = tracePathOpacity(depth, maxDepth, "baseline");
+  return { path, glow: traceGlowOpacity(depth, maxDepth, "baseline") };
 }

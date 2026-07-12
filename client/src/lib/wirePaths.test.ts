@@ -116,15 +116,15 @@ describe("layoutBranchFanPaths", () => {
       SVG_BOX,
     );
     expect(paths).toHaveLength(2);
-    expect(paths[0]).toContain("L 4 139");
-    expect(paths[0]).toContain("L 4 169");
-    expect(paths[1]).toMatch(/^M 4 169/);
+    expect(paths[0]).toContain("L 24 139");
+    expect(paths[0]).toContain("L 24 169");
+    expect(paths[1]).toMatch(/^M 24 169/);
     expect(paths[1]).not.toContain("M 163");
   });
 });
 
 describe("layoutCubicFanPaths", () => {
-  it("uses gutter taps before clustered same-line targets", () => {
+  it("fans curved spurs from a shared trunk for same-line targets", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
     const { paths, clusterKind } = layoutCubicFanPaths(
       240,
@@ -137,7 +137,7 @@ describe("layoutCubicFanPaths", () => {
       SVG_BOX,
     );
     expect(clusterKind).toBe("horizontal");
-    expect(paths[0]).toMatch(/C .+ C .+ C /);
+    expect(paths[0]).toMatch(/^M .+ C .+ M .+ C /);
     expect(paths[1]).toMatch(/^M [\d.+-]+ [\d.+-]+ C /);
     expect(paths[1]).not.toMatch(/\bL /);
   });

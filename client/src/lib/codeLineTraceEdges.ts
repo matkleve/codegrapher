@@ -250,8 +250,8 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
   const bindingDefElForCascade =
     initBindingDefId && pane
       ? findLocalDefElement(pane, initBindingDefId)
-      : canonicalDef?.dataset.localDefId?.includes("::local::")
-        ? canonicalDef
+      : chipEl.dataset.localDefId?.includes("::local::")
+        ? chipEl
         : null;
 
   if (

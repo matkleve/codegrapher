@@ -16,6 +16,7 @@ import {
   type DemoMemberScene,
 } from "@/lib/connectionLegendDemoScenes";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
+import { junctionChevronPath } from "@/lib/previewEdgeJunction";
 import { cn } from "@/lib/utils";
 
 type ConnectionLegendKindDemoProps = {
@@ -330,13 +331,25 @@ export function ConnectionLegendKindDemo({
           />
         ))}
         {wire.junction ? (
-          <circle
-            cx={wire.junction.x}
-            cy={wire.junction.y}
-            r={3}
-            className="preview-edge-junction"
-            fill={def.stroke}
-          />
+          <g className="preview-edge-junction">
+            <circle
+              cx={wire.junction.x}
+              cy={wire.junction.y}
+              r={3}
+              className="preview-edge-junction-ring"
+              fill={def.stroke}
+              stroke={def.stroke}
+            />
+            <path
+              d={junctionChevronPath(
+                wire.junction.x,
+                wire.junction.y,
+                wire.junction.bearing ?? Math.PI / 2,
+              )}
+              className="preview-edge-junction-chevron"
+              fill={def.stroke}
+            />
+          </g>
         ) : null}
       </svg>
     </div>

@@ -384,4 +384,109 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(edges.some((e) => e.id.includes("chain-b-"))).toBe(true);
     expect(edges.some((e) => e.liveTo?.token === "city")).toBe(true);
   });
+
+  it("binds field init -> value and does not cascade param chain from value usage", () => {
+    const EXTRACT_MEMBER = "method:file:Geo.extractFieldValue";
+    const EXTRACT_CODE = `extractFieldValue(field: AddressFieldKind): string | null {
+  const value = extractFieldValue(result, field);
+  return value;
+}`;
+    const EXTRACT_START = 10;
+    const index = buildMemberSymbolIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START);
+    const fieldParam = [...index.defSites.entries()].find(([, id]) =>
+      id.includes("::param::field::"),
+    )!;
+    const valueDefId = [...index.defSites.values()].find((id) => id.includes("::local::value::"))!;
+    const constLine = EXTRACT_CODE.split("\n")[1]!;
+    const returnLine = EXTRACT_CODE.split("\n")[2]!;
+    const constLineNo = EXTRACT_START + 1;
+    const returnLineNo = EXTRACT_START + 2;
+    const fieldIdx = tokenizeLine(constLine).tokens.findIndex((t) => t.text === "field");
+    const valueDefIdx = tokenizeLine(constLine).tokens.findIndex(
+      (t) => t.kind === "identifier" && t.text === "value",
+    );
+    const valueUseIdx = tokenizeLine(returnLine).tokens.findIndex((t) => t.text === "value");
+
+    const pane = document.querySelector(".graph-pane")!;
+
+    const fieldUseEl = document.createElement("span");
+    fieldUseEl.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      EXTRACT_MEMBER,
+      constLineNo,
+      fieldIdx,
+      "field",
+    );
+    fieldUseEl.dataset.localTargetId = fieldParam[1];
+    pane.appendChild(fieldUseEl);
+
+    const valueDefEl = document.createElement("span");
+    valueDefEl.dataset.localDefId = valueDefId;
+    pane.appendChild(valueDefEl);
+
+    const valueUseEl = document.createElement("span");
+    valueUseEl.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      EXTRACT_MEMBER,
+      returnLineNo,
+      valueUseIdx,
+      "value",
+    );
+    valueUseEl.dataset.localTargetId = valueDefId;
+    registerTraceHost(valueUseEl);
+    pane.appendChild(valueUseEl);
+
+    const defEdges = assembleCodeLinePreviewEdges({
+      name: "value",
+      chipEl: valueDefEl,
+      kind: "variable",
+      tokenIndex: valueDefIdx,
+      edgeKey: "test-value-def",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START),
+      sourceFlowId: FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: constLineNo,
+      methodCode: EXTRACT_CODE,
+      methodStartLine: EXTRACT_START,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () => undefined,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    const binding = defEdges.find((e) => e.connectionKind === "binding");
+    expect(binding?.from.type).toBe("element");
+    expect(binding?.to.type).toBe("element");
+    if (binding?.from.type === "element" && binding?.to.type === "element") {
+      expect(binding.from.el).toBe(fieldUseEl);
+      expect(binding.to.el).toBe(valueDefEl);
+    }
+
+    const useEdges = assembleCodeLinePreviewEdges({
+      name: "value",
+      chipEl: valueUseEl,
+      kind: "variable",
+      tokenIndex: valueUseIdx,
+      edgeKey: "test-value-use",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START),
+      sourceFlowId: FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: returnLineNo,
+      methodCode: EXTRACT_CODE,
+      methodStartLine: EXTRACT_START,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () => undefined,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    expect(useEdges.some((e) => e.id.includes("init-param"))).toBe(false);
+    expect(useEdges.some((e) => e.liveTo?.token === "field")).toBe(false);
+  });
 });

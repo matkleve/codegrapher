@@ -54,9 +54,11 @@ describe("traceDepth", () => {
   });
 
   it("snaps emphasized wires to full path + bright glow", () => {
-    const emphasized = traceWireOpacity(2, 5, "emphasis", true);
-    const chain = traceWireOpacity(2, 5, "emphasis", false);
+    const emphasized = traceWireOpacity(2, 5, true, false);
+    const backdrop = traceWireOpacity(1, 5, false, true);
+    const baseline = traceWireOpacity(1, 5, false, false);
     expect(emphasized.path).toBe(1);
-    expect(emphasized.glow).toBeGreaterThan(chain.glow);
+    expect(emphasized.glow).toBeGreaterThan(backdrop.glow);
+    expect(backdrop.path).toBeLessThan(baseline.path);
   });
 });

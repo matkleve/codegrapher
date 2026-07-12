@@ -1,4 +1,4 @@
-import { forwardRef, type DragEvent, type ReactNode } from "react";
+import { forwardRef, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { cn } from "@/lib/utils";
@@ -7,11 +7,12 @@ type GraphPaneProps = {
   children: ReactNode;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  onClickCapture?: (e: MouseEvent<HTMLDivElement>) => void;
 };
 
 /** Mood root for Ctrl greyout + trace dim — classes scoped to the graph pane only. */
 export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
-  function GraphPane({ children, onDragOver, onDrop }, ref) {
+  function GraphPane({ children, onDragOver, onDrop, onClickCapture }, ref) {
     const { isCtrlActive } = useCtrlKey();
     const { isTraceActive, isWarm, pinnedTraces } = useGraphInteraction();
 
@@ -27,6 +28,7 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
         )}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onClickCapture={onClickCapture}
       >
         {children}
       </div>

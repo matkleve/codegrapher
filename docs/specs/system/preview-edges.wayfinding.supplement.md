@@ -13,7 +13,7 @@ When **2+ wires** share the same source element and the same `connectionKind`, t
 | Kind | Spur geometry |
 | ---- | ------------- |
 | Control flow (`branch`) | Orthogonal gutter bus + horizontal tap |
-| Usage / binding / transitive | **Cubic trunk** (exit curve + curved `treeSpinePath` bus drop) + cubic spurs |
+| Usage / binding / transitive | **Cubic trunk** (one curve source → fork) + optional curved spine + cubic spurs |
 | Typesetting | Solo rounded Manhattan only — never bus-fanned |
 
 Explicit `branchFan` groups (built at trace time) always fan. Other kinds fan at **render time** via `wireFanLayout.ts` when clustering rules pass (same `connectionKind` + source element only).
@@ -24,7 +24,7 @@ Within one member row, multiple **orthogonal** wires (`branch`, `typesetting`) r
 
 ## Junction knots
 
-Grouped fans draw **one** `preview-edge-junction` at `(busX, forkY)` on the first member. Additional members branch from the bus column at their own Y without a second knot.
+Grouped fans draw **one** `preview-edge-junction` at `(busX, forkY)` on the first member: a soft ring plus a **chevron** aimed along the average outbound fan direction (toward targets / down the spine).
 
 ## Acceptance
 

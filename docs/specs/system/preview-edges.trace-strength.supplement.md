@@ -114,7 +114,7 @@ Tunable in `client/src/lib/lexicalGraph.ts` (consumed by `walkLexicalForward` / 
 | Kind | Meaning | Same-line policy |
 | ---- | ------- | ---------------- |
 | `usage` | usage site → def | always emitted |
-| `binding-init` | binding def ↔ initializer site | adapter chains same-line binding from def anchor, not usage token |
+| `binding-init` | initializer site → binding def | always from the RHS/init token to the `const`/`let` slot |
 | `member-access` | receiver site → property site | emitted only when **cross-line**; same-line `receiver.property` micro-hops are skipped at build time |
 
 ### Data

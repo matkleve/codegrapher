@@ -13,10 +13,12 @@ import {
   branchJunctionPoint,
   previewWirePath,
 } from "@/lib/wirePaths";
+import { fanJunctionBearing } from "@/lib/previewEdgeJunction";
+import type { PreviewEdgeJunction } from "@/lib/previewEdgeJunction";
 
 export type LegendDemoWireLayout = {
   paths: string[];
-  junction: { x: number; y: number } | null;
+  junction: PreviewEdgeJunction | null;
 };
 
 const EMPTY: LegendDemoWireLayout = { paths: [], junction: null };
@@ -146,7 +148,7 @@ function structuralPath(
 function branchJunctionForSpecs(
   specs: PreviewEdgeSpec[],
   svgBox: DOMRect,
-): { x: number; y: number } | null {
+): PreviewEdgeJunction | null {
   const head = specs[0];
   if (!head || head.connectionKind !== "branch") return null;
 
@@ -162,13 +164,28 @@ function branchJunctionForSpecs(
       toEl: entry.toPt.el,
     }));
 
-  return branchJunctionPoint(
+  const point = branchJunctionPoint(
     row.fromPt.x,
     row.fromPt.y,
     row.fromPt.el,
     spurs,
     svgBox,
   );
+  if (!point) return null;
+
+  const forkY = Math.min(...spurs.map((spur) => spur.y2));
+  return {
+    x: point.x,
+    y: point.y,
+    bearing: fanJunctionBearing(
+      row.fromPt.x,
+      row.fromPt.y,
+      point.x,
+      forkY,
+      spurs,
+      Math.max(...spurs.map((spur) => spur.y2)),
+    ),
+  };
 }
 
 export function layoutLegendDemoWires(

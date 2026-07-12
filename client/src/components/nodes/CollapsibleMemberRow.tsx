@@ -82,7 +82,7 @@ export function CollapsibleMemberRow({
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
     cancelHoverLeaveGrace,
-    focusReadingMember,
+    selectReadingFocus,
     showConnectionMenu,
     clearConnectionMenu,
   } = useGraphInteraction();
@@ -265,9 +265,9 @@ export function CollapsibleMemberRow({
       e.stopPropagation();
       e.preventDefault();
       cancelHoverLeaveGrace();
-      focusReadingMember(flowNodeId, memberId);
+      selectReadingFocus({ flowNodeId, memberId });
     },
-    [cancelHoverLeaveGrace, focusReadingMember, flowNodeId, memberId],
+    [cancelHoverLeaveGrace, flowNodeId, memberId, selectReadingFocus],
   );
 
   return (

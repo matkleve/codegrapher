@@ -5,7 +5,11 @@ import {
   type ResolvedAnchor,
 } from "@/lib/resolvePreviewAnchor";
 import type { PreviewConnectionKind, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { PreviewEdgeJunction } from "@/lib/previewEdgeJunction";
+import { fanJunctionBearing } from "@/lib/previewEdgeJunction";
 import {
+  fanClusterKind,
+  fanSpineRange,
   layoutBranchFanPaths,
   layoutCubicFanPaths,
   type BranchSpurInput,
@@ -25,7 +29,7 @@ export type ResolvedWireEndpoints = {
 
 export type WireFanMemberLayout = {
   pathD: string;
-  junction: { x: number; y: number } | null;
+  junction: PreviewEdgeJunction | null;
   drawHitFrom: boolean;
   drawTrunkClass: boolean;
   fromX: number;
@@ -165,6 +169,8 @@ function layoutFanGroup(
   }));
 
   const kind = connectionKindOf(head.spec);
+  const clusterKind = fanClusterKind(spurs);
+  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
   const layout = isBranchFanKind(kind)
     ? layoutBranchFanPaths(head.fromPt.x, head.fromPt.y, head.fromPt.el, spurs, svgBox)
     : layoutCubicFanPaths(head.fromPt.x, head.fromPt.y, head.fromPt.el, spurs, svgBox);
@@ -172,13 +178,22 @@ function layoutFanGroup(
   wires.forEach((wire, index) => {
     const pathD = layout.paths[index];
     if (!pathD) return;
-    const clusterYs = wires.map((w) => w.toPt.y);
-    const forkY = Math.min(...clusterYs);
     const showJunction = wires.length === 1 || index === 0;
     out.set(wire.spec.id, {
       pathD,
       junction: showJunction
-        ? { x: layout.busX, y: forkY }
+        ? {
+            x: layout.busX,
+            y: forkY,
+            bearing: fanJunctionBearing(
+              head.fromPt.x,
+              head.fromPt.y,
+              layout.busX,
+              forkY,
+              spurs,
+              spineEndY,
+            ),
+          }
         : null,
       drawHitFrom: index === 0,
       drawTrunkClass: index === 0 && wires.length > 1,

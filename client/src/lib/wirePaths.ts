@@ -192,7 +192,7 @@ export function layoutBranchFanPaths(
 
   const clusterKind = fanClusterKind(spurs);
   const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
-  const busX = computeFanBusX(spurs, svgBox, clusterKind);
+  const busX = computeBranchBusX(spurs, svgBox);
   const trunk = computeBranchTrunk(
     x1,
     y1,
@@ -218,15 +218,7 @@ export function layoutBranchFanPaths(
   };
 }
 
-/** Join SVG subpaths — drop the leading moveto on continuations. */
-function appendSvgPath(base: string, segment: string): string {
-  if (!segment) return base;
-  if (!base) return segment;
-  const tail = segment.replace(/^M\s+[\d.+-]+\s+[\d.+-]+\s+/, "");
-  return `${base} ${tail}`;
-}
-
-/** Cubic approach into the shared bus column — same exit curve as solo preview wires. */
+/** Cubic approach into the fork — one curve from source to the bus knot. */
 function computeCubicFanTrunk(
   x1: number,
   y1: number,
@@ -237,20 +229,23 @@ function computeCubicFanTrunk(
   clusterKind: FanClusterKind,
 ): BranchTrunkGeometry {
   const busX = computeFanBusX(spurs, svgBox, clusterKind);
-  const lineRect = lineRectInSvg(fromEl, svgBox);
-  const busTopY = belowRectY(lineRect, y1);
   const clearance = chipClearance(fromEl, spurs[0]?.toEl ?? null);
   const approachSides = cubicPortSides(x1, busX);
-  const approach = cubicPath(x1, y1, busX, busTopY, approachSides.fromSide, approachSides.toSide, {
-    clearance,
-  });
-  const busDrop = treeSpinePath(busX, busTopY, forkY, "left");
+  const trunkPrefix = cubicPath(
+    x1,
+    y1,
+    busX,
+    forkY,
+    approachSides.fromSide,
+    approachSides.toSide,
+    { clearance },
+  );
 
   return {
     startX: x1,
     busX,
-    busTopY,
-    trunkPrefix: appendSvgPath(approach, busDrop),
+    busTopY: forkY,
+    trunkPrefix,
   };
 }
 
@@ -290,7 +285,7 @@ export function layoutCubicFanPaths(
     cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl, clusterKind),
   );
 
-  let path0 = appendSvgPath(trunk.trunkPrefix, spurPaths[0] ?? "");
+  let path0 = `${trunk.trunkPrefix} ${spurPaths[0] ?? ""}`;
   if (spineEndY > forkY + 2) {
     path0 = `${path0} ${treeSpinePath(trunk.busX, forkY, spineEndY, "left")}`;
   }

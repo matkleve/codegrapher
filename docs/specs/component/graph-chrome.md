@@ -10,6 +10,8 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 **GraphMapControlSlot** — `relative` wrapper around each map icon button: `GraphMapControlButton` + legend-style label chip (`graph-map-control-label`). Labels show on hover/focus only (`hidden` while legend panel is open).
 
+**Map control stack** (bottom-right): legend, grid toggle, **Focus selection for reading**, center view, fit to screen. Reading focus is **two-step**: click a class node or member on the canvas to **select** a target (`selectReadingFocus`); the toolbar button then **scroll-aligns** the viewport (no class-node width resize). `?focus=` is written only when layout runs, not on selection alone. Jump menu **Jump** still selects + scroll-aligns in one step (`focusReadingMember`).
+
 **TokenConnectionMenu** — anchored dropdown below a token chip on hover (external/off-canvas targets) or on right-click (full Jump + Load + Open in editor). Shows **Load all · N** when ≥2 off-canvas rows.
 
 **Path highlight** — right-click a node → "Find path to…" → click second node; rings nodes and thickens structural React Flow edges along shortest path.
@@ -17,6 +19,8 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 ## Where It Lives
 
 - `ConnectionLegend.tsx` — bottom-right map control stack (`GraphFlowInner`), driven by `GraphInteractionContext`
+- `GraphMapControlSlot.tsx` — map icon buttons + hover labels
+- `graphReadingFocus.ts` — selection resolve, scroll alignment, `?focus=` URL
 - `TokenConnectionMenu.tsx` — portal menu, driven by `GraphInteractionContext`
 - `connectionMenu.ts` — row builders (`buildHoverLoadMenu`, `buildContextMenu`)
 - `graphPathHighlight.ts` — shortest path over React Flow `edges`
@@ -31,6 +35,8 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 | 3 | Right-clicks indexed token | Context **TokenConnectionMenu**: Jump (on canvas) + Load (off) + editor footer |
 | 4 | Clicks **Load all · N** | Parallel `/api/focus` merges per row |
 | 5 | Right-click node → **Find path to…** | Awaits second node click; highlights structural path or shows "No path found" |
+| 6 | Clicks node or member on canvas | Select reading-focus target (enables toolbar button); no scroll or URL yet | `selectReadingFocus` via pane `onClickCapture` |
+| 7 | Clicks **Focus selection for reading** | Scroll-align current target; expand member if needed; persist `?focus=`; no width resize | `focusReadingView` / `runReadingFocusLayout` |
 
 ## Component Hierarchy
 

@@ -253,15 +253,10 @@ export function walkLexicalForward(
           const bindings = graph.bindingDefsFromSite.get(siteKey(usage)) ?? [];
           for (const bindingDefId of bindings) {
             const chainLevel = level === 1 && !opts.includeDirectUsages ? 2 : level + 1;
-            const bindingSite = graph.defSiteOf.get(bindingDefId);
-            const sameLineBinding =
-              bindingSite != null && bindingSite.lineNumber === usage.lineNumber;
             push(
               {
                 id: `b-${chainLevel}-${bindingDefId}`,
-                from: sameLineBinding
-                  ? { node: "def", defId }
-                  : { node: "site", site: usage },
+                from: { node: "site", site: usage },
                 to: { node: "def", defId: bindingDefId },
                 kind: "binding-init",
                 depth: chainLevel,

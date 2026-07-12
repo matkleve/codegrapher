@@ -28,9 +28,11 @@ export type DemoWireSpec =
       to: DemoWireEndpoint;
     };
 
+import type { PreviewEdgeJunction } from "@/lib/previewEdgeJunction";
+
 export type LegendDemoWireState = {
   paths: string[];
-  junction: { x: number; y: number } | null;
+  junction: PreviewEdgeJunction | null;
 };
 
 export function useLegendDemoWire(

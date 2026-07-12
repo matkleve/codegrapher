@@ -24,8 +24,10 @@ Split pane with folder path input, file tree, recent files, and the theme toggle
 | 4 | Clicks Browse for folder | Native OS dialog | `POST /api/browse-folder` — **never headless** |
 | 5 | Toggles theme (explorer footer) | Persist `localStorage["codegrapher:theme"]` | `ThemeToggle` |
 | 6 | Resizes sidebar divider | Update sidebar width; below warn width shows collapse hint; release below threshold collapses | `useResizableSidebar` |
-| 7 | Double-clicks anywhere in a member row on canvas | Reading focus — expand, scroll, persist `?focus=nodeId\|memberId` | `focusReadingMember` — see class-node |
-| 8 | Clicks reading-focus control (canvas) | Re-run reading layout for current `?focus=` selection | `GraphFlowInner` |
+| 7 | Clicks node or member on canvas | Select reading-focus target (enables toolbar button) | `selectReadingFocus` — see graph-chrome |
+| 7b | Double-clicks member row | Same as row click — select target only | `selectReadingFocus` — see class-node |
+| 8 | Clicks **Focus selection for reading** (map controls) | Scroll-align selection; persist `?focus=`; no class width resize | `focusReadingView` |
+| 8b | Jump menu → member on canvas | Select + scroll-align in one step | `focusReadingMember` |
 | 9 | Clicks **Simulation** toggle (graph header) | Open or close simulation right rail; icon reflects state | `SimulationPanelToggle` |
 
 ## Component Hierarchy

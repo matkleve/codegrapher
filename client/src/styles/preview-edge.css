@@ -125,8 +125,17 @@
 
 .preview-edge-junction {
   pointer-events: none;
-  stroke: none;
   animation: preview-edge-junction-pulse 1.4s ease-in-out infinite;
+}
+
+.preview-edge-junction-ring {
+  stroke-width: 1.2;
+  fill-opacity: 0.28;
+  stroke-opacity: 0.9;
+}
+
+.preview-edge-junction-chevron {
+  stroke: none;
 }
 
 .preview-edge-glow.preview-edge-warm {
@@ -164,4 +173,14 @@
 
 .preview-edge-glow.preview-edge-line-hover {
   opacity: 0.4 !important;
+}
+
+/* Direct branch under pointer — glow halo on wires touching the hovered chip. */
+.preview-edge-glow.preview-edge-branch-emphasis {
+  opacity: 0.38 !important;
+}
+
+.preview-edge-path.preview-edge-branch-emphasis {
+  stroke-width: 1.35;
+  opacity: 1 !important;
 }

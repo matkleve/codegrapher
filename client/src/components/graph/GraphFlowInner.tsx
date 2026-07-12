@@ -64,10 +64,10 @@ import {
   applyReadingFocusToNodes,
   clearReadingFocusFromNodes,
   clearFocusFromUrl,
-  computeReadingWidth,
   findFocusTargetElement,
   normalizeReadingFocus,
   parseFocusFromUrl,
+  resolveFocusFromClick,
   scrollToReadingPosition,
   writeFocusToUrl,
   type ReadingFocus,
@@ -289,50 +289,48 @@ export function GraphFlowInner({
       if (!pane) return;
 
       setNodes((nds) => applyReadingFocusToNodes(nds, focus));
+      writeFocusToUrl(focus);
 
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const cardEl = document.querySelector(
-            `[data-flow-node-id="${CSS.escape(focus.flowNodeId)}"]`,
-          );
-          if (!(cardEl instanceof HTMLElement)) return;
-
-          const targetWidth = computeReadingWidth(pane, cardEl, getViewport);
-          setNodes((nds) =>
-            applyReadingFocusToNodes(nds, focus, { width: targetWidth }),
-          );
-
-          requestAnimationFrame(() => {
-            const targetEl = findFocusTargetElement(focus);
-            if (!targetEl) return;
-            scrollToReadingPosition({
-              paneEl: pane,
-              targetEl,
-              getViewport,
-              setViewport,
-              screenToFlowPosition,
-            });
-            syncGrid();
-          });
+        const targetEl = findFocusTargetElement(focus);
+        if (!targetEl) return;
+        scrollToReadingPosition({
+          paneEl: pane,
+          targetEl,
+          getViewport,
+          setViewport,
+          screenToFlowPosition,
         });
+        syncGrid();
       });
     },
     [getViewport, screenToFlowPosition, setNodes, setViewport, syncGrid],
   );
 
+  const selectReadingFocus = useCallback((focus: ReadingFocus | null) => {
+    setReadingFocus(focus);
+  }, []);
+
   const focusReadingMember = useCallback(
     (flowNodeId: string, memberId: string) => {
       const focus: ReadingFocus = { flowNodeId, memberId };
-      setReadingFocus(focus);
+      selectReadingFocus(focus);
       runReadingFocusLayout(focus);
     },
-    [runReadingFocusLayout],
+    [runReadingFocusLayout, selectReadingFocus],
   );
 
   const focusReadingView = useCallback(() => {
     if (!readingFocus) return;
     runReadingFocusLayout(readingFocus);
   }, [readingFocus, runReadingFocusLayout]);
+
+  const handleReadingFocusCapture = useCallback(
+    (e: React.MouseEvent) => {
+      selectReadingFocus(resolveFocusFromClick(e.target));
+    },
+    [selectReadingFocus],
+  );
 
   const centerView = () => {
     if (nodes.length > 0) {
@@ -451,9 +449,7 @@ export function GraphFlowInner({
     if (!readingFocus) {
       clearFocusFromUrl();
       setNodes((nds) => clearReadingFocusFromNodes(nds));
-      return;
     }
-    writeFocusToUrl(readingFocus);
   }, [readingFocus, setNodes]);
 
   useEffect(() => {
@@ -475,11 +471,11 @@ export function GraphFlowInner({
 
   useEffect(() => {
     if (nodes.length === 0 || urlFocusAppliedRef.current) return;
+    urlFocusAppliedRef.current = true;
     const urlFocus = parseFocusFromUrl();
     if (!urlFocus) return;
     if (!nodes.some((n) => n.id === urlFocus.flowNodeId)) return;
 
-    urlFocusAppliedRef.current = true;
     setReadingFocus(urlFocus);
     runReadingFocusLayout(urlFocus);
   }, [nodes, runReadingFocusLayout]);
@@ -521,6 +517,7 @@ export function GraphFlowInner({
           setNodes={setNodes}
           onLoadFile={onLoadFile}
           onFocusReadingMember={focusReadingMember}
+          onSelectReadingFocus={selectReadingFocus}
         >
           <SimulationProvider>
             <div className="pointer-events-auto relative z-30 flex items-center gap-3 border-b border-border bg-card px-3 py-2">
@@ -569,6 +566,7 @@ export function GraphFlowInner({
             <div className="flex min-h-0 min-w-0 flex-1">
               <GraphPane
             ref={graphPaneRef}
+            onClickCapture={handleReadingFocusCapture}
             onDragOver={(e) => {
               e.preventDefault();
               e.dataTransfer.dropEffect = "copy";

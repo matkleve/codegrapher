@@ -21,6 +21,7 @@ import {
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
+import type { ReadingFocus } from "@/lib/graphReadingFocus";
 import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
 import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
 import { useIncrementalUsageSiteIndex } from "@/hooks/useIncrementalUsageSiteIndex";
@@ -95,7 +96,9 @@ type GraphInteractionContextValue = {
   lookupProjectReferences: (token: string) => ReferenceEntry[];
   lookupOffCanvasCallSiteFiles: (token: string) => ReferenceEntry[];
   focusFlowNode: (flowNodeId: string) => void;
-  /** Expand member, widen node, scroll into reading position; persists `?focus=` URL. */
+  /** Remember node/member for the reading-focus toolbar button — no scroll or resize. */
+  selectReadingFocus: (focus: ReadingFocus | null) => void;
+  /** Jump menu: select target and scroll into reading alignment (no width resize). */
   focusReadingMember: (flowNodeId: string, memberId: string) => void;
   onLoadFile: (filePath: string) => void | Promise<void>;
   /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
@@ -132,6 +135,7 @@ type GraphInteractionProviderProps = {
   nodes: Node[];
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
   onLoadFile: (filePath: string) => void | Promise<void>;
+  onSelectReadingFocus?: (focus: ReadingFocus | null) => void;
   onFocusReadingMember?: (flowNodeId: string, memberId: string) => void;
 };
 
@@ -141,6 +145,7 @@ export function GraphInteractionProvider({
   nodes,
   setNodes,
   onLoadFile,
+  onSelectReadingFocus,
   onFocusReadingMember,
 }: GraphInteractionProviderProps) {
   const { isCtrlActive } = useCtrlKey();
@@ -284,6 +289,7 @@ export function GraphInteractionProvider({
       lookupProjectReferences: lookups.lookupProjectReferences,
       lookupOffCanvasCallSiteFiles: lookups.lookupOffCanvasCallSiteFiles,
       focusFlowNode,
+      selectReadingFocus: onSelectReadingFocus ?? (() => {}),
       focusReadingMember: onFocusReadingMember ?? (() => {}),
       onLoadFile,
       refreshLoadTraces,
@@ -310,6 +316,7 @@ export function GraphInteractionProvider({
       lookups,
       focusFlowNode,
       onFocusReadingMember,
+      onSelectReadingFocus,
       onLoadFile,
       refreshLoadTraces,
       graphData,

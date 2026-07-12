@@ -22,7 +22,7 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Method 
 | 2 | Clicks indexed title | Pin definition trace | `useTokenPin` |
 | 3 | Drags header | Move node | `node-drag-handle` on header root |
 | 4 | Clicks member row | Expand/collapse inline source | `onToggleMethod` / `onToggleProperty` |
-| 4b | **Double-clicks** anywhere in member row (header or body) | Reading focus: expand member, widen node, scroll into view; `?focus=` URL | `focusReadingMember` |
+| 4b | **Double-clicks** anywhere in member row (header or body) | Select reading-focus target (same as single click on row); does **not** scroll or resize | `selectReadingFocus` |
 | 5 | Clicks section header | Bulk expand/collapse section | `onToggleMethodsSection` |
 | 6 | Drags resize control | Live snap height to content | `useClassNodeResize` |
 | 7 | Hovers indexed token in body | Preview edge — see [preview-edges](../../system/preview-edges.md) | `GraphInteractionContext` |
@@ -100,5 +100,5 @@ Resize MUST commit via `computeClassNodeHeight` — do not bind card CSS height 
 - [x] Param usage wires anchor at the in-body declaration when hovering a usage; hovering a def fans out only from that chip (header twin lights, no duplicate wire)
 - [ ] Only expanded method bodies expose indexed token chips for preview
 - [ ] `previewTargetTop(id)` handle is unique per node
-- [ ] Double-clicking anywhere in a member row (header or inline body) expands it and scrolls it into reading position
+- [ ] Double-clicking anywhere in a member row selects it as the reading-focus target without scrolling or resizing the class node
 - [ ] ClassNode.tsx stays render-only; logic in hooks

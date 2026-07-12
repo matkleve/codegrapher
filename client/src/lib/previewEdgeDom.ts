@@ -5,6 +5,7 @@ import {
   wireHitMidSegment,
   wireHitSegment,
 } from "@/lib/resolvePreviewAnchor";
+import { junctionChevronPath, type PreviewEdgeJunction } from "@/lib/previewEdgeJunction";
 import { branchJunctionPoint, previewWirePath } from "@/lib/wirePaths";
 import { getWireLayoutContext } from "@/lib/wireFanLayout";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -18,6 +19,7 @@ import { depthFromHop, TRACE_GLOW_BASELINE_RATIO, traceWireOpacity } from "@/lib
 import {
   edgeTouchesHoveredToken,
   getWireHoveredTokenKey,
+  isTraceEmphasisActive,
   isTraceSessionActive,
   isWireHovered,
 } from "@/lib/wireHoverBoost";
@@ -28,7 +30,7 @@ export type WireElements = {
   group: SVGGElement;
   glow: SVGPathElement;
   path: SVGPathElement;
-  junction: SVGCircleElement;
+  junction: SVGGElement;
   hitFrom: SVGPathElement;
   hitTo: SVGPathElement;
   hitMid: SVGPathElement;
@@ -50,7 +52,7 @@ function applyWireMarkers(wire: WireElements, spec: PreviewEdgeSpec): void {
 
 function setWireJunction(
   wire: WireElements,
-  junction: { x: number; y: number } | null,
+  junction: PreviewEdgeJunction | null,
   stroke: string,
 ): void {
   if (!junction) {
@@ -58,9 +60,15 @@ function setWireJunction(
     return;
   }
   wire.junction.style.display = "";
-  wire.junction.setAttribute("cx", String(junction.x));
-  wire.junction.setAttribute("cy", String(junction.y));
-  wire.junction.style.fill = stroke;
+  const ring = wire.junction.querySelector<SVGCircleElement>(".preview-edge-junction-ring");
+  const chevron = wire.junction.querySelector<SVGPathElement>(".preview-edge-junction-chevron");
+  if (!ring || !chevron) return;
+  ring.setAttribute("cx", String(junction.x));
+  ring.setAttribute("cy", String(junction.y));
+  ring.style.stroke = stroke;
+  ring.style.fill = stroke;
+  chevron.setAttribute("d", junctionChevronPath(junction.x, junction.y, junction.bearing));
+  chevron.style.fill = stroke;
 }
 
 function applyWireDepthOpacity(
@@ -86,14 +94,18 @@ function applyWireDepthOpacity(
     return;
   }
 
+  const backdrop = isTraceEmphasisActive() && !emphasized;
+
   const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(
     depth,
     undefined,
-    "baseline",
     emphasized,
+    backdrop,
   );
   path.style.opacity = String(pathOpacity);
   glow.style.opacity = String(glowOpacity);
+  path.classList.toggle("preview-edge-branch-emphasis", emphasized);
+  glow.classList.toggle("preview-edge-branch-emphasis", emphasized);
 }
 
 export function createWireGroup(
@@ -114,10 +126,15 @@ export function createWireGroup(
   path.classList.add(...pathClasses);
   applyWireDepthOpacity(path, glow, spec);
 
-  const junction = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  junction.setAttribute("r", "4.5");
+  const junction = document.createElementNS("http://www.w3.org/2000/svg", "g");
   junction.classList.add("preview-edge-junction");
   junction.style.display = "none";
+  const junctionRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  junctionRing.setAttribute("r", "4");
+  junctionRing.classList.add("preview-edge-junction-ring");
+  const junctionChevron = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  junctionChevron.classList.add("preview-edge-junction-chevron");
+  junction.append(junctionRing, junctionChevron);
 
   const hitFrom = document.createElementNS("http://www.w3.org/2000/svg", "path");
   hitFrom.setAttribute("fill", "none");
@@ -154,7 +171,7 @@ type FanWireLayout = {
   toY: number;
   drawHitFrom: boolean;
   drawTrunkClass: boolean;
-  junction: { x: number; y: number } | null;
+  junction: PreviewEdgeJunction | null;
 };
 
 function applyFanWireLayout(wire: WireElements, layout: FanWireLayout, stroke: string): void {
