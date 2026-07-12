@@ -27,6 +27,14 @@
   stroke: var(--brand);
 }
 
+/* Row label spans set explicit rest colors in control-rows.css — promote on brand hover */
+.hoverable:hover .control-row-text-primary,
+.hoverable:hover .control-row-text-title,
+.hoverable:hover .control-row-text-secondary,
+.hoverable:hover .control-row-text-subtitle {
+  color: var(--brand);
+}
+
 /* Member rows — sig chips / labels stay flat; header uses brand via .member-row-header */
 .member-row .hoverable:not(.member-row-header):hover,
 .member-row .hoverable:not(.member-row-header):focus-visible {
@@ -49,6 +57,13 @@
   color: var(--foreground);
 }
 
+.hoverable-neutral:hover .control-row-text-primary,
+.hoverable-neutral:hover .control-row-text-title,
+.hoverable-neutral:hover .control-row-text-secondary,
+.hoverable-neutral:hover .control-row-text-subtitle {
+  color: var(--foreground);
+}
+
 /* Passive / deactivated read-only rows — grey at rest, slightly deepened on hover */
 .list-row-passive {
   border: 1px solid var(--border);
@@ -66,6 +81,13 @@
   color: var(--muted-foreground);
 }
 
+.list-row-passive:hover .control-row-text-primary,
+.list-row-passive:hover .control-row-text-title,
+.list-row-passive:hover .control-row-text-secondary,
+.list-row-passive:hover .control-row-text-subtitle {
+  color: var(--muted-foreground);
+}
+
 /* Context bar — neutral hover; brand on chips reads as warning */
 [data-token-context-bar] .hoverable:hover {
   background-color: var(--muted);
@@ -79,9 +101,17 @@
   stroke: var(--foreground);
 }
 
-/* Section headers + folder rows: muted at rest; brand only on :hover (expanded ≠ active) */
+[data-token-context-bar] .hoverable:hover .control-row-text-primary,
+[data-token-context-bar] .hoverable:hover .control-row-text-title,
+[data-token-context-bar] .hoverable:hover .control-row-text-secondary,
+[data-token-context-bar] .hoverable:hover .control-row-text-subtitle {
+  color: var(--foreground);
+}
+
+/* Explorer rows: muted/foreground at rest; expanded ≠ hovered (brand via .hoverable:hover) */
 .bg-sidebar button.explorer-section-header,
-.bg-sidebar button.explorer-folder-row {
+.bg-sidebar button.explorer-folder-row,
+.bg-sidebar [role="button"].explorer-file-row {
   border-color: transparent;
   background-color: transparent;
 }
@@ -90,17 +120,9 @@
   color: var(--muted-foreground);
 }
 
-.bg-sidebar button.explorer-folder-row {
+.bg-sidebar button.explorer-folder-row,
+.bg-sidebar [role="button"].explorer-file-row {
   color: var(--foreground);
-}
-
-.bg-sidebar button.explorer-section-header svg,
-.bg-sidebar button.explorer-section-header [data-icon],
-.bg-sidebar button.explorer-section-header span,
-.bg-sidebar button.explorer-folder-row svg,
-.bg-sidebar button.explorer-folder-row [data-icon],
-.bg-sidebar button.explorer-folder-row span {
-  transition: color var(--motion-hover-color) var(--ease);
 }
 
 .bg-sidebar button.explorer-section-header[aria-expanded="true"],
@@ -117,20 +139,10 @@
   color: var(--foreground);
 }
 
-.bg-sidebar button.explorer-section-header:hover,
-.bg-sidebar button.explorer-folder-row:hover {
-  background-color: var(--brand-surface);
-  border-color: var(--brand-border);
-  color: var(--brand);
-}
-
-.bg-sidebar button.explorer-section-header:hover span,
-.bg-sidebar button.explorer-section-header:hover svg,
-.bg-sidebar button.explorer-section-header:hover [data-icon],
-.bg-sidebar button.explorer-folder-row:hover span,
-.bg-sidebar button.explorer-folder-row:hover svg,
-.bg-sidebar button.explorer-folder-row:hover [data-icon] {
-  color: var(--brand);
+/* In-graph file ink at rest; brand hover wins via .hoverable:hover rules above */
+.explorer-file-in-graph .control-row-text-primary {
+  color: var(--explorer-file-in-graph);
+  font-weight: 500;
 }
 
 .interactive-toggle--active,

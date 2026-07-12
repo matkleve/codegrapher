@@ -5,13 +5,15 @@ import {
   type JumpChoice,
 } from "@/context/JumpTooltipContext";
 import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
+import { useJumpTooltipAction } from "@/hooks/useJumpTooltipAction";
+import {
+  InteractiveListRow,
+  SemanticConnectionDot,
+} from "@/components/ui/InteractiveListRow";
 
 const CURSOR_PAD = 14;
 
-import { useJumpTooltipAction } from "@/hooks/useJumpTooltipAction";
-
-function ChoiceRow({
+function JumpChoiceRow({
   choice,
   onPick,
 }: {
@@ -19,23 +21,24 @@ function ChoiceRow({
   onPick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-caption hover:bg-muted"
+    <InteractiveListRow
+      density="plain"
+      title={choice.label}
+      className="text-caption font-medium"
+      leading={
+        <>
+          <span className="font-bold text-brand" aria-hidden>
+            ↳
+          </span>
+          <span>Jump to</span>
+          <SemanticConnectionDot kind={choice.kind} />
+        </>
+      }
       onClick={(e) => {
         e.stopPropagation();
         onPick();
       }}
-    >
-      <span className="font-bold text-brand">↳</span>
-      <span>Jump to</span>
-      <span
-        className="size-2 shrink-0 rounded-sm"
-        style={{ background: TOKEN_EDGE_STROKE[choice.kind] }}
-        aria-hidden
-      />
-      <b className="truncate">{choice.label}</b>
-    </button>
+    />
   );
 }
 
@@ -57,7 +60,7 @@ export function JumpTooltip() {
   return createPortal(
     <div
       ref={tipRef}
-      className="jump-tip pointer-events-auto fixed z-[60] flex flex-col gap-0.5 rounded-lg border border-border bg-card px-1 py-1 text-caption font-medium text-foreground shadow-md"
+      className="jump-tip pointer-events-auto fixed z-[60] flex flex-col gap-0.5 rounded-lg border border-border bg-card px-1 py-1 text-caption shadow-md"
       style={
         position
           ? { left: position.left, top: position.top, visibility: "visible" }
@@ -70,26 +73,13 @@ export function JumpTooltip() {
       onMouseDown={(e) => e.stopPropagation()}
     >
       {mode === "single" && single ? (
-        <button
-          type="button"
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 hover:bg-muted"
-          onClick={(e) => {
-            e.stopPropagation();
-            onJump(wireId, single.wireEnd);
-          }}
-        >
-          <span className="font-bold text-brand">↳</span>
-          <span>Jump to</span>
-          <span
-            className="size-2 rounded-sm"
-            style={{ background: TOKEN_EDGE_STROKE[single.kind] }}
-            aria-hidden
-          />
-          <b>{single.label}</b>
-        </button>
+        <JumpChoiceRow
+          choice={single}
+          onPick={() => onJump(wireId, single.wireEnd)}
+        />
       ) : null}
       {mode === "choice" && choices?.map((choice) => (
-        <ChoiceRow
+        <JumpChoiceRow
           key={choice.wireEnd}
           choice={choice}
           onPick={() => onJump(wireId, choice.wireEnd)}

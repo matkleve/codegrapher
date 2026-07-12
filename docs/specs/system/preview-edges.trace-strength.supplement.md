@@ -51,7 +51,7 @@ This supplement defines trace **strength** tiers and adds **Typesetting** as the
 | Control flow (`branch`) | `--edge-control-flow` | **No** — branch fan-out stays tier 1; kind color already separates it from usage |
 | Transitive (call-graph) | `--edge-usage` | Yes — existing `hop: 2|3` on `PreviewEdgeSpec` (unchanged) |
 
-**Lit vs wire:** Tier-2/3 endpoints MUST receive `token-chip-lit` + `token-chip-endpoint-sibling` (grey socket) unless they are the hovered/pinned host. Tier-1 endpoints receive full `token-chip-on`.
+**Lit vs wire:** Tier-2/3 endpoints receive `token-chip-lit` + hop class (`token-chip-hop2` / `token-chip-hop3`) with **full semantic ink** at reduced opacity — not grey `endpoint-sibling` wash. Sockets use the same semantic color at matching hop opacity.
 
 ---
 

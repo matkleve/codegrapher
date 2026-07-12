@@ -47,10 +47,7 @@ export function FileTreeItem({
       title={name}
       disabled={disabled}
       draggable={!disabled}
-      className={cn(
-        EXPLORER_FILE_ROW,
-        inGraph && "explorer-file-in-graph font-medium text-[var(--explorer-file-in-graph)]",
-      )}
+      className={cn(EXPLORER_FILE_ROW, inGraph && "explorer-file-in-graph")}
       leading={
         fileIcon.vscodeIcon ? (
           <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
