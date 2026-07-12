@@ -15,6 +15,7 @@ import {
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useSimulationOptional } from "@/context/SimulationContext";
 import { SimGutterControl } from "@/components/simulation/SimGutterControl";
+import { inlineValuesForStep } from "@/lib/staticWalk/inlineValues";
 import { ctrlPreviewEdgeId, previewLineHandle } from "@/lib/ctrlPreviewHandles";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import {
@@ -562,10 +563,21 @@ export function CodeLine({
   const lineTargetActive = isHandleActive(lineTargetId);
   const lineKind = edgeKindAtHandle(lineTargetId);
   const sim = useSimulationOptional();
-  const isSimCurrent =
-    sim?.simActive &&
-    sim.session?.memberId === memberId &&
-    sim.session.steps[sim.session.currentIndex]?.lineNumber === lineNumber;
+  const simStep =
+    sim?.simActive && sim.session?.memberId === memberId
+      ? sim.session.steps[sim.session.currentIndex]
+      : undefined;
+  const isSimCurrent = simStep?.lineNumber === lineNumber;
+  const simInlineValues = isSimCurrent && simStep ? inlineValuesForStep(simStep) : [];
+  const simWriteNames =
+    isSimCurrent && simStep ? new Set(simStep.detail.writes.map((w) => w.name)) : null;
+  const simReadNames =
+    isSimCurrent && simStep ? new Set(simStep.detail.reads.map((r) => r.name)) : null;
+  const simTokenClass = (name: string): string | undefined => {
+    if (simWriteNames?.has(name)) return "sim-token-write";
+    if (simReadNames?.has(name)) return "sim-token-read";
+    return undefined;
+  };
   const inSimRange = sim?.isLineInSimRange(memberId, lineNumber) ?? false;
 
   return (
@@ -927,6 +939,7 @@ export function CodeLine({
             semantic={semantic}
             traceKey={tokenKey}
             interactive={interactive}
+            className={simTokenClass(token.text)}
             localDefId={localDefId}
             localTargetId={localTargetId ?? undefined}
             symbolRole={isDefinition ? "definition" : "usage"}
@@ -962,6 +975,25 @@ export function CodeLine({
           />
         );
       })}
+        {simInlineValues.length > 0 ? (
+          <span className="sim-inline-values" aria-hidden>
+            {simInlineValues.map((v) => (
+              <span
+                key={v.name}
+                className={cn(
+                  "sim-inline-value",
+                  v.kind === "unevaluated" && "sim-inline-value--unevaluated",
+                  v.kind === "unknown" && "sim-inline-value--unknown",
+                )}
+              >
+                <span className="sim-inline-value__name">{v.name}</span>
+                {" = "}
+                {v.kind === "unevaluated" ? "~" : ""}
+                {v.display}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </div>
     </div>
   );

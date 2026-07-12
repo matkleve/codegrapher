@@ -1,4 +1,14 @@
 import type { Edge, Node } from "@xyflow/react";
+import { isStructuralEdgeType } from "@/lib/buildStructuralEdges";
+
+function isOverlayStructuralEdge(edge: Edge): boolean {
+  const edgeType = edge.data?.edgeType;
+  return typeof edgeType === "string" && isStructuralEdgeType(edgeType);
+}
+
+function overlayStructuralRestStyle(): { stroke: string; opacity: number } {
+  return { stroke: "var(--muted-foreground)", opacity: 0 };
+}
 
 export function findShortestPath(
   edges: Edge[],
@@ -65,10 +75,11 @@ export function applyPathHighlight(
     })),
     edges: edges.map((e) => ({
       ...e,
+      hidden: edgeSet.has(e.id) ? false : e.hidden,
       className: edgeSet.has(e.id) ? "path-highlight" : undefined,
       animated: edgeSet.has(e.id) ? true : e.animated,
       style: edgeSet.has(e.id)
-        ? { ...e.style, stroke: "var(--ring)", strokeWidth: 3 }
+        ? { ...e.style, stroke: "var(--ring)", strokeWidth: 3, opacity: 1 }
         : e.style,
     })),
   };
@@ -83,14 +94,25 @@ export function clearPathHighlight(
       ...n,
       data: { ...n.data, pathHighlighted: false, selected: false },
     })),
-    edges: edges.map((e) => ({
-      ...e,
-      className: undefined,
-      style:
-        e.data?.edgeType === "imports"
-          ? { stroke: "var(--primary)" }
-          : { stroke: "var(--muted-foreground)" },
-      animated: e.data?.edgeType === "imports",
-    })),
+    edges: edges.map((e) => {
+      if (isOverlayStructuralEdge(e)) {
+        return {
+          ...e,
+          hidden: true,
+          className: undefined,
+          style: overlayStructuralRestStyle(),
+          animated: false,
+        };
+      }
+      return {
+        ...e,
+        className: undefined,
+        style:
+          e.data?.edgeType === "imports"
+            ? { stroke: "var(--primary)" }
+            : { stroke: "var(--muted-foreground)" },
+        animated: e.data?.edgeType === "imports",
+      };
+    }),
   };
 }

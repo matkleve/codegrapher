@@ -1,0 +1,53 @@
+/* Execution simulator — on-canvas value layer.
+   See docs/specs/system/execution-simulator.canvas-values.supplement.md */
+
+.sim-inline-values {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-inline-start: 0.75rem;
+  user-select: none;
+  vertical-align: baseline;
+}
+
+.sim-inline-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1875rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--token-chip-radius);
+  background: color-mix(in oklch, var(--edge-binding) 12%, var(--background));
+  color: var(--edge-binding);
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-2xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sim-inline-value__name {
+  color: var(--muted-foreground);
+}
+
+.sim-inline-value--unevaluated {
+  background: var(--trace-dim-surface);
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.sim-inline-value--unknown {
+  background: var(--trace-dim-surface);
+  color: var(--faint);
+}
+
+/* C2 — read/write lighting on the current step's line. Write stronger than read. */
+.sim-token-read {
+  background: color-mix(in oklch, var(--token-edge-type) 16%, transparent);
+  border-radius: var(--token-chip-radius);
+}
+
+.sim-token-write {
+  background: color-mix(in oklch, var(--edge-binding) 28%, transparent);
+  border-radius: var(--token-chip-radius);
+  font-weight: 640;
+}

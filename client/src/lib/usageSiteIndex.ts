@@ -1,9 +1,8 @@
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { Node } from "@xyflow/react";
 
-const WORD_RE = /\b([A-Za-z_][A-Za-z0-9_]*)\b/g;
-
 import { tokenizeLine } from "@/lib/tokenizeLine";
+import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
 
 export type UsageSiteRecord = {
   flowNodeId: string;
@@ -53,11 +52,11 @@ export function buildUsageSiteIndex(
     const classData = node.data as ClassNodeData;
     const flowNodeId = node.id;
 
-    const scanMemberBody = (memberId: string, code: string) => {
+    const scanMemberBody = (memberId: string, code: string, startLine: number) => {
       const lines = code.split("\n");
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i] ?? "";
-        const lineNumber = i + 1;
+        const lineNumber = fileLineFromSnippetIndex(startLine, i);
         const tokens = tokenizeLine(line).tokens;
         for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
           const tok = tokens[tokenIndex]!;
@@ -77,12 +76,12 @@ export function buildUsageSiteIndex(
     };
 
     for (const method of classData.methods) {
-      scanMemberBody(method.id, method.code);
+      scanMemberBody(method.id, method.code, method.startLine ?? 1);
     }
 
     for (const property of classData.properties) {
       if (!property.code?.trim()) continue;
-      scanMemberBody(property.id, property.code);
+      scanMemberBody(property.id, property.code, property.startLine ?? 1);
     }
   }
 

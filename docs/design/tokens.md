@@ -119,12 +119,15 @@ Persistent taxonomy wires (inheritance, implementation, composition, module impo
 | `--edge-implementation` | `implements` (dotted, hollow triangle) |
 | `--edge-composition` | constructor DI (solid, filled diamond) |
 | `--edge-import` | module import toggle (thin dotted) |
+| `--edge-usage` | usage + transitive preview wires (dashed, function blue) |
+| `--edge-binding` | initializer → binding preview (dotted) |
+| `--edge-control-flow` | `switch`/`if` → branch preview (dash-dot) |
 
 Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColors.ts`.
 
-Preview **binding** wires (initializer → local/param) reuse `--token-edge-variable` with a dotted overlay style (`preview-edge-path--binding`) — not a separate `--edge-*` hue. See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
+Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Usage.
 
-Preview **control-flow** wires (`switch`/`if` → branch) use a dedicated hue, `--edge-control-flow`, with a dash-dot overlay style (`preview-edge-branch`) — unlike binding/usage, they don't reuse a token-kind color, since the anchors are keywords/conditions rather than a specific symbol kind. **Binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Control flow.
+Preview **binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
 
 ### Trace dimming
 

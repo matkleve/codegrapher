@@ -118,6 +118,10 @@ flowchart TB
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
 
+**Sig-type usages in the fan-out:** the body-line scan misses type/class usages that render as `…::sig-type::<token>` chips (return/param annotations). `resolveDefinitionUsageSites` MUST also enumerate those from the DOM and set `liveTo.traceKey` to the sig-type key so `computeTraceLit` lights the chip (`token-chip-lit`/`-on`), honouring the reveal waterfall (collapsed → container, expanded → chip).
+
+**Fan-out line-base:** scans of `method.code` in `resolveDefinitionUsageSites` and `usageSiteIndex` are snippet-relative, but chip keys and preview handles are **file-absolute** — convert via `fileLineFromSnippetIndex(method.startLine, i)` or usage chips never match and stay unlit when expanded.
+
 **DOM fan-out:** Member signature tokens (`isDefinitionSignatureLine`) carry `data-symbol-role="definition"` in `CodeLine` so they are not counted as usage anchors when tracing from the member-row label.
 
 **Same-class usage → def:** `resolveVisibleTarget` MUST NOT skip `flowNodeId === sourceFlowId`. The live wire anchor for a member definition is resolved by `memberDefAnchor.ts`: prefer the **signature-line body chip** when the row is expanded and the user hovered/pinned that chip; fall back to **`.member-row-label`** when the body is collapsed; on re-expand, return to the body chip when `preferBody` is set (locked while pinned).
@@ -220,7 +224,7 @@ Each `ConnectionLegend` row toggles exactly one `ConnectionKind` in `visibleEdge
 | Composition | Persistent `composition` structural wires | Preview wires |
 | Module import | Persistent `imports` structural wires (toggle-gated) | Preview wires |
 
-**Common confusion:** Local variable preview wires (purple/variable, dashed) are **Usage**, not Inheritance. Toggling Inheritance off MUST leave them visible unless Usage is also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, and `branch` separately.
+**Common confusion:** Usage preview wires are always **function blue** (`--edge-usage`), regardless of whether you trace a class, param, or type token — they are **not** Inheritance (solid lila, class-header to class-header). Toggling Inheritance off MUST leave usage wires visible unless Usage is also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, and `branch` separately.
 
 Default on: usage, binding, control flow, inheritance, implementation, composition. Default off: module import.
 

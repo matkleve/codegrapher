@@ -6,7 +6,7 @@ import {
 } from "@/lib/resolvePreviewAnchor";
 import { layoutBranchFanPaths, previewWirePath } from "@/lib/wirePaths";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { TOKEN_EDGE_STROKE } from "@/lib/tokenColors";
+import { previewWireClasses, previewWireMarkerId, previewWireStroke } from "@/lib/connectionWireStyle";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -25,37 +25,22 @@ export function createWireGroup(
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
   group.setAttribute("data-edge-id", spec.id);
 
+  const { path: pathClasses, glow: glowClasses } = previewWireClasses(spec, warm);
+
   const glow = document.createElementNS("http://www.w3.org/2000/svg", "path");
   glow.setAttribute("fill", "none");
-  glow.classList.add("preview-edge-glow");
-  if (warm) glow.classList.add("preview-edge-warm");
+  glow.classList.add(...glowClasses);
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("fill", "none");
-  path.classList.add("preview-edge-path");
-  if (spec.load) path.classList.add("preview-edge-load");
-  if (spec.connectionKind === "binding") {
-    path.classList.add("preview-edge-binding");
-    glow.classList.add("preview-edge-binding");
-  }
-  if (spec.connectionKind === "branch") {
-    path.classList.add("preview-edge-branch");
-    glow.classList.add("preview-edge-branch");
-  }
-  if (warm) path.classList.add("preview-edge-warm");
-  if (spec.hop === 2) {
-    path.classList.add("preview-wire--hop2");
-    glow.classList.add("preview-wire--hop2");
-  }
-  if (spec.hop === 3) {
-    path.classList.add("preview-wire--hop3");
-    glow.classList.add("preview-wire--hop3");
-  }
+  path.classList.add(...pathClasses);
   if (spec.opacity != null && spec.opacity < 1 && spec.hop == null) {
     path.style.opacity = String(spec.opacity);
     glow.style.opacity = String(spec.opacity * 0.12);
   }
-  if (!spec.load) path.setAttribute("marker-end", "url(#preview-edge-arrow)");
+  if (!spec.load) {
+    path.setAttribute("marker-end", `url(#${previewWireMarkerId()})`);
+  }
 
   const hitFrom = document.createElementNS("http://www.w3.org/2000/svg", "path");
   hitFrom.setAttribute("fill", "none");
@@ -65,14 +50,7 @@ export function createWireGroup(
   hitTo.setAttribute("fill", "none");
   hitTo.classList.add("preview-edge-hit");
 
-  const stroke =
-    spec.connectionKind === "branch"
-      ? "var(--edge-control-flow)"
-      : spec.connectionKind === "binding"
-        ? "var(--edge-binding)"
-        : spec.hop != null && spec.hop >= 2
-          ? "var(--edge-transitive)"
-          : TOKEN_EDGE_STROKE[spec.kind];
+  const stroke = previewWireStroke(spec);
   glow.style.stroke = stroke;
   path.style.stroke = stroke;
 
@@ -323,7 +301,7 @@ export function syncWireDom(
         wire.path.removeAttribute("marker-end");
       } else {
         wire.path.classList.remove("preview-edge-load");
-        wire.path.setAttribute("marker-end", "url(#preview-edge-arrow)");
+        wire.path.setAttribute("marker-end", `url(#${previewWireMarkerId()})`);
       }
     }
   }

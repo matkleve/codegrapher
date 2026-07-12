@@ -1,9 +1,10 @@
 import { chipClearance, cubicPath, resolvePreviewAnchor } from "@/lib/resolvePreviewAnchor";
-import { STRUCTURAL_EDGE_STROKE } from "@/lib/structuralEdgeColors";
 import {
+  STRUCTURAL_EDGE_STROKE,
   structuralMarkerId,
-  type StructuralEdgeSpec,
-} from "@/lib/structuralEdgeTypes";
+  structuralWireClasses,
+} from "@/lib/connectionWireStyle";
+import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { Node } from "@xyflow/react";
 
 export type StructuralWireElements = {
@@ -18,12 +19,8 @@ export function createStructuralWireGroup(spec: StructuralEdgeSpec): StructuralW
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("fill", "none");
-  path.classList.add("structural-edge-path");
-  path.classList.add(`structural-edge-path--${spec.strokeStyle}`);
-  path.classList.add(`structural-edge-path--${spec.edgeType}`);
-  if (spec.pulse) path.classList.add("structural-edge-path--pulse");
+  path.classList.add(...structuralWireClasses(spec));
   if (spec.opacity != null && spec.opacity < 1) {
-    path.classList.add("structural-edge-path--faded");
     path.style.opacity = String(spec.opacity);
   }
 

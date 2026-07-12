@@ -18,6 +18,7 @@ import {
 } from "@/lib/classNodeLayout";
 import { camelToWords } from "@/lib/camelToWords";
 import { fileDisplayName } from "@/lib/recentFiles";
+import { isStructuralEdgeType } from "@/lib/buildStructuralEdges";
 import type { GraphData, GraphNode } from "@/types";
 
 export type FlowNodeUiState = {
@@ -306,16 +307,21 @@ export function graphToFlow(
     if (edge.type === "contains") continue;
 
     const isImport = edge.type === "imports";
+    const isOverlayStructural = isStructuralEdgeType(edge.type);
     edges.push({
       id: flowEdgeId(edge),
       source,
       target,
       label: edge.label ?? undefined,
-      animated: isImport,
+      hidden: isOverlayStructural,
+      selectable: false,
+      animated: isImport && !isOverlayStructural,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: isImport
-        ? { stroke: "var(--primary)" }
-        : { stroke: "var(--muted-foreground)" },
+      style: isOverlayStructural
+        ? { stroke: "var(--muted-foreground)", opacity: 0 }
+        : isImport
+          ? { stroke: "var(--primary)" }
+          : { stroke: "var(--muted-foreground)" },
       labelStyle: {
         fontSize: 12,
         fill: "var(--foreground)",

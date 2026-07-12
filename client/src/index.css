@@ -143,6 +143,7 @@
   --edge-transitive: oklch(0.58 0.02 250);
   --edge-control-flow: oklch(0.50 0.13 145);
   --edge-binding: oklch(0.50 0.11 200);
+  --edge-usage: var(--token-edge-function);
   --code-type-primitive: oklch(0.52 0.05 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);
@@ -273,6 +274,7 @@ html.dark {
   --edge-transitive: oklch(0.62 0.02 250);
   --edge-control-flow: oklch(0.72 0.12 145);
   --edge-binding: oklch(0.72 0.09 200);
+  --edge-usage: var(--token-edge-function);
   --code-type-primitive: oklch(0.62 0.04 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 12%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);
@@ -815,16 +817,9 @@ html.dark {
   background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
 }
 
-@keyframes flowDash {
-  from {
-    stroke-dashoffset: 24;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
 
 @import "./styles/tokens-chips.css";
 @import "./styles/trace-modes.css";
 @import "./styles/preview-wires.css";
 @import "./styles/nodes.css";
+@import "./styles/simulation.css";

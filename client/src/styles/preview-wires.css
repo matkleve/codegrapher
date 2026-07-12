@@ -120,7 +120,7 @@
 }
 
 .structural-edge-path--solid {
-  stroke-dasharray: none;
+  stroke-dasharray: unset;
 }
 
 .structural-edge-path--dotted {
@@ -140,9 +140,23 @@
   opacity: 0.5;
 }
 
-/* Legend swatches — reuse map wire styles + flow on dashed/dotted kinds */
-.connection-legend-swatch--flow {
+/* Legend swatches — reuse map wire classes + always-on motion at map speeds */
+.connection-legend-swatch-line--dotted-flow {
   animation: proto-flow 700ms linear infinite;
+}
+
+.connection-legend-swatch--firing .connection-legend-swatch-line {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
+}
+
+.connection-legend-swatch--idle .connection-legend-swatch-line {
+  opacity: 0.72;
+}
+
+.connection-legend-row--firing .control-row-text-primary {
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .hoverable:hover .connection-legend-swatch--inactive {
@@ -192,7 +206,7 @@
 @media (prefers-reduced-motion: reduce) {
   .preview-edge-path,
   .preview-edge-glow,
-  .connection-legend-swatch--flow,
+  .connection-legend-swatch-line,
   .graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
   .graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after,
   .graph-pane.graph-ctrl-preview .react-flow__node.class-node-root::after {

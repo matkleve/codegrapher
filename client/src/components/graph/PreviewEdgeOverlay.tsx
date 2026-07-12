@@ -17,6 +17,7 @@ import {
 } from "@/lib/structuralEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
+import { WireMarkerDefs } from "@/components/graph/WireMarkerDefs";
 
 export function PreviewEdgeOverlay() {
   const {
@@ -161,56 +162,7 @@ export function PreviewEdgeOverlay() {
       aria-hidden
     >
       <defs>
-        <marker
-          id="preview-edge-arrow"
-          markerWidth="5"
-          markerHeight="5"
-          refX="4"
-          refY="2.5"
-          orient="auto"
-        >
-          <path d="M0,0 L5,2.5 L0,5 Z" fill="context-stroke" />
-        </marker>
-        <marker
-          id="structural-arrow-triangle"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="4"
-          orient="auto"
-        >
-          <path
-            d="M0,0 L8,4 L0,8 Z"
-            fill="none"
-            stroke="context-stroke"
-            strokeWidth="1.2"
-          />
-        </marker>
-        <marker
-          id="structural-arrow-diamond"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="4"
-          orient="auto"
-        >
-          <path d="M0,4 L4,0 L8,4 L4,8 Z" fill="context-stroke" />
-        </marker>
-        <marker
-          id="structural-arrow-open"
-          markerWidth="6"
-          markerHeight="6"
-          refX="5"
-          refY="3"
-          orient="auto"
-        >
-          <path
-            d="M0,0 L6,3 L0,6"
-            fill="none"
-            stroke="context-stroke"
-            strokeWidth="1"
-          />
-        </marker>
+        <WireMarkerDefs />
       </defs>
     </svg>
   );

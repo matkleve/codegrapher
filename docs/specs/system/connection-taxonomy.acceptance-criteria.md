@@ -28,7 +28,7 @@ Child of [connection-taxonomy.md](connection-taxonomy.md). Per-kind Actions, Dat
 | ----- | ----- |
 | Direction | definition → usage |
 | Persistent | No |
-| Color | Per token-kind (`TOKEN_EDGE_STROKE`) |
+| Color | Dedicated hue (`--edge-usage`) — not token-kind color |
 | Line | Dashed |
 | Arrowhead | Open |
 | Anchor escalation | class header → member row → line chip |
@@ -65,7 +65,7 @@ Child of [connection-taxonomy.md](connection-taxonomy.md). Per-kind Actions, Dat
 | ----- | ----- |
 | Direction | definition → usage (each hop) |
 | Persistent | No — on-demand only, same as usage |
-| Color | Same token-kind family as usage, opacity decayed per hop |
+| Color | Same hue as usage (`--edge-usage`), opacity decayed per hop |
 | Line | Dashed |
 | Arrowhead | Open |
 | Default `transitiveHopDepth` | **2** |

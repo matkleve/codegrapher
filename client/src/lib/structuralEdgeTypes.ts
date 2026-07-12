@@ -1,8 +1,14 @@
 import type { StructuralEdgeType } from "@/types";
 import type { AnchorRef } from "@/lib/previewEdgeTypes";
+import {
+  STRUCTURAL_EDGE_STYLE,
+  structuralMarkerId,
+  type StructuralArrowhead,
+  type StructuralStrokeStyle,
+} from "@/lib/connectionWireStyle";
 
-export type StructuralStrokeStyle = "solid" | "dotted";
-export type StructuralArrowhead = "triangle-hollow" | "diamond-filled" | "open";
+export type { StructuralStrokeStyle, StructuralArrowhead };
+export { STRUCTURAL_EDGE_STYLE, structuralMarkerId };
 
 export type StructuralEdgeSpec = {
   id: string;
@@ -17,24 +23,3 @@ export type StructuralEdgeSpec = {
   /** Hop decay for transitive overlay reuse (optional). */
   opacity?: number;
 };
-
-export const STRUCTURAL_EDGE_STYLE: Record<
-  StructuralEdgeType,
-  { strokeStyle: StructuralStrokeStyle; arrowhead: StructuralArrowhead }
-> = {
-  extends: { strokeStyle: "solid", arrowhead: "triangle-hollow" },
-  implements: { strokeStyle: "dotted", arrowhead: "triangle-hollow" },
-  composition: { strokeStyle: "solid", arrowhead: "diamond-filled" },
-  imports: { strokeStyle: "dotted", arrowhead: "open" },
-};
-
-export function structuralMarkerId(arrowhead: StructuralArrowhead): string {
-  switch (arrowhead) {
-    case "triangle-hollow":
-      return "structural-arrow-triangle";
-    case "diamond-filled":
-      return "structural-arrow-diamond";
-    case "open":
-      return "structural-arrow-open";
-  }
-}

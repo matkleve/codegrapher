@@ -105,6 +105,7 @@ trace that starts mid-method still maps each step to the correct statement.
 - **Interactions (index):** [execution-simulator.interactions.supplement.md](execution-simulator.interactions.supplement.md) · [modes](execution-simulator.modes.supplement.md) · [surfaces](execution-simulator.surfaces.supplement.md) · [AC](execution-simulator.interactions.acceptance-criteria.md)
 - **Vision (S2+ scenario graph, mocks):** [execution-simulator.vision.supplement.md](execution-simulator.vision.supplement.md) · **S1 transport/panel:** [execution-simulator.transport-panel.supplement.md](execution-simulator.transport-panel.supplement.md)
 - Workspace (gutter, tabs, ledger, paths): [execution-simulator.workspace.supplement.md](execution-simulator.workspace.supplement.md)
+- On-canvas values & variable lighting (value pills, read/write lighting, value pulses, watch): [execution-simulator.canvas-values.supplement.md](execution-simulator.canvas-values.supplement.md)
 - Engine options B/C: [execution-simulator.engine-options.supplement.md](execution-simulator.engine-options.supplement.md)
 
 ## References

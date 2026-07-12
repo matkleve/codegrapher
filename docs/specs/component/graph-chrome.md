@@ -6,7 +6,7 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 ## What It Looks Like
 
-**ConnectionLegend** — compact "Legend" button, top-right of canvas overlay. Dropdown lists each connection kind with a swatch and label; click toggles visibility. Module import off by default.
+**ConnectionLegend** — compact "Legend" button, top-right of canvas overlay. Dropdown lists each connection kind with a swatch and label; click toggles visibility. While open, kinds with live wires on the overlay are emphasized (brand glow on swatch, semibold label). Module import off by default.
 
 **TokenConnectionMenu** — anchored dropdown below a token chip on hover (external/off-canvas targets) or on right-click (full Jump + Load + Open in editor). Shows **Load all · N** when ≥2 off-canvas rows.
 
