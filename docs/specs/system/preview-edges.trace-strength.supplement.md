@@ -94,11 +94,11 @@ They are the **same logical slots** (one `localDefId` for the param; one indexed
 - Header sig-type hover → tier-2 typesetting to the **header** `result` chip, then chained wires from that chip into the body.
 - Inline sig-type hover → same chain anchored on the **body signature line** chips.
 
-Implementation: `findParamDefCoLocated` / `findParamTypeChipCoLocated` in `paramTypeAnchors.ts`; `preferOriginEl: true` on `buildSignatureTypeParamCascade` so the body duplicate does not steal the chain origin.
+Implementation: `findParamDefCoLocated` / `findParamTypeChipCoLocated` in `paramTypeAnchors.ts`; `preferOriginEl: true` on `traceSigTypeEdges` (`traceEdgesForOrigin.ts`) so the body duplicate does not steal the chain origin.
 
 ### Relative walk depth knobs
 
-Tunable in `client/src/lib/defRelativePreviewEdges.ts`:
+Tunable in `client/src/lib/lexicalGraph.ts` (consumed by `walkLexicalForward` / `walkLexicalBackward` and the `defRelativePreviewEdges` facade):
 
 | Export | Default | Meaning |
 | ------ | ------- | ------- |
@@ -106,6 +106,14 @@ Tunable in `client/src/lib/defRelativePreviewEdges.ts`:
 | `TRACE_DEPTH_UP` / `BACKWARD_LEXICAL_MAX_DEPTH` | 5 | Max hops **upstream** from a usage |
 | `RELATIVE_FAN_OUT_CAP` | 24 | Max wires per relative walk |
 | `TRACE_VISUAL_HOP_MAX` | 3 | Opacity tiers (`hop: 2` ≈ half, `hop: 3` ≈ quarter) |
+
+**Lexical graph edge kinds** (`buildLexicalGraph` from `MemberSymbolIndex`):
+
+| Kind | Meaning | Same-line policy |
+| ---- | ------- | ---------------- |
+| `usage` | usage site → def | always emitted |
+| `binding-init` | binding def ↔ initializer site | adapter chains same-line binding from def anchor, not usage token |
+| `member-access` | receiver site → property site | emitted only when **cross-line**; same-line `receiver.property` micro-hops are skipped at build time |
 
 ### Data
 
@@ -165,6 +173,10 @@ Indexed types in the same file as an on-canvas class (e.g. `export type AddressF
 
 | File | Change |
 | ---- | ------ |
+| `lexicalGraph.ts` | Build adjacency graph from `MemberSymbolIndex`; `walkLexical*` for forward/backward relatives |
+| `lexicalWalkPreviewEdges.ts` | `LexicalWalkHop[]` → `PreviewEdgeSpec[]` (anchors, hop tiers, degenerate filters) |
+| `traceEdgesForOrigin.ts` | Orchestrator: sig-type, param-def, binding-init cascade entry points |
+| `defRelativePreviewEdges.ts` | Thin facade over `walkLexical*` + adapter |
 | `paramTypeCascadeEdges.ts` | Build tier 2/3 edges from param usage/def + signature type |
 | `wirePaths.ts` | `typesettingOrthogonalPath` — rounded-corner Manhattan for `connectionKind: "typesetting"` |
 | `codeLineTraceEdges.ts` | Merge cascade on inline signature param def/usage and body param usage |

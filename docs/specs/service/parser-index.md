@@ -82,6 +82,7 @@ Stateless per request. Client owns merged ego-graph state.
 | `server/src/index.ts` | Route handlers |
 | `client/src/lib/resolveVisibleTarget.ts` | Consumes scoped entries to resolve hover/click targets |
 | `client/src/lib/localSymbolLinks.ts` | Client-local param/local lexical index (pre-dates server indexing of these kinds) |
+| `client/src/lib/lexicalGraph.ts` | Client adapter: builds bidirectional adjacency (`usage`, `binding-init`, `member-access`) from `MemberSymbolIndex` for O(edges) relative walks |
 
 ## Acceptance Criteria
 

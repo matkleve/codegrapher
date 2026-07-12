@@ -1,4 +1,5 @@
 import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
+import type { LexicalGraph } from "@/lib/lexicalGraph";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
 
 export type CodeLineProps = {
@@ -10,6 +11,7 @@ export type CodeLineProps = {
   filePath: string;
   definedInLabel: string;
   symbolIndex: MemberSymbolIndex;
+  lexicalGraph: LexicalGraph;
   controlFlowIndex: ControlFlowIndex;
   /** Raw member identifier — signature-line chips with this name are definitions. */
   memberSymbolName?: string;

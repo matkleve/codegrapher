@@ -29,6 +29,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
     definedInLabel,
     sourceGraphNodeId,
     symbolIndex,
+    lexicalGraph,
     controlFlowIndex,
     methodCode,
     methodStartLine,
@@ -127,6 +128,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
         hasSymbol,
         lookup,
         cascadeEdges,
+        lexicalGraph,
       });
 
       const loadEdge = primaryHoverLoadEdge(edges, chipEl);
@@ -156,6 +158,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
       showUsageLoadMenu,
       sourceFlowId,
       symbolIndex,
+      lexicalGraph,
       controlFlowIndex,
       symbols,
       methodCode,

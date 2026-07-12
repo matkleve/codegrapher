@@ -16,6 +16,7 @@ import {
   buildMemberSymbolIndex,
   memberDefId,
 } from "@/lib/localSymbolLinks";
+import { buildLexicalGraph } from "@/lib/lexicalGraph";
 import { buildControlFlowIndex } from "@/lib/controlFlowLinks";
 import { symbolKindToSemantic, TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { makeTokenInfo } from "@/lib/tokenContextInfo";
@@ -96,6 +97,10 @@ export function CollapsibleMemberRow({
   const symbolIndex = useMemo(
     () => buildMemberSymbolIndex(memberId, code, startLine),
     [memberId, code, startLine],
+  );
+  const lexicalGraph = useMemo(
+    () => buildLexicalGraph(symbolIndex, code, startLine),
+    [symbolIndex, code, startLine],
   );
   const controlFlowIndex = useMemo(
     () => buildControlFlowIndex(memberId, code, startLine),
@@ -379,6 +384,9 @@ export function CollapsibleMemberRow({
             filePath={filePath}
             classLabel={classLabel}
             symbolIndex={symbolIndex}
+            lexicalGraph={lexicalGraph}
+            methodCode={code}
+            methodStartLine={startLine}
           />
         ) : null}
         {overrideInfo ? (
@@ -429,6 +437,7 @@ export function CollapsibleMemberRow({
                 filePath={filePath}
                 definedInLabel={classLabel}
                 symbolIndex={symbolIndex}
+                lexicalGraph={lexicalGraph}
                 controlFlowIndex={controlFlowIndex}
                 memberSymbolName={symbolName}
                 methodCode={code}

@@ -1,6 +1,6 @@
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
-import { buildBindingInitializerCascadeEdges } from "@/lib/bindingInitializerCascade";
+import { buildLexicalGraph, type LexicalGraph } from "@/lib/lexicalGraph";
 import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
 import { buildLocalPreviewEdges, canonicalLocalDefHost } from "@/lib/localDefLinks";
 import {
@@ -18,7 +18,10 @@ import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { SymbolEntry, GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
 import { buildBackwardLexicalRelatives } from "@/lib/defRelativePreviewEdges";
-import { buildSignatureTypeParamCascade } from "@/lib/signatureTypeParamCascade";
+import {
+  traceBindingInitCascadeEdges,
+  traceSigTypeEdges,
+} from "@/lib/traceEdgesForOrigin";
 import { paramNameForSignatureType } from "@/lib/paramTypeAnchors";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { tokenizeLine } from "@/lib/tokenizeLine";
@@ -73,6 +76,12 @@ function backwardLexicalEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
   });
 }
 
+function lexicalGraphFor(ctx: CodeLineTraceContext): LexicalGraph | null {
+  if (ctx.lexicalGraph) return ctx.lexicalGraph;
+  if (!ctx.methodCode || ctx.methodStartLine == null) return null;
+  return buildLexicalGraph(ctx.symbolIndex, ctx.methodCode, ctx.methodStartLine);
+}
+
 function signatureTypeRelativeEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
   const {
     name,
@@ -87,25 +96,32 @@ function signatureTypeRelativeEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[
     symbols,
     graphData,
     getNode,
+    hasSymbol,
   } = ctx;
   if (!methodCode || methodStartLine == null) return [];
   if (kind !== "type" && kind !== "class") return [];
+  const graph = lexicalGraphFor(ctx);
+  if (!graph) return [];
   const lineIdx = lineNumber - methodStartLine;
   if (lineIdx < 0) return [];
   const lineText = methodCode.split("\n")[lineIdx] ?? "";
   const paramName = paramNameForSignatureType(lineText, name);
   if (!paramName) return [];
-  return buildSignatureTypeParamCascade({
+  return traceSigTypeEdges({
     symbolName: name,
     typeKind: kind,
     sigTypeEl: chipEl,
     paramName,
     symbolIndex,
+    lexicalGraph: graph,
+    methodCode,
+    methodStartLine,
     flowNodeId: sourceFlowId,
     memberId,
     symbols,
     graphData,
     getNode,
+    hasSymbol,
     edgeIdPrefix: `sig-inline-${paramName}-${name}`,
   });
 }
@@ -129,6 +145,7 @@ export type CodeLineTraceContext = {
   hasSymbol: (name: string) => boolean;
   lookup: (name: string) => SymbolEntry | undefined;
   cascadeEdges: PreviewEdgeSpec[];
+  lexicalGraph?: LexicalGraph;
 };
 
 /** Assembles preview edges for a CodeLine usage/definition token hover. */
@@ -207,19 +224,23 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     methodCode &&
     methodStartLine != null
   ) {
-    bindingCascade = buildBindingInitializerCascadeEdges({
-      bindingDefEl: bindingDefElForCascade,
-      symbolIndex,
-      flowNodeId: sourceFlowId,
-      memberId,
-      methodCode,
-      methodStartLine,
-      edgeIdPrefix: edgeKey,
-      symbols,
-      graphData,
-      getNode,
-      hasSymbol,
-    });
+    const graph = lexicalGraphFor(ctx);
+    if (graph) {
+      bindingCascade = traceBindingInitCascadeEdges({
+        bindingDefEl: bindingDefElForCascade,
+        symbolIndex,
+        lexicalGraph: graph,
+        methodCode,
+        methodStartLine,
+        flowNodeId: sourceFlowId,
+        memberId,
+        edgeIdPrefix: edgeKey,
+        symbols,
+        graphData,
+        getNode,
+        hasSymbol,
+      });
+    }
   }
 
   const skipControlFlow =

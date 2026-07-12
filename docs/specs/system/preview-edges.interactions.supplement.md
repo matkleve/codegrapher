@@ -138,7 +138,7 @@ flowchart TB
 
 ## Local lexical trace (usage + binding)
 
-Params and locals use a client-side lexical index (`localSymbolLinks.ts`). Two preview kinds apply:
+Params and locals use a client-side lexical index (`localSymbolLinks.ts`) built into a **`LexicalGraph`** adjacency structure (`lexicalGraph.ts`) per expanded member row. Relative walks (forward from a def, backward from a usage) use a single `walkLexical*` BFS; `lexicalWalkPreviewEdges.ts` maps hops to `PreviewEdgeSpec`. Two preview kinds apply:
 
 ```mermaid
 flowchart LR

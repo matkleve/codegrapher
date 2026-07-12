@@ -15,7 +15,7 @@ export function saveShowGrid(show: boolean): void {
   localStorage.setItem(GRAPH_GRID_STORAGE_KEY, JSON.stringify(show));
 }
 
-/** Keep grid lines aligned with React Flow pan/zoom. */
+/** Keep dot grid aligned with React Flow pan/zoom. */
 export function syncGridToViewport(
   viewport: { x: number; y: number; zoom: number },
   gridEl: HTMLElement,

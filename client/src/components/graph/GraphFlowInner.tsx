@@ -18,7 +18,7 @@ import {
   ChevronRight,
   Crosshair,
   FileText,
-  Grid3x3,
+  Grip,
   Maximize2,
   Waypoints,
 } from "lucide-react";
@@ -593,7 +593,7 @@ export function GraphFlowInner({
               ref={gridRef}
               aria-hidden
               className={cn(
-                "graph-canvas-grid pointer-events-none absolute inset-0 z-0",
+                "graph-canvas-grid canvas-dot-grid pointer-events-none absolute inset-0 z-0",
                 !showGrid && "hidden",
               )}
             />
@@ -643,7 +643,7 @@ export function GraphFlowInner({
                 aria-pressed={showGrid}
                 onClick={toggleGrid}
               >
-                <Grid3x3 />
+                <Grip />
               </GraphMapControlButton>
               <GraphMapControlButton
                 flashKey="reading"

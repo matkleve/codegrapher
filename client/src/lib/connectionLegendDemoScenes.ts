@@ -1,7 +1,17 @@
 import type { DemoWireSpec } from "@/hooks/useLegendDemoWire";
 import type { LegendConnectionKind } from "@/lib/connectionWireStyle";
 
-export type DemoCodePart = { text: string; anchorId?: string; tokenKind?: string };
+export type DemoCodePart = {
+  text: string;
+  anchorId?: string;
+  tokenKind?: string;
+  tone?: "kw" | "pn";
+};
+
+export type DemoCodeLineScene = {
+  lineNo?: number;
+  parts: DemoCodePart[];
+};
 
 export type DemoMemberScene = {
   id: string;
@@ -9,8 +19,7 @@ export type DemoMemberScene = {
   labelAnchorId?: string;
   labelTokenKind?: "function" | "class" | "type" | "variable";
   signature?: DemoCodePart[];
-  body?: DemoCodePart[];
-  branchTargets?: { id: string; label: string }[];
+  body?: DemoCodeLineScene[];
 };
 
 export type DemoCardScene = {
@@ -54,9 +63,13 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
             label: "process",
             labelTokenKind: "function",
             body: [
-              { text: "return " },
-              { text: "extractFieldValue", anchorId: "usage", tokenKind: "function" },
-              { text: "(field)" },
+              {
+                parts: [
+                  { text: "return ", tone: "kw" },
+                  { text: "extractFieldValue", anchorId: "usage", tokenKind: "function" },
+                  { text: "(field)" },
+                ],
+              },
             ],
           },
         ],
@@ -82,10 +95,14 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
             label: "extract Field Value",
             labelTokenKind: "function",
             body: [
-              { text: "const " },
-              { text: "addr", anchorId: "bind", tokenKind: "variable" },
-              { text: " = " },
-              { text: "result.address", anchorId: "init", tokenKind: "variable" },
+              {
+                parts: [
+                  { text: "const ", tone: "kw" },
+                  { text: "addr", anchorId: "bind", tokenKind: "variable" },
+                  { text: " = " },
+                  { text: "result.address", anchorId: "init", tokenKind: "variable" },
+                ],
+              },
             ],
           },
         ],
@@ -141,13 +158,35 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
             label: "extract Field Value",
             labelTokenKind: "function",
             body: [
-              { text: "switch (" },
-              { text: "field", anchorId: "trunk", tokenKind: "variable" },
-              { text: ") {" },
-            ],
-            branchTargets: [
-              { id: "caseA", label: "case A" },
-              { id: "caseB", label: "case B" },
+              {
+                lineNo: 1,
+                parts: [
+                  { text: "switch ", tone: "kw" },
+                  { text: "(" },
+                  { text: "field", anchorId: "trunk", tokenKind: "variable" },
+                  { text: ") {" },
+                ],
+              },
+              {
+                lineNo: 2,
+                parts: [
+                  { text: "  case ", tone: "kw" },
+                  { text: "A", anchorId: "caseA", tokenKind: "variable" },
+                  { text: ": break;" },
+                ],
+              },
+              {
+                lineNo: 3,
+                parts: [
+                  { text: "  case ", tone: "kw" },
+                  { text: "B", anchorId: "caseB", tokenKind: "variable" },
+                  { text: ": break;" },
+                ],
+              },
+              {
+                lineNo: 4,
+                parts: [{ text: "}" }],
+              },
             ],
           },
         ],
@@ -170,14 +209,28 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
         title: "Base Service",
         titleAnchorId: "base",
         variant: "class",
-        members: [{ id: "m1", label: "run", labelTokenKind: "function", body: [{ text: "run()" }] }],
+        members: [
+          {
+            id: "m1",
+            label: "run",
+            labelTokenKind: "function",
+            body: [{ parts: [{ text: "run()" }] }],
+          },
+        ],
       },
       {
         id: "child",
         title: "Order Service",
         titleAnchorId: "child",
         variant: "class",
-        members: [{ id: "m2", label: "run", labelTokenKind: "function", body: [{ text: "super.run()" }] }],
+        members: [
+          {
+            id: "m2",
+            label: "run",
+            labelTokenKind: "function",
+            body: [{ parts: [{ text: "super.run()" }] }],
+          },
+        ],
       },
     ],
     wire: {
@@ -194,14 +247,28 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
         title: "I Repository",
         titleAnchorId: "iface",
         variant: "interface",
-        members: [{ id: "m1", label: "find", labelTokenKind: "function", body: [{ text: "find(): T" }] }],
+        members: [
+          {
+            id: "m1",
+            label: "find",
+            labelTokenKind: "function",
+            body: [{ parts: [{ text: "find(): T" }] }],
+          },
+        ],
       },
       {
         id: "impl",
         title: "Repository",
         titleAnchorId: "impl",
         variant: "class",
-        members: [{ id: "m2", label: "find", labelTokenKind: "function", body: [{ text: "find(): T" }] }],
+        members: [
+          {
+            id: "m2",
+            label: "find",
+            labelTokenKind: "function",
+            body: [{ parts: [{ text: "find(): T" }] }],
+          },
+        ],
       },
     ],
     wire: {
@@ -218,7 +285,14 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
         title: "Payment Gateway",
         titleAnchorId: "dep",
         variant: "class",
-        members: [{ id: "m1", label: "charge", labelTokenKind: "function", body: [{ text: "charge()" }] }],
+        members: [
+          {
+            id: "m1",
+            label: "charge",
+            labelTokenKind: "function",
+            body: [{ parts: [{ text: "charge()" }] }],
+          },
+        ],
       },
       {
         id: "owner",
@@ -229,7 +303,11 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
             id: "m2",
             label: "constructor",
             labelTokenKind: "function",
-            body: [{ text: "gateway", anchorId: "dep-inject", tokenKind: "variable" }],
+            body: [
+              {
+                parts: [{ text: "gateway", anchorId: "dep-inject", tokenKind: "variable" }],
+              },
+            ],
           },
         ],
       },
@@ -265,9 +343,14 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
             id: "m2",
             label: "order.ts",
             body: [
-              { text: "import { " },
-              { text: "formatDate", anchorId: "import-use", tokenKind: "function" },
-              { text: " }" },
+              {
+                parts: [
+                  { text: "import ", tone: "kw" },
+                  { text: "{ " },
+                  { text: "formatDate", anchorId: "import-use", tokenKind: "function" },
+                  { text: " }" },
+                ],
+              },
             ],
           },
         ],
@@ -281,3 +364,19 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
     },
   },
 };
+
+export function countLegendDemoLines(scene: DemoScene): number {
+  return scene.cards.reduce(
+    (total, card) =>
+      total +
+      card.members.reduce((memberTotal, member) => memberTotal + (member.body?.length ?? 0), 0),
+    0,
+  );
+}
+
+export function legendDemoNeedsTallCanvas(scene: DemoScene): boolean {
+  if (countLegendDemoLines(scene) > 2) return true;
+  return scene.cards.some((card) =>
+    card.members.some((member) => Boolean(member.signature?.length && !member.body?.length)),
+  );
+}

@@ -74,7 +74,7 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
         density="compact"
         title={load.token}
         actionLabel="Load"
-        className="h-full min-w-0 rounded-[inherit] border-0"
+        className="h-full min-w-0 gap-1 rounded-[inherit] border-0 pr-1"
         leading={<ConnectionTargetLeading kind={edge.kind} size={10} />}
         trailing={
           <FlowAnchor

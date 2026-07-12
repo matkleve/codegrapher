@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { paramNameForSignatureType } from "@/lib/paramTypeAnchors";
-import { buildSignatureTypeParamCascade } from "@/lib/signatureTypeParamCascade";
+import { buildLexicalGraph } from "@/lib/lexicalGraph";
+import { traceSigTypeEdges } from "@/lib/traceEdgesForOrigin";
 import { buildMemberSymbolIndex, paramDefForName } from "@/lib/localSymbolLinks";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 
@@ -27,9 +28,10 @@ describe("paramNameForSignatureType", () => {
   });
 });
 
-describe("buildSignatureTypeParamCascade", () => {
+describe("traceSigTypeEdges", () => {
   it("fans out from sig-type through param to lexical relatives", () => {
     const index = buildMemberSymbolIndex(MEMBER, CODE, 10);
+    const graph = buildLexicalGraph(index, CODE, 10);
     const sigEl = document.createElement("span");
     sigEl.dataset.traceKey = "sig-type";
 
@@ -49,12 +51,15 @@ describe("buildSignatureTypeParamCascade", () => {
       properties: [],
     };
 
-    const edges = buildSignatureTypeParamCascade({
+    const edges = traceSigTypeEdges({
       symbolName: "GeocoderSearchResult",
       typeKind: "type",
       sigTypeEl: sigEl,
       paramName: "result",
       symbolIndex: index,
+      lexicalGraph: graph,
+      methodCode: CODE,
+      methodStartLine: 10,
       flowNodeId: FLOW,
       memberId: MEMBER,
       symbols: new Map(),
@@ -65,6 +70,7 @@ describe("buildSignatureTypeParamCascade", () => {
         position: { x: 0, y: 0 },
         data: classData,
       }),
+      hasSymbol: () => false,
       edgeIdPrefix: "test",
     });
 

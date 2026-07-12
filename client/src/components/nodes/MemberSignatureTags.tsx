@@ -2,6 +2,7 @@ import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { MemberSignatureParamChip } from "@/components/nodes/MemberSignatureParamChip";
 import { MemberSignatureTypeLabel } from "@/components/nodes/MemberSignatureTypeLabel";
 import type { MethodSignature } from "@/lib/parseMethodSignature";
+import type { LexicalGraph } from "@/lib/lexicalGraph";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,9 @@ type MemberSignatureTagsProps = {
   filePath: string;
   classLabel: string;
   symbolIndex: MemberSymbolIndex;
+  lexicalGraph: LexicalGraph;
+  methodCode: string;
+  methodStartLine: number;
   className?: string;
 };
 
@@ -27,6 +31,9 @@ export function MemberSignatureTags({
   filePath,
   classLabel,
   symbolIndex,
+  lexicalGraph,
+  methodCode,
+  methodStartLine,
   className,
 }: MemberSignatureTagsProps) {
   const { params, returnType } = signature;
@@ -60,6 +67,7 @@ export function MemberSignatureTags({
                   filePath={filePath}
                   classLabel={classLabel}
                   symbolIndex={symbolIndex}
+                  lexicalGraph={lexicalGraph}
                   shimmerDelay={`-${((memberId.length + index) * 0.37).toFixed(2)}s`}
                 />
                 {param.type ? (
@@ -78,6 +86,9 @@ export function MemberSignatureTags({
                   filePath={filePath}
                   paramName={param.name}
                   symbolIndex={symbolIndex}
+                  lexicalGraph={lexicalGraph}
+                  methodCode={methodCode}
+                  methodStartLine={methodStartLine}
                   shimmerDelay={`-${((memberId.length + index + 1) * 0.37).toFixed(2)}s`}
                 />
               ) : null}

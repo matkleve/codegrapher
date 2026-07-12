@@ -1,11 +1,17 @@
 /* Graph canvas — grid, pane cursors, resizer, scrollbars. */
 
+.canvas-dot-grid {
+  background-image:
+    radial-gradient(
+      circle,
+      color-mix(in oklch, var(--muted-foreground) 42%, transparent) 1px,
+      transparent 1px
+    );
+  background-repeat: repeat;
+}
+
 .graph-canvas-grid {
   background-color: var(--background);
-  background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px);
-  background-repeat: repeat;
 }
 
 .graph-flow-container {

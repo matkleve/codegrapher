@@ -5,7 +5,7 @@ import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { buildSignatureTypeUsageEdges } from "@/lib/signatureTypeEdges";
-import { buildSignatureTypeParamCascade } from "@/lib/signatureTypeParamCascade";
+import { traceSigTypeEdges } from "@/lib/traceEdgesForOrigin";
 import { connectionCountsForHost } from "@/lib/connectionCounts";
 import {
   buildHoverLoadMenu,
@@ -18,6 +18,7 @@ import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { makeSignatureTypeKey } from "@/lib/traceKeys";
 
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
+import type { LexicalGraph } from "@/lib/lexicalGraph";
 
 type UseMemberSignatureTypeTraceArgs = {
   type: string;
@@ -30,6 +31,9 @@ type UseMemberSignatureTypeTraceArgs = {
   /** Set for param input types (`result: GeocoderSearchResult`). */
   paramName?: string;
   symbolIndex?: MemberSymbolIndex;
+  lexicalGraph?: LexicalGraph;
+  methodCode?: string;
+  methodStartLine?: number;
 };
 
 export function useMemberSignatureTypeTrace({
@@ -42,6 +46,9 @@ export function useMemberSignatureTypeTrace({
   hostRef,
   paramName,
   symbolIndex,
+  lexicalGraph,
+  methodCode,
+  methodStartLine,
 }: UseMemberSignatureTypeTraceArgs) {
   const { hasSymbol, symbols } = useIndex();
   const { getNode } = useReactFlow();
@@ -77,19 +84,23 @@ export function useMemberSignatureTypeTrace({
       flowNodeId,
       memberId,
     );
-    if (paramName && symbolIndex) {
+    if (paramName && symbolIndex && lexicalGraph && methodCode && methodStartLine != null) {
       edges.push(
-        ...buildSignatureTypeParamCascade({
+        ...traceSigTypeEdges({
           symbolName,
           typeKind: semantic,
           sigTypeEl: chipEl,
           paramName,
           symbolIndex,
+          lexicalGraph,
+          methodCode,
+          methodStartLine,
           flowNodeId,
           memberId,
           symbols,
           graphData,
           getNode,
+          hasSymbol,
           edgeIdPrefix: `sig-type-${paramName}`,
         }),
       );
@@ -125,7 +136,11 @@ export function useMemberSignatureTypeTrace({
     flowNodeId,
     getNode,
     graphData,
+    hasSymbol,
+    lexicalGraph,
     memberId,
+    methodCode,
+    methodStartLine,
     paramName,
     semantic,
     showConnectionMenu,

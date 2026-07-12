@@ -3,6 +3,7 @@ import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useMemberSignatureTypeTrace } from "@/hooks/useMemberSignatureTypeTrace";
 import { useIndex } from "@/context/IndexContext";
+import type { LexicalGraph } from "@/lib/lexicalGraph";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import {
   primaryIndexedSymbolInType,
@@ -23,6 +24,10 @@ type MemberSignatureTypeLabelProps = {
   shimmerDelay?: string;
   paramName?: string;
   symbolIndex?: MemberSymbolIndex;
+  lexicalGraph?: LexicalGraph;
+  methodCode?: string;
+  methodStartLine?: number;
+  classLabel?: string;
 };
 
 function primitiveTypeClassName(variant: "in" | "out"): string {
@@ -43,6 +48,9 @@ export function MemberSignatureTypeLabel({
   shimmerDelay,
   paramName,
   symbolIndex,
+  lexicalGraph,
+  methodCode,
+  methodStartLine,
 }: MemberSignatureTypeLabelProps) {
   const { hasSymbol } = useIndex();
   const chipRef = useRef<TokenChipHandle>(null);
@@ -69,6 +77,9 @@ export function MemberSignatureTypeLabel({
     hostRef,
     paramName,
     symbolIndex,
+    lexicalGraph,
+    methodCode,
+    methodStartLine,
   });
 
   const expandable = signatureTypeIsExpandable(type);

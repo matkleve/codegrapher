@@ -203,18 +203,24 @@ export function InteractiveListRow({
         )
       : compactRowClass(density, fullWidth);
 
+  const actionBadge = actionLabel ? (
+    <span
+      className={cn(
+        buttonVariants({ variant: "outline", size: "xs" }),
+        "pointer-events-none shrink-0 font-medium",
+      )}
+    >
+      {actionLabel}
+    </span>
+  ) : null;
+
   const trailingNode =
-    trailing ??
-    (actionLabel ? (
-      <span
-        className={cn(
-          buttonVariants({ variant: "outline", size: "xs" }),
-          "pointer-events-none shrink-0 font-medium",
-        )}
-      >
-        {actionLabel}
-      </span>
-    ) : null);
+    actionBadge || trailing ? (
+      <>
+        {actionBadge}
+        {trailing}
+      </>
+    ) : null;
 
   const rowBody = (
     <>
@@ -228,7 +234,7 @@ export function InteractiveListRow({
         mono={mono}
       />
       {trailingNode ? (
-        <span className="ml-1 flex shrink-0 items-center">{trailingNode}</span>
+        <span className="ml-1 flex shrink-0 items-center gap-1">{trailingNode}</span>
       ) : null}
     </>
   );

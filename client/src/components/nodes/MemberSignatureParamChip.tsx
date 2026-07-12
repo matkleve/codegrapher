@@ -8,6 +8,7 @@ import {
   buildParamDefPreviewEdges,
   paramUsageCount,
 } from "@/lib/paramDefPreviewEdges";
+import type { LexicalGraph } from "@/lib/lexicalGraph";
 import {
   paramDefForName,
   type MemberSymbolIndex,
@@ -23,6 +24,7 @@ type MemberSignatureParamChipProps = {
   filePath: string;
   classLabel: string;
   symbolIndex: MemberSymbolIndex;
+  lexicalGraph: LexicalGraph;
   shimmerDelay: string;
 };
 
@@ -34,6 +36,7 @@ export function MemberSignatureParamChip({
   filePath,
   classLabel,
   symbolIndex,
+  lexicalGraph,
   shimmerDelay,
 }: MemberSignatureParamChipProps) {
   const chipRef = useRef<TokenChipHandle>(null);
@@ -63,6 +66,7 @@ export function MemberSignatureParamChip({
         symbols,
         graphData,
         hasSymbol,
+        lexicalGraph,
       ),
     );
   }, [
@@ -72,6 +76,7 @@ export function MemberSignatureParamChip({
     graphData,
     hasSymbol,
     memberId,
+    lexicalGraph,
     paramDef,
     paramName,
     symbolIndex,
@@ -84,8 +89,8 @@ export function MemberSignatureParamChip({
       makeTokenInfo({
         token: paramName,
         kind: "variable",
-        connectionCount: paramDef ? paramUsageCount(symbolIndex, paramDef.defId) : 0,
-        projectConnectionCount: paramDef ? paramUsageCount(symbolIndex, paramDef.defId) : 0,
+        connectionCount: paramDef ? paramUsageCount(lexicalGraph, paramDef.defId) : 0,
+        projectConnectionCount: paramDef ? paramUsageCount(lexicalGraph, paramDef.defId) : 0,
         definedIn: classLabel,
         filePath,
         line: paramLine,
@@ -99,6 +104,7 @@ export function MemberSignatureParamChip({
       filePath,
       flowNodeId,
       graphNodeId,
+      lexicalGraph,
       paramDef,
       paramLine,
       paramName,

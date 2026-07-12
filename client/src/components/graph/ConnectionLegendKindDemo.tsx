@@ -7,7 +7,9 @@ import {
   type LegendConnectionKind,
 } from "@/lib/connectionWireStyle";
 import {
+  legendDemoNeedsTallCanvas,
   LEGEND_DEMO_SCENES,
+  type DemoCodeLineScene,
   type DemoCodePart,
   type DemoMemberScene,
 } from "@/lib/connectionLegendDemoScenes";
@@ -58,22 +60,30 @@ function DemoAnchorChip({
   );
 }
 
+function DemoCodePartSpan({ part }: { part: DemoCodePart }) {
+  return (
+    <span className={part.tone === "kw" ? "code-kw" : "code-pn"}>{part.text}</span>
+  );
+}
+
 function DemoCodeLine({
-  parts,
+  line,
+  lineNo,
   litId,
   onToggle,
 }: {
-  parts: DemoCodePart[];
+  line: DemoCodeLineScene;
+  lineNo: number;
   litId: string | null;
   onToggle: (id: string) => void;
 }) {
   return (
     <div className="code-line connection-legend-demo-code-line">
       <span className="code-line-gutter" aria-hidden>
-        1
+        {line.lineNo ?? lineNo}
       </span>
       <span className="code-line-body">
-        {parts.map((part, i) =>
+        {line.parts.map((part, i) =>
           part.anchorId ? (
             <DemoAnchorChip
               key={`${part.anchorId}-${i}`}
@@ -84,9 +94,7 @@ function DemoCodeLine({
               onToggle={onToggle}
             />
           ) : (
-            <span key={`${part.text}-${i}`} className="code-pn">
-              {part.text}
-            </span>
+            <DemoCodePartSpan key={`${part.text}-${i}`} part={part} />
           ),
         )}
       </span>
@@ -104,10 +112,18 @@ function DemoMember({
   onToggle: (id: string) => void;
 }) {
   const expanded = Boolean(member.body?.length || member.signature?.length);
+  const signatureOnly = Boolean(member.signature?.length && !member.body?.length);
 
   return (
-    <div className={cn("member-row", expanded && "member-row--open")}>
-      <div className="member-row-header connection-legend-demo-member-header flex w-full flex-wrap items-center border border-transparent py-1 text-left">
+    <div className={cn("member-row rounded-md bg-muted", expanded && "member-row--open")}>
+      <div
+        className={cn(
+          "member-row-header connection-legend-demo-member-header flex w-full border border-transparent text-left",
+          signatureOnly
+            ? "flex-col items-start gap-y-0.5 py-1.5"
+            : "flex-wrap items-center gap-x-1.5 gap-y-0.5 py-1",
+        )}
+      >
         {member.labelAnchorId ? (
           <DemoAnchorChip
             id={member.labelAnchorId}
@@ -119,14 +135,19 @@ function DemoMember({
           />
         ) : (
           <span
-            className="member-row-label token-def-label"
+            className="member-row-label token-def-label shrink-0"
             data-token-kind={member.labelTokenKind ?? "function"}
           >
             {member.label}
           </span>
         )}
         {member.signature?.length ? (
-          <span className="member-signature-tags connection-legend-demo-signature">
+          <span
+            className={cn(
+              "member-signature-tags connection-legend-demo-signature",
+              signatureOnly && "connection-legend-demo-signature--stacked",
+            )}
+          >
             {member.signature.map((part, i) =>
               part.anchorId ? (
                 <DemoAnchorChip
@@ -138,40 +159,23 @@ function DemoMember({
                   onToggle={onToggle}
                 />
               ) : (
-                <span key={`${part.text}-${i}`} className="code-pn">
-                  {part.text}
-                </span>
+                <DemoCodePartSpan key={`${part.text}-${i}`} part={part} />
               ),
             )}
           </span>
         ) : null}
       </div>
-      {expanded ? (
-        <div className="member-body-wrap">
-          {member.body?.length ? (
-            <DemoCodeLine parts={member.body} litId={litId} onToggle={onToggle} />
-          ) : null}
-          {member.branchTargets?.length ? (
-            <div className="connection-legend-demo-branches">
-              {member.branchTargets.map((target) => (
-                <button
-                  key={target.id}
-                  type="button"
-                  data-demo-anchor={target.id}
-                  className={cn(
-                    "connection-legend-demo-branch-row",
-                    litId === target.id && "connection-legend-demo-anchor--lit",
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggle(target.id);
-                  }}
-                >
-                  {target.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+      {expanded && member.body?.length ? (
+        <div className="member-body-wrap connection-legend-demo-member-body">
+          {member.body.map((line, i) => (
+            <DemoCodeLine
+              key={`${member.id}-line-${i}`}
+              line={line}
+              lineNo={i + 1}
+              litId={litId}
+              onToggle={onToggle}
+            />
+          ))}
         </div>
       ) : null}
     </div>
@@ -187,6 +191,7 @@ export function ConnectionLegendKindDemo({
   const svgRef = useRef<SVGSVGElement>(null);
   const def = wireStyleForKind(kind);
   const scene = LEGEND_DEMO_SCENES[kind];
+  const tallCanvas = legendDemoNeedsTallCanvas(scene);
   const pathClass = legendSwatchClasses(kind, { pulse: false }).join(" ");
   const wire = useLegendDemoWire(rootRef, svgRef, scene.wire, kind);
 
@@ -198,41 +203,13 @@ export function ConnectionLegendKindDemo({
     <div
       ref={rootRef}
       className={cn(
-        "connection-legend-demo",
+        "connection-legend-demo canvas-dot-grid",
+        scene.layout === "split" && "connection-legend-demo--split",
+        tallCanvas && "connection-legend-demo--tall",
         !active && "connection-legend-demo--inactive",
       )}
       aria-hidden
     >
-      <div className="connection-legend-demo-grid" />
-      <svg ref={svgRef} className="connection-legend-demo-svg" aria-hidden>
-        <defs>
-          <WireMarkerDefs />
-        </defs>
-        {wire.paths.map((pathD, i) => (
-          <path
-            key={`${kind}-wire-${i}`}
-            d={pathD}
-            fill="none"
-            className={cn("connection-legend-demo-wire", pathClass)}
-            stroke={def.stroke}
-            markerEnd={`url(#${def.markerId})`}
-            markerStart={
-              kind === "typesetting" && i === 0 && def.markerStartId
-                ? `url(#${def.markerStartId})`
-                : undefined
-            }
-          />
-        ))}
-        {wire.junction ? (
-          <circle
-            cx={wire.junction.x}
-            cy={wire.junction.y}
-            r={3}
-            className="preview-edge-junction"
-            fill={def.stroke}
-          />
-        ) : null}
-      </svg>
       <div
         className={cn(
           "connection-legend-demo-stage",
@@ -276,6 +253,35 @@ export function ConnectionLegendKindDemo({
           </div>
         ))}
       </div>
+      <svg ref={svgRef} className="connection-legend-demo-svg" aria-hidden>
+        <defs>
+          <WireMarkerDefs />
+        </defs>
+        {wire.paths.map((pathD, i) => (
+          <path
+            key={`${kind}-wire-${i}`}
+            d={pathD}
+            fill="none"
+            className={cn("connection-legend-demo-wire", pathClass)}
+            stroke={def.stroke}
+            markerEnd={`url(#${def.markerId})`}
+            markerStart={
+              kind === "typesetting" && i === 0 && def.markerStartId
+                ? `url(#${def.markerStartId})`
+                : undefined
+            }
+          />
+        ))}
+        {wire.junction ? (
+          <circle
+            cx={wire.junction.x}
+            cy={wire.junction.y}
+            r={3}
+            className="preview-edge-junction"
+            fill={def.stroke}
+          />
+        ) : null}
+      </svg>
     </div>
   );
 }

@@ -162,9 +162,13 @@ export function useLegendDemoWire(
     };
 
     measure();
+    const raf = requestAnimationFrame(measure);
     const ro = new ResizeObserver(measure);
     ro.observe(root);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, [legendKind, rootRef, spec, svgRef]);
 
   return state;

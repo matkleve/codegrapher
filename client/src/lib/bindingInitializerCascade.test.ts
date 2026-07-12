@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildBindingInitializerCascadeEdges } from "@/lib/bindingInitializerCascade";
+import { traceBindingInitCascadeEdges } from "@/lib/traceEdgesForOrigin";
+import { buildLexicalGraph } from "@/lib/lexicalGraph";
 import { registerTraceHost } from "@/lib/elementRegistry";
 import { buildMemberSymbolIndex, bindingInitFor } from "@/lib/localSymbolLinks";
 import { typeTokenIndexOnParamSignature } from "@/lib/paramTypeAnchors";
@@ -12,22 +13,22 @@ import type { SymbolEntry } from "@/types";
 const FLOW = "flow:file:svc.ts";
 const MEMBER = "fn:svc:filter";
 
-describe("buildBindingInitializerCascadeEdges", () => {
+describe("traceBindingInitCascadeEdges", () => {
   it("does not cascade member-access bindings (addr = result.address)", () => {
-    const index = buildMemberSymbolIndex(
-      MEMBER,
-      `filter(results: SearchResult[]): void {
+    const code = `filter(results: SearchResult[]): void {
   const addr = result.address;
-}`,
-    );
+}`;
+    const index = buildMemberSymbolIndex(MEMBER, code);
+    const graph = buildLexicalGraph(index, code, 1);
     const addrDef = document.createElement("span");
     addrDef.dataset.localDefId = [...index.defSites.values()].find((id) =>
       id.includes("::local::addr::"),
     );
 
-    const edges = buildBindingInitializerCascadeEdges({
+    const edges = traceBindingInitCascadeEdges({
       bindingDefEl: addrDef!,
       symbolIndex: index,
+      lexicalGraph: graph,
       flowNodeId: FLOW,
       memberId: MEMBER,
       methodCode: "",
@@ -53,6 +54,7 @@ describe("buildBindingInitializerCascadeEdges", () => {
 }`;
     const START = 135;
     const index = buildMemberSymbolIndex(MEMBER, METHOD, START);
+    const graph = buildLexicalGraph(index, METHOD, START);
 
     const loopLine = "  for (const result of results) {";
     const loopLineNumber = START + 1;
@@ -148,9 +150,10 @@ describe("buildBindingInitializerCascadeEdges", () => {
       ],
     ]);
 
-    const edges = buildBindingInitializerCascadeEdges({
+    const edges = traceBindingInitCascadeEdges({
       bindingDefEl: resultDef,
       symbolIndex: index,
+      lexicalGraph: graph,
       flowNodeId: FLOW,
       memberId: MEMBER,
       methodCode: METHOD,

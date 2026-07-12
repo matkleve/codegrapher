@@ -20,8 +20,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 
-const DETAIL_CURSOR_PAD = 12;
+const DETAIL_PANEL_GAP = 10;
 const DETAIL_WIDTH_PX = 304;
+
+type DetailAnchor = {
+  panelLeft: number;
+  rowCenterY: number;
+};
 
 type ConnectionLegendProps = {
   flashKey: string;
@@ -100,14 +105,18 @@ function ConnectionLegendDetail({
 }: {
   kind: LegendConnectionKind;
   active: boolean;
-  anchor: { x: number; y: number };
+  anchor: DetailAnchor;
   panelRef: RefObject<HTMLDivElement | null>;
 }) {
-  const position = useViewportAnchoredPosition(panelRef, anchor, {
-    mode: "cursor",
-    pad: DETAIL_CURSOR_PAD,
-    viewportMargin: 8,
-  });
+  const position = useViewportAnchoredPosition(
+    panelRef,
+    { x: anchor.panelLeft, y: anchor.rowCenterY },
+    {
+      mode: "beside-left",
+      gap: DETAIL_PANEL_GAP,
+      viewportMargin: 8,
+    },
+  );
 
   return createPortal(
     <div
@@ -117,8 +126,8 @@ function ConnectionLegendDetail({
         position: "fixed",
         zIndex: 60,
         width: DETAIL_WIDTH_PX,
-        left: position?.left ?? anchor.x + DETAIL_CURSOR_PAD,
-        top: position?.top ?? anchor.y + DETAIL_CURSOR_PAD,
+        left: position?.left ?? anchor.panelLeft - DETAIL_WIDTH_PX - DETAIL_PANEL_GAP,
+        top: position?.top ?? anchor.rowCenterY,
         visibility: position ? "visible" : "hidden",
       }}
       onMouseDown={(e) => e.stopPropagation()}
@@ -151,9 +160,7 @@ export function ConnectionLegend({
   const [hoveredKind, setHoveredKind] = useState<LegendConnectionKind | null>(
     null,
   );
-  const [detailAnchor, setDetailAnchor] = useState<{ x: number; y: number } | null>(
-    null,
-  );
+  const [detailAnchor, setDetailAnchor] = useState<DetailAnchor | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const legendPanelRef = useRef<HTMLDivElement>(null);
   const detailPanelRef = useRef<HTMLDivElement>(null);
@@ -171,9 +178,19 @@ export function ConnectionLegend({
 
   const focusedVisible = hoveredKind ? isEdgeKindVisible(hoveredKind) : false;
 
-  const showDetail = (kind: LegendConnectionKind, x: number, y: number) => {
+  const showDetail = (
+    kind: LegendConnectionKind,
+    rowEl: HTMLElement,
+  ) => {
+    const panel = legendPanelRef.current;
+    if (!panel) return;
+    const rowRect = rowEl.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
     setHoveredKind(kind);
-    setDetailAnchor({ x, y });
+    setDetailAnchor({
+      panelLeft: panelRect.left,
+      rowCenterY: rowRect.top + rowRect.height / 2,
+    });
   };
 
   useEffect(() => {
@@ -251,16 +268,8 @@ export function ConnectionLegend({
                     )}
                     title={CONNECTION_KIND_LABEL[kind]}
                     aria-pressed={visible}
-                    onMouseEnter={(e) => showDetail(kind, e.clientX, e.clientY)}
-                    onMouseMove={(e) => {
-                      if (hoveredKind === kind) {
-                        setDetailAnchor({ x: e.clientX, y: e.clientY });
-                      }
-                    }}
-                    onFocus={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      showDetail(kind, rect.right, rect.top + rect.height / 2);
-                    }}
+                    onMouseEnter={(e) => showDetail(kind, e.currentTarget)}
+                    onFocus={(e) => showDetail(kind, e.currentTarget)}
                     onClick={() => toggleEdgeKind(kind)}
                     leading={
                       <LegendSwatch

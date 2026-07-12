@@ -22,7 +22,17 @@ export type CursorAnchorStrategy = {
   viewportMargin?: number;
 };
 
-export type ViewportAnchorStrategy = PanelAnchorStrategy | CursorAnchorStrategy;
+/** Place panel to the left of anchor x; vertically center on anchor y. */
+export type BesideLeftAnchorStrategy = {
+  mode: "beside-left";
+  gap?: number;
+  viewportMargin?: number;
+};
+
+export type ViewportAnchorStrategy =
+  | PanelAnchorStrategy
+  | CursorAnchorStrategy
+  | BesideLeftAnchorStrategy;
 
 export function useViewportAnchoredPosition(
   panelRef: RefObject<HTMLElement | null>,
@@ -75,6 +85,23 @@ export function useViewportAnchoredPosition(
       return;
     }
 
+    if (strategy.mode === "beside-left") {
+      const gap = strategy.gap ?? 10;
+      const margin = strategy.viewportMargin ?? DEFAULT_VIEWPORT_MARGIN;
+
+      let left = anchorX - width - gap;
+      let top = anchorY - height / 2;
+
+      if (top < margin) top = margin;
+      if (top + height > viewportH - margin) {
+        top = viewportH - margin - height;
+      }
+      if (left < margin) left = margin;
+
+      setPosition({ left, top });
+      return;
+    }
+
     const pad = strategy.pad ?? 14;
     const margin = strategy.viewportMargin ?? 6;
 
@@ -96,9 +123,11 @@ export function useViewportAnchoredPosition(
     anchorY,
     panelRef,
     strategy.mode,
-    strategy.mode === "panel" ? strategy.gapBelow : strategy.pad,
+    strategy.mode === "panel" ? strategy.gapBelow : undefined,
     strategy.mode === "panel" ? strategy.gapAbove : undefined,
     strategy.mode === "panel" ? strategy.placement : undefined,
+    strategy.mode === "cursor" ? strategy.pad : undefined,
+    strategy.mode === "beside-left" ? strategy.gap : undefined,
     strategy.viewportMargin,
   ]);
 
