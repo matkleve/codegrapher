@@ -129,7 +129,7 @@ sequenceDiagram
 | Phase | Pane class | Chip | Member rows | Body / syntax | Wires / glow |
 | ----- | ---------- | ---- | ----------- | ------------- | ------------ |
 | **Idle** | — | resting ink | `bg-muted` | full color | hidden |
-| **Pending dwell** (0–40ms) | `graph-trace-pending` | `token-chip-pending-trace` | dim surface eases in | `--faint-*` eases in | hidden |
+| **Pending dwell** (0–40ms) | `graph-trace-pending` | `token-chip-pending-trace` (semantic ink + fill) | dim surface | `--faint-*` eases in | hidden |
 | **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | `token-chip-lit` `token-chip-on` | lit row + dim others | lit lines + faint non-lit | WAAPI stroke reveal 240ms; marching dash after |
 | **Ctrl held** | `graph-ctrl-preview` (+ trace classes if active) | shimmer on indexed | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
 | **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | per merged lit | per merged lit | pinned edges persist |

@@ -187,6 +187,22 @@ export function clearTraceLitDom(): void {
   appliedSockets.clear();
 }
 
+/** Drop inline fade before CSS surround eases out; lit classes cleared after motion. */
+export function unwindTraceLitDom(): void {
+  for (const [el, state] of appliedHosts) {
+    el.classList.remove(TRACE_DEPTH_FADED);
+    el.style.removeProperty("opacity");
+    for (const socket of state.sockets.keys()) {
+      socket.classList.remove(TRACE_DEPTH_FADED);
+      socket.style.removeProperty("opacity");
+    }
+  }
+  for (const [socket] of appliedSockets) {
+    socket.classList.remove(TRACE_DEPTH_FADED);
+    socket.style.removeProperty("opacity");
+  }
+}
+
 export function createHostState(classes: string[], depth: number): HostState {
   return { classes, depth, sockets: new Map() };
 }

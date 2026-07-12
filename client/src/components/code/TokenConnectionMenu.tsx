@@ -8,10 +8,7 @@ import { floatingPanelClass } from "@/components/ui/floatingPanel";
 import { ConnectionMenuRow } from "@/components/graph/ConnectionMenuRow";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
-import {
-  HOVER_MENU_CURSOR_PAD,
-  useHoverMenuPointer,
-} from "@/hooks/useHoverMenuPointer";
+import { useHoverMenuScrollDismiss } from "@/hooks/useHoverMenuPointer";
 import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 import { openFileInEditor } from "@/api";
 import {
@@ -75,25 +72,17 @@ function TokenConnectionMenuPanel({
   };
 
   const isHoverMenu = menu.variant === "hover";
-  const menuKey = `${menu.token}:${menu.role}:${menu.variant}`;
-  const activeAnchor = useHoverMenuPointer(
-    menu.variant,
-    menu.anchor,
-    menuKey,
-    onClose,
-  );
+  useHoverMenuScrollDismiss(menu.variant, onClose);
 
   const position = useViewportAnchoredPosition(
     panelRef,
-    activeAnchor,
-    isHoverMenu
-      ? { mode: "cursor", pad: HOVER_MENU_CURSOR_PAD, viewportMargin: 6 }
-      : {
-          mode: "panel",
-          gapBelow: 6,
-          gapAbove: 6,
-          placement: menu.anchor.placement ?? "below",
-        },
+    menu.anchor,
+    {
+      mode: "panel",
+      gapBelow: isHoverMenu ? 12 : 6,
+      gapAbove: isHoverMenu ? 12 : 6,
+      placement: menu.anchor.placement ?? "below",
+    },
   );
 
   useEffect(() => {
@@ -135,14 +124,8 @@ function TokenConnectionMenuPanel({
       className={floatingPanelClass("fixed z-[62]", allRows.length === 1 ? "min-w-48" : undefined)}
       style={{
         width: MENU_WIDTH_PX,
-        left:
-          position?.left ??
-          (isHoverMenu ? activeAnchor.x + HOVER_MENU_CURSOR_PAD : activeAnchor.x),
-        top:
-          position?.top ??
-          (isHoverMenu
-            ? activeAnchor.y + HOVER_MENU_CURSOR_PAD
-            : activeAnchor.y + 6),
+        left: position?.left ?? menu.anchor.x,
+        top: position?.top ?? menu.anchor.y + (isHoverMenu ? 12 : 6),
         visibility: position ? "visible" : "hidden",
       }}
       onMouseEnter={cancelHoverLeaveGrace}

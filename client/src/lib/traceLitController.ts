@@ -17,6 +17,7 @@ import {
   clearTraceLitDom,
   createHostState,
   syncTraceLitDom,
+  unwindTraceLitDom,
   type HostState,
 } from "@/lib/traceLitApply";
 import {
@@ -472,4 +473,8 @@ export function applyTraceLit(
 
 export function clearTraceLit(): void {
   clearTraceLitDom();
+}
+
+export function unwindTraceLit(): void {
+  unwindTraceLitDom();
 }

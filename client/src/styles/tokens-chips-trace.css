@@ -43,6 +43,31 @@
   background: color-mix(in srgb, var(--token-edge-variable) 38%, var(--background));
 }
 
+/* Pending dwell — semantic ink stays full while surround dims (no faint → lit jump) */
+.token-chip.token-chip-pending-trace[data-token-kind="class"] .token-chip-text,
+.token-def-label.token-chip-pending-trace[data-token-kind="class"] {
+  color: var(--token-edge-class) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="function"] .token-chip-text,
+.token-def-label.token-chip-pending-trace[data-token-kind="function"] {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="type"] .token-chip-text,
+.token-def-label.token-chip-pending-trace[data-token-kind="type"] {
+  color: var(--token-edge-type) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="variable"] .token-chip-text,
+.token-def-label.token-chip-pending-trace[data-token-kind="variable"] {
+  color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
 /* Trace dim — restore semantic ink on hovered / focused chips (fill from rules above) */
 .graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:hover:not(.token-chip-lit) .token-chip-text,
 .graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:focus-visible:not(.token-chip-lit) .token-chip-text,

@@ -7,8 +7,10 @@ import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
-import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
+import { applyTraceLit, clearTraceLit, unwindTraceLit } from "@/lib/traceLitController";
 import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
+import { MOTION_TRACE_MS } from "@/lib/motionTokens";
+import { setTraceLitFading } from "@/lib/traceLitFading";
 import {
   setHoverPreviewEdgeIds,
   setTraceSessionActive,
@@ -51,6 +53,8 @@ export function useTraceLitState({
 }: UseTraceLitStateArgs) {
   const refineCacheRef = useRef(createRefinePreviewEdgeCache());
   const lastApplyRef = useRef({ fingerprint: "", hovered: "", strength: 0 });
+  const clearLitTimerRef = useRef(0);
+  const fadingLitRef = useRef(false);
   const [strengthRevision, setStrengthRevision] = useState(0);
 
   useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
@@ -137,13 +141,28 @@ export function useTraceLitState({
 
   useLayoutEffect(() => {
     if (!traceTokenKey) {
-      lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
-      setTraceSessionActive(false);
-      setWireHoveredTokenKey(null);
-      setHoverPreviewEdgeIds(new Set());
-      clearTraceLit();
+      if (!fadingLitRef.current) {
+        fadingLitRef.current = true;
+        setTraceLitFading(true);
+        setTraceSessionActive(false);
+        setWireHoveredTokenKey(null);
+        setHoverPreviewEdgeIds(new Set());
+        unwindTraceLit();
+        clearLitTimerRef.current = window.setTimeout(() => {
+          lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
+          clearTraceLit();
+          fadingLitRef.current = false;
+          setTraceLitFading(false);
+          clearLitTimerRef.current = 0;
+        }, MOTION_TRACE_MS);
+      }
       return;
     }
+
+    fadingLitRef.current = false;
+    setTraceLitFading(false);
+    window.clearTimeout(clearLitTimerRef.current);
+    clearLitTimerRef.current = 0;
     setTraceSessionActive(true);
     setWireHoveredTokenKey(hoveredTokenKey);
     const fingerprint = traceLitFingerprint(traceLit);
@@ -175,6 +194,13 @@ export function useTraceLitState({
     revealRevision,
     strengthRevision,
   ]);
+
+  useLayoutEffect(
+    () => () => {
+      window.clearTimeout(clearLitTimerRef.current);
+    },
+    [],
+  );
 
   return { isHandleActive, edgeKindAtHandle };
 }

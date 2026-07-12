@@ -27,7 +27,7 @@
   filter: none;
 }
 
-.graph-trace-active .flow-anchor-on,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .flow-anchor-on,
 .graph-trace-pinned .flow-anchor-on {
   opacity: 1;
   background-color: color-mix(

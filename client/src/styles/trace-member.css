@@ -1,5 +1,5 @@
-.graph-trace-active .trace-member-lit,
-.graph-trace-active .trace-member-owner-lit,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .trace-member-lit,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .trace-member-owner-lit,
 .graph-pane.graph-ctrl-preview .trace-member-lit,
 .graph-pane.graph-ctrl-preview .trace-member-owner-lit {
   background: var(--member-row-trace-lit-bg) !important;
@@ -36,13 +36,13 @@
   border-color: var(--member-row-trace-lit-border) !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line .code-kw,
-.graph-trace-active .code-line.trace-lit-line .control-flow-chip-text,
-.graph-trace-active .code-line.trace-lit-line .code-pn,
-.graph-trace-active .code-line.trace-lit-line .code-comment,
-.graph-trace-active .code-line.trace-lit-line .code-string,
-.graph-trace-active .code-line.trace-lit-line .code-number,
-.graph-trace-active .code-line.trace-lit-line .code-type {
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-kw,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .control-flow-chip-text,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-pn,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-comment,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-string,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-number,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line .code-type {
   color: var(--muted-foreground) !important;
 }
 
@@ -53,17 +53,17 @@
   color: inherit !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line {
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line {
   opacity: 1 !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-kw,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .control-flow-chip-text,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-pn,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-comment,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-string,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-number,
-.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-type {
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-kw,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .control-flow-chip-text,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-pn,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-comment,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-string,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-number,
+.graph-pane:is(.graph-trace-active, .graph-trace-leaving) .code-line.trace-lit-line.trace-depth-faded .code-type {
   color: var(--muted-foreground) !important;
 }
 

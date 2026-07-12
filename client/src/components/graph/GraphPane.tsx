@@ -5,6 +5,10 @@ import {
   isTracePending as getTracePending,
   subscribeTracePending,
 } from "@/lib/pendingTraceChip";
+import {
+  isTraceLitFading as getTraceLitFading,
+  subscribeTraceLitFading,
+} from "@/lib/traceLitFading";
 import { cn } from "@/lib/utils";
 
 type GraphPaneProps = {
@@ -24,6 +28,11 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
       getTracePending,
       () => false,
     );
+    const isTraceLeaving = useSyncExternalStore(
+      subscribeTraceLitFading,
+      getTraceLitFading,
+      () => false,
+    );
 
     return (
       <div
@@ -33,6 +42,7 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
           isCtrlActive && "graph-ctrl-preview",
           isTracePending && "graph-trace-pending",
           isTraceActive && "graph-trace-active",
+          isTraceLeaving && "graph-trace-leaving",
           isTraceActive && isWarm && "graph-trace-warm",
           pinnedTraces.length > 0 && "graph-trace-pinned",
         )}

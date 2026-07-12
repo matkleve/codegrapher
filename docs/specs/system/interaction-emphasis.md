@@ -6,7 +6,7 @@ Cross-app contract for pointer hover on clickable surfaces: **brand gold** in bo
 
 ## What It Looks Like
 
-Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, dim indexed tokens stay `--faint` on pass-over; only **lit** endpoints get semantic color + crisp socket ring. **Pinned** trace keeps the pin lit; hovering another indexed token still runs the normal dwell preview (chip-on + wires) without changing the pin until click.
+Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted surface, and gold border via `.hoverable`. During **trace**, syntax and chrome dim to `--faint-*`; indexed `cursor-pointer` token chips keep semantic ink at rest; only **lit** endpoints get semantic fill + crisp socket ring. **Pinned** trace keeps the pin lit; hovering another indexed token still runs the normal dwell preview (chip-on + wires) without changing the pin until click.
 
 ## Where It Lives
 
@@ -52,7 +52,7 @@ flowchart TB
 
 | Surface | Trace active, not lit | Trace lit endpoint | Pinned + foreign token |
 | ------- | --------------------- | ------------------ | ---------------------- |
-| Token chip text | `--faint` | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
+| Token chip text | `--faint` (non-interactive only) | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
 | Token background | transparent | `token-chip-on` semantic fill, **no border** | same semantic fill on hover |
 | Local-def sibling endpoint | — | `token-chip-endpoint-sibling` grey chip-on + grey socket (same geometry as focus) | — |
 | Provenance hop ≥ 2 endpoint (sig-type, param def when usage is focus) | — | `token-chip-endpoint-sibling` + grey socket | — |
@@ -92,7 +92,7 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-pending
 | 2 | **Row header hover** | `--brand-surface` bg + `--brand-border` border; title + caret → `--brand` | unchanged | `--muted-foreground` on code (`--surface-neutral-strong` fill) | unchanged |
 | 3 | **Label hover / trace on title** | `--member-row-trace-lit-bg` + `--member-row-trace-lit-border` on `.member-row` | unchanged | — | semantic ink + `--token-surface-*` fill (same as `token-chip-on`) |
 | 4 | **Ctrl held** (`graph-ctrl-preview`) | `--trace-dim-surface` on non-lit rows; lit rows unchanged | param/return pills → `--trace-dim-surface`; indexed types keep semantic ink | syntax → `--faint-ctrl` | shimmer glint on indexed chips |
-| 5 | **Trace active, row not lit** | `--trace-dim-surface` on non-lit rows | bg transparent; text → `--faint` | syntax → per-token `--faint-*` mixes (greyish, hue hint) | non-lit chips → `--faint` |
+| 5 | **Trace active, row not lit** | `--trace-dim-surface` on non-lit rows | bg transparent; text → `--faint` | syntax → per-token `--faint-*` mixes (greyish, hue hint) | non-lit **non-interactive** chips → `--faint`; indexed `cursor-pointer` chips keep semantic ink |
 | 5b | **Trace active, owner row** (hovering sig param/type in that row) | same row bg may be owner-lit | non-lit sig fragments → `--faint` | — | **member row label** (function name) → `--faint` unless `token-chip-lit` |
 | 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | pill bg transparent; lit signature chips → same `token-chip-lit` + `token-chip-on` as body | lit lines → `trace-lit-line`; syntax → `--muted-foreground` (no saturated primitives) | `token-chip-lit` + `token-chip-on` fill |
 | 7 | **Trace active, owner row** (`trace-member-owner-lit`) | same as lit row 6 | same as lit | same as lit | same as lit |
