@@ -51,3 +51,50 @@
   border-radius: var(--token-chip-radius);
   font-weight: 640;
 }
+
+/* C3 — flow-point anchor flash. A point briefly "arrives" on an operator or
+   the LHS target; imperatively toggled by FlowPointOverlay (see the Anchor
+   contract's decision table), not by React state. */
+.sim-flow-anchor-lit {
+  background: color-mix(in oklch, var(--edge-binding) 28%, transparent);
+  border-radius: var(--token-chip-radius);
+}
+
+/* C3 — a single point of light travelling along a flow-point arc. */
+.sim-flow-point {
+  pointer-events: none;
+  r: 3;
+  transition: opacity 120ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-flow-point {
+    transition: opacity 60ms linear;
+  }
+}
+
+/* C-alt — shimmer while an undecomposable line's value is still computing;
+   lights solid (same idiom as .code-line--sim-current) once resolved. Slower
+   `--sim-shimmer-duration` signals "waiting on a call" (see
+   docs/specs/system/execution-simulator.canvas-values.supplement.md,
+   "Alternative — shimmer while computing"). */
+@keyframes sim-line-shimmer {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.code-line--sim-shimmer {
+  animation: sim-line-shimmer var(--sim-shimmer-duration, 1.2s) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-line--sim-shimmer {
+    animation: none;
+    opacity: 0.75;
+  }
+}

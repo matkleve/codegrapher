@@ -17,6 +17,8 @@ type TokenChipProps = {
   interactive: boolean;
   localDefId?: string;
   localTargetId?: string;
+  /** `{line}:{tokenIndex}` — set only while this identifier is a C3 flow-point anchor. */
+  simAnchor?: string;
   shimmerDelay?: string;
   symbolRole?: "usage" | "definition";
   onMouseEnter?: () => void;
@@ -40,6 +42,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
       interactive,
       localDefId,
       localTargetId,
+      simAnchor,
       shimmerDelay = "0s",
       symbolRole = "usage",
       onMouseEnter,
@@ -83,6 +86,7 @@ export const TokenChip = forwardRef<TokenChipHandle, TokenChipProps>(
         data-trace-key={traceKey}
         {...(localDefId ? { "data-local-def-id": localDefId } : {})}
         {...(localTargetId ? { "data-local-target-id": localTargetId } : {})}
+        {...(simAnchor ? { "data-sim-anchor": simAnchor } : {})}
         className={cn(chipClassName, interactive && "cursor-pointer")}
         textClassName="token-chip-text"
         onMouseEnter={onMouseEnter}

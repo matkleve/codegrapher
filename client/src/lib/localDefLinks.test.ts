@@ -99,12 +99,18 @@ describe("localDefLinks buildViewbox param fan-out", () => {
     expect(edges.every((e) => e.kind === "variable")).toBe(true);
   });
 
-  it("fans out from a usage host to every def→usage wire", () => {
+  it("builds a primary wire plus hop-2 wires to sibling usages", () => {
     const lngDefId = `local-def::${MEMBER}::param::lng::${START_LINE}`;
-    const use = pane.querySelector<HTMLElement>(`[data-local-target-id="${lngDefId}"]`)!;
-    const edges = buildLocalPreviewEdges(use, "variable", "lng-use");
-    expect(edges.length).toBeGreaterThanOrEqual(2);
-    expect(edges.some((e) => e.to.type === "element" && e.to.el === use)).toBe(true);
+    const uses = pane.querySelectorAll<HTMLElement>(`[data-local-target-id="${lngDefId}"]`);
+    expect(uses.length).toBeGreaterThanOrEqual(2);
+    const focus = uses[0]!;
+    const edges = buildLocalPreviewEdges(focus, "variable", "lng-use");
+    expect(edges.length).toBe(uses.length);
+    expect(edges[0]?.hop).toBeUndefined();
+    expect(edges.slice(1).every((e) => e.hop === 2)).toBe(true);
+    if (edges[0]?.to.type === "element") {
+      expect(edges[0].to.el).toBe(focus);
+    }
   });
 
   it("indexes two lng usages on the return line", () => {

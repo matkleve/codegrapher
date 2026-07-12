@@ -24,22 +24,22 @@ Gutter = *where* on source. Toolbar = *how* time advances. Panel = *what happene
 
 | Marker | Meaning | Count |
 | ------ | ------- | ----- |
-| *(empty; faint ○ on row hover)* | No anchor | — |
-| **▶** (green) | Trace **start** | One per armed trace (clears previous) |
-| **■** (red) | **Stop here** (end anchor) | One per armed trace (default: last statement) |
+| *(empty; action on row hover)* | No anchor | — |
+| **▶** (Play icon) | Trace **start** | One per armed trace |
+| **■** (Square icon) | **Stop here** (end anchor) | One per armed trace |
+| **⏸** (Pause icon) | **Breakpoint** (auto-pause on play) | Zero or more |
 | **→** (brand) | **Current step** (program counter) | One during active sim |
 
 Faint brand wash between start and end lines in the same member body.
 
-**Interaction** (follows VS Code / IntelliJ split: line markers ≠ transport):
+**Interaction** (smart gutter — no modifier keys):
 
 | Gesture | Effect |
 | ------- | ------ |
-| Plain click gutter | Toggle **stop here** on this line; if another line had end, move it here |
-| Alt/Option+click | Set **start** here (clear previous start) |
-| Shift+click (start set) | `runStartToEnd` → preflight if needed |
+| Click gutter action | Smart default: no start → **start** · start only → **stop** · start+stop → **toggle pause** |
+| Hover dwell (~400ms) | Dropdown: start / stop / pause (primary action first) |
 | During `simActive` | Gutter clicks disabled; show **→** on current step only |
-| Right-click line | Keep existing context menu (`Start trace here`, `Set as end point`, `Run start → end`) |
+| Right-click token chip | Context menu (`Start trace here`, `Set as end point`, `Run start → end`) |
 
 Play, pause, step, scrub, and **exit session** stay in `SimulationToolbar` only — not in the gutter.
 
@@ -48,12 +48,14 @@ Play, pause, step, scrub, and **exit session** stay in `SimulationToolbar` only 
 Three tabs in `SimulationPanel`:
 
 ```text
-┌ Simulation ──────────────────────── [×] ┐
+┌ Simulation ─────────────────────────────┐
 │ [ Run ] [ Inputs ] [ Paths ]            │
 ├─────────────────────────────────────────┤
 │  (tab content)                          │
 └─────────────────────────────────────────┘
 ```
+
+Panel **open/close** is controlled only by **`SimulationPanelToggle`** in the graph header (same control that opens the panel). The panel chrome has **no** separate close button. Dragging the left resize handle below the collapse threshold also closes the panel (width is restored on reopen).
 
 | Tab | Purpose |
 | --- | ------- |
@@ -267,6 +269,7 @@ MUST populate `methodStartLine`, or the walk produces zero/misaligned steps.
 | State | Default | Effect |
 | ----- | ------- | ------ |
 | `panelTab` | `"run"` | Active tab in SimulationPanel |
+| `pauseAnchors` | `[]` | Breakpoint lines (auto-pause on play) |
 | `startAnchor` / `endAnchor` | null | Gutter markers + range shade |
 | `ledgerExpanded` | `Set<number>` | Open accordion rows (step indices) |
 | `savedPaths` | `[]` from localStorage | Paths tab list |
@@ -296,11 +299,12 @@ When `simActive` becomes true, switch to **Run** tab and scroll ledger to `curre
 
 ### Gutter
 
-- [ ] Given an expanded method, when the user Alt+clicks the gutter, then that line shows **▶** and any previous start clears
-- [ ] Given an expanded method, when the user clicks the gutter, then that line toggles **■** end anchor (one global end)
+- [ ] Given an expanded method, when the user clicks the gutter action with no start, then that line shows **▶** and Inputs tab opens
+- [ ] Given start set, when the user clicks another line's gutter action, then that line shows **■**
+- [ ] Given start and stop on the same member, when the user clicks a third line, then a **⏸** pause toggles on that line
 - [ ] Given start and end on the same member, when both are set, then lines between them show range shading
+- [ ] Given start only, Inputs tab shows prompt to set stop before Start run
 - [ ] Given `simActive`, when stepping, then the current line shows **→** and gutter anchor clicks are disabled
-- [ ] Given gutter start set, when the user Shift+clicks end gutter, then preflight or session start matches context menu **Run start → end**
 
 ### Step ledger
 

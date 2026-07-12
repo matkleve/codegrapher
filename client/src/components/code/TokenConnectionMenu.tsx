@@ -73,6 +73,8 @@ function TokenConnectionMenuPanel({
   const position = useViewportAnchoredPosition(panelRef, menu.anchor, {
     mode: "panel",
     gapBelow: 6,
+    gapAbove: 6,
+    placement: menu.anchor.placement ?? "below",
   });
 
   useEffect(() => {

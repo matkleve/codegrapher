@@ -115,6 +115,8 @@ flowchart TB
 | Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
 | Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
 | Property in a `a.b.c` chain | `buildReceiverCascadeEdges` (merged with the property's own edges, if any) | Own edge (0 or 1) + 1 per resolvable receiver leftward in the chain |
+| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Tier 1: param def → usage; tier 2: sig-type → param def; tier 3: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
+| Param def in signature (fan-out) | `buildParamDefPreviewEdges` + type cascade | Tier 1: def → each usage; tier 2/3: type chain behind param |
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
 

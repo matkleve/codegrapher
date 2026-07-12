@@ -1,7 +1,12 @@
 import { buildUsagePreviewEdge, buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { buildBindingPreviewEdges } from "@/lib/bindingPreviewEdges";
+import { buildBindingInitializerCascadeEdges } from "@/lib/bindingInitializerCascade";
 import { buildControlFlowPreviewEdges } from "@/lib/controlFlowPreviewEdges";
 import { buildLocalPreviewEdges, canonicalLocalDefHost } from "@/lib/localDefLinks";
+import {
+  buildParamTypeCascadeEdges,
+  paramNameFromDefId,
+} from "@/lib/paramTypeCascadeEdges";
 import { bindingDefForInit, type MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
 import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
@@ -23,6 +28,8 @@ export type CodeLineTraceContext = {
   sourceFlowId: string;
   memberId: string;
   lineNumber: number;
+  methodCode?: string;
+  methodStartLine?: number;
   symbols: Map<string, SymbolEntry[]>;
   graphData: GraphData | null;
   getNode: (id: string) => Node | undefined;
@@ -44,6 +51,8 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     sourceFlowId,
     memberId,
     lineNumber,
+    methodCode,
+    methodStartLine,
     symbols,
     graphData,
     getNode,
@@ -80,15 +89,65 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     }
   }
 
+  const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
+
+  if (bindingEdges.length > 0 && localEdges.length > 0) {
+    bindingEdges = bindingEdges.map((edge) => ({ ...edge, hop: 2 }));
+  }
+
+  let bindingCascade: PreviewEdgeSpec[] = [];
+  if (
+    bindingEdges.length > 0 &&
+    localEdges.length > 0 &&
+    canonicalDef &&
+    methodCode &&
+    methodStartLine != null
+  ) {
+    bindingCascade = buildBindingInitializerCascadeEdges({
+      bindingDefEl: canonicalDef,
+      symbolIndex,
+      flowNodeId: sourceFlowId,
+      memberId,
+      methodCode,
+      methodStartLine,
+      edgeIdPrefix: edgeKey,
+      symbols,
+      graphData,
+      getNode,
+      hasSymbol,
+    });
+  }
+
   if (
     bindingEdges.length > 0 &&
     Number.isFinite(tokenIndex) &&
-    bindingDefForInit(symbolIndex, lineNumber, tokenIndex)
+    bindingDefForInit(symbolIndex, lineNumber, tokenIndex) &&
+    localEdges.length === 0
   ) {
     return [...bindingEdges, ...cascadeEdges];
   }
 
-  const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
+  const localTargetId = chipEl.dataset.localTargetId;
+  const paramDefEl = canonicalLocalDefHost(chipEl);
+  const paramName =
+    localTargetId != null ? paramNameFromDefId(localTargetId) : null;
+  const typeCascade =
+    localEdges.length > 0 &&
+    paramName != null &&
+    paramDefEl != null &&
+    localTargetId?.includes("::param::")
+      ? buildParamTypeCascadeEdges({
+          paramName,
+          paramDefEl,
+          flowNodeId: sourceFlowId,
+          memberId,
+          symbols,
+          graphData,
+          getNode,
+          hasSymbol,
+          edgeIdPrefix: edgeKey,
+        })
+      : [];
 
   const skipControlFlow =
     localEdges.length > 0 &&
@@ -117,7 +176,14 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     controlFlowEdges.length > 0 ||
     cascadeEdges.length > 0
   ) {
-    return [...localEdges, ...bindingEdges, ...controlFlowEdges, ...cascadeEdges];
+    return [
+      ...localEdges,
+      ...bindingEdges,
+      ...bindingCascade,
+      ...controlFlowEdges,
+      ...cascadeEdges,
+      ...typeCascade,
+    ];
   }
 
   const entry = lookup(name);

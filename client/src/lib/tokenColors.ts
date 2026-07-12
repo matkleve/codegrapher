@@ -32,16 +32,22 @@ const TYPE_CONTEXT_PREV = new Set([
 ]);
 
 /** Type annotations and generic bounds use blue `type` ink, not purple `class`. */
-export function isTypeAnnotationContext(prevText: string | null): boolean {
+export function isTypeAnnotationContext(
+  prevText: string | null,
+  prevPrevText?: string | null,
+): boolean {
+  // `??` tokenizes as two `?` operators — not a type position.
+  if (prevText === "?" && prevPrevText === "?") return false;
   return TYPE_CONTEXT_PREV.has(prevText ?? "");
 }
 
 export function semanticForCodeIdentifier(
   entry: { kind: SymbolKind } | undefined,
   prevText: string | null,
+  prevPrevText?: string | null,
 ): SemanticTokenKind {
   const base = entry ? symbolKindToSemantic(entry.kind) : "variable";
-  if (isTypeAnnotationContext(prevText) && base !== "function") {
+  if (isTypeAnnotationContext(prevText, prevPrevText) && base !== "function") {
     return "type";
   }
   return base;

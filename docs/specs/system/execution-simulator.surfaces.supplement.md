@@ -37,34 +37,41 @@ flowchart TB
 
 Visible on every **expanded** body line when `methodCode`, `methodName`, `signatureLine`, `methodStartLine` are present.
 
+Each line has a **gutter action** control (left of the line number) with Lucide icons: **Play** = start, **Square** = stop, **Pause** = breakpoint.
+
 ```mermaid
 flowchart TD
-  Click[Gutter click] --> Active{simActive?}
+  Click[Gutter action click] --> Active{simActive?}
   Active -->|yes| Block[ignored]
-  Active -->|no| Mod{modifier?}
-  Mod -->|Alt| Start[armStart / disarm if same ▶ line]
-  Mod -->|Shift| Run[gutterRunRange → preflight]
-  Mod -->|none| End[toggleEndHere]
-  Run --> HasStart{▶ set same member?}
-  HasStart -->|no| Noop[silent no-op]
-  HasStart -->|yes| PF[preflight]
+  Active -->|no| Smart{anchor state}
+  Smart -->|no start| Start[set ▶ start]
+  Smart -->|start only| End[set ■ stop]
+  Smart -->|start + stop| Pause[toggle ⏸ pause]
+  Hover[Dwell on action ~400ms] --> Menu[dropdown: start / stop / pause]
+  Menu --> Pick[user picks any action]
 ```
 
 | Gesture | Effect |
 | ------- | ------ |
-| **Alt+click** | Set ▶; open panel Inputs. Alt+click same ▶ line → **disarm** |
-| **Plain click** | Toggle ■ on line |
-| **Shift+click** | Set ■ on line + open preflight (requires ▶ same member) |
+| **Click** (smart default) | No start → **start** · start only → **stop** · start + stop → **toggle pause** on that line |
+| **Hover dwell** (~400ms) | Dropdown with all three actions; **primary** (same as one-click) listed first |
+| **Click existing marker** | Toggle off that marker (start / stop / pause) |
 | **During active run** | Disabled; show → on PC line only |
 
-| Marker | Glyph | CSS role |
-| ------ | ----- | -------- |
-| Start | ▶ | `sim-gutter-marker--start` |
-| End | ■ | `sim-gutter-marker--end` |
+| Marker | Icon | CSS role |
+| ------ | ---- | -------- |
+| Start | Play | `sim-gutter-marker--start` |
+| Stop | Square | `sim-gutter-marker--end` |
+| Pause | Pause | `sim-gutter-marker--pause` |
 | PC | → | `sim-gutter-marker--current` |
-| In range | ○ + wash | `sim-gutter-marker--in-range` |
+| In range | faint wash | `sim-gutter-marker--in-range` |
+| Between start+stop (hover) | Pause hint | `sim-gutter-marker--pause-hint` |
 
-Tooltip (required): `Click: stop here · Alt+click: start · Shift+click: run range`
+**No modifier keys** (Alt / Shift removed from gutter). Run-from-gutter removed — use Inputs **Start run** or token menu.
+
+Tooltip: `Click: {primary action} · hover for more`
+
+**Panel validation (Inputs tab):** start only → prompt to set stop; stop only → prompt to set start. **Start run** requires explicit start **and** stop on the same member.
 
 ---
 
@@ -121,14 +128,17 @@ When `simActive`, banner shows session range + **[Exit run]** and **[Stop and cl
 ### Idle Run tab copy
 
 1. Expand a method body  
-2. **Alt+click** gutter ▶ start · **click** ■ stop · **Shift+click** run  
-3. Set inputs → Start run  
+2. Click gutter action → **start**, then **stop**; add **pauses** between them  
+3. Hover gutter action briefly for start / stop / pause menu  
+4. Set inputs → Start run (requires both start and stop)  
 
 Or right-click a **token** → Start trace here / Set end / Run.
 
-### Panel collapse [×]
+### Panel open/close
 
-Hides panel; anchors unchanged. Reopen via graph **Simulation** toggle.
+No in-panel close control — the graph header **`SimulationPanelToggle`** is the sole explicit open/close affordance (shows `PanelRightClose` when open, `PanelRightOpen` when closed). Collapsing hides the panel; anchors unchanged. Reopen via the same toggle.
+
+Dragging the panel's left resize handle below the collapse threshold also closes the panel (same pattern as the file explorer sidebar).
 
 ---
 
@@ -188,13 +198,13 @@ Play auto-stops at last step (`PLAY_INTERVAL_MS / playbackSpeed`, default 600ms 
 
 | Intent | Gesture | Precondition | Result |
 | ------ | ------- | ------------ | ------ |
-| Set **start** | Alt+gutter | expanded, not active | ▶, Inputs tab |
-| Clear **start** | Alt+gutter on ▶ line | armed | idle |
-| Set **end** | Plain gutter | expanded, not active | ■ toggle |
-| Set **end** | Menu → Set end | token chip | ■ |
-| **Run** | Shift+gutter | ▶ same member | preflight |
+| Set **start** | Gutter click (no start) or menu | expanded, not active | ▶, Inputs tab |
+| Clear **start** | Gutter click on ▶ line | armed | removes start |
+| Set **stop** | Gutter click (start only) or menu | expanded, not active | ■ |
+| Toggle **stop** | Gutter click on ■ line | armed | removes stop |
+| Set **pause** | Gutter click (start+stop) or menu | expanded, not active | ⏸ toggle |
 | **Run** | Menu → Run start→end | token chip | preflight |
-| **Run** | Inputs Start run | armed | active |
+| **Run** | Inputs Start run | armed + explicit stop | active |
 | **Play/Pause** | Toolbar | active | transport |
 | **Exit run** | X / Esc | active | armed |
 | **Disarm** | Clear setup / Esc | armed | idle |

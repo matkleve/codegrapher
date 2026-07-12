@@ -26,6 +26,7 @@ Split pane with folder path input, file tree, recent files, and the theme toggle
 | 6 | Resizes sidebar divider | Update sidebar width; below warn width shows collapse hint; release below threshold collapses | `useResizableSidebar` |
 | 7 | Double-clicks anywhere in a member row on canvas | Reading focus — expand, scroll, persist `?focus=nodeId\|memberId` | `focusReadingMember` — see class-node |
 | 8 | Clicks reading-focus control (canvas) | Re-run reading layout for current `?focus=` selection | `GraphFlowInner` |
+| 9 | Clicks **Simulation** toggle (graph header) | Open or close simulation right rail; icon reflects state | `SimulationPanelToggle` |
 
 ## Component Hierarchy
 
@@ -77,6 +78,7 @@ App
 - [ ] Dragging sidebar narrower than warn width shows collapse overlay; release below threshold collapses to rail
 - [ ] Browse-folder button is not auto-clicked in headless testing
 - [ ] Empty canvas copy instructs click or drag to start
+- [ ] Simulation panel opens/closes only via graph header **Simulation** toggle (no duplicate close control in panel chrome)
 
 ## References
 

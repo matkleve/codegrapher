@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import {
   buildParamDefPreviewEdges,
@@ -37,7 +38,8 @@ export function MemberSignatureParamChip({
 }: MemberSignatureParamChipProps) {
   const chipRef = useRef<TokenChipHandle>(null);
   const { getNode } = useReactFlow();
-  const { beginTrace } = useGraphInteraction();
+  const { lookup, hasSymbol, symbols } = useIndex();
+  const { beginTrace, graphData } = useGraphInteraction();
 
   const paramDef = paramDefForName(symbolIndex, memberId, paramName);
   const paramLine = paramDef?.lineNumber ?? 1;
@@ -58,16 +60,22 @@ export function MemberSignatureParamChip({
         flowNodeId,
         memberId,
         getNode,
+        symbols,
+        graphData,
+        hasSymbol,
       ),
     );
   }, [
     beginTrace,
     flowNodeId,
     getNode,
+    graphData,
+    hasSymbol,
     memberId,
     paramDef,
     paramName,
     symbolIndex,
+    symbols,
     tokenKey,
   ]);
 

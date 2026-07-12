@@ -15,32 +15,44 @@ export function SimInputsForm() {
     confirmPreflight,
     preflightOpen,
     simActive,
+    hasExplicitTraceEnd,
   } = useSimulation();
 
   if (!startAnchor) {
     if (endAnchor) {
       return (
         <p className="text-xs text-muted-foreground">
-          End set on line {endAnchor.line}.{" "}
-          <span className="font-medium text-foreground">Alt+click</span> the gutter to set a start
-          point.
+          Stop set on line {endAnchor.line}. Use the line gutter to set a{" "}
+          <span className="font-medium text-foreground">start</span> point.
         </p>
       );
     }
     return (
       <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Alt+click</span> the gutter or right-click a
-        token → <span className="font-medium text-foreground">Start trace here</span> to arm a
-        trace.
+        Use the line gutter to set a <span className="font-medium text-foreground">start</span>{" "}
+        point, or right-click a token → <span className="font-medium text-foreground">Start trace here</span>.
       </p>
     );
   }
 
+  if (!hasExplicitTraceEnd) {
+    return (
+      <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+        <p>
+          Start set on line {startAnchor.startLine} ({startAnchor.methodName}). Use the line gutter
+          to set a <span className="font-medium text-foreground">stop</span> point.
+        </p>
+        <p className="text-2xs">
+          Hover the gutter action for a moment to pick start, stop, or pause on any line.
+        </p>
+      </div>
+    );
+  }
+
   const names = Object.keys(preflightInputs);
-  const implicitEnd = endAnchor == null || endAnchor.memberId !== startAnchor.memberId;
   const rangeLabel =
     effectiveEndLine != null
-      ? traceRangeLabel(startAnchor.startLine, effectiveEndLine, implicitEnd)
+      ? traceRangeLabel(startAnchor.startLine, effectiveEndLine, false)
       : `L${startAnchor.startLine}`;
 
   return (

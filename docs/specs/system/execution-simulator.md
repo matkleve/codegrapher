@@ -12,7 +12,7 @@ User sets trace bounds via **gutter markers** (▶ start, ■ stop here) or righ
 
 - **Entry:** gutter markers on `CodeLine`, context menu on `CodeLine` and collapsed `CollapsibleMemberRow` header
 - **Orchestration:** `SimulationContext` (`SimulationProvider` in `GraphFlowInner`)
-- **UI:** `SimulationPanel` (tabbed right rail — Run / Inputs / Paths), `SimulationToolbar` (bottom transport), `SimGutterControl`, reuse `PreviewEdgeOverlay` for value-flow pulses
+- **UI:** `SimulationPanel` (tabbed right rail — Run / Inputs / Paths), `SimulationPanelToggle` (graph header open/close — sole explicit collapse control), `SimulationToolbar` (bottom transport), `SimGutterControl`, reuse `PreviewEdgeOverlay` for value-flow pulses
 - **Engine:** `client/src/lib/staticWalk/` (new) — statement list + scope snapshots from method `code` string
 
 ## Actions
@@ -62,7 +62,7 @@ Off-graph callee policy: **pause and prompt** — offer Load via existing `useLo
 | `simActive` | false | When true, hover preview traces suppressed; sim chrome visible |
 | `simSession` | null | Current walk state |
 | `playbackSpeed` | 1 | Multiplier for play mode |
-| `panelOpen` | true when sim starts | Right variable panel visibility |
+| `panelOpen` | toggled via `SimulationPanelToggle` | Right rail visibility (no in-panel close button) |
 
 ## File Map
 

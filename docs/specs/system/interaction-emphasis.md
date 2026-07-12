@@ -43,6 +43,7 @@ flowchart TB
 | Token chip text | `--faint` | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
 | Token background | transparent | `token-chip-on` semantic fill, **no border** | same semantic fill on hover |
 | Local-def sibling endpoint | — | `token-chip-endpoint-sibling` grey chip-on + grey socket (same geometry as focus) | — |
+| Provenance tier 2/3 endpoint (sig-type, param def when usage is focus) | — | `token-chip-endpoint-sibling` + grey socket | — |
 | Node card header | card white | card white | card white |
 | Member row (lit) | `--member-row-trace-lit-bg` + inset function-blue border | `trace-member-lit` | per trace lit set |
 | Member row (dim, trace on) | `bg-muted` at rest; trace dims non-lit rows | no lit class | non-lit rows while trace active |

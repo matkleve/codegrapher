@@ -8,7 +8,7 @@ On-demand dashed SVG connections between indexed symbols. Summoned by hovering t
 
 ## What It Looks Like
 
-Semantic-color dashed curves (function blue, class blue, …) with animated dash flow toward the arrowhead. Endpoint sockets pop in (`--spring`) with a crisp semantic ring — no brightness bloom. Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
+Function-blue dashed curves (`--edge-usage`) with animated dash flow toward the open arrowhead. Endpoint sockets pop in (`--spring`) with a crisp semantic ring colored by token kind — no brightness bloom. Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
 
 ## Where It Lives
 
@@ -91,6 +91,7 @@ stateDiagram-v2
 | `resolveLiveAnchor.ts` | Per-frame anchor upgrade |
 | `localDefLinks.ts` | Def fan-out + usage site pairs (`linksForElement`) |
 | `buildDefinitionPreviewEdges.ts` | Definition fan-out + off-canvas Load stubs |
+| `paramTypeCascadeEdges.ts` | Param usage/def → sig-type provenance chain (tier 2/3) |
 | `bindingPreviewEdges.ts` / `controlFlowPreviewEdges.ts` | Binding and branch wires |
 | `preview-wires.css` | Wires, sockets |
 | `trace-modes.css` | Trace dim |
@@ -116,6 +117,7 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 ## Child specs
 
 - **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
 - Philosophy: [preview-edges.philosophy.supplement.md](preview-edges.philosophy.supplement.md)
 - Overlay component: [../component/preview-edge-overlay.md](../component/preview-edge-overlay.md)
 - Prototype: [docs/prototypes/connectors-proto.html](../../prototypes/connectors-proto.html)

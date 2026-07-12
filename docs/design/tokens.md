@@ -65,7 +65,7 @@ See [brand-book.md](brand-book.md) for the full accent matrix.
 
 | Token | Role |
 | ----- | ---- |
-| `TOKEN_EDGE_STROKE` (JS) | Preview edge stroke — CSS variable via `style`, never hex in SVG attrs |
+| `TOKEN_EDGE_STROKE` (JS) | Flow-anchor / jump-tip dot ink by token kind — not preview wire stroke |
 | `TOKEN_ANCHOR` (JS) | Flow-anchor fill classes |
 
 Chip resting ink, Ctrl shimmer, and trace lit states are **CSS-only** in `tokens-chips.css` / `trace-modes.css` via `data-token-kind` — do not duplicate in TS maps.
@@ -125,7 +125,7 @@ Persistent taxonomy wires (inheritance, implementation, composition, module impo
 
 Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColors.ts`.
 
-Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Usage.
+Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** hops (usage → param → type) reuse the same hue with tiered opacity (`preview-wire--hop2` ≈ ½, `--hop3` ≈ ¼) — see [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Usage.
 
 Preview **binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
 

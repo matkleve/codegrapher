@@ -272,9 +272,12 @@ export function applyTraceLit(
 
     if (processedHosts.has(host)) continue;
     processedHosts.add(host);
+    const traceKey = traceKeyFromHost(host);
+    const isProvenanceSibling =
+      traceKey != null && state.siblingEndpointTokenKeys.has(traceKey);
     applyEndpointHost(
       host,
-      false,
+      isProvenanceSibling,
       pinnedTokenKeys,
       hoveredTokenKey,
       state.endpointPortSide,

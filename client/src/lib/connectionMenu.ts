@@ -31,7 +31,7 @@ export type TokenConnectionMenuState = {
   token: string;
   kind: SemanticTokenKind;
   role: "usage" | "definition";
-  anchor: { x: number; y: number };
+  anchor: { x: number; y: number; placement?: "above" | "below" };
   variant: "hover" | "context";
   sections: ConnectionMenuSection[];
   contextFilePath?: string;
@@ -43,6 +43,21 @@ export type TokenConnectionMenuState = {
 export function anchorBelowElement(el: HTMLElement): { x: number; y: number } {
   const rect = el.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.bottom + 4 };
+}
+
+export function anchorAboveElement(el: HTMLElement): { x: number; y: number } {
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top - 4 };
+}
+
+/** Hover menus in member bodies open upward so they do not cover the token. */
+export function hoverMenuAnchor(
+  el: HTMLElement,
+): { x: number; y: number; placement: "above" | "below" } {
+  if (el.closest(".code-line")) {
+    return { ...anchorAboveElement(el), placement: "above" };
+  }
+  return { ...anchorBelowElement(el), placement: "below" };
 }
 
 /** Usage hover lists definitions (source end); definition hover lists callers (target end). */
@@ -242,7 +257,7 @@ export function buildHoverLoadMenu(
     token,
     kind,
     role,
-    anchor: anchorBelowElement(chipEl),
+    anchor: hoverMenuAnchor(chipEl),
     variant: "hover",
     sections: hoverSectionsFromLoadTargets(token, kind, role, targets),
     contextFilePath,

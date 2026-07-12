@@ -56,6 +56,13 @@ When behavior changes, update the owning spec in the same change.
 
 ## Conventions
 
+### Bootstrapping other projects
+
+When the user says *"copy from codegrapher"*, follow the agent playbook at
+[`docs/agent-workflows/project-bootstrap-from-codegrapher.md`](docs/agent-workflows/project-bootstrap-from-codegrapher.md)
+— folder layout, shared eslint, spec governance, tokens, and a numbered checklist.
+Patterns trace to feldpost; codegrapher is the slim React + Express variant.
+
 - `npm run lint` at root = client lint + server lint. Rules are Feldpost-aligned and
   live in `eslint.shared.mjs` (`maintainabilityRules` + `codeQualityRules`, spread into
   both `client/eslint.config.js` and `server/eslint.config.mjs`). The key cap is

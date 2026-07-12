@@ -6,13 +6,18 @@ Supplement to [interactions index](execution-simulator.interactions.supplement.m
 
 ## Anchors & range
 
-- [ ] Given expanded method, Alt+click gutter sets ▶ and opens Inputs tab
-- [ ] Given expanded method, plain click gutter toggles ■ on that line
+- [ ] Given expanded method, gutter click with no start sets start and opens Inputs tab
+- [ ] Given start only, gutter click on another line sets stop
+- [ ] Given start+stop, gutter click toggles pause on that line
+- [ ] Given start only, Inputs tab prompts to set stop; Start run disabled
+- [ ] Given stop only, Inputs tab prompts to set start
 - [ ] Given ▶ and no ■, range shade spans start through `methodStartLine + codeLines - 1` (file-absolute)
 - [ ] Given armed trace, panel banner shows `L{start}→L{effectiveEnd}` with `(method end)` when ■ unset
+- [ ] Given start+stop, hover between them shows pause icon hint
+- [ ] Given gutter action hover dwell, dropdown lists start/stop/pause with primary first
 - [ ] Given active run, gutter clicks ignored; only → on current step line
 - [ ] Given ▶ on member A, setting ▶ on member B clears ■ if ■ was on another member
-- [ ] Given Alt+click on current ▶ line when armed, disarm to idle
+- [ ] Given click on current ▶ line when armed, clears start
 
 ---
 
@@ -40,7 +45,8 @@ Supplement to [interactions index](execution-simulator.interactions.supplement.m
 - [ ] Given token chip right-click on body line, sim menu shows three actions with correct `methodStartLine`
 - [ ] Given line with no token chips, gutter still sets anchors; no context menu on whitespace
 - [ ] Given collapsed member header chip, sim menu uses signature line as start
-- [ ] Idle Run tab mentions Alt+click, plain click, Shift+click, and token menu
+- [ ] Idle Run tab mentions gutter start/stop/pause and hover menu
+- [ ] Given open simulation panel, panel chrome has no separate close button; graph header **Simulation** toggle collapses it
 
 ---
 

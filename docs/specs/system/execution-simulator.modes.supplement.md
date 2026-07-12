@@ -65,13 +65,13 @@ stateDiagram-v2
 ```mermaid
 flowchart TB
   subgraph start [▶ Start]
-    SA[Alt+click gutter] --> Armed
+    SA[Gutter: Start here] --> Armed
     SC[Token menu: Start trace here] --> Armed
     SR[Token menu: Run start→end] --> Preflight
   end
 
   subgraph end [■ End]
-    EA[Plain click gutter] --> Toggle
+    EA[Gutter: Stop here] --> Toggle
     EC[Token menu: Set as end point] --> SetEnd
     Toggle -->|same line| ClearEnd[implicit end]
     Toggle -->|other line| MoveEnd
@@ -84,7 +84,7 @@ flowchart TB
   subgraph clear [Clear]
     D1[Panel: Clear setup] --> Idle
     D2[Esc when armed] --> Idle
-    D3[Alt+click ▶ line again] --> Idle
+    D3[Gutter click on ▶ line again] --> ClearStart[clears start]
     D4[Exit run X / Esc active] --> Armed
     D5[Stop and clear] --> Idle
   end
@@ -92,8 +92,9 @@ flowchart TB
 
 | Marker | Set | Move | Clear |
 | ------ | --- | ---- | ----- |
-| **▶** | Alt+gutter · menu Start trace here | Alt+another line | Disarm · Alt+same ▶ line · Esc (armed) |
-| **■** | Plain gutter · menu Set end | Plain+another line | Plain+same ■ line (→ implicit end) |
+| **▶** | Gutter Start here · menu Start trace here | Gutter on another line | Click same ▶ line · Esc (armed) clears start |
+| **■** | Gutter Stop here · menu Set end | Gutter on another line | Click same ■ line (→ implicit end) |
+| **⏸** | Gutter Pause here (start+stop set) | — | Click same ⏸ line |
 | **→** | System on active step | Step/scrub/play | Exit run |
 
 **Cross-member rule:** setting ▶ on member A MUST clear ■ if `endAnchor.memberId !== A`.
@@ -197,7 +198,7 @@ flowchart TD
 
 - Show ■ on that line only
 - No range shade
-- Panel Paths/Inputs: hint “Set a start point (Alt+click gutter)”
+- Panel Paths/Inputs: hint “Set a start point (gutter action)” / “Set a stop point” when only one anchor set
 - Plain click ■ again clears end → idle
 
 ---

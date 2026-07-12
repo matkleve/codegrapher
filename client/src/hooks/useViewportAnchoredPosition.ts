@@ -11,6 +11,8 @@ export type PanelAnchorStrategy = {
   gapAbove?: number;
   centerX?: boolean;
   viewportMargin?: number;
+  /** Anchor y is the chip top — place panel above it (hover menus in code lines). */
+  placement?: "below" | "above";
 };
 
 /** Offset from cursor; flip left/up when clipped. */
@@ -52,15 +54,20 @@ export function useViewportAnchoredPosition(
       const centerX = strategy.centerX !== false;
 
       let left = centerX ? anchorX - width / 2 : anchorX;
-      let top = anchorY + gapBelow;
+      const placeAbove = strategy.placement === "above";
+
+      let top = placeAbove ? anchorY - height - gapAbove : anchorY + gapBelow;
 
       if (left + width > viewportW - margin) {
         left = viewportW - width - margin;
       }
       if (left < margin) left = margin;
 
-      if (top + height > viewportH - margin) {
+      if (!placeAbove && top + height > viewportH - margin) {
         top = anchorY - height - gapAbove;
+      }
+      if (placeAbove && top < margin) {
+        top = anchorY + gapBelow;
       }
       if (top < margin) top = margin;
 
@@ -91,7 +98,7 @@ export function useViewportAnchoredPosition(
     strategy.mode,
     strategy.mode === "panel" ? strategy.gapBelow : strategy.pad,
     strategy.mode === "panel" ? strategy.gapAbove : undefined,
-    strategy.mode === "panel" ? strategy.centerX : undefined,
+    strategy.mode === "panel" ? strategy.placement : undefined,
     strategy.viewportMargin,
   ]);
 

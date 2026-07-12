@@ -14,9 +14,9 @@ Four independent visual dimensions combine per kind, so kinds never have to figh
 | Path geometry | cubic (data/value) · orthogonal (control flow) |
 | Color family | per-relationship-category hue (distinct from today's per-token-kind hue) |
 | Arrowhead | none · open · filled · hollow triangle (UML is-a) · filled diamond (UML has-a) |
-| Opacity / thickness | full for 1-hop; stepped decay for 2+ hop (transitive) relationships |
+| Opacity / thickness | full for 1-hop; stepped decay for 2+ hop (transitive **and** provenance — see [trace-strength supplement](preview-edges.trace-strength.supplement.md)) |
 
-Today's usage preview edge (dashed, per-token-kind color, open arrowhead, hover-summoned) is **kind 1** below and stays exactly as specified in [preview-edges.md](preview-edges.md) — this spec only adds new kinds alongside it, it does not change kind 1's contract.
+Today's usage preview edge (dashed, `--edge-usage` blue, open arrowhead, hover-summoned) is **kind 1** below — see [preview-edges.md](preview-edges.md) and [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md) §1.
 
 ## Where It Lives
 

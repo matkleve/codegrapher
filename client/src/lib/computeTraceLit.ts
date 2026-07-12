@@ -8,7 +8,7 @@ import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
-import { allLocalDefElements } from "@/lib/localDefElements";
+import { allLocalDefElements, findLocalDefElement } from "@/lib/localDefElements";
 import { linksForElement } from "@/lib/localDefLinks";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -24,6 +24,8 @@ import {
 export type TraceLitState = {
   litTokenKeys: ReadonlySet<string>;
   endpointTokenKeys: ReadonlySet<string>;
+  /** Provenance tier 2/3 endpoints — grey sibling chip + socket. */
+  siblingEndpointTokenKeys: ReadonlySet<string>;
   /** Wire port sides per endpoint trace key (`from` → right, `to` → left). */
   endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>;
   litMemberIds: ReadonlySet<string>;
@@ -36,6 +38,7 @@ export type TraceLitState = {
 export const EMPTY_TRACE_LIT: TraceLitState = {
   litTokenKeys: new Set(),
   endpointTokenKeys: new Set(),
+  siblingEndpointTokenKeys: new Set(),
   endpointPortSide: new Map(),
   litMemberIds: new Set(),
   ownerLitMemberIds: new Set(),
@@ -49,6 +52,10 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
   return {
     litTokenKeys: new Set([...a.litTokenKeys, ...b.litTokenKeys]),
     endpointTokenKeys: new Set([...a.endpointTokenKeys, ...b.endpointTokenKeys]),
+    siblingEndpointTokenKeys: new Set([
+      ...a.siblingEndpointTokenKeys,
+      ...b.siblingEndpointTokenKeys,
+    ]),
     endpointPortSide: mergeEndpointPortSides(a.endpointPortSide, b.endpointPortSide),
     litMemberIds: new Set([...a.litMemberIds, ...b.litMemberIds]),
     ownerLitMemberIds: new Set([...a.ownerLitMemberIds, ...b.ownerLitMemberIds]),
@@ -75,6 +82,7 @@ function mergeEndpointPortSides(
 type LitCollections = {
   litTokenKeys: Set<string>;
   endpointTokenKeys: Set<string>;
+  siblingEndpointTokenKeys: Set<string>;
   endpointPortSide: Map<string, Set<"left" | "right">>;
   litMemberIds: Set<string>;
   ownerLitMemberIds: Set<string>;
@@ -201,9 +209,42 @@ function absorbLocalDefSiblings(
   }
 }
 
-function spreadLocalLinkChain(seedKey: string, state: LitCollections): void {
+function spreadLocalLinkChain(
+  seedKey: string,
+  activeTokenKey: string,
+  state: LitCollections,
+): void {
   const seed = elementForTraceKey(seedKey);
   if (!seed) return;
+
+  const targetId = seed.dataset.localTargetId;
+  if (targetId) {
+    absorbToken(seed, state, true);
+
+    const pane = document.querySelector(".graph-pane");
+    if (!pane) return;
+
+    const defEl = findLocalDefElement(pane, targetId);
+    if (defEl && defEl !== seed) {
+      absorbToken(defEl, state, true);
+      const defKey = traceKeyFromElement(defEl);
+      if (defKey && defKey !== activeTokenKey) {
+        state.siblingEndpointTokenKeys.add(defKey);
+      }
+    }
+
+    for (const usageEl of pane.querySelectorAll<HTMLElement>(
+      `[data-local-target-id="${CSS.escape(targetId)}"]`,
+    )) {
+      if (usageEl === seed) continue;
+      absorbToken(usageEl, state, true);
+      const usageKey = traceKeyFromElement(usageEl);
+      if (usageKey && usageKey !== activeTokenKey) {
+        state.siblingEndpointTokenKeys.add(usageKey);
+      }
+    }
+    return;
+  }
 
   const visited = new Set<HTMLElement>();
   const stack: HTMLElement[] = [seed];
@@ -380,6 +421,7 @@ export function computeTraceLit(
   const state: LitCollections = {
     litTokenKeys: new Set<string>([activeTokenKey]),
     endpointTokenKeys: new Set<string>([activeTokenKey]),
+    siblingEndpointTokenKeys: new Set<string>(),
     endpointPortSide: new Map<string, Set<"left" | "right">>(),
     litMemberIds: new Set<string>(),
     ownerLitMemberIds: new Set<string>(),
@@ -418,6 +460,9 @@ export function computeTraceLit(
       if (!ep) continue;
       state.litTokenKeys.add(ep.traceKey);
       state.endpointTokenKeys.add(ep.traceKey);
+      if (edge.hop != null && edge.hop >= 2 && ep.traceKey !== activeTokenKey) {
+        state.siblingEndpointTokenKeys.add(ep.traceKey);
+      }
       if (ep.kind) state.tokenKinds.set(ep.traceKey, ep.kind);
       if (ep.flowNodeId) state.litFlowNodeIds.add(ep.flowNodeId);
       if (ep.memberId) {
@@ -432,7 +477,7 @@ export function computeTraceLit(
     if (edge.liveTo) absorbLiveHint(edge.liveTo, state, true, activeTokenKey);
   }
 
-  spreadLocalLinkChain(activeTokenKey, state);
+  spreadLocalLinkChain(activeTokenKey, activeTokenKey, state);
 
   const activeUsageMember = memberIdFromUsageKey(activeTokenKey);
   if (activeUsageMember) {
@@ -456,6 +501,7 @@ export function computeTraceLit(
   return {
     litTokenKeys: state.litTokenKeys,
     endpointTokenKeys: state.endpointTokenKeys,
+    siblingEndpointTokenKeys: state.siblingEndpointTokenKeys,
     endpointPortSide: state.endpointPortSide,
     litMemberIds: state.litMemberIds,
     ownerLitMemberIds: state.ownerLitMemberIds,

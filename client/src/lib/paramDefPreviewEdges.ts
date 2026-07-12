@@ -4,9 +4,11 @@ import {
   paramDefForName,
   type MemberSymbolIndex,
 } from "@/lib/localSymbolLinks";
+import { buildParamTypeCascadeEdges } from "@/lib/paramTypeCascadeEdges";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
+import type { GraphData, SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
 
 function getClassNodeData(
@@ -38,10 +40,25 @@ export function buildParamDefPreviewEdges(
   flowNodeId: string,
   memberId: string,
   getNode: (id: string) => Node | undefined,
+  symbols: Map<string, SymbolEntry[]>,
+  graphData: GraphData | null,
+  hasSymbol: (name: string) => boolean,
 ): PreviewEdgeSpec[] {
   const kind: SemanticTokenKind = "variable";
+  const typeCascade = buildParamTypeCascadeEdges({
+    paramName,
+    paramDefEl: definitionEl,
+    flowNodeId,
+    memberId,
+    symbols,
+    graphData,
+    getNode,
+    hasSymbol,
+    edgeIdPrefix: `param-def-${paramName}`,
+  });
+
   const local = buildLocalPreviewEdges(definitionEl, kind, `param-def-${paramName}`);
-  if (local.length > 0) return local;
+  if (local.length > 0) return [...local, ...typeCascade];
 
   const classData = getClassNodeData(flowNodeId, getNode);
   if (!classData) return [];
@@ -87,5 +104,5 @@ export function buildParamDefPreviewEdges(
     });
     idx++;
   }
-  return edges;
+  return [...edges, ...typeCascade];
 }

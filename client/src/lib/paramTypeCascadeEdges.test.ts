@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildParamTypeCascadeEdges,
+  paramNameFromDefId,
+} from "@/lib/paramTypeCascadeEdges";
+import { registerTraceHost } from "@/lib/elementRegistry";
+import {
+  makeSigParamDefKey,
+  makeSignatureTypeKey,
+} from "@/lib/traceKeys";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import type { SymbolEntry } from "@/types";
+import type { Node } from "@xyflow/react";
+
+const FLOW = "flow:file:order.ts";
+const MEMBER = "fn:order:extract";
+const PARAM = "field";
+const TYPE = "AddressFieldKind";
+
+const METHOD_CODE = `extractFieldValue(${PARAM}: ${TYPE}): string | null {
+  return ${PARAM};
+}`;
+
+function classNode(): Node {
+  const data: ClassNodeData = {
+    label: "OrderService",
+    fileName: "order.ts",
+    filePath: "/proj/order.ts",
+    graphNodeId: "class:order",
+    nodeKind: "class",
+    properties: [],
+    methods: [
+      {
+        id: MEMBER,
+        label: "extract Field Value",
+        symbolName: "extractFieldValue",
+        code: METHOD_CODE,
+        startLine: 10,
+      },
+    ],
+    expandedPropertyIds: [],
+    expandedMethodIds: [MEMBER],
+    propertiesSectionCollapsed: false,
+    methodsSectionCollapsed: false,
+    collapsed: false,
+    pinnedMemberIds: [],
+  };
+  return { id: FLOW, type: "class", data, position: { x: 0, y: 0 } };
+}
+
+describe("paramNameFromDefId", () => {
+  it("extracts param name from scoped def id", () => {
+    expect(paramNameFromDefId(`local-def::${MEMBER}::param::field::10`)).toBe(
+      "field",
+    );
+  });
+});
+
+describe("buildParamTypeCascadeEdges", () => {
+  it("emits tier-2 sig-type→param and tier-3 Load stub when type is off canvas", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    document.body.appendChild(pane);
+
+    const paramDef = document.createElement("span");
+    paramDef.dataset.traceKey = makeSigParamDefKey(FLOW, MEMBER, PARAM);
+    paramDef.dataset.localDefId = `local-def::${MEMBER}::param::${PARAM}::10`;
+    pane.appendChild(paramDef);
+    registerTraceHost(paramDef);
+
+    const sigType = document.createElement("span");
+    sigType.dataset.traceKey = makeSignatureTypeKey(FLOW, MEMBER, TYPE);
+    sigType.dataset.tokenKind = "type";
+    pane.appendChild(sigType);
+    registerTraceHost(sigType);
+
+    const symbols = new Map<string, SymbolEntry[]>([
+      [TYPE, [{ filePath: "/proj/types.ts", kind: "type", line: 3 }]],
+    ]);
+
+    const edges = buildParamTypeCascadeEdges({
+      paramName: PARAM,
+      paramDefEl: paramDef,
+      flowNodeId: FLOW,
+      memberId: MEMBER,
+      symbols,
+      graphData: null,
+      getNode: () => classNode(),
+      hasSymbol: (name) => name === TYPE,
+      edgeIdPrefix: "test",
+    });
+
+    expect(edges).toHaveLength(2);
+    expect(edges[0]?.hop).toBe(2);
+    expect(edges[1]?.hop).toBe(3);
+    expect(edges[1]?.load?.filePath).toBe("/proj/types.ts");
+    expect(edges[0]?.from.type).toBe("element");
+    expect((edges[0]?.from as { el: HTMLElement }).el).toBe(sigType);
+    expect((edges[0]?.to as { el: HTMLElement }).el).toBe(paramDef);
+
+    document.body.innerHTML = "";
+  });
+
+  it("returns empty when param has no indexed type", () => {
+    const paramDef = document.createElement("span");
+    const code = `run(x: string): void { return; }`;
+    const node = classNode();
+    (node.data as ClassNodeData).methods[0]!.code = code;
+
+    const edges = buildParamTypeCascadeEdges({
+      paramName: "x",
+      paramDefEl: paramDef,
+      flowNodeId: FLOW,
+      memberId: MEMBER,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () => node,
+      hasSymbol: () => false,
+      edgeIdPrefix: "test",
+    });
+
+    expect(edges).toEqual([]);
+  });
+});

@@ -407,6 +407,44 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 
 ---
 
+## 11. Trace strength (provenance hop decay)
+
+**Status:** `implemented`
+
+**What it is:** Stepped wire opacity and endpoint emphasis for **provenance** relationships summoned in the same trace as a primary usage wire — param/local usage → signature param → indexed type → type definition. Distinct from §2 Transitive (call-graph N-hop). Full contract: [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md).
+
+### Actions
+
+| # | Trigger | System Response |
+| --- | ------- | --------------- |
+| 1 | Hover body usage of param `field: AddressFieldKind` | Tier 1 param→usage + tier 2 sig-type→param + tier 3 type def→sig-type (or Load stub) |
+| 2 | Hover param def `field` | Tier 1 fan-out to all usages + tier 2/3 type chain |
+| 3 | Hover sig-type only | Tier 1 only (no reverse cascade to usages) |
+| 4 | Same trace includes control-flow fan-out | Branch wires stay tier 1 `--edge-control-flow` |
+
+### Data
+
+| Field | Value |
+| ----- | ----- |
+| Tier 1 opacity | 100% (no hop class) |
+| Tier 2 opacity | ~42% (`preview-wire--hop2`) |
+| Tier 3 opacity | ~22% (`preview-wire--hop3`) |
+| Kind | Usage (`--edge-usage`) for provenance segments |
+| Endpoint tier 2/3 | `token-chip-endpoint-sibling` + `flow-anchor-endpoint-sibling` |
+| Sibling usages on single-usage hover | Lit optional; **no** extra usage wires |
+
+### Acceptance Criteria
+
+- [x] Body usage hover draws three-tier provenance chain when param has indexed type
+- [x] Tier 2/3 wires visibly weaker than tier 1
+- [x] Param def fan-out keeps all usage wires at tier 1; type chain at tier 2/3
+- [x] Cascaded Load stub does not open a second connection menu
+- [ ] Load of module-level type alias mounts graph node and upgrades stub on rebuild — verify manually after Load
+- [x] Control-flow wires in same trace are not decayed
+- [x] Provenance `hop` does not set `connectionKind: "transitive"` (legend still buckets under Usage)
+
+---
+
 ## References
 
 - Parent taxonomy: [connection-taxonomy.md](connection-taxonomy.md)

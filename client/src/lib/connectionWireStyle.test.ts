@@ -4,6 +4,7 @@ import {
   computePulsingConnectionKinds,
   legendSwatchClasses,
   previewWireClasses,
+  previewWireStroke,
   structuralWireClasses,
 } from "@/lib/connectionWireStyle";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -85,6 +86,18 @@ describe("connectionWireStyle", () => {
         structuralEdge({ id: "e", edgeType: "extends", strokeStyle: "solid" }),
       ),
     ).toEqual(["structural-edge-path", "structural-edge-path--solid"]);
+  });
+
+  it("previewWireStroke uses dedicated hues per connection kind", () => {
+    expect(
+      previewWireStroke(previewEdge({ id: "u", kind: "class", connectionKind: "usage" })),
+    ).toBe("var(--edge-usage)");
+    expect(
+      previewWireStroke(previewEdge({ id: "t", kind: "class", hop: 2 })),
+    ).toBe("var(--edge-usage)");
+    expect(
+      previewWireStroke(previewEdge({ id: "b", connectionKind: "binding" })),
+    ).toBe("var(--edge-binding)");
   });
 
   it("previewWireClasses matches warm binding edges", () => {

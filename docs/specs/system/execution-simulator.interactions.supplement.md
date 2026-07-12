@@ -108,8 +108,9 @@ During **active run**, `graph-sim-active` applies sim chrome (outline, dimmed co
 | ------- | ---- |
 | Mode + anchors | `SimulationContext.tsx` |
 | Effective end / range | `client/src/lib/simTraceBounds.ts` |
-| Gutter | `SimGutterControl.tsx` |
+| Gutter | `SimGutterControl.tsx`, `SimGutterMenu.tsx`, `simGutterActions.ts` |
 | Panel banner / disarm | `SimulationPanel.tsx`, `SimInputsForm.tsx` |
+| Panel open/close | `SimulationPanelToggle.tsx` (graph header only) |
 | Saved paths | `simTracePaths.ts` |
 | Context menu anchor | `CodeLine.tsx` → `useTokenContextMenu.ts` |
 

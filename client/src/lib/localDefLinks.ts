@@ -77,8 +77,33 @@ export function buildLocalPreviewEdges(
   kind: SemanticTokenKind,
   edgeIdPrefix: string,
 ): PreviewEdgeSpec[] {
-  const defHost = canonicalLocalDefHost(host) ?? host;
-  return linksForElement(defHost).map((pair, index) =>
+  const targetId = host.dataset.localTargetId;
+  if (targetId) {
+    const pane = graphPane();
+    if (!pane) return [];
+
+    const from = findLocalDefElement(pane, targetId);
+    if (!from || from === host || areMemberDefSiblingHosts(from, host)) return [];
+
+    const edges: PreviewEdgeSpec[] = [
+      buildElementPreviewEdge(`${edgeIdPrefix}-0`, from, host, kind),
+    ];
+
+    let idx = 1;
+    for (const sibling of pane.querySelectorAll<HTMLElement>(
+      `[data-local-target-id="${CSS.escape(targetId)}"]`,
+    )) {
+      if (sibling === host || areMemberDefSiblingHosts(from, sibling)) continue;
+      edges.push({
+        ...buildElementPreviewEdge(`${edgeIdPrefix}-${idx}`, from, sibling, kind),
+        hop: 2,
+      });
+      idx++;
+    }
+    return edges;
+  }
+
+  return linksForElement(host).map((pair, index) =>
     buildElementPreviewEdge(`${edgeIdPrefix}-${index}`, pair.from, pair.to, kind),
   );
 }

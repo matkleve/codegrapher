@@ -82,10 +82,11 @@ function SimPanelTabBody({ tab }: { tab: SimPanelTab }) {
         <ol className="list-decimal space-y-1 pl-4">
           <li>Expand a method body</li>
           <li>
-            <span className="font-medium text-foreground">Alt+click</span> gutter ▶ start ·{" "}
-            <span className="font-medium text-foreground">click</span> ■ stop ·{" "}
-            <span className="font-medium text-foreground">Shift+click</span> run
+            Click the gutter action to set <span className="font-medium text-foreground">start</span>{" "}
+            then <span className="font-medium text-foreground">stop</span> · add{" "}
+            <span className="font-medium text-foreground">pauses</span> between them
           </li>
+          <li>Hover the gutter action briefly for start / stop / pause menu</li>
           <li>Or right-click a token → Start trace / Set end / Run</li>
           <li>Set inputs and start a run</li>
         </ol>
@@ -147,23 +148,11 @@ export function SimulationPanel() {
           collapseWarning && "sim-panel-collapse-warning__content",
         )}
       >
-        <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-2">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold">Simulation</h3>
-            <p className="truncate text-xs text-muted-foreground">
-              {session?.methodName ?? startAnchor?.methodName ?? "No trace armed"}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setPanelOpen(false)}
-            aria-label="Collapse simulation panel"
-            title="Collapse panel"
-          >
-            <PanelRightClose />
-          </Button>
+        <div className="border-b border-border px-3 py-2">
+          <h3 className="text-sm font-semibold">Simulation</h3>
+          <p className="truncate text-xs text-muted-foreground">
+            {session?.methodName ?? startAnchor?.methodName ?? "No trace armed"}
+          </p>
         </div>
         <SimTraceBanner />
         <div className="flex gap-1 border-b border-border px-2 py-1.5">
