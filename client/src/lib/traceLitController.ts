@@ -122,6 +122,7 @@ function attachEndpointSockets(
   hostState: HostState,
   portSides: ReadonlySet<"left" | "right">,
   depth: number,
+  pointerHover = false,
 ): void {
   const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
   const right = host.querySelector<HTMLElement>('[data-flow-anchor="right"]');
@@ -132,6 +133,7 @@ function attachEndpointSockets(
       endpointSibling: depth >= 2,
       depth,
       colorClasses: anchorColorClasses(host),
+      pointerHover,
     });
   }
   setDepth(hostState, depth);
@@ -147,11 +149,12 @@ function applyEndpointHost(
 ): void {
   const traceKey = traceKeyFromHost(host);
   const hostState = ensureHost(next, host);
+  const hoverPreview = traceKey != null && hoveredTokenKey === traceKey;
   const extra: string[] = [CHIP_ON];
   if (depth === 1) {
     if (traceKey && pinnedTokenKeys.has(traceKey)) {
       extra.push(CHIP_SOURCE);
-    } else if (traceKey && hoveredTokenKey === traceKey) {
+    } else if (hoverPreview) {
       extra.push(CHIP_HOVER_PREVIEW);
     }
   }
@@ -162,6 +165,7 @@ function applyEndpointHost(
     hostState,
     portSidesForHost(host, endpointPortSide),
     depth,
+    hoverPreview,
   );
 }
 
@@ -186,6 +190,7 @@ function boostChipHost(
     hostState,
     portSidesForHost(host, state.endpointPortSide),
     1,
+    forceHoverPreview,
   );
   boostHoveredLine(next, host);
 }

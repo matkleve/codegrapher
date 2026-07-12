@@ -38,13 +38,13 @@ This supplement defines trace **strength by graph distance** and adds **Typesett
 | Distance | Label (informal) | Wire path opacity | Glow opacity | Endpoint chip | When |
 | -------- | ---------------- | ----------------- | ------------ | ------------- | ---- |
 | **1** | Focus | `tracePathOpacity(1)` → 100% | `traceGlowOpacity(1)` (~16%) | `token-chip-on` + semantic ink | Hovered/pinned token; direct wire (`hop` omitted) |
-| **2** | Provenance | `tracePathOpacity(2)` (~76% at maxDepth 5) | `traceGlowOpacity(2)` (~13%) | `trace-depth-faded` + semantic ink | One hop from focus (`hop: 2`) |
-| **3** | Origin | `tracePathOpacity(3)` (~54%) | `traceGlowOpacity(3)` (~9%) | `trace-depth-faded` + semantic ink | Two hops from focus (`hop: 3`) |
-| **N** | Distant | `tracePathOpacity(N)` → floor `--trace-depth-min-opacity` | scales with path | `trace-depth-faded` | N hops (up to `RELATIVE_MAX_DEPTH`) |
+| **2** | Provenance | `tracePathOpacity(2)` (~83% at maxDepth 5) | `traceGlowOpacity(2)` | `trace-depth-faded` + semantic ink | One step from focus (`hop: 2`) |
+| **3** | Origin | `tracePathOpacity(3)` (~64%) | `traceGlowOpacity(3)` | `trace-depth-faded` + semantic ink | Two steps from focus (`hop: 3`) |
+| **N** | Distant | `tracePathOpacity(N)` → floor `--trace-depth-min-opacity` | scales with path | `trace-depth-faded` | N steps (up to `RELATIVE_MAX_DEPTH`) |
 
-**Normative scale:** opacity decays with **graph distance** from the focus token — not a fixed 3-hop enum. `client/src/lib/traceDepth.ts` computes path/glow opacity from depth and `maxDepth`. **Emission:** wires and chips/sockets/lines set **inline `style.opacity`** via `previewEdgeDom.ts` and `traceLitApply.ts`; class `trace-depth-faded` marks hop ≥ 2 endpoints.
+**Normative scale:** one continuous power curve in `tracePathOpacity(depth, maxDepth)` — same function for **wires**, **socket dots**, **token chips**, and **lit code lines** (`traceLitApply.ts`, `previewEdgeDom.ts`). Walk reach is capped separately upstream (`TRACE_DEPTH_UP` / `TRACE_DEPTH_DOWN` in `lexicalGraph.ts`). Non-lit syntax stays `--faint` (binary off-curve).
 
-**Kind overrides strength hue, not hop decay (with one exemption):**
+**Kind overrides strength hue, not distance decay (one exemption):**
 
 | Kind | Hue | Hop decay applies? |
 | ---- | --- | ------------------ |
@@ -58,49 +58,40 @@ This supplement defines trace **strength by graph distance** and adds **Typesett
 
 ---
 
-## Strength stack (session × pointer × distance)
+## Brightness curve (normative)
 
-Trace strength is three **independent axes**, not one enum. Portable pattern: [visual-strength-stacks.md](../../agent-playbook/core/visual-strength-stacks.md).
+```
+focus token = distance 1
+     │
+     ├─► child walk  (RELATIVE_MAX_DEPTH / TRACE_DEPTH_DOWN)
+     └─► parent walk (BACKWARD_LEXICAL_MAX_DEPTH / TRACE_DEPTH_UP)
+     │
+     ▼
+every lit wire / chip / socket / code line gets distance d ∈ [1, maxDepth]
+     │
+     ▼
+brightness(d) = tracePathOpacity(d, maxDepth)   // single curve, all surfaces
+```
 
-| Axis | State source | Meaning |
-| ---- | ------------ | ------- |
-| **Session** | `traceTokenKey` set (dwell or pin) | Committed trace — hop decay applies |
-| **Pointer** | `pointerTokenKey` or wire under cursor | Emphasis within an active trace |
-| **Distance** | `traceDepth` / `PreviewEdgeSpec.hop` | Graph hops from focus |
+| Surface | Distance source | Application |
+| ------- | ----------------- | ----------- |
+| Wires | `PreviewEdgeSpec.hop` → `depthFromHop` | `traceWireOpacity` inline on path + glow |
+| Token chips & sockets | `TraceLitState.traceDepth` per key | `traceLitApply.applyDepth` |
+| Lit code lines | `TraceLitState.litLineDepth` | same `applyDepth` on `.code-line` |
+| Load stub chip | `edge.hop` | inline opacity on stub host |
+| Non-lit syntax | — | `--faint-*` (not on curve) |
 
-### Derived modes
+**Session:** trace strength applies while `traceTokenKey` is set (`isTraceSessionActive`). Pointer leaving a card MUST NOT clear the curve.
 
-| Mode | Session | Pointer | Wires | Lit chips |
-| ---- | ------- | ------- | ----- | --------- |
-| **Idle** | off | — | hidden | semantic rest |
-| **Trace** | on | none | `traceWireOpacity(baseline)` | full at distance 1; `trace-depth-faded` at hop ≥ 2 |
-| **Emphasis** | on | token or wire | direct/subgraph: full + glow; **backdrop** on other trace wires (~50% path) | pointer endpoint: `token-chip-hover-preview`; **other lit members stay at trace baseline** |
-
-### Normative invariants
-
-1. **Session survives pointer leave:** moving the pointer out of a class card MUST NOT drop trace strength while `traceTokenKey` or pin is active. Implementation: `isTraceSessionActive()` in `wireHoverBoost.ts`.
-2. **Lit member protection:** chips/sockets/lines already lit by the trace MUST NOT dim below trace baseline when pointer emphasizes another branch (`isLitTraceMember` in `traceLitApply.ts`).
-3. **Backdrop is wire-only (v1):** during pointer emphasis, non-emphasized **wires** recede; lit chips use baseline unless they are the pointer endpoint.
-4. **Glow authority:** path and glow opacity for preview wires come from `traceWireOpacity` in JS — not a fixed CSS default that fights inline updates.
-
-### Pointer emphasis triggers
-
-| Pointer on | Emphasized | Backdrop |
-| ---------- | ---------- | -------- |
-| Indexed token chip | Wires touching that token's `traceKey` (+ wire hover class) | Other wires in the same trace session |
-| Preview wire hit-zone | That wire + endpoint chips (`applyWireHoverBoost`) | Other trace wires |
-| Nothing (session only) | — | — (pure hop decay) |
-
-**Planned:** subgraph emphasis (BFS 1–2 hops from pointer token) — [refactor plan](../../project/trace-strength-refactor-plan.md) PR 6.
+**Wire hit-zone hover:** stroke-width only (`preview-edge-line-hover`) — opacity stays on the distance curve.
 
 ### Constants (`traceDepth.ts`)
 
 | Constant | Role |
 | -------- | ---- |
-| `TRACE_DEPTH_CURVE` / `TRACE_DEPTH_CURVE_EMPHASIS` | Hop decay steepness (baseline vs pointer emphasis) |
-| `TRACE_WIRE_EMPHASIS_*` | Full path + glow on emphasized wire |
-| `TRACE_WIRE_BACKDROP_*` | Recede non-emphasized wires during pointer emphasis |
-| `TRACE_UNINVOLVED_IN_TRACE` | Distance-1 non-pointer chips during emphasis (rare; lit members bypass) |
+| `TRACE_DEPTH_CURVE` | Power exponent (lower = flatter fade) |
+| `TRACE_DEPTH_MIN_OPACITY` | Floor at `maxDepth` |
+| `TRACE_GLOW_*_RATIO` | Glow halo = path × ratio |
 
 ---
 

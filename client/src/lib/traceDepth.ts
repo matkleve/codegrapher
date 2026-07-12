@@ -3,38 +3,20 @@ import { RELATIVE_MAX_DEPTH } from "@/lib/lexicalGraph";
 /** Floor opacity at `maxDepth` — keep in sync with `--trace-depth-min-opacity` in theme CSS. */
 export const TRACE_DEPTH_MIN_OPACITY = 0.2;
 
-/** Lit distance-1 chips/wires dimmed only while pointer emphasizes another trace member. */
-export const TRACE_UNINVOLVED_IN_TRACE = 0.68;
-
-/** Baseline path for hop-1 wires during an active trace (emphasis pops to full). */
-export const TRACE_WIRE_SESSION_PATH_AT_FOCUS = 0.8;
-
-/** Non-emphasized wires recede while pointer is on a direct branch. */
-export const TRACE_WIRE_BACKDROP_PATH_OPACITY = 0.36;
-export const TRACE_WIRE_BACKDROP_GLOW_OPACITY = 0.05;
-
-/** Wire path + glow when pointer is on the wire or its endpoint chip. */
-export const TRACE_WIRE_EMPHASIS_PATH_OPACITY = 1;
-/** Subtle halo — the dashed path carries hover brightness, not the glow layer. */
-export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.18;
-
-/** Power curve for provenance decay during a committed trace (lower = flatter). */
+/** Power curve for distance decay (lower = flatter). */
 export const TRACE_DEPTH_CURVE = 0.85;
-
-/** Flatter curve while pointer emphasizes one branch — hops stay readable. */
-export const TRACE_DEPTH_CURVE_EMPHASIS = 0.55;
-
-/** Floor opacity for provenance hops during pointer emphasis. */
-export const TRACE_EMPHASIS_MIN_OPACITY = 0.44;
 
 /** Glow opacity ≈ path opacity × ratio at provenance distances. */
 export const TRACE_GLOW_PATH_RATIO = 0.172;
-export const TRACE_GLOW_EMPHASIS_RATIO = 0.28;
 export const TRACE_GLOW_BASELINE_RATIO = 0.13;
 
-export type TraceStrengthMode = "baseline" | "emphasis";
+/** Pointer emphasis within an active trace — multiplies curve opacity, capped at 1. */
+export const TRACE_POINTER_HOVER_BOOST = 1.35;
 
-/** Graph distance from the hovered token (1 = focus). */
+/** Extra glow scale when the pointer emphasizes a wire at focus distance. */
+export const TRACE_POINTER_GLOW_BOOST = 2.2;
+
+/** Graph distance from the focus token (1 = focus). */
 export function clampTraceDepth(depth: number, maxDepth = RELATIVE_MAX_DEPTH): number {
   return Math.max(1, Math.min(depth, maxDepth));
 }
@@ -51,69 +33,64 @@ export function depthFromHop(hop: number | undefined): number {
   return hop;
 }
 
-function curveForMode(mode: TraceStrengthMode): number {
-  return mode === "emphasis" ? TRACE_DEPTH_CURVE_EMPHASIS : TRACE_DEPTH_CURVE;
-}
-
-function floorForMode(mode: TraceStrengthMode): number {
-  return mode === "emphasis" ? TRACE_EMPHASIS_MIN_OPACITY : TRACE_DEPTH_MIN_OPACITY;
-}
-
 /**
- * Path/chip opacity from graph distance. Scales with `maxDepth` so depth 10 at max 10
- * matches the old hop-5 fade when maxDepth was 5.
+ * Single brightness curve for wires, chips, sockets, and lit code lines.
+ * Distance 1 → 1.0; scales to `TRACE_DEPTH_MIN_OPACITY` at `maxDepth`.
  */
 export function tracePathOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  mode: TraceStrengthMode = "baseline",
 ): number {
-  if (depth <= 1) {
-    return mode === "emphasis" ? TRACE_UNINVOLVED_IN_TRACE : 1;
-  }
+  if (depth <= 1) return 1;
   const clamped = clampTraceDepth(depth, maxDepth);
-  if (maxDepth <= 1) return floorForMode(mode);
+  if (maxDepth <= 1) return TRACE_DEPTH_MIN_OPACITY;
   const t = (maxDepth - clamped) / (maxDepth - 1);
-  const floor = floorForMode(mode);
-  return floor + (1 - floor) * Math.pow(t, curveForMode(mode));
+  return (
+    TRACE_DEPTH_MIN_OPACITY +
+    (1 - TRACE_DEPTH_MIN_OPACITY) * Math.pow(t, TRACE_DEPTH_CURVE)
+  );
+}
+
+export function applyPointerHoverBoost(
+  opacity: number,
+  pointerHover: boolean,
+): number {
+  if (!pointerHover) return opacity;
+  return Math.min(1, opacity * TRACE_POINTER_HOVER_BOOST);
+}
+
+/** Lit-surface strength at graph distance, optionally boosted by pointer emphasis. */
+export function traceStrengthAtDistance(
+  depth: number,
+  maxDepth: number = RELATIVE_MAX_DEPTH,
+  pointerHover = false,
+): number {
+  return applyPointerHoverBoost(tracePathOpacity(depth, maxDepth), pointerHover);
 }
 
 /** Wire glow halo opacity at this graph distance. */
 export function traceGlowOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  mode: TraceStrengthMode = "baseline",
+  pointerHover = false,
 ): number {
-  if (depth <= 1) {
-    const ratio = mode === "emphasis" ? TRACE_GLOW_EMPHASIS_RATIO : TRACE_GLOW_BASELINE_RATIO;
-    const base = mode === "emphasis" ? TRACE_UNINVOLVED_IN_TRACE : 1;
-    return base * ratio;
+  const path = tracePathOpacity(depth, maxDepth);
+  const ratio = depth <= 1 ? TRACE_GLOW_BASELINE_RATIO : TRACE_GLOW_PATH_RATIO;
+  let glow = path * ratio;
+  if (pointerHover) {
+    glow = Math.min(0.42, glow * TRACE_POINTER_GLOW_BOOST);
   }
-  const ratio = mode === "emphasis" ? TRACE_GLOW_EMPHASIS_RATIO : TRACE_GLOW_PATH_RATIO;
-  return tracePathOpacity(depth, maxDepth, mode) * ratio;
+  return glow;
 }
 
-/** Explicit wire opacities for emphasized vs backdrop vs baseline. */
+/** Preview wire path + glow from graph distance, with optional pointer emphasis. */
 export function traceWireOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  emphasized = false,
-  backdrop = false,
+  pointerHover = false,
 ): { path: number; glow: number } {
-  if (emphasized) {
-    return {
-      path: TRACE_WIRE_EMPHASIS_PATH_OPACITY,
-      glow: TRACE_WIRE_EMPHASIS_GLOW_OPACITY,
-    };
-  }
-  if (backdrop) {
-    // Backdrop only applies to hop-1 siblings; hop 2+ keeps provenance decay (see previewEdgeDom).
-    const path = TRACE_WIRE_BACKDROP_PATH_OPACITY;
-    return {
-      path,
-      glow: Math.max(path * TRACE_GLOW_BASELINE_RATIO, TRACE_WIRE_BACKDROP_GLOW_OPACITY),
-    };
-  }
-  const path = depth <= 1 ? TRACE_WIRE_SESSION_PATH_AT_FOCUS : tracePathOpacity(depth, maxDepth, "baseline");
-  return { path, glow: traceGlowOpacity(depth, maxDepth, "baseline") };
+  return {
+    path: traceStrengthAtDistance(depth, maxDepth, pointerHover),
+    glow: traceGlowOpacity(depth, maxDepth, pointerHover),
+  };
 }

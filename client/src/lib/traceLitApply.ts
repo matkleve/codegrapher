@@ -1,5 +1,5 @@
-import { tracePathOpacity, type TraceStrengthMode } from "@/lib/traceDepth";
-import { isTraceEmphasisActive, isTraceSessionActive } from "@/lib/wireHoverBoost";
+import { tracePathOpacity, traceStrengthAtDistance } from "@/lib/traceDepth";
+import { isTraceSessionActive } from "@/lib/wireHoverBoost";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
 export const CHIP_LIT = "token-chip-lit";
@@ -11,6 +11,7 @@ export const MEMBER_LIT = "trace-member-lit";
 export const MEMBER_OWNER_LIT = "trace-member-owner-lit";
 export const LINE_LIT = "trace-lit-line";
 export const TRACE_DEPTH_FADED = "trace-depth-faded";
+export const TRACE_POINTER_EMPHASIS = "trace-pointer-emphasis";
 export const ANCHOR_ON = "flow-anchor-on";
 export const ANCHOR_OFF = "flow-anchor-off";
 export const ANCHOR_ENDPOINT_SIBLING = "flow-anchor-endpoint-sibling";
@@ -19,6 +20,7 @@ export type SocketState = {
   endpointSibling: boolean;
   depth: number;
   colorClasses: string[];
+  pointerHover?: boolean;
 };
 
 export type HostState = {
@@ -49,59 +51,29 @@ function removeAnchorColorClasses(anchor: HTMLElement): void {
   }
 }
 
-function isFocusBoosted(classes: string[]): boolean {
-  return classes.includes(CHIP_HOVER_PREVIEW) || classes.includes(CHIP_SOURCE);
-}
+function applyDepth(el: HTMLElement, depth: number, pointerHover = false): void {
+  if (!isTraceSessionActive()) {
+    el.classList.remove(TRACE_DEPTH_FADED, TRACE_POINTER_EMPHASIS);
+    el.style.removeProperty("opacity");
+    return;
+  }
 
-/** Committed trace member — stays at baseline strength; only pointer emphasis pops brighter. */
-function isLitTraceMember(classes: string[]): boolean {
-  return (
-    classes.includes(CHIP_LIT) ||
-    classes.includes(CHIP_ON) ||
-    classes.includes(LINE_LIT) ||
-    classes.includes(MEMBER_LIT) ||
-    classes.includes(MEMBER_OWNER_LIT)
+  const base = tracePathOpacity(depth);
+  const opacity = traceStrengthAtDistance(depth, undefined, pointerHover);
+  el.classList.toggle(TRACE_DEPTH_FADED, depth > 1);
+  el.classList.toggle(
+    TRACE_POINTER_EMPHASIS,
+    pointerHover && base >= 0.98 && opacity >= 0.98,
   );
-}
-
-function traceStrengthMode(): TraceStrengthMode | null {
-  if (!isTraceSessionActive()) return null;
-  return isTraceEmphasisActive() ? "emphasis" : "baseline";
-}
-
-function applyDepth(el: HTMLElement, depth: number, classes: string[] = []): void {
-  if (isFocusBoosted(classes)) {
-    el.classList.remove(TRACE_DEPTH_FADED);
+  if (opacity >= 1) {
     el.style.removeProperty("opacity");
-    return;
+  } else {
+    el.style.opacity = String(opacity);
   }
-
-  const mode = traceStrengthMode();
-  if (!mode) {
-    el.classList.remove(TRACE_DEPTH_FADED);
-    el.style.removeProperty("opacity");
-    return;
-  }
-
-  const strengthMode: TraceStrengthMode =
-    mode === "emphasis" && isLitTraceMember(classes) ? "baseline" : mode;
-
-  if (depth <= 1) {
-    el.classList.remove(TRACE_DEPTH_FADED);
-    if (strengthMode === "baseline") {
-      el.style.removeProperty("opacity");
-    } else {
-      el.style.opacity = String(tracePathOpacity(1, undefined, "emphasis"));
-    }
-    return;
-  }
-
-  el.classList.add(TRACE_DEPTH_FADED);
-  el.style.opacity = String(tracePathOpacity(depth, undefined, strengthMode));
 }
 
 function revertDepth(el: HTMLElement): void {
-  el.classList.remove(TRACE_DEPTH_FADED);
+  el.classList.remove(TRACE_DEPTH_FADED, TRACE_POINTER_EMPHASIS);
   el.style.removeProperty("opacity");
 }
 
@@ -115,6 +87,7 @@ function socketStatesEqual(a: SocketState, b: SocketState): boolean {
   return (
     a.endpointSibling === b.endpointSibling &&
     a.depth === b.depth &&
+    a.pointerHover === b.pointerHover &&
     classesEqual(a.colorClasses, b.colorClasses)
   );
 }
@@ -127,17 +100,13 @@ function revertSocket(el: HTMLElement): void {
   appliedSockets.delete(el);
 }
 
-function applySocket(
-  el: HTMLElement,
-  state: SocketState,
-  hostClasses: string[] = [],
-): void {
+function applySocket(el: HTMLElement, state: SocketState): void {
   el.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
   el.classList.add(ANCHOR_ON);
   removeAnchorColorClasses(el);
   el.classList.add(...state.colorClasses);
   el.classList.toggle(ANCHOR_ENDPOINT_SIBLING, state.endpointSibling);
-  applyDepth(el, state.depth, hostClasses);
+  applyDepth(el, state.depth, state.pointerHover);
   appliedSockets.set(el, state);
 }
 
@@ -156,9 +125,13 @@ function applyHost(el: HTMLElement, state: HostState): void {
   for (const cls of state.classes) {
     if (!el.classList.contains(cls)) el.classList.add(cls);
   }
-  applyDepth(el, state.depth, state.classes);
+  const pointerHover = state.classes.includes(CHIP_HOVER_PREVIEW);
+  applyDepth(el, state.depth, pointerHover);
   for (const [socket, socketState] of state.sockets) {
-    applySocket(socket, socketState, state.classes);
+    applySocket(socket, {
+      ...socketState,
+      pointerHover: pointerHover || Boolean(socketState.pointerHover),
+    });
   }
   appliedHosts.set(el, state);
 }
@@ -176,7 +149,8 @@ export function syncTraceLitDom(next: Map<HTMLElement, HostState>): void {
       classesEqual(prev.classes, state.classes) &&
       prev.depth === state.depth
     ) {
-      applyDepth(el, state.depth, state.classes);
+      const pointerHover = state.classes.includes(CHIP_HOVER_PREVIEW);
+      applyDepth(el, state.depth, pointerHover);
       const socketKeys = [...state.sockets.keys()];
       const sameSockets =
         socketKeys.length === prev.sockets.size &&
@@ -187,7 +161,7 @@ export function syncTraceLitDom(next: Map<HTMLElement, HostState>): void {
         });
       if (sameSockets) {
         for (const [socket, socketState] of state.sockets) {
-          applySocket(socket, socketState, state.classes);
+          applySocket(socket, socketState);
         }
         appliedHosts.set(el, state);
         continue;

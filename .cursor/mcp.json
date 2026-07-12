@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--executablePath",
+        "/home/matthias/.cache/puppeteer/chrome/linux-150.0.7871.24/chrome-linux64/chrome",
+        "--memoryDebugging",
+        "--categoryExtensions",
+        "--allowedUrlPattern",
+        "http://localhost:*/*",
+        "--allowedUrlPattern",
+        "http://127.0.0.1:*/*",
+        "--screenshotFormat",
+        "jpeg",
+        "--screenshotMaxWidth",
+        "1280"
+      ]
+    }
+  }
+}

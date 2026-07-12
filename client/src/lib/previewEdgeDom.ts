@@ -19,7 +19,6 @@ import { depthFromHop, TRACE_GLOW_BASELINE_RATIO, traceWireOpacity } from "@/lib
 import {
   edgeTouchesHoveredToken,
   getWireHoveredTokenKey,
-  isTraceEmphasisActive,
   isTraceSessionActive,
   isWireHovered,
 } from "@/lib/wireHoverBoost";
@@ -84,26 +83,19 @@ function applyWireDepthOpacity(
     return;
   }
 
-  const emphasized =
-    isWireHovered(spec, path) ||
-    (getNode != null && edgeTouchesHoveredToken(spec, getNode, getWireHoveredTokenKey()));
   const depth = depthFromHop(spec.hop);
+  const hoverKey = getWireHoveredTokenKey();
+  const pointerHover =
+    isWireHovered(spec, path) ||
+    (getNode != null && edgeTouchesHoveredToken(spec, getNode, hoverKey));
 
-  if (spec.opacity != null && spec.opacity < 1 && !emphasized) {
+  if (spec.opacity != null && spec.opacity < 1) {
     path.style.opacity = String(spec.opacity);
     glow.style.opacity = String(spec.opacity * TRACE_GLOW_BASELINE_RATIO);
     return;
   }
 
-  // Provenance hops 2+ keep hop-decay strength; only hop-1 siblings recede during pointer emphasis.
-  const backdrop = isTraceEmphasisActive() && !emphasized && depth <= 1;
-
-  const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(
-    depth,
-    undefined,
-    emphasized,
-    backdrop,
-  );
+  const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(depth, undefined, pointerHover);
   path.style.opacity = String(pathOpacity);
   const group = path.parentElement as SVGGElement | null;
   const revealing =
@@ -111,8 +103,8 @@ function applyWireDepthOpacity(
   if (!revealing) {
     glow.style.opacity = String(glowOpacity);
   }
-  path.classList.toggle("preview-edge-branch-emphasis", emphasized);
-  glow.classList.toggle("preview-edge-branch-emphasis", emphasized);
+  path.classList.toggle("preview-edge-line-hover", pointerHover);
+  glow.classList.toggle("preview-edge-line-hover", pointerHover);
 }
 
 function revealWireIfReady(wire: WireElements): void {

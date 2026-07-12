@@ -136,12 +136,11 @@
   pointer-events: stroke;
 }
 
-.preview-edge-path.preview-edge-line-hover,
-.preview-edge-path.preview-edge-branch-emphasis {
+.preview-edge-path.preview-edge-line-hover {
   stroke-width: 2.25;
+  opacity: 1 !important;
 }
 
-.preview-edge-glow.preview-edge-line-hover,
-.preview-edge-glow.preview-edge-branch-emphasis {
-  stroke-width: 7;
+.preview-edge-glow.preview-edge-line-hover {
+  stroke-width: 4;
 }
