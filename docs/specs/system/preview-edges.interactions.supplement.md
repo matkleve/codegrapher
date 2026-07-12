@@ -24,7 +24,9 @@ stateDiagram-v2
 
   note right of HoverPending
     graph-trace-pending
-    token-chip-pending-trace
+    surround dims
+    focal chip: pending strength
+    ink unchanged
   end note
 
   note right of Tracing
@@ -110,15 +112,15 @@ sequenceDiagram
   participant Wire as playWireReveal
 
   P->>Chip: enter (0ms)
-  Chip->>Chip: token-chip-pending-trace
+  Chip->>Chip: token-chip-pending-trace (strength only; ink unchanged)
   Pane->>Pane: graph-trace-pending
   Surround->>Surround: faint-* + trace-dim-surface (ease 120ms)
 
-  Note over Pane: dwell 40ms
+  Note over Pane: dwell 40ms — gates commit, not chip ink
 
   P->>Pane: beginTrace
   Pane->>Pane: graph-trace-active (+ warm after first commit)
-  Chip->>Chip: pending → token-chip-lit / token-chip-on
+  Chip->>Chip: pending strength → focus curve + token-chip-lit / token-chip-on
   Lit->>Surround: trace-member-lit, trace-lit-line, sockets
   Wire->>Wire: path+glow dash draw 240ms (+25ms stagger)
 
@@ -126,24 +128,26 @@ sequenceDiagram
   Note over Pane: grace 50ms → clear
 ```
 
-| Phase | Pane class | Chip | Member rows | Body / syntax | Wires / glow |
-| ----- | ---------- | ---- | ----------- | ------------- | ------------ |
-| **Idle** | — | resting ink | `bg-muted` | full color | hidden |
-| **Pending dwell** (0–40ms) | `graph-trace-pending` | `token-chip-pending-trace` (semantic ink + fill) | dim surface | `--faint-*` eases in | hidden |
-| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | `token-chip-lit` `token-chip-on` | lit row + dim others | lit lines + faint non-lit | WAAPI stroke reveal 240ms; marching dash after |
-| **Ctrl held** | `graph-ctrl-preview` (+ trace classes if active) | shimmer on indexed | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
-| **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | per merged lit | per merged lit | pinned edges persist |
-| **Foreign hover while pinned** | trace + pin | dwell preview on other token | ephemeral lit | ephemeral lit | preview wires |
+| Phase | Pane class | Focal chip | Other indexed chips | Member rows | Body / syntax | Wires / glow |
+| ----- | ---------- | ---------- | ------------------- | ----------- | ------------- | ------------ |
+| **Idle** | — | resting ink | resting ink | `bg-muted` | full color | hidden |
+| **Pending dwell** (0–40ms) | `graph-trace-pending` | pending `--trace-strength` + semantic ink | resting ink | dim surface | `--faint-*` eases in | hidden |
+| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | lit: focus curve + fill | resting ink (not faint) | lit row + dim others | lit lines + faint syntax | WAAPI stroke reveal 240ms |
+| **Ctrl held** | `graph-ctrl-preview` (+ trace if active) | shimmer on indexed | shimmer | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
+| **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | resting ink | per merged lit | per merged lit | pinned edges persist |
+| **Foreign hover while pinned** | trace + pin | ephemeral preview on other token | resting ink | ephemeral lit rows | ephemeral lit | preview wires |
 
 \*`graph-trace-warm` — set after the first committed dwell this session; shortens socket transition only ([interaction-emphasis.md](interaction-emphasis.md)).
 
 **Ownership rules (no staggered pops):**
 
 - **Surround dim** starts at pending (`graph-trace-pending`), not only at `beginTrace`.
+- **Chip ink** never drops to `--faint` during pending or active trace — pending is `--trace-strength` on the focal chip only; commit promotes strength and lit classes.
+- **Row promotion** (`trace-member-lit`) applies on trace commit only — not during pending dwell.
 - **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); `LEAVE_GRACE_MS` only defers host `onClear` / ref cleanup for neighbor anti-flicker.
 - **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
 - **Wire path + glow** share one dash-offset reveal in `playWireReveal`; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
-- **Importance easing** — color, background, border, box-shadow, opacity on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
+- **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
 
 ---
 
@@ -447,17 +451,17 @@ Applied on graph pane wrapper (`GraphFlowCanvas`):
 flowchart TB
   subgraph classes [Canvas classes]
     C[graph-ctrl-preview] -->|Ctrl held| Shimmer[indexed token glint]
-    T[graph-trace-active] -->|traceTokenKey set| Dim[dim non-lit tokens color-only]
+    T[graph-trace-active] -->|traceTokenKey set| Dim[surround dims — syntax + chrome color-only]
     P[graph-trace-pinned] -->|pinnedTraces non-empty| Pin[pinned trace + ephemeral hover preview]
   end
 ```
 
-| Mode | Lit tokens | Dim tokens | Node header |
-| ---- | ---------- | ---------- | ----------- |
-| Idle | semantic colors | normal | card background |
-| Trace active | semantic + endpoints `token-chip-on` | `--faint` text, **no bg wash** | **no tint** (stays white/card) |
-| Ctrl + trace | shimmer stays on for every indexed token (Ctrl always wins) | faint + shimmer | no tint |
-| Pinned | pinned trace lit + optional hover preview | faint until dwell (or immediately if Ctrl held) | no tint |
+| Mode | Lit path | Surround (syntax, chrome) | Indexed chips off path | Node header |
+| ---- | -------- | --------------------------- | ---------------------- | ----------- |
+| Idle | — | normal | resting semantic ink | card background |
+| Trace active | focus curve + `token-chip-on` | `--faint-*` / dim rows, **no bg wash** | **resting semantic ink** | no tint |
+| Ctrl + trace | shimmer on every indexed chip | `--faint-ctrl` (wins syntax) | shimmer + resting ink | no tint |
+| Pinned | merged lit + `token-chip-source` | per merged lit | resting ink; foreign preview on dwell | no tint |
 
 **Active chips (`token-chip-on`):** semantic tint fill (`--token-surface-*` — `color-mix(in srgb, …)` of `--token-edge-*` into white / `--background`), **no inset ring**; idle `:hover` and `:focus-visible` on `.cursor-pointer` chips use the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
 

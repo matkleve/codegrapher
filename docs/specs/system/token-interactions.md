@@ -15,7 +15,7 @@ usage, or binding / control-flow per kind), an **info box**, a **jump tip**, a *
 code **dims** so the answer stands alone. Nothing is a standing preview layer — release
 the gesture and the node returns to its calm resting state. This spec catalogs
 the gestures; edge mechanism lives in [preview-edges.md](preview-edges.md), dim/lit
-in [interaction-emphasis.md](interaction-emphasis.md). **Visual commit order** (pending dwell → trace → wires): [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) § Visual commit timeline.
+in [interaction-emphasis.md](interaction-emphasis.md). **Map:** [token-hover.atlas.supplement.md](token-hover.atlas.supplement.md).
 
 ## Where It Lives
 

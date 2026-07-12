@@ -1,28 +1,20 @@
-import {
-  Node,
-  Project,
-  SyntaxKind,
-  type ArrowFunction,
-  type ClassDeclaration,
-  type FunctionDeclaration,
-  type FunctionExpression,
-  type MethodDeclaration,
-  type SourceFile,
-} from "ts-morph";
+import { Project, type SourceFile } from "ts-morph";
 import * as fs from "fs";
 import * as path from "path";
-import { classNodeId, functionNodeId, methodNodeId, resolveImportPath } from "./parser";
-
-export type SymbolKind =
-  | "class"
-  | "function"
-  | "method"
-  | "interface"
-  | "type"
-  | "property"
-  | "param"
-  | "local";
-
+import {
+  indexClassesInFile,
+  indexExportedArrowFunctions,
+} from "./indexClasses";
+import { indexFunctionsInFile } from "./indexFunctions";
+import { indexImportsInFile } from "./indexImports";
+import { indexInterfacesInFile } from "./indexInterfaces";
+import {
+  collectTsFiles,
+  isInNodeModules,
+  isTsFile,
+  yieldToEventLoop,
+} from "./indexerUtils";
+import type { IndexProgressEvent, ProjectIndex, SymbolEntry } from "./indexerTypes";
 import {
   buildProjectReferences,
   countReferences,
@@ -31,226 +23,7 @@ import {
 } from "./referenceIndexer";
 
 export type { ReferenceEntry };
-
-/**
- * `enclosingSymbol` is the owning declaration's graph-node id (same id format as
- * `GraphNode.id` — see `classNodeId`/`methodNodeId`/`functionNodeId` in parser.ts).
- * Required for scoped kinds (method, property, param, local) so lookups can
- * disambiguate same-named members instead of matching on bare name alone.
- * Absent for module-level kinds (class, function, interface, type). See
- * docs/specs/service/parser-index.md.
- */
-export type SymbolEntry = {
-  filePath: string;
-  kind: SymbolKind;
-  line: number;
-  enclosingSymbol?: string;
-};
-
-type FunctionLikeNode = MethodDeclaration | FunctionDeclaration | ArrowFunction | FunctionExpression;
-
-export type ProjectIndex = {
-  folderPath: string;
-  symbolCount: number;
-  referenceCount: number;
-  symbols: Map<string, SymbolEntry[]>;
-  references: Map<string, ReferenceEntry[]>;
-};
-
-const SKIP_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "build",
-  ".next",
-  "coverage",
-  "out",
-]);
-
-const PRIMITIVE_NAMES = new Set([
-  "string",
-  "number",
-  "boolean",
-  "void",
-  "null",
-  "undefined",
-  "any",
-  "unknown",
-  "never",
-  "object",
-  "symbol",
-  "bigint",
-  "true",
-  "false",
-]);
-
-const TS_KEYWORDS = new Set([
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "continue",
-  "debugger",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "enum",
-  "export",
-  "extends",
-  "false",
-  "finally",
-  "for",
-  "function",
-  "if",
-  "import",
-  "in",
-  "instanceof",
-  "interface",
-  "let",
-  "new",
-  "of",
-  "return",
-  "super",
-  "switch",
-  "this",
-  "throw",
-  "true",
-  "try",
-  "typeof",
-  "var",
-  "while",
-  "with",
-  "yield",
-  "async",
-  "await",
-  "from",
-  "as",
-  "implements",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "static",
-  "readonly",
-  "declare",
-  "abstract",
-  "type",
-  "namespace",
-  "module",
-  "require",
-  "global",
-]);
-
-function isTsFile(filePath: string): boolean {
-  return /\.tsx?$/.test(filePath);
-}
-
-function collectTsFiles(dir: string, out: string[] = []): string[] {
-  const absolute = path.resolve(dir);
-  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
-    return out;
-  }
-
-  for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
-    if (entry.name.startsWith(".")) continue;
-    const full = path.join(absolute, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      collectTsFiles(full, out);
-      continue;
-    }
-    if (entry.isFile() && isTsFile(entry.name)) {
-      out.push(path.normalize(full));
-    }
-  }
-  return out;
-}
-
-function isInNodeModules(filePath: string): boolean {
-  return filePath.split(path.sep).includes("node_modules");
-}
-
-function addSymbol(
-  index: Map<string, SymbolEntry[]>,
-  name: string | undefined,
-  filePath: string,
-  kind: SymbolKind,
-  line: number,
-  enclosingSymbol?: string,
-): void {
-  if (!name) return;
-  if (PRIMITIVE_NAMES.has(name) || TS_KEYWORDS.has(name)) return;
-
-  const entry: SymbolEntry = { filePath, kind, line, enclosingSymbol };
-  const list = index.get(name) ?? [];
-  const dup = list.some(
-    (e) => e.filePath === entry.filePath && e.kind === entry.kind && e.line === entry.line,
-  );
-  if (!dup) list.push(entry);
-  index.set(name, list);
-}
-
-/** Simple identifier-named params/locals only — destructured bindings are skipped (no addressable single name). */
-function indexParamsAndLocals(
-  index: Map<string, SymbolEntry[]>,
-  filePath: string,
-  enclosingSymbol: string | undefined,
-  fn: FunctionLikeNode,
-): void {
-  if (!enclosingSymbol) return;
-
-  for (const param of fn.getParameters()) {
-    const nameNode = param.getNameNode();
-    if (!Node.isIdentifier(nameNode)) continue;
-    addSymbol(index, nameNode.getText(), filePath, "param", param.getStartLineNumber(), enclosingSymbol);
-  }
-
-  for (const varDecl of fn.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
-    const owningFn = varDecl.getFirstAncestor((a) => Node.isFunctionLikeDeclaration(a));
-    if (owningFn !== fn) continue;
-
-    const nameNode = varDecl.getNameNode();
-    if (!Node.isIdentifier(nameNode)) continue;
-    addSymbol(index, nameNode.getText(), filePath, "local", varDecl.getStartLineNumber(), enclosingSymbol);
-  }
-}
-
-function hasInjectableDecorator(cls: ClassDeclaration): boolean {
-  return cls.getDecorators().some((d) => {
-    const name = d.getExpression().getText();
-    return name === "Injectable" || name.endsWith(".Injectable");
-  });
-}
-
-function isExportedDeclaration(
-  node: { isExported?: () => boolean; hasExportKeyword?: () => boolean },
-): boolean {
-  if (typeof node.isExported === "function") return node.isExported();
-  if (typeof node.hasExportKeyword === "function") return node.hasExportKeyword();
-  return false;
-}
-
-function kindForImportedName(
-  resolvedFile: string,
-  name: string,
-  project: Project,
-): SymbolKind {
-  const sf = project.getSourceFile(resolvedFile);
-  if (!sf) return "class";
-
-  if (sf.getClass(name)) return "class";
-  if (sf.getInterface(name)) return "interface";
-  if (sf.getTypeAlias(name)) return "type";
-  if (sf.getFunction(name)) return "function";
-  if (sf.getEnum(name)) return "type";
-
-  const cls = sf.getClasses().find((c) => c.getName() === name);
-  if (cls) return "class";
-
-  return "class";
-}
+export type { SymbolKind, SymbolEntry, ProjectIndex, IndexProgressEvent } from "./indexerTypes";
 
 function indexSourceFile(
   sf: SourceFile,
@@ -262,141 +35,12 @@ function indexSourceFile(
   if (isInNodeModules(filePath)) return;
   if (!filePath.startsWith(folderPath)) return;
 
-  for (const cls of sf.getClasses()) {
-    const name = cls.getName();
-    const line = cls.getStartLineNumber();
-    const exported = isExportedDeclaration(cls);
-    const injectable = hasInjectableDecorator(cls);
-
-    if (exported || injectable) {
-      addSymbol(index, name, filePath, "class", line);
-    }
-
-    if (exported || injectable) {
-      const classId = name ? classNodeId(filePath, name) : undefined;
-
-      for (const method of cls.getMethods()) {
-        const methodName = method.getName();
-        addSymbol(index, methodName, filePath, "method", method.getStartLineNumber(), classId);
-        const methodId = classId && name ? methodNodeId(filePath, name, methodName) : undefined;
-        indexParamsAndLocals(index, filePath, methodId, method);
-      }
-      for (const prop of cls.getProperties()) {
-        addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber(), classId);
-      }
-    }
-  }
-
-  for (const iface of sf.getInterfaces()) {
-    if (!isExportedDeclaration(iface)) continue;
-    const ifaceName = iface.getName();
-    addSymbol(index, ifaceName, filePath, "interface", iface.getStartLineNumber());
-
-    const ifaceId = classNodeId(filePath, ifaceName);
-    for (const prop of iface.getProperties()) {
-      addSymbol(index, prop.getName(), filePath, "property", prop.getStartLineNumber(), ifaceId);
-    }
-    for (const method of iface.getMethods()) {
-      addSymbol(index, method.getName(), filePath, "method", method.getStartLineNumber(), ifaceId);
-    }
-  }
-
-  for (const typeAlias of sf.getTypeAliases()) {
-    if (!isExportedDeclaration(typeAlias)) continue;
-    addSymbol(index, typeAlias.getName(), filePath, "type", typeAlias.getStartLineNumber());
-  }
-
-  for (const enm of sf.getEnums()) {
-    if (!isExportedDeclaration(enm)) continue;
-    addSymbol(index, enm.getName(), filePath, "type", enm.getStartLineNumber());
-  }
-
-  for (const fn of sf.getFunctions()) {
-    if (!isExportedDeclaration(fn)) continue;
-    const name = fn.getName();
-    addSymbol(index, name, filePath, "function", fn.getStartLineNumber());
-    if (name) {
-      indexParamsAndLocals(index, filePath, functionNodeId(filePath, name), fn);
-    }
-  }
-
-  for (const varDecl of sf.getVariableDeclarations()) {
-    const parent = varDecl.getParent();
-    if (parent?.getKind() !== SyntaxKind.VariableStatement) continue;
-    const stmt = parent.asKindOrThrow(SyntaxKind.VariableStatement);
-    if (!isExportedDeclaration(stmt)) continue;
-
-    const init = varDecl.getInitializer();
-    if (!init) continue;
-    const initKind = init.getKind();
-    const isFn =
-      initKind === SyntaxKind.ArrowFunction ||
-      initKind === SyntaxKind.FunctionExpression;
-    if (!isFn) continue;
-
-    const name = varDecl.getName();
-    addSymbol(index, name, filePath, "function", varDecl.getStartLineNumber());
-    indexParamsAndLocals(
-      index,
-      filePath,
-      functionNodeId(filePath, name),
-      init as ArrowFunction | FunctionExpression,
-    );
-  }
-
-  for (const importDecl of sf.getImportDeclarations()) {
-    const moduleSpecifier = importDecl.getModuleSpecifierValue();
-    if (!moduleSpecifier.startsWith(".")) continue;
-
-    const resolved = resolveImportPath(filePath, moduleSpecifier);
-    if (!resolved || isInNodeModules(resolved)) continue;
-
-    const defaultImport = importDecl.getDefaultImport();
-    if (defaultImport) {
-      const name = defaultImport.getText();
-      const kind = kindForImportedName(resolved, name, project);
-      const declLine =
-        project.getSourceFile(resolved)?.getClass(name)?.getStartLineNumber() ??
-        importDecl.getStartLineNumber();
-      addSymbol(index, name, resolved, kind, declLine);
-    }
-
-    for (const named of importDecl.getNamedImports()) {
-      const name = named.getName();
-      const kind = kindForImportedName(resolved, name, project);
-      const decl =
-        project.getSourceFile(resolved)?.getClass(name) ??
-        project.getSourceFile(resolved)?.getInterface(name) ??
-        project.getSourceFile(resolved)?.getFunction(name) ??
-        project.getSourceFile(resolved)?.getTypeAlias(name);
-      const declLine = decl?.getStartLineNumber() ?? importDecl.getStartLineNumber();
-      addSymbol(index, name, resolved, kind, declLine);
-    }
-
-    const namespaceImport = importDecl.getNamespaceImport();
-    if (namespaceImport) {
-      addSymbol(
-        index,
-        namespaceImport.getText(),
-        resolved,
-        "class",
-        importDecl.getStartLineNumber(),
-      );
-    }
-  }
+  indexClassesInFile(sf, index);
+  indexInterfacesInFile(sf, index);
+  indexFunctionsInFile(sf, index);
+  indexExportedArrowFunctions(sf, index);
+  indexImportsInFile(sf, index, project);
 }
-
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, 0);
-  });
-}
-
-export type IndexProgressEvent =
-  | { phase: "loading" }
-  | { phase: "preparing"; total: number }
-  | { phase: "files"; done: number; total: number; currentFile?: string }
-  | { phase: "references"; filesTotal: number };
 
 export async function buildProjectIndex(
   folderPath: string,
@@ -433,7 +77,6 @@ export async function buildProjectIndex(
   const fileTotal = sourceFiles.length;
 
   await report({ phase: "files", done: 0, total: fileTotal });
-
   await report({ phase: "preparing", total: fileTotal });
   project.getTypeChecker();
 

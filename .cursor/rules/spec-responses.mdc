@@ -1,0 +1,26 @@
+---
+description: Short answers — use spec atlas, don't restate docs in chat
+alwaysApply: true
+---
+
+# Spec-first, brief responses
+
+**Atlas:** `docs/specs/system/token-hover.atlas.supplement.md` — token hover / trace / dim / pending.
+
+## When explaining behavior
+
+- Link the atlas + owning spec; do **not** copy spec tables or mermaid into chat.
+- ≤6 bullets or one small table unless the user asks for depth.
+- Code citations only for the line under discussion.
+
+## Spec map (hover)
+
+| Layer | Spec |
+| ----- | ---- |
+| Gestures | `token-interactions.md` |
+| Timing | `preview-edges.interactions.supplement.md` |
+| Looks | `interaction-emphasis.md` · [implementation supplement](system/interaction-emphasis.implementation.supplement.md) |
+| Brightness | `preview-edges.trace-strength.supplement.md` |
+| Wire kind | `connection-taxonomy.md` |
+
+Full rules: `docs/agent-playbook/core/working-with-agents.md` § Explaining behavior.

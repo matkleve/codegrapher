@@ -14,11 +14,13 @@ onto the canvas to merge them in.
 - Spec template: `docs/agent-playbook/core/spec-format.md`
 - React layout: `docs/agent-playbook/frameworks/react.md`
 - Restructure backlog: `docs/project/restructure-plan.md`
-- Key system specs: `docs/specs/system/preview-edges.md`, `ego-graph-model.md`, `interaction-emphasis.md`
+- Key system specs: `docs/specs/system/token-hover.atlas.supplement.md` (start here for hover/trace), `ego-graph-model.md`, `interaction-emphasis.md`, `preview-edges.md`
 - Trace strength stack (portable): `docs/agent-playbook/core/visual-strength-stacks.md`; refactor plan: `docs/project/trace-strength-refactor-plan.md`
 - Governance: `docs/specs/GOVERNANCE-MATRIX.md`
 
 When behavior changes, update the owning spec in the same change.
+
+**Agent responses:** Do not restate specs — link `token-hover.atlas.supplement.md` + the owning spec; keep answers short ([working-with-agents.md](docs/agent-playbook/core/working-with-agents.md) § Explaining behavior).
 
 ## Architecture
 
@@ -46,7 +48,7 @@ When behavior changes, update the owning spec in the same change.
   (see `.cursor/rules/tailwind-tokens-only.mdc`). Size scale enforced by `npm run lint:tokens`.
   Colors used from JS (e.g. `TOKEN_EDGE_STROKE`) must be CSS variables applied via
   `style`, not hex literals or SVG presentation attributes.
-- Interactive hover: see `docs/specs/system/interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
+- Interactive hover: **`docs/specs/system/token-hover.atlas.supplement.md`** → `interaction-emphasis.md`. Gold **brand** accent in BOTH themes (`--brand` /
   `--brand-surface` / `--brand-border`, gold-per-theme, registered as Tailwind
   `brand`/`brand-surface`/`brand-border`). Route any new clickable/draggable element's
   hover to these — not `--primary` (periwinkle action accent). The raw hover

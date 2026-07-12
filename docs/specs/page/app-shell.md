@@ -70,7 +70,15 @@ App
 | ---- | ------- |
 | `App.tsx` | Shell composition |
 | `components/FileExplorer.tsx` | Left panel |
-| `components/graph/GraphFlowInner.tsx` | Canvas host |
+| `components/graph/GraphFlowInner.tsx` | Canvas shell composer |
+| `components/graph/useGraphFlowController.ts` | Nodes/edges sync, history, drag-drop |
+| `components/graph/useGraphPathMode.ts` | Shortest-path highlight mode |
+| `components/graph/useGraphReadingFocus.ts` | Reading focus + URL `?focus=` |
+| `components/graph/useGraphMapControls.ts` | Grid, fit/center, map control flash |
+| `components/graph/GraphToolbar.tsx` | Graph header chrome |
+| `components/graph/GraphMapControls.tsx` | Floating legend + view controls |
+| `components/graph/GraphEmptyState.tsx` | Empty canvas overlay |
+| `components/graph/GraphNodeContextMenu.tsx` | Node right-click menu |
 
 ## Acceptance Criteria
 

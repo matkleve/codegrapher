@@ -1,369 +1,93 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { clearJumpTooltip } from "@/context/JumpTooltipContext";
+import { useMemo, useRef } from "react";
 import { useClearPinnedOnClickAway } from "@/hooks/useClearPinnedOnClickAway";
-import { useHoverIntentTimers } from "@/hooks/useHoverIntentTimers";
-import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
-import {
-  applyPinGesture,
-  mergePinnedEdges,
-  pinnedKeys,
-  updatePinnedEdges,
-  updatePinnedInfo,
-  type PinnedTrace,
-} from "@/lib/pinnedTraces";
-import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import {
-  clearTraceAnchorHost,
-  lockTraceAnchorPreference,
-  setTraceAnchorHost,
-  traceAnchorState,
-  unlockTraceAnchorPreference,
-} from "@/lib/memberDefAnchor";
-
-/** Caps memory use; deep back-tracking beyond this isn't a realistic use case. */
-const PIN_HISTORY_LIMIT = 20;
-
-type PinSnapshot = {
-  traces: PinnedTrace[];
-  activePinKey: string | null;
-  tokenInfo: TokenInfoState;
-};
+import { useTraceHoverState } from "@/hooks/useTraceHoverState";
+import { useTracePinState } from "@/hooks/useTracePinState";
+import { traceAnchorState } from "@/lib/memberDefAnchor";
 
 /**
- * Owns the hover/pin trace state machine: ephemeral hover preview, pinned
- * traces + undo history, hover-intent timers (dwell/leave-grace/info delay),
- * and the connection menu + token-info panel that ride along with it.
- *
- * Hover and pin are intentionally one hook, not two — `beginTrace` reads and
- * writes pin state directly (a fired hover on an already-pinned token updates
- * that pin's edges instead of opening a parallel hover trace), so splitting
- * them would just relay the same refs back and forth between two files.
+ * Composes hover and pin trace state. Hover and pin share refs so
+ * `beginTrace` can update an already-pinned token's edges in place.
  */
-type AnchorTrace = {
-  tokenKey: string;
-  edges: PreviewEdgeSpec[];
-};
-
 export function useTokenTraceState(isCtrlActive: boolean) {
-  const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
-  const [anchorTrace, setAnchorTrace] = useState<AnchorTrace | null>(null);
-  const [pinnedTraces, setPinnedTraces] = useState<PinnedTrace[]>([]);
-  const [activePinKey, setActivePinKeyState] = useState<string | null>(null);
-  const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
-  const [isWarm, setIsWarm] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<TokenInfoState>(null);
-  const [connectionMenu, setConnectionMenu] = useState<TokenConnectionMenuState | null>(
-    null,
-  );
-  const [pinHistoryLength, setPinHistoryLength] = useState(0);
+  const hoverEndRef = useRef<() => void>(() => {});
+  const resetHoverRef = useRef<() => void>(() => {});
+  const setHoveredRef = useRef<(key: string | null) => void>(() => {});
+  const setWarmRef = useRef<(warm: boolean) => void>(() => {});
+  const clearAnchorRef = useRef<() => void>(() => {});
+  const clearLastRefsRef = useRef<() => void>(() => {});
 
-  const pinnedTracesRef = useRef<PinnedTrace[]>([]);
-  const activePinKeyRef = useRef<string | null>(null);
-  const tokenInfoRef = useRef<TokenInfoState>(null);
-  tokenInfoRef.current = tokenInfo;
-  const pinHistoryRef = useRef<PinSnapshot[]>([]);
-  const hoverPreviewEdgesRef = useRef<PreviewEdgeSpec[]>([]);
-  hoverPreviewEdgesRef.current = hoverPreviewEdges;
-  const lastTraceKeyRef = useRef<string | null>(null);
-  const lastTraceEdgesRef = useRef<PreviewEdgeSpec[]>([]);
-
-  const clearConnectionMenu = useCallback(() => {
-    setConnectionMenu(null);
-  }, []);
-
-  const showConnectionMenu = useCallback((state: TokenConnectionMenuState) => {
-    setConnectionMenu(state);
-  }, []);
-
-  const endTrace = useCallback(() => {
-    setHoverPreviewEdges([]);
-    setAnchorTrace(null);
-    lastTraceKeyRef.current = null;
-    lastTraceEdgesRef.current = [];
-    setHoveredTokenKey(null);
-    setIsWarm(false);
-    setConnectionMenu(null);
-    clearTraceAnchorHost();
-    unlockTraceAnchorPreference();
-    clearJumpTooltip();
-  }, []);
-
-  const beginTrace = useCallback((tokenKey: string, edges: PreviewEdgeSpec[]) => {
-    setHoveredTokenKey(tokenKey);
-    setIsWarm(true);
-    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
-    if (pin) {
-      const updated = updatePinnedEdges(pinnedTracesRef.current, tokenKey, edges);
-      pinnedTracesRef.current = updated;
-      setPinnedTraces(updated);
-      setHoverPreviewEdges([]);
-      return;
-    }
-
-    setAnchorTrace((anchor) => {
-      const priorKey = lastTraceKeyRef.current;
-      const priorEdges = lastTraceEdgesRef.current;
-      if (
-        priorKey &&
-        priorKey !== tokenKey &&
-        priorEdges.length > 0 &&
-        !pinnedTracesRef.current.some((t) => t.tokenKey === priorKey)
-      ) {
-        return { tokenKey: priorKey, edges: priorEdges };
-      }
-      return null;
-    });
-
-    lastTraceKeyRef.current = tokenKey;
-    lastTraceEdgesRef.current = edges;
-    setHoverPreviewEdges(edges);
-  }, []);
-
-  const isPinnedTokenKey = useCallback(
-    (tokenKey: string) =>
-      pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey),
-    [],
-  );
-
-  const beginHoverVisualLeave = useCallback(() => {
-    if (pinnedTracesRef.current.length > 0) {
-      setHoveredTokenKey(null);
-      setHoverPreviewEdges([]);
-      setConnectionMenu(null);
-      return;
-    }
-    setHoveredTokenKey(null);
-    setHoverPreviewEdges([]);
-    setAnchorTrace(null);
-    clearJumpTooltip();
-  }, []);
-
-  const {
-    hoveredTokenKeyRef,
-    resetHoverIntent,
-    scheduleHoverFire,
-    scheduleHoverClear,
-    cancelHoverLeaveGrace,
-    scheduleHoverLeaveGrace,
-  } = useHoverIntentTimers({
-    isCtrlActive,
-    isWarm,
-    hoveredTokenKey,
-    isTokenPinned: isPinnedTokenKey,
-    setHoveredTokenKey,
-    setIsWarm,
-    onCtrlRelease: clearConnectionMenu,
-    onVisualLeave: beginHoverVisualLeave,
+  const pin = useTracePinState({
+    endTrace: () => hoverEndRef.current(),
+    resetHoverIntent: () => resetHoverRef.current(),
+    setHoveredTokenKey: (key) => setHoveredRef.current(key),
+    setIsWarm: (warm) => setWarmRef.current(warm),
+    clearAnchorTrace: () => clearAnchorRef.current(),
+    clearLastTraceRefs: () => clearLastRefsRef.current(),
   });
 
-  const endHoverPreview = useCallback(() => {
-    if (pinnedTracesRef.current.length > 0) {
-      hoveredTokenKeyRef.current = null;
-      setHoveredTokenKey(null);
-      setHoverPreviewEdges([]);
-      setConnectionMenu(null);
-      if (!tokenInfo?.pinned) setTokenInfo(null);
-      return;
-    }
-    endTrace();
-    if (!tokenInfo?.pinned) setTokenInfo(null);
-  }, [endTrace, hoveredTokenKeyRef, tokenInfo?.pinned]);
+  const hover = useTraceHoverState(isCtrlActive, {
+    pinnedTracesRef: pin.pinnedTracesRef,
+    isPinnedTokenKey: pin.isPinnedTokenKey,
+    updatePinnedTraceEdges: pin.updatePinnedTraceEdges,
+    clearUnpinnedTokenInfo: pin.clearUnpinnedTokenInfo,
+  });
 
-  const pushPinHistory = useCallback(() => {
-    if (pinnedTracesRef.current.length === 0) return;
-    const history = pinHistoryRef.current;
-    history.push({
-      traces: pinnedTracesRef.current,
-      activePinKey: activePinKeyRef.current,
-      tokenInfo: tokenInfoRef.current,
-    });
-    if (history.length > PIN_HISTORY_LIMIT) history.shift();
-    setPinHistoryLength(history.length);
-  }, []);
+  hoverEndRef.current = hover.endTrace;
+  resetHoverRef.current = hover.resetHoverIntent;
+  setHoveredRef.current = hover.setHoveredTokenKey;
+  setWarmRef.current = hover.setIsWarm;
+  clearAnchorRef.current = hover.clearAnchorTrace;
+  clearLastRefsRef.current = hover.clearLastTraceRefs;
 
-  const clearTokenInfo = useCallback(() => {
-    pushPinHistory();
-    pinnedTracesRef.current = [];
-    activePinKeyRef.current = null;
-    setPinnedTraces([]);
-    setActivePinKeyState(null);
-    setTokenInfo(null);
-    endTrace();
-    unlockTraceAnchorPreference();
-    resetHoverIntent();
-  }, [endTrace, pushPinHistory, resetHoverIntent]);
+  useClearPinnedOnClickAway(pin.pinnedTraces.length > 0, pin.clearTokenInfo);
 
-  const goBackPin = useCallback(() => {
-    const history = pinHistoryRef.current;
-    const snapshot = history.pop();
-    setPinHistoryLength(history.length);
-    if (!snapshot) return;
-
-    resetHoverIntent();
-    pinnedTracesRef.current = snapshot.traces;
-    activePinKeyRef.current = snapshot.activePinKey;
-    setPinnedTraces(snapshot.traces);
-    setActivePinKeyState(snapshot.activePinKey);
-    setTokenInfo(snapshot.tokenInfo);
-    if (snapshot.activePinKey) {
-      lockTraceAnchorPreference();
-      setHoveredTokenKey(snapshot.activePinKey);
-      setIsWarm(true);
-    } else {
-      unlockTraceAnchorPreference();
-      endTrace();
-    }
-  }, [endTrace, resetHoverIntent]);
-
-  const pinTrace = useCallback(
-    (tokenKey: string, shiftKey = false, traceHost?: HTMLElement | null) => {
-      pushPinHistory();
-      resetHoverIntent();
-      setAnchorTrace(null);
-      lastTraceKeyRef.current = null;
-      lastTraceEdgesRef.current = [];
-      if (traceHost) setTraceAnchorHost(traceHost);
-      const mode = shiftKey
-        ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
-          ? "toggle"
-          : "accumulate"
-        : "replace";
-      const { traces, activeKey } = applyPinGesture(
-        pinnedTracesRef.current,
-        tokenKey,
-        mode,
-      );
-      pinnedTracesRef.current = traces;
-      activePinKeyRef.current = activeKey;
-      setPinnedTraces(traces);
-      setActivePinKeyState(activeKey);
-      if (activeKey) {
-        lockTraceAnchorPreference();
-        setHoveredTokenKey(activeKey);
-        setIsWarm(true);
-      } else {
-        unlockTraceAnchorPreference();
-        setTokenInfo(null);
-        endTrace();
-      }
-    },
-    [endTrace, pushPinHistory, resetHoverIntent],
-  );
-
-  const showTokenInfo = useCallback(
-    (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => {
-      setTokenInfo(info);
-      if (info.pinned && activePinKeyRef.current) {
-        const key = activePinKeyRef.current;
-        const updated = updatePinnedInfo(
-          pinnedTracesRef.current,
-          key,
-          { ...info, pinned: true },
-        );
-        pinnedTracesRef.current = updated;
-        setPinnedTraces(updated);
-      }
-    },
-    [],
-  );
-
-  const setActivePinKey = useCallback((tokenKey: string) => {
-    if (!pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)) return;
-    activePinKeyRef.current = tokenKey;
-    setActivePinKeyState(tokenKey);
-    const pin = pinnedTracesRef.current.find((t) => t.tokenKey === tokenKey);
-    if (pin?.info) {
-      setTokenInfo(pin.info);
-    }
-  }, []);
-
-  useClearPinnedOnClickAway(pinnedTraces.length > 0, clearTokenInfo);
-
-  const pinnedPreviewEdges = useMemo(
-    () => mergePinnedEdges(pinnedTraces),
-    [pinnedTraces],
-  );
-  const pinnedTokenKeySet = useMemo(
-    () => new Set(pinnedKeys(pinnedTraces)),
-    [pinnedTraces],
-  );
   const traceTokenKey =
-    activePinKey ??
-    hoveredTokenKey ??
-    anchorTrace?.tokenKey ??
-    pinnedTraces[0]?.tokenKey ??
+    pin.activePinKey ??
+    hover.hoveredTokenKey ??
+    hover.anchorTrace?.tokenKey ??
+    pin.pinnedTraces[0]?.tokenKey ??
     null;
   const isTraceActive =
-    pinnedTraces.length > 0 || hoveredTokenKey != null || anchorTrace != null;
-  const canGoBackPin = pinHistoryLength > 0;
+    pin.pinnedTraces.length > 0 ||
+    hover.hoveredTokenKey != null ||
+    hover.anchorTrace != null;
 
   return useMemo(
     () => ({
-      hoverPreviewEdges,
-      anchorTrace,
-      pinnedPreviewEdges,
-      pinnedTraces,
-      pinnedTokenKeySet,
-      activePinKey,
-      hoveredTokenKey,
-      hoveredTokenKeyRef,
+      hoverPreviewEdges: hover.hoverPreviewEdges,
+      anchorTrace: hover.anchorTrace,
+      pinnedPreviewEdges: pin.pinnedPreviewEdges,
+      pinnedTraces: pin.pinnedTraces,
+      pinnedTokenKeySet: pin.pinnedTokenKeySet,
+      activePinKey: pin.activePinKey,
+      hoveredTokenKey: hover.hoveredTokenKey,
+      hoveredTokenKeyRef: hover.hoveredTokenKeyRef,
       traceAnchorState,
-      pinnedTracesRef,
-      isWarm,
-      tokenInfo,
-      connectionMenu,
+      pinnedTracesRef: pin.pinnedTracesRef,
+      isWarm: hover.isWarm,
+      tokenInfo: pin.tokenInfo,
+      connectionMenu: hover.connectionMenu,
       traceTokenKey,
       isTraceActive,
-      canGoBackPin,
-      setHoverPreviewEdges,
-      setPinnedTraces,
-      beginTrace,
-      endTrace,
-      endHoverPreview,
-      pinTrace,
-      goBackPin,
-      clearTokenInfo,
-      showTokenInfo,
-      setActivePinKey,
-      isPinnedTokenKey,
-      scheduleHoverFire,
-      scheduleHoverClear,
-      scheduleHoverLeaveGrace,
-      cancelHoverLeaveGrace,
-      showConnectionMenu,
-      clearConnectionMenu,
+      canGoBackPin: pin.canGoBackPin,
+      setHoverPreviewEdges: hover.setHoverPreviewEdges,
+      setPinnedTraces: pin.setPinnedTraces,
+      beginTrace: hover.beginTrace,
+      endTrace: hover.endTrace,
+      endHoverPreview: hover.endHoverPreview,
+      pinTrace: pin.pinTrace,
+      goBackPin: pin.goBackPin,
+      clearTokenInfo: pin.clearTokenInfo,
+      showTokenInfo: pin.showTokenInfo,
+      setActivePinKey: pin.setActivePinKey,
+      isPinnedTokenKey: pin.isPinnedTokenKey,
+      scheduleHoverFire: hover.scheduleHoverFire,
+      scheduleHoverClear: hover.scheduleHoverClear,
+      scheduleHoverLeaveGrace: hover.scheduleHoverLeaveGrace,
+      cancelHoverLeaveGrace: hover.cancelHoverLeaveGrace,
+      showConnectionMenu: hover.showConnectionMenu,
+      clearConnectionMenu: hover.clearConnectionMenu,
     }),
-    [
-      hoverPreviewEdges,
-      anchorTrace,
-      pinnedPreviewEdges,
-      pinnedTraces,
-      pinnedTokenKeySet,
-      activePinKey,
-      hoveredTokenKey,
-      hoveredTokenKeyRef,
-      traceAnchorState,
-      isWarm,
-      tokenInfo,
-      connectionMenu,
-      traceTokenKey,
-      isTraceActive,
-      canGoBackPin,
-      beginTrace,
-      endTrace,
-      endHoverPreview,
-      pinTrace,
-      goBackPin,
-      clearTokenInfo,
-      showTokenInfo,
-      setActivePinKey,
-      isPinnedTokenKey,
-      scheduleHoverFire,
-      scheduleHoverClear,
-      scheduleHoverLeaveGrace,
-      cancelHoverLeaveGrace,
-      showConnectionMenu,
-      clearConnectionMenu,
-    ],
+    [hover, pin, isTraceActive, traceTokenKey],
   );
 }

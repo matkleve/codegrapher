@@ -55,7 +55,7 @@ This supplement defines trace **strength by graph distance** and adds **Typesett
 
 Glow opacity = path × ratio (`TRACE_GLOW_*_RATIO`); glow stroke width steps down at hop ≥ 2. **Wires stay louder than chip fill** at the same hop (chip provenance uses `TRACE_CHIP_PROVENANCE_RATIO`).
 
-**Walk reach** is capped separately upstream (`TRACE_DEPTH_UP` / `TRACE_DEPTH_DOWN` in `lexicalGraph.ts`). Non-lit syntax stays `--faint` (binary off-curve).
+**Walk reach** is capped separately upstream (`TRACE_DEPTH_UP` / `TRACE_DEPTH_DOWN` in `lexicalGraph.ts`). Non-lit **syntax and chrome** use `--faint-*` (binary off-curve). **Indexed chips are never on the faint curve** — off-path chips keep resting semantic ink; on-path chips use `--trace-strength`.
 
 **Kind overrides strength hue, not distance decay (one exemption):**
 

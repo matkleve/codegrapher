@@ -4,23 +4,31 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import {
-  getByMemberId,
-  getByTraceKey,
-} from "@/lib/elementRegistry";
+import { getByTraceKey } from "@/lib/elementRegistry";
 import {
   memberDefSiblingHosts,
   resolveMemberDefEndpoint,
 } from "@/lib/memberDefAnchor";
 import { makeMemberDefKey } from "@/lib/traceKeys";
 import { fileLineFromSnippetIndex } from "@/lib/memberFileLine";
-import { makeUsageTokenKey, parseControlFlowKey, parseUsageTokenKey } from "@/lib/traceKeys";
+import { parseUsageTokenKey } from "@/lib/traceKeys";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
+import {
+  cfHostForTraceKey,
+  findClassDefLabel,
+  findMemberDefLabel,
+  firstUsageChipOnLine,
+  usageChipInGraph,
+} from "@/lib/liveAnchorFinders";
 
-function graphPane(): HTMLElement | null {
-  return document.querySelector(".graph-pane");
-}
+export {
+  cfHostForTraceKey,
+  findClassDefLabel,
+  findMemberDefLabel,
+  firstUsageChipOnLine,
+  usageChipInGraph,
+} from "@/lib/liveAnchorFinders";
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -35,81 +43,6 @@ function getClassNodeData(
   return node.data as ClassNodeData;
 }
 
-export function findMemberDefLabel(
-  flowNodeId: string,
-  memberId: string,
-  token: string,
-): HTMLElement | null {
-  const fromMember = getByMemberId(memberId);
-  if (fromMember?.isConnected) {
-    const label = fromMember.querySelector<HTMLElement>(
-      `.member-row-label[data-symbol-name="${CSS.escape(token)}"]`,
-    );
-    if (label?.isConnected) return label;
-  }
-
-  const pane = graphPane();
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] [data-member-id="${CSS.escape(memberId)}"] .member-row-label[data-symbol-name="${CSS.escape(token)}"]`,
-  );
-}
-
-export function findClassDefLabel(flowNodeId: string, token: string): HTMLElement | null {
-  const pane = graphPane();
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] .node-card-title[data-symbol-name="${CSS.escape(token)}"]`,
-  );
-}
-
-function cfHostForTraceKey(traceKey: string): HTMLElement | null {
-  if (!traceKey.includes("::cf-")) return null;
-  const fromRegistry = getByTraceKey(traceKey);
-  if (fromRegistry?.isConnected) return fromRegistry;
-  const pane = graphPane();
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-trace-key="${CSS.escape(traceKey)}"]`,
-  );
-}
-
-function firstUsageChipOnLine(
-  flowNodeId: string,
-  memberId: string,
-  lineNumber: number,
-  token: string,
-): HTMLElement | null {
-  const pane = graphPane();
-  if (!pane) return null;
-  const prefix = `${flowNodeId}::${memberId}::${lineNumber}::`;
-  for (const el of pane.querySelectorAll<HTMLElement>("[data-trace-key]")) {
-    const key = el.dataset.traceKey;
-    if (!key?.startsWith(prefix)) continue;
-    const parsed = parseUsageTokenKey(key);
-    if (parsed?.token === token) return el;
-  }
-  return null;
-}
-
-function usageChipInGraph(
-  flowNodeId: string,
-  memberId: string,
-  lineNumber: number,
-  tokenIndex: number,
-  token: string,
-): HTMLElement | null {
-  const traceKey = makeUsageTokenKey(flowNodeId, memberId, lineNumber, tokenIndex, token);
-  const fromRegistry = getByTraceKey(traceKey);
-  if (fromRegistry) return fromRegistry;
-
-  const pane = graphPane();
-  if (!pane) return null;
-  return pane.querySelector<HTMLElement>(
-    `[data-trace-key="${CSS.escape(traceKey)}"]`,
-  );
-}
-
 /** Finest usage anchor for current reveal level (class → member → line chip). */
 export function resolveUsageSiteAnchor(
   flowNodeId: string,
@@ -119,11 +52,6 @@ export function resolveUsageSiteAnchor(
   tokenIndex: number | null,
   token: string,
 ): AnchorRef {
-  // Exact index when known (hint built from a live chip); otherwise fall back to
-  // the first same-token chip on the line. A usage site that was collapsed when
-  // the trace was pinned has no rendered chip to read the index from, so
-  // tokenIndex stays null until the row expands — without this fallback the
-  // call-site chip never resolves and never lights. Mirrors the definition side.
   const chip =
     (tokenIndex != null
       ? usageChipInGraph(flowNodeId, memberId, lineNumber, tokenIndex, token)
@@ -220,8 +148,6 @@ function resolveHint(
   }
 
   if (hint.role === "usage") {
-    // tokenIndex may be null for a site collapsed at pin time; resolve by
-    // line + token in that case (see resolveUsageSiteAnchor).
     if (!hint.memberId || hint.lineNumber == null) {
       return { type: "handle", handle: previewMemberHandle(hint.memberId ?? "") };
     }

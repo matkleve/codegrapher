@@ -143,13 +143,31 @@ Manual pass on multi-hop trace (e.g. `extractFieldValue` / `AddressFieldKind` ca
 
 ---
 
+## PR 10 — Emphasis model (surround dim only)
+
+**Scope:** Align CSS with [interaction-emphasis.md](../specs/system/interaction-emphasis.md) § Emphasis model — **spec synced 2026-07-12**.
+
+| Task | Detail | Status |
+| ---- | ------ | ------ |
+| Remove chip `--faint` from `trace-syntax.css` | Dim syntax/chrome only; never `.token-chip` | Done |
+| Pending on strength curve | `token-chip-pending-trace` uses `--trace-strength` pending tier; drop parallel fill-only recipe when redundant | Open |
+| Row lit on commit only | `trace-member-lit` not implied by pending `:has()` alone | Open |
+| Lint / comment guard | No `color` on `.token-chip` in `trace-syntax.css` | Open |
+| Visual regression | idle / pending / active / ctrl / pinned on one fixture node | Open |
+
+**Depends on:** PR 1 (spec). Unblocks cleaner simulator/timeline emphasis reuse.
+
+---
+
 ## Dependency graph
 
 ```mermaid
 flowchart LR
   PR1[PR1 Spec] --> PR8[PR8 Fragile fixes]
   PR1 --> PR9[PR9 Manual AC]
+  PR1 --> PR10[PR10 Emphasis model]
   PR8 --> PR9
+  PR10 --> PR9
   PR3[PR3 Context] -. optional .-> PR5[PR5 Merge boosts]
   PR7[PR7 Wire unify] -. optional .-> PR9
 ```

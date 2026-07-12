@@ -26,9 +26,11 @@ Motion is classified by **what a change means**, not by which property moves. Th
 | Class | Applies to | Motion | Why |
 | ----- | ---------- | ------ | --- |
 | **Affordance** | direct `:hover` (brand lift, caret ink, chevron rotate), body-wrap hover wash | fast, one clock (`--motion-*` = 120ms) | confirms "you can act on *this*" |
-| **Reveal dim** | syntax / member-row surround | **`--motion-trace` = 120ms** | same clock as chips, sockets, wires, pending dwell |
-| **Reveal lite** | lit chips, sockets, wire opacity | **`--motion-trace` = 120ms** | unified with dim — no staggered importance pops |
+| **Reveal dim** | syntax / member-row surround | **`--motion-trace` = 120ms** | surround recedes — indexed chips **do not** join this dim |
+| **Reveal lite** | lit chips, sockets, wire opacity | **`--motion-trace` = 120ms** | path elevates via `--trace-strength` |
 | **Ambient** | Ctrl shimmer, node breathe, wire dash | keyframe `animation` | decorative, independent of affordance and reveal |
+
+**Trace emphasis rule:** surroundings dim; indexed chip ink stays at resting semantic color. Emphasis on chips **only increases** (pending strength → focus curve → hover curve). See [interaction-emphasis.md](../specs/system/interaction-emphasis.md) § Emphasis model.
 
 **Enforcement:** Trace importance changes use `--motion-trace` (120ms) on member rows,
 code lines, chips, sockets, and wire opacity. Wire stroke draw stays WAAPI (~240ms).

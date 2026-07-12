@@ -2,6 +2,8 @@
 
 **Terminology:** **graph distance** from the focus token. Walk caps: `TRACE_DEPTH_DOWN` / `TRACE_DEPTH_UP` (or project equivalent). **Brightness:** two power curves in `traceDepth.ts` — **focus/rest** vs **pointer hover** — plus hop-1 snaps.
 
+**codegrapher map:** [token-hover.atlas.supplement.md](../../specs/system/token-hover.atlas.supplement.md) — start here; this doc is brightness math only.
+
 Copy with the agent playbook. Constants live in project `traceDepth.ts` (or equivalent).
 
 ---
@@ -24,9 +26,11 @@ every summoned wire / chip / socket / lit line gets distance d
 | State | When | Brightness |
 | ----- | ---- | ---------- |
 | **Idle** | No trace | Resting semantic ink; wires hidden |
+| **Pending** | Dwell not committed | Focal chip: pending `--trace-strength`; ink unchanged |
 | **Focus** | `traceTokenKey` set; pointer not on this element | Focus curve + hop-1 snaps |
 | **Hover** | `token-chip-hover-preview` or wire `emphasized` | Hover curve + hop-1 snaps |
-| **Non-lit syntax** | Trace on, line not in `litLineDepth` | `--faint` (binary; off-curve) |
+| **Non-lit syntax** | Trace on, not a chip | `--faint-*` (binary; off-curve) |
+| **Indexed chip off path** | Trace on, not in lit set | Resting `--token-edge-*` (not faint) |
 
 **Session rule:** committed trace brightness MUST NOT drop when the pointer leaves a panel (`isTraceSessionActive`).
 
@@ -46,7 +50,8 @@ Same numbers, two mechanisms — main source of implementation complexity:
 | Token chip + socket | `traceDepth` map | `--trace-strength` + `color-mix` | `traceLitApply.ts`, `trace-chip-lit.css` |
 | Lit `.code-line` | `litLineDepth` map | `--trace-strength` | `traceLitApply.ts` |
 | Load stub | `edge.hop` | `--trace-strength` | stub host |
-| Non-lit keywords | — | `--faint-*` CSS | `trace-syntax.css` |
+| Non-lit keywords / chrome | — | `--faint-*` CSS | `trace-syntax.css` |
+| Indexed chips (off path) | — | resting `--token-edge-*` | `tokens-chips-base.css` — **not** `trace-syntax.css` |
 
 **Hue** comes from connection kind / token kind (`--edge-usage`, `--token-surface-*`). **Brightness** comes from distance + situation (focus vs hover).
 

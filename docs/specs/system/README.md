@@ -4,6 +4,8 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 
 ## Contracts
 
+**Token hover (start here):** [token-hover.atlas.supplement.md](token-hover.atlas.supplement.md)
+
 - [ego-graph-model](ego-graph-model.md) — incremental graph philosophy and loading semantics
 - [preview-edges](preview-edges.md) — token hover, Ctrl reveal, pinning, timing
 - [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, **visual commit timeline**, anchors, pin lock, live retarget
@@ -11,7 +13,7 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim + pointer emphasis
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
 - [connection-taxonomy](connection-taxonomy.md) — connection kinds (usage, binding, **typesetting**, control flow, structural, transitive, …) and visual language · [per-kind AC](connection-taxonomy.acceptance-criteria.md) · [accessibility matrix](../../design/accessibility.md)
-- [execution-simulator](execution-simulator.md) — **Option A static walk implemented** (step-into/out deferred) · variable panel, playback controls
+- [execution-simulator](execution-simulator.md) — static walk · atlas: [execution-simulator.atlas.supplement.md](execution-simulator.atlas.supplement.md)
 - [execution-simulator.interactions.supplement](execution-simulator.interactions.supplement.md) — interaction index · [modes](execution-simulator.modes.supplement.md) · [surfaces](execution-simulator.surfaces.supplement.md) · [AC](execution-simulator.interactions.acceptance-criteria.md)
 
 ## Rules

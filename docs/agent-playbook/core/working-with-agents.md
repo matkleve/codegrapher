@@ -40,6 +40,20 @@ Match surrounding code. Reuse existing abstractions. No drive-by refactors.
 
 ---
 
+## Explaining behavior (responses)
+
+**Do not restate specs in chat.** Point to the contract; answer in a few sentences or a small table.
+
+1. **Start at the atlas** (if the project has one) — e.g. `docs/specs/system/token-hover.atlas.supplement.md`.
+2. **Link the owning spec** for detail — one line per layer (gesture / clock / pixels).
+3. **Cap prose** — prefer ≤6 bullets or one short table; skip mermaid, file maps, and "reading order" unless asked.
+4. **Code citations** only for the exact line under discussion — not whole subsystems.
+5. **SPEC GAP** when the atlas and specs disagree with code — don't invent a third story.
+
+When behavior changes, update the **spec** (and atlas if the map changed), not a long chat summary.
+
+---
+
 ## What agents need from the repo
 
 | Artifact | Why |

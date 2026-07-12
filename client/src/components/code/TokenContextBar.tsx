@@ -1,20 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Code2, Crosshair, X } from "lucide-react";
+import { TokenContextBarList } from "@/components/code/TokenContextBarList";
+import { useTokenContextBar } from "@/components/code/useTokenContextBar";
+import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
 import { Button } from "@/components/ui/button";
-import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
-import {
-  InteractiveListRow,
-  SemanticConnectionDot,
-} from "@/components/ui/InteractiveListRow";
+import { SemanticConnectionDot } from "@/components/ui/InteractiveListRow";
 import { PinTab } from "@/components/ui/PinTab";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
-import { LoadTargetPicker } from "@/components/graph/LoadTargetPicker";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
 import { openFileInEditor } from "@/api";
-import { fileBaseName, fromExternalCards, fromTokenReferences } from "@/lib/loadTargets";
-import { connectionCountLabel } from "@/lib/projectReferences";
-import type { TokenReference } from "@/lib/semanticLookup";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<string, string> = {
@@ -24,130 +16,31 @@ const KIND_LABEL: Record<string, string> = {
   variable: "Variable",
 };
 
-function definitionRef(refs: TokenReference[]): TokenReference | null {
-  const inGraph = refs.filter((r) => r.inGraph && r.flowNodeId);
-  return inGraph[0] ?? refs[0] ?? null;
-}
-
-/**
- * Docked trace action bar — visible when a connection is pinned (click a token).
- * Sits at the bottom of the graph pane so it never covers code.
- */
 export function TokenContextBar() {
-  const {
-    tokenInfo,
-    clearTokenInfo,
-    findReferences,
-    findCallSites,
-    focusFlowNode,
-    pinnedTraces,
-    activePinKey,
-    setActivePinKey,
-    goBackPin,
-    canGoBackPin,
-  } = useGraphInteraction();
-  const loadTarget = useLoadTargetAction();
-  const loadButtonRef = useRef<HTMLButtonElement>(null);
-  const [loadPickerOpen, setLoadPickerOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const bar = useTokenContextBar();
+  if (!bar.tokenInfo) return null;
 
-  const isDefinition = tokenInfo?.role === "definition";
-
-  useEffect(() => {
-    setExpanded(false);
-    setLoadPickerOpen(false);
-  }, [tokenInfo?.token]);
-
-  useEffect(() => {
-    if (!tokenInfo?.pinned) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") clearTokenInfo();
-      if (e.altKey && e.key === "ArrowLeft" && canGoBackPin) {
-        e.preventDefault();
-        goBackPin();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [canGoBackPin, clearTokenInfo, goBackPin, tokenInfo?.pinned]);
-
-  const references = useMemo(
-    () => (tokenInfo && !isDefinition ? findReferences(tokenInfo.token) : []),
-    [findReferences, isDefinition, tokenInfo],
-  );
-
-  const callSites = useMemo(
-    () => (tokenInfo && isDefinition ? findCallSites(tokenInfo.token) : []),
-    [findCallSites, isDefinition, tokenInfo],
-  );
-
-  const graphRefs = useMemo(
-    () => references.filter((r) => r.inGraph && r.flowNodeId),
-    [references],
-  );
-
-  const externalRefs = useMemo(
-    () => references.filter((r) => !r.inGraph),
-    [references],
-  );
-
-  const externalCallSiteFiles = useMemo(() => {
-    const seen = new Set<string>();
-    return callSites.filter((site) => {
-      if (site.inGraph) return false;
-      if (seen.has(site.filePath)) return false;
-      seen.add(site.filePath);
-      return true;
-    });
-  }, [callSites]);
-
-  const externalLoadTargets = useMemo(
-    () =>
-      isDefinition
-        ? fromExternalCards(
-            externalCallSiteFiles.map((site) => ({
-              symbolName: tokenInfo?.token ?? "",
-              filePath: site.filePath,
-              line: site.line,
-              occurrenceCount: 1,
-            })),
-          )
-        : fromTokenReferences(externalRefs),
-    [externalCallSiteFiles, externalRefs, isDefinition, tokenInfo?.token],
-  );
-
-  if (!tokenInfo) return null;
-
-  const isPinned = tokenInfo.pinned;
-  const { token, kind, connectionCount, projectConnectionCount, definedIn, role } =
-    tokenInfo;
-  const def = definitionRef(references);
-  const canJumpDef = !isDefinition && Boolean(def?.flowNodeId);
-  const connectionLabel = connectionCountLabel({
-    onCanvas: connectionCount,
-    inProject: projectConnectionCount,
-  });
-  const listCount = isDefinition ? callSites.length : references.length;
+  const { token, kind, definedIn, role } = bar.tokenInfo;
 
   return (
     <div
       data-token-context-bar
       className={cn(
         "pointer-events-auto absolute inset-x-3 bottom-3 z-50 overflow-hidden rounded-xl border bg-card/95 shadow-lg backdrop-blur-sm",
-        isPinned ? "border-border" : "border-brand-border/60 opacity-95",
+        bar.isPinned ? "border-border" : "border-brand-border/60 opacity-95",
       )}
     >
-      {isPinned && pinnedTraces.length > 1 ? (
+      {bar.isPinned && bar.pinnedTraces.length > 1 ? (
         <div className="flex flex-wrap gap-1 border-b border-border px-2 py-1.5">
-          {pinnedTraces.map((trace) => {
+          {bar.pinnedTraces.map((trace) => {
             const label = trace.info?.token ?? trace.tokenKey.split("::").pop() ?? "?";
-            const active = trace.tokenKey === activePinKey;
+            const active = trace.tokenKey === bar.activePinKey;
             return (
               <PinTab
                 key={trace.tokenKey}
                 label={label}
                 active={active}
-                onClick={() => setActivePinKey(trace.tokenKey)}
+                onClick={() => bar.setActivePinKey(trace.tokenKey)}
               />
             );
           })}
@@ -171,7 +64,7 @@ export function TokenContextBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
-          {isPinned && canGoBackPin ? (
+          {bar.isPinned && bar.canGoBackPin ? (
             <Button
               type="button"
               variant="ghost"
@@ -179,23 +72,21 @@ export function TokenContextBar() {
               className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
               aria-label="Back to previous selection"
               title="Back to previous selection (Alt+←)"
-              onClick={goBackPin}
+              onClick={bar.goBackPin}
             >
               <ArrowLeft className="size-3.5" aria-hidden />
             </Button>
           ) : null}
 
-          {isPinned && canJumpDef ? (
+          {bar.isPinned && bar.canJumpDef && bar.def?.flowNodeId ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="gap-1.5 text-caption"
               onClick={() => {
-                if (def?.flowNodeId) {
-                  clearTokenInfo();
-                  focusFlowNode(def.flowNodeId);
-                }
+                bar.clearTokenInfo();
+                bar.focusFlowNode(bar.def!.flowNodeId!);
               }}
             >
               <Crosshair className="size-3.5" aria-hidden />
@@ -203,27 +94,27 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {isPinned && connectionLabel ? (
+          {bar.isPinned && bar.connectionLabel ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="gap-1 text-caption"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={() => bar.setExpanded((v) => !v)}
             >
-              {connectionLabel}
-              <ExpandChevron expanded={expanded} className="text-muted-foreground" />
+              {bar.connectionLabel}
+              <ExpandChevron expanded={bar.expanded} className="text-muted-foreground" />
             </Button>
           ) : null}
 
-          {isPinned && def ? (
+          {bar.isPinned && bar.def ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="gap-1.5 text-caption"
               onClick={() => {
-                void openFileInEditor(def.filePath, def.line);
+                void openFileInEditor(bar.def!.filePath, bar.def!.line);
               }}
             >
               <Code2 className="size-3.5" aria-hidden />
@@ -231,25 +122,25 @@ export function TokenContextBar() {
             </Button>
           ) : null}
 
-          {isPinned && externalLoadTargets.length > 0 ? (
+          {bar.isPinned && bar.externalLoadTargets.length > 0 ? (
             <Button
-              ref={loadButtonRef}
+              ref={bar.loadButtonRef}
               type="button"
               variant="outline"
               size="sm"
               className="text-caption"
               onClick={() => {
-                if (externalLoadTargets.length === 1) {
-                  loadTarget(externalLoadTargets[0]!.filePath);
+                if (bar.externalLoadTargets.length === 1) {
+                  bar.loadTarget(bar.externalLoadTargets[0]!.filePath);
                   return;
                 }
-                setLoadPickerOpen(true);
+                bar.setLoadPickerOpen(true);
               }}
             >
               + Load
-              {externalLoadTargets.length > 1
-                ? ` · ${externalLoadTargets.length} files`
-                : isDefinition
+              {bar.externalLoadTargets.length > 1
+                ? ` · ${bar.externalLoadTargets.length} files`
+                : bar.isDefinition
                   ? " caller"
                   : " into graph"}
             </Button>
@@ -260,76 +151,41 @@ export function TokenContextBar() {
             variant="ghost"
             size="icon"
             className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label={isPinned ? "Unpin" : "Dismiss"}
-            title={isPinned ? "Unpin" : "Dismiss"}
-            onClick={clearTokenInfo}
+            aria-label={bar.isPinned ? "Unpin" : "Dismiss"}
+            title={bar.isPinned ? "Unpin" : "Dismiss"}
+            onClick={bar.clearTokenInfo}
           >
             <X className="size-3.5" aria-hidden />
           </Button>
         </div>
       </div>
 
-      {expanded && listCount > 0 ? (
+      {bar.expanded && bar.listCount > 0 ? (
         <div className="max-h-40 overflow-x-hidden overflow-y-auto border-t border-border px-1.5 py-1.5">
-          <ul className="flex flex-col gap-0.5">
-            {isDefinition
-              ? callSites.map((site, idx) => (
-                  <li key={`c-${site.filePath}-${site.line}-${idx}`}>
-                    <InteractiveListRow
-                      title={fileBaseName(site.filePath)}
-                      subtitle={`line ${site.line}${site.inGraph ? " · on canvas" : ""}`}
-                      leading={<ConnectionTargetLeading kind={kind} />}
-                      onClick={() => loadTarget(site.filePath)}
-                    />
-                  </li>
-                ))
-              : null}
-            {!isDefinition
-              ? graphRefs.map((ref, idx) => (
-                  <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
-                    <InteractiveListRow
-                      title={
-                        ref.memberLabel
-                          ? `${ref.classLabel} → ${ref.memberLabel}`
-                          : ref.classLabel
-                      }
-                      subtitle={`line ${ref.line}`}
-                      leading={<ConnectionTargetLeading kind={ref.kind} />}
-                      onClick={() => {
-                        clearTokenInfo();
-                        focusFlowNode(ref.flowNodeId!);
-                      }}
-                    />
-                  </li>
-                ))
-              : null}
-            {!isDefinition
-              ? externalRefs.map((ref, idx) => (
-                  <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
-                    <InteractiveListRow
-                      title={ref.classLabel}
-                      subtitle={`line ${ref.line}`}
-                      leading={<ConnectionTargetLeading kind={ref.kind} />}
-                      onClick={() => loadTarget(ref.filePath)}
-                    />
-                  </li>
-                ))
-              : null}
-          </ul>
+          <TokenContextBarList
+            isDefinition={bar.isDefinition}
+            kind={kind}
+            callSites={bar.callSites}
+            graphRefs={bar.graphRefs}
+            externalRefs={bar.externalRefs}
+            onLoadTarget={bar.loadTarget}
+            onFocusFlowNode={bar.focusFlowNode}
+            onClearTokenInfo={bar.clearTokenInfo}
+          />
         </div>
       ) : null}
 
-      {loadPickerOpen && externalLoadTargets.length > 1 && loadButtonRef.current ? (
+      {bar.loadPickerOpen && bar.externalLoadTargets.length > 1 && bar.loadButtonRef.current ? (
         <LoadTargetPicker
           token={token}
-          targets={externalLoadTargets}
+          targets={bar.externalLoadTargets}
           anchor={(() => {
-            const rect = loadButtonRef.current!.getBoundingClientRect();
+            const rect = bar.loadButtonRef.current!.getBoundingClientRect();
             return { x: rect.left + rect.width / 2, y: rect.top };
           })()}
-          contextFilePath={tokenInfo.filePath}
-          onSelect={loadTarget}
-          onClose={() => setLoadPickerOpen(false)}
+          contextFilePath={bar.tokenInfo.filePath}
+          onSelect={bar.loadTarget}
+          onClose={() => bar.setLoadPickerOpen(false)}
         />
       ) : null}
     </div>

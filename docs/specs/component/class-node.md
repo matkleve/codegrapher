@@ -71,6 +71,11 @@ ClassNode
 | File | Purpose |
 | ---- | ------- |
 | `ClassNode.tsx` | Render |
+| `CollapsibleMemberRow.tsx` | Member row composer |
+| `MemberRowHeader.tsx` | Row chevron, label trace, signature tags |
+| `MemberRowBody.tsx` | Expanded `CodeLine` list |
+| `NodeCardHeader.tsx` | Class title + def trace |
+| `hooks/useDefinitionTrace.ts` | Shared def hover/pin/context menu |
 | `useClassNodeController.ts` | Composes hooks |
 | `useClassNodeCommit.ts` | Single node writer |
 | `useClassNodeMembers.ts` | Member toggles |

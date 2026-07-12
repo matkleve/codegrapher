@@ -1,133 +1,19 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import type { Node } from "@xyflow/react";
-import { useReactFlow } from "@xyflow/react";
-import { useCtrlKey } from "@/context/CtrlKeyContext";
-import { useIndex } from "@/context/IndexContext";
-import { useConnectionLookups } from "@/hooks/useConnectionLookups";
-import { useConnectionEdgeState } from "@/hooks/useConnectionEdgeState";
-import { useLoadTraceRebuild } from "@/hooks/useLoadTraceRebuild";
-import { useRevealRevision } from "@/hooks/useRevealRevision";
-import { useTokenTraceState } from "@/hooks/useTokenTraceState";
-import { useTraceLitState } from "@/hooks/useTraceLitState";
 import {
-  type PreviewEdgeSpec,
-} from "@/lib/previewEdgeTypes";
-import type { TokenInfoState } from "@/lib/tokenContextInfo";
-import type { SemanticTokenKind } from "@/lib/tokenColors";
-import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
+  type GraphInteractionContextValue,
+  type AnchorRect,
+  toAnchorRect,
+} from "@/context/graphInteractionTypes";
+import { useGraphInteractionController } from "@/context/useGraphInteractionController";
 import type { ReadingFocus } from "@/lib/graphReadingFocus";
-import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
-import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
-import { useIncrementalUsageSiteIndex } from "@/hooks/useIncrementalUsageSiteIndex";
-import { rankAndCapUsageSites } from "@/lib/usageSiteRanking";
-import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
-import type { ConnectionKind } from "@/lib/structuralEdgeColors";
-import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
-import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
-import type { CallSiteReference } from "@/lib/projectReferences";
-import type { PinnedTrace } from "@/lib/pinnedTraces";
-import type { TokenReference } from "@/lib/semanticLookup";
-import type { GraphData, ReferenceEntry } from "@/types";
+import type { GraphData } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
 export { edgeTouchesHandle, refinePreviewEdge } from "@/lib/resolveLiveAnchor";
-
-export type AnchorRect = {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
-};
-
-export function toAnchorRect(rect: DOMRect): AnchorRect {
-  return {
-    left: rect.left,
-    top: rect.top,
-    right: rect.right,
-    bottom: rect.bottom,
-    width: rect.width,
-    height: rect.height,
-  };
-}
-
-export type { TokenInfoState };
-
-type GraphInteractionContextValue = {
-  previewEdges: PreviewEdgeSpec[];
-  structuralEdges: StructuralEdgeSpec[];
-  pulseEdges: StructuralEdgeSpec[];
-  visibleEdgeKinds: ReadonlySet<ConnectionKind>;
-  isEdgeKindVisible: (kind: ConnectionKind) => boolean;
-  toggleEdgeKind: (kind: ConnectionKind) => void;
-  setPulseEdges: React.Dispatch<React.SetStateAction<StructuralEdgeSpec[]>>;
-  transitiveHopDepth: number;
-  isHandleActive: (handle: string) => boolean;
-  edgeKindAtHandle: (handle: string) => SemanticTokenKind | null;
-  /** Set trace key + wires in one commit (avoids staggered lit paint). */
-  beginTrace: (tokenKey: string, edges: PreviewEdgeSpec[]) => void;
-  endTrace: () => void;
-  /** End ephemeral hover preview; restores pinned edges when a pin is active. */
-  endHoverPreview: () => void;
-  isWarm: boolean;
-  scheduleHoverFire: (
-    tokenKey: string,
-    onFire: () => void,
-    onClear: () => void,
-    onInfo?: () => void,
-    options?: { instant?: boolean; traceHost?: HTMLElement | null },
-  ) => void;
-  scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
-  scheduleHoverLeaveGrace: () => void;
-  cancelHoverLeaveGrace: () => void;
-  tokenInfo: TokenInfoState;
-  showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
-  clearTokenInfo: () => void;
-  isTraceActive: boolean;
-  findReferences: (token: string) => TokenReference[];
-  findCallSites: (token: string) => CallSiteReference[];
-  lookupProjectReferences: (token: string) => ReferenceEntry[];
-  lookupOffCanvasCallSiteFiles: (token: string) => ReferenceEntry[];
-  focusFlowNode: (flowNodeId: string) => void;
-  /** Remember node/member for the reading-focus toolbar button — no scroll or resize. */
-  selectReadingFocus: (focus: ReadingFocus | null) => void;
-  /** Jump menu: select target and scroll into reading alignment (no width resize). */
-  focusReadingMember: (flowNodeId: string, memberId: string) => void;
-  onLoadFile: (filePath: string) => void | Promise<void>;
-  /** Swap load stubs for in-graph wires (e.g. target file already on canvas). */
-  refreshLoadTraces: () => void;
-  graphData: GraphData | null;
-  pinTrace: (tokenKey: string, shiftKey?: boolean, traceHost?: HTMLElement | null) => void;
-  pinnedTokenKey: string | null;
-  pinnedTraces: PinnedTrace[];
-  activePinKey: string | null;
-  setActivePinKey: (tokenKey: string) => void;
-  isPinnedTokenKey: (tokenKey: string) => boolean;
-  hoveredTokenKey: string | null;
-  lookupIndexedUsageSites: (
-    token: string,
-    sourceFlowId: string,
-    sourceMemberId?: string,
-    anchorLineNumber?: number,
-  ) => UsageSiteRecord[];
-  /** Undo one pin/clear action, restoring the selection it replaced. */
-  goBackPin: () => void;
-  canGoBackPin: boolean;
-  connectionMenu: TokenConnectionMenuState | null;
-  showConnectionMenu: (state: TokenConnectionMenuState) => void;
-  clearConnectionMenu: () => void;
-};
-
-const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
-  null,
-);
+export type { TokenInfoState } from "@/lib/tokenContextInfo";
+export type { GraphInteractionContextValue, AnchorRect };
+export { toAnchorRect };
 
 type GraphInteractionProviderProps = {
   children: ReactNode;
@@ -139,190 +25,15 @@ type GraphInteractionProviderProps = {
   onFocusReadingMember?: (flowNodeId: string, memberId: string) => void;
 };
 
+const GraphInteractionContext = createContext<GraphInteractionContextValue | null>(
+  null,
+);
+
 export function GraphInteractionProvider({
   children,
-  graphData,
-  nodes,
-  setNodes,
-  onLoadFile,
-  onSelectReadingFocus,
-  onFocusReadingMember,
+  ...options
 }: GraphInteractionProviderProps) {
-  const { isCtrlActive } = useCtrlKey();
-  const { symbols, references } = useIndex();
-  const { setCenter, getNode } = useReactFlow();
-  // Recompute trace-lit when the mounted-trace-host set changes (a member or
-  // class expanding/collapsing), so newly revealed tokens light up.
-  const registryRevision = useElementRegistryRevision();
-  const revealRevision = useRevealRevision(nodes);
-
-  const trace = useTokenTraceState(isCtrlActive);
-  const lookups = useConnectionLookups({ graphData, symbols, references });
-
-  const indexedSymbolNames = useMemo(() => new Set(symbols.keys()), [symbols]);
-  const usageSiteIndex = useIncrementalUsageSiteIndex(nodes, indexedSymbolNames);
-
-  const lookupIndexedUsageSites = useCallback(
-    (
-      token: string,
-      sourceFlowId: string,
-      sourceMemberId?: string,
-      anchorLineNumber?: number,
-    ) => {
-      const records = usageSiteIndex.get(token) ?? [];
-      const filtered = records.filter(
-        (rec) =>
-          !isDefinitionSignatureLine(
-            rec.line,
-            token,
-            rec.flowNodeId,
-            rec.memberId,
-            sourceFlowId,
-            sourceMemberId,
-          ),
-      );
-      return rankAndCapUsageSites(filtered, {
-        flowNodeId: sourceFlowId,
-        memberId: sourceMemberId,
-        lineNumber: anchorLineNumber,
-      });
-    },
-    [usageSiteIndex],
-  );
-
-  const edges = useConnectionEdgeState({
-    graphData,
-    nodes,
-    getNode,
-    symbols,
-    usageSiteIndex,
-    hoverPreviewEdges: trace.hoverPreviewEdges,
-    anchorPreviewEdges: trace.anchorTrace?.edges ?? [],
-    anchorTokenKey: trace.anchorTrace?.tokenKey ?? null,
-    pinnedPreviewEdges: trace.pinnedPreviewEdges,
-    pinnedTraces: trace.pinnedTraces,
-    hoveredTokenKey: trace.hoveredTokenKey,
-    traceTokenKey: trace.traceTokenKey,
-  });
-
-  const refreshLoadTraces = useLoadTraceRebuild({
-    graphData,
-    symbols,
-    getNode,
-    hoveredTokenKeyRef: trace.hoveredTokenKeyRef,
-    hoverPreviewEdges: trace.hoverPreviewEdges,
-    setHoverPreviewEdges: trace.setHoverPreviewEdges,
-    pinnedTraces: trace.pinnedTraces,
-    setPinnedTraces: trace.setPinnedTraces,
-    pinnedTracesRef: trace.pinnedTracesRef,
-    revealRevision,
-  });
-
-  const { isHandleActive, edgeKindAtHandle } = useTraceLitState({
-    previewEdges: edges.previewEdges,
-    hoverPreviewEdges: trace.hoverPreviewEdges,
-    pinnedTraces: trace.pinnedTraces,
-    pinnedTokenKeySet: trace.pinnedTokenKeySet,
-    hoveredTokenKey: trace.hoveredTokenKey,
-    traceTokenKey: trace.traceTokenKey,
-    visibleEdgeKinds: edges.visibleEdgeKinds,
-    getNode,
-    revealRevision,
-    registryRevision,
-  });
-
-  const focusFlowNode = useCallback(
-    (flowNodeId: string) => {
-      const node = getNode(flowNodeId) ?? nodes.find((n) => n.id === flowNodeId);
-      if (!node) return;
-
-      setNodes((nds) =>
-        nds.map((n) => ({
-          ...n,
-          selected: n.id === flowNodeId,
-          data: {
-            ...n.data,
-            selected: n.id === flowNodeId,
-            pathHighlighted: n.id === flowNodeId,
-          },
-        })),
-      );
-
-      const w =
-        typeof node.width === "number" ? node.width : CLASS_NODE_DEFAULT_WIDTH;
-      const h = typeof node.height === "number" ? node.height : 120;
-      void setCenter(node.position.x + w / 2, node.position.y + h / 2, {
-        zoom: 1.15,
-        duration: 350,
-      });
-    },
-    [getNode, nodes, setCenter, setNodes],
-  );
-
-  const value = useMemo(
-    () => ({
-      previewEdges: edges.previewEdges,
-      structuralEdges: edges.structuralEdges,
-      pulseEdges: edges.pulseEdges,
-      visibleEdgeKinds: edges.visibleEdgeKinds,
-      isEdgeKindVisible: edges.isEdgeKindVisible,
-      toggleEdgeKind: edges.toggleEdgeKind,
-      transitiveHopDepth: edges.transitiveHopDepth,
-      setPulseEdges: edges.setPulseEdges,
-      isHandleActive,
-      edgeKindAtHandle,
-      beginTrace: trace.beginTrace,
-      endTrace: trace.endTrace,
-      endHoverPreview: trace.endHoverPreview,
-      isWarm: trace.isWarm,
-      scheduleHoverFire: trace.scheduleHoverFire,
-      scheduleHoverClear: trace.scheduleHoverClear,
-      scheduleHoverLeaveGrace: trace.scheduleHoverLeaveGrace,
-      cancelHoverLeaveGrace: trace.cancelHoverLeaveGrace,
-      tokenInfo: trace.tokenInfo,
-      showTokenInfo: trace.showTokenInfo,
-      clearTokenInfo: trace.clearTokenInfo,
-      isTraceActive: trace.isTraceActive,
-      findReferences: lookups.findReferences,
-      findCallSites: lookups.findCallSites,
-      lookupProjectReferences: lookups.lookupProjectReferences,
-      lookupOffCanvasCallSiteFiles: lookups.lookupOffCanvasCallSiteFiles,
-      focusFlowNode,
-      selectReadingFocus: onSelectReadingFocus ?? (() => {}),
-      focusReadingMember: onFocusReadingMember ?? (() => {}),
-      onLoadFile,
-      refreshLoadTraces,
-      graphData,
-      pinTrace: trace.pinTrace,
-      pinnedTokenKey: trace.activePinKey,
-      pinnedTraces: trace.pinnedTraces,
-      activePinKey: trace.activePinKey,
-      setActivePinKey: trace.setActivePinKey,
-      isPinnedTokenKey: trace.isPinnedTokenKey,
-      hoveredTokenKey: trace.hoveredTokenKey,
-      lookupIndexedUsageSites,
-      goBackPin: trace.goBackPin,
-      canGoBackPin: trace.canGoBackPin,
-      connectionMenu: trace.connectionMenu,
-      showConnectionMenu: trace.showConnectionMenu,
-      clearConnectionMenu: trace.clearConnectionMenu,
-    }),
-    [
-      edges,
-      isHandleActive,
-      edgeKindAtHandle,
-      trace,
-      lookups,
-      focusFlowNode,
-      onFocusReadingMember,
-      onSelectReadingFocus,
-      onLoadFile,
-      refreshLoadTraces,
-      graphData,
-      lookupIndexedUsageSites,
-    ],
-  );
-
+  const value = useGraphInteractionController(options);
   return (
     <GraphInteractionContext.Provider value={value}>
       {children}

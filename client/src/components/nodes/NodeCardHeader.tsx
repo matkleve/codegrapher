@@ -5,20 +5,12 @@ import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
+import { useDefinitionTrace } from "@/hooks/useDefinitionTrace";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
-import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
 import type { DefinitionEdgeContext } from "@/lib/resolveDefinitionUsageSites";
-import { connectionCountsForHost } from "@/lib/connectionCounts";
 import { symbolKindToSemantic } from "@/lib/tokenColors";
-import { makeTokenInfo } from "@/lib/tokenContextInfo";
 import { makeClassDefKey } from "@/lib/traceKeys";
-import {
-  buildHoverLoadMenu,
-  loadTargetsFromCallSiteRefs,
-} from "@/lib/connectionMenu";
-import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { cn } from "@/lib/utils";
 
 type NodeCardHeaderProps = {
@@ -45,8 +37,13 @@ export function NodeCardHeader({
   const titleRef = useRef<HTMLSpanElement>(null);
   useTraceHostRegistration(titleRef);
   const { lookup, hasSymbol } = useIndex();
-  const { beginTrace, graphData, lookupIndexedUsageSites, lookupProjectReferences, lookupOffCanvasCallSiteFiles, cancelHoverLeaveGrace, showConnectionMenu, clearConnectionMenu } =
-    useGraphInteraction();
+  const {
+    graphData,
+    lookupIndexedUsageSites,
+    lookupProjectReferences,
+    lookupOffCanvasCallSiteFiles,
+    cancelHoverLeaveGrace,
+  } = useGraphInteraction();
   const { getNode } = useReactFlow();
 
   const indexed = Boolean(symbolName && hasSymbol(symbolName));
@@ -66,114 +63,20 @@ export function NodeCardHeader({
     [flowNodeId, getNode, graphData, lookupIndexedUsageSites, lookupOffCanvasCallSiteFiles, lookupProjectReferences],
   );
 
-  const fireDefPreview = useCallback(() => {
-    if (!symbolName || !indexed || !titleRef.current) return;
-    const symEntry = lookup(symbolName);
-    if (!symEntry) return;
-    const kind = symbolKindToSemantic(symEntry.kind);
-    beginTrace(
-      defTokenKey,
-      buildDefinitionPreviewEdges(
-        symbolName,
-        kind,
-        titleRef.current,
-        defEdgeContext,
-      ),
-    );
-    const sites = lookupOffCanvasCallSiteFiles(symbolName);
-    const menuState = buildHoverLoadMenu(
-      symbolName,
-      kind,
-      "definition",
-      titleRef.current,
-      loadTargetsFromCallSiteRefs(symbolName, sites),
-      filePath,
-    );
-    if (menuState) showConnectionMenu(menuState);
-    else clearConnectionMenu();
-  }, [
-    beginTrace,
-    clearConnectionMenu,
-    defEdgeContext,
-    defTokenKey,
-    filePath,
-    indexed,
-    lookup,
-    lookupOffCanvasCallSiteFiles,
-    showConnectionMenu,
-    symbolName,
-  ]);
-
-  const buildTitlePinInfo = useCallback(() => {
-    const symEntry = lookup(symbolName!);
-    const counts = connectionCountsForHost(
-      titleRef.current!,
-      symbolName!,
-      defEdgeContext,
-    );
-    return makeTokenInfo({
-      token: symbolName!,
-      kind: symbolKindToSemantic(symEntry!.kind),
-      connectionCount: counts.onCanvas,
-      projectConnectionCount: counts.inProject,
-      definedIn: symbolName!,
-      filePath,
-      line: symEntry!.line,
-      sourceFlowId: flowNodeId,
-      sourceGraphNodeId: graphNodeId,
-      role: "definition",
-      pinned: true,
-    });
-  }, [
+  const defTrace = useDefinitionTrace({
+    anchorRef: titleRef,
+    tokenKey: defTokenKey,
+    traceName: symbolName ?? title,
+    defKind,
+    enabled: indexed,
     defEdgeContext,
     filePath,
+    definedIn: symbolName ?? title,
+    line: entry?.line ?? 1,
     flowNodeId,
     graphNodeId,
-    lookup,
-    symbolName,
-  ]);
-
-  const { onEnter: onTitleEnter, onLeave: onTitleLeave, onFocus: onTitleFocus, onBlur: onTitleBlur } = useTokenHover({
-    tokenKey: defTokenKey,
-    enabled: indexed,
-    onFire: fireDefPreview,
-    onClear: () => {},
-    buildTransientInfo: () => {
-      const { pinned: _p, ...rest } = buildTitlePinInfo();
-      return rest;
-    },
+    editorLine: entry?.line ?? 1,
   });
-
-  const { onPinClick: onTitleClick } = useTokenPin({
-    tokenKey: defTokenKey,
-    enabled: indexed && Boolean(symbolName && defKind),
-    onFire: fireDefPreview,
-    animateEl: undefined,
-    buildPinInfo: () => {
-      const { pinned: _p, ...rest } = buildTitlePinInfo();
-      return rest;
-    },
-  });
-
-  const openContextMenu = useTokenContextMenu({
-    filePath,
-    sourceFlowId: flowNodeId,
-  });
-
-  const onTitleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (!symbolName || !indexed || !titleRef.current || !defKind) return;
-      const symEntry = lookup(symbolName);
-      openContextMenu(e, {
-        token: symbolName,
-        kind: defKind,
-        role: "definition",
-        chipEl: titleRef.current,
-        editorLine: symEntry?.line ?? 1,
-      });
-    },
-    [defKind, indexed, lookup, openContextMenu, symbolName],
-  );
 
   const onHeaderClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
@@ -232,18 +135,18 @@ export function NodeCardHeader({
                 : undefined
             }
             onPointerDown={(e) => e.stopPropagation()}
-            onMouseEnter={onTitleEnter}
-            onMouseLeave={onTitleLeave}
-            onFocus={onTitleFocus}
-            onBlur={onTitleBlur}
-            onContextMenu={onTitleContextMenu}
-            onClick={onTitleClick}
+            onMouseEnter={defTrace.onEnter}
+            onMouseLeave={defTrace.onLeave}
+            onFocus={defTrace.onFocus}
+            onBlur={defTrace.onBlur}
+            onContextMenu={defTrace.onContextMenu}
+            onClick={defTrace.onPinClick}
             onKeyDown={
               indexed
                 ? (e) => {
                     if (e.key === "Enter") {
                       e.stopPropagation();
-                      onTitleClick(e as unknown as React.MouseEvent);
+                      defTrace.onPinClick(e as unknown as React.MouseEvent);
                     }
                   }
                 : undefined

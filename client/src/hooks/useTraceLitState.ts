@@ -7,17 +7,12 @@ import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
-import { applyTraceLit, clearTraceLit, unwindTraceLit } from "@/lib/traceLitController";
-import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
-import { MOTION_TRACE_MS } from "@/lib/motionTokens";
-import { setTraceLitFading } from "@/lib/traceLitFading";
 import {
-  setHoverPreviewEdgeIds,
-  setTraceSessionActive,
-  setWireHoveredTokenKey,
-  subscribeTraceStrength,
-} from "@/lib/wireHoverBoost";
-import { notifyWireTransform } from "@/lib/wireEngine";
+  applyActiveTraceLit,
+  clearTraceLitTimer,
+  syncHoverPreviewEdgeIds,
+} from "@/lib/traceLitApply";
+import { subscribeTraceStrength } from "@/lib/wireHoverBoost";
 
 type UseTraceLitStateArgs = {
   previewEdges: PreviewEdgeSpec[];
@@ -35,9 +30,7 @@ type UseTraceLitStateArgs = {
 /**
  * Resolves which DOM handles/chips should render "lit" (active) and applies
  * that to the DOM directly (`applyTraceLit`) — the graph-wide visual state
- * that follows the current hover/pin trace. Separate from edge *building*
- * (`useConnectionEdgeState`) because lit state depends on DOM anchor
- * resolution, not just which edges exist.
+ * that follows the current hover/pin trace.
  */
 export function useTraceLitState({
   previewEdges,
@@ -60,11 +53,7 @@ export function useTraceLitState({
   useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
 
   useLayoutEffect(() => {
-    setHoverPreviewEdgeIds(
-      hoveredTokenKey != null
-        ? new Set(hoverPreviewEdges.map((edge) => edge.id))
-        : new Set(),
-    );
+    syncHoverPreviewEdgeIds(hoveredTokenKey, hoverPreviewEdges);
   }, [hoverPreviewEdges, hoveredTokenKey]);
 
   const activeHandleKinds = useMemo(() => {
@@ -77,7 +66,7 @@ export function useTraceLitState({
       if (to.type === "handle") map.set(to.handle, edge.kind);
     }
     return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision forces recompute after DOM reveal, not read directly
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision forces recompute after DOM reveal
   }, [getNode, previewEdges, revealRevision]);
 
   const isHandleActive = useCallback(
@@ -107,7 +96,7 @@ export function useTraceLitState({
       );
     }
     return lit;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute after DOM reveal, not read directly
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
   }, [getNode, pinnedTraces, revealRevision, registryRevision, visibleEdgeKinds]);
 
   const hoverTraceLit = useMemo(() => {
@@ -123,7 +112,7 @@ export function useTraceLitState({
       getNode,
       cache,
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute after DOM reveal, not read directly
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
   }, [
     getNode,
     hoverPreviewEdges,
@@ -140,49 +129,18 @@ export function useTraceLitState({
   );
 
   useLayoutEffect(() => {
-    if (!traceTokenKey) {
-      if (!fadingLitRef.current) {
-        fadingLitRef.current = true;
-        setTraceLitFading(true);
-        setTraceSessionActive(false);
-        setWireHoveredTokenKey(null);
-        setHoverPreviewEdgeIds(new Set());
-        unwindTraceLit();
-        clearLitTimerRef.current = window.setTimeout(() => {
-          lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
-          clearTraceLit();
-          fadingLitRef.current = false;
-          setTraceLitFading(false);
-          clearLitTimerRef.current = 0;
-        }, MOTION_TRACE_MS);
-      }
-      return;
-    }
-
-    fadingLitRef.current = false;
-    setTraceLitFading(false);
-    window.clearTimeout(clearLitTimerRef.current);
-    clearLitTimerRef.current = 0;
-    setTraceSessionActive(true);
-    setWireHoveredTokenKey(hoveredTokenKey);
-    const fingerprint = traceLitFingerprint(traceLit);
-    const hovered = hoveredTokenKey ?? "";
-    if (
-      fingerprint === lastApplyRef.current.fingerprint &&
-      hovered === lastApplyRef.current.hovered &&
-      strengthRevision === lastApplyRef.current.strength
-    ) {
-      notifyWireTransform();
-      return;
-    }
-    lastApplyRef.current = { fingerprint, hovered, strength: strengthRevision };
-    applyTraceLit(traceLit, {
-      pinnedTokenKeys: pinnedTokenKeySet,
+    applyActiveTraceLit({
+      traceTokenKey,
       hoveredTokenKey,
+      traceLit,
+      pinnedTokenKeySet,
       previewEdges,
       getNode,
+      strengthRevision,
+      lastApplyRef,
+      clearLitTimerRef,
+      fadingLitRef,
     });
-    notifyWireTransform();
   }, [
     getNode,
     hoveredTokenKey,
@@ -197,7 +155,7 @@ export function useTraceLitState({
 
   useLayoutEffect(
     () => () => {
-      window.clearTimeout(clearLitTimerRef.current);
+      clearTraceLitTimer(clearLitTimerRef);
     },
     [],
   );

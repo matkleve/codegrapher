@@ -53,6 +53,7 @@ Split strategy: specs → [spec-format.md](../agent-playbook/core/spec-format.md
 
 ## Cross-cutting contracts
 
+- **Token hover (start here):** [system/token-hover.atlas.supplement.md](system/token-hover.atlas.supplement.md) — one-page map; detail in token-interactions + interaction-emphasis + preview-edges supplements
 - **Preview edges:** [system/preview-edges.md](system/preview-edges.md) · [interactions supplement](system/preview-edges.interactions.supplement.md) (mermaid)
 - **Ego-graph philosophy:** [system/ego-graph-model.md](system/ego-graph-model.md)
 - **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md) · strength stack playbook: [visual-strength-stacks.md](../agent-playbook/core/visual-strength-stacks.md)
