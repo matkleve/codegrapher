@@ -1,6 +1,11 @@
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import { buildLoadPreviewEdge, buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
-import { getByTraceKey } from "@/lib/elementRegistry";
+import {
+  buildLoadPreviewEdge,
+  buildUsagePreviewEdge,
+  liveFromDefEl,
+  liveToFromUsageEl,
+} from "@/lib/buildPreviewEdges";
+import { findParamDefChip, findParamTypeChip } from "@/lib/paramTypeAnchors";
 import { primaryIndexedSymbolInType } from "@/lib/formatSignatureType";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -9,10 +14,6 @@ import {
   resolveVisibleTarget,
 } from "@/lib/resolveVisibleTarget";
 import { symbolKindToSemantic, type SemanticTokenKind } from "@/lib/tokenColors";
-import {
-  makeSigParamDefKey,
-  makeSignatureTypeKey,
-} from "@/lib/traceKeys";
 import type { GraphData, SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
 
@@ -60,14 +61,11 @@ function paramTypeString(
 function findSigTypeChip(
   flowNodeId: string,
   memberId: string,
+  paramName: string,
   symbolName: string,
+  getNode: (id: string) => Node | undefined,
 ): HTMLElement | null {
-  const traceKey = makeSignatureTypeKey(flowNodeId, memberId, symbolName);
-  const registered = getByTraceKey(traceKey);
-  if (registered?.isConnected) return registered;
-  return document.querySelector<HTMLElement>(
-    `[data-trace-key="${CSS.escape(traceKey)}"]`,
-  );
+  return findParamTypeChip(flowNodeId, memberId, paramName, symbolName, getNode);
 }
 
 /**
@@ -95,11 +93,12 @@ export function buildParamTypeCascadeEdges(
   const symbolName = primaryIndexedSymbolInType(typeStr, hasSymbol);
   if (!symbolName) return [];
 
-  const sigTypeEl = findSigTypeChip(flowNodeId, memberId, symbolName);
+  const sigTypeEl = findSigTypeChip(flowNodeId, memberId, paramName, symbolName, getNode);
   if (!sigTypeEl) return [];
 
-  const paramDefKey = makeSigParamDefKey(flowNodeId, memberId, paramName);
-  const sigTypeKey = makeSignatureTypeKey(flowNodeId, memberId, symbolName);
+  const resolvedParamDef =
+    findParamDefChip(flowNodeId, memberId, paramName) ?? paramDefEl;
+
   const entry = symbols.get(symbolName)?.[0];
   const typeKind: SemanticTokenKind = entry
     ? symbolKindToSemantic(entry.kind)
@@ -108,23 +107,18 @@ export function buildParamTypeCascadeEdges(
   const tier2: PreviewEdgeSpec = {
     id: `${edgeIdPrefix}-prov-type-param`,
     from: { type: "element", el: sigTypeEl },
-    to: { type: "element", el: paramDefEl },
+    to: { type: "element", el: resolvedParamDef },
     kind: typeKind,
     hop: 2,
-    liveFrom: {
-      token: symbolName,
-      flowNodeId,
-      memberId,
-      role: "usage",
-      traceKey: sigTypeKey,
-    },
-    liveTo: {
-      token: paramName,
-      flowNodeId,
-      memberId,
-      role: "definition",
-      traceKey: paramDefKey,
-    },
+    liveFrom:
+      liveToFromUsageEl(symbolName, sigTypeEl) ?? {
+        token: symbolName,
+        flowNodeId,
+        memberId,
+        role: "usage",
+        traceKey: sigTypeEl.dataset.traceKey,
+      },
+    liveTo: liveFromDefEl(paramName, resolvedParamDef, flowNodeId, memberId),
   };
 
   let resolved = resolveVisibleTarget(

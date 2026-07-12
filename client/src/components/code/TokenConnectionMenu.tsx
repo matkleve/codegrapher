@@ -207,7 +207,7 @@ function TokenConnectionMenuPanel({
       ) : null}
 
       {menu.variant === "context" && menu.editorTarget ? (
-        <div className="border-t border-border px-1.5 py-1">
+        <div className="border-t border-border px-1.5 py-1.5">
           <InteractiveListRow
             title="Open in editor"
             leading={<Code2 className="size-3.5 shrink-0" aria-hidden />}

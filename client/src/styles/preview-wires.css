@@ -97,19 +97,19 @@
 }
 
 .preview-edge-path.preview-wire--hop2 {
-  opacity: 0.42;
+  opacity: var(--preview-wire-hop2-opacity);
 }
 
 .preview-edge-path.preview-wire--hop3 {
-  opacity: 0.22;
+  opacity: var(--preview-wire-hop3-opacity);
 }
 
 .preview-edge-glow.preview-wire--hop2 {
-  opacity: 0.06;
+  opacity: var(--preview-wire-hop2-glow-opacity);
 }
 
 .preview-edge-glow.preview-wire--hop3 {
-  opacity: 0.04;
+  opacity: var(--preview-wire-hop3-glow-opacity);
 }
 
 /* Structural wires (persistent taxonomy kinds) */

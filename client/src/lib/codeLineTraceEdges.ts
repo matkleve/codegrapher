@@ -127,6 +127,27 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     return [...bindingEdges, ...cascadeEdges];
   }
 
+  const skipControlFlow =
+    localEdges.length > 0 &&
+    Number.isFinite(tokenIndex) &&
+    (() => {
+      const anchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, tokenIndex);
+      return anchor != null && anchor.role !== "head";
+    })();
+
+  const controlFlowEdges =
+    Number.isFinite(tokenIndex) && !skipControlFlow
+      ? buildControlFlowPreviewEdges(
+          chipEl,
+          controlFlowIndex,
+          sourceFlowId,
+          memberId,
+          lineNumber,
+          tokenIndex,
+          edgeKey,
+        )
+      : [];
+
   const localTargetId = chipEl.dataset.localTargetId;
   const paramDefEl = canonicalLocalDefHost(chipEl);
   const paramName =
@@ -147,27 +168,6 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
           hasSymbol,
           edgeIdPrefix: edgeKey,
         })
-      : [];
-
-  const skipControlFlow =
-    localEdges.length > 0 &&
-    Number.isFinite(tokenIndex) &&
-    (() => {
-      const anchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, tokenIndex);
-      return anchor != null && anchor.role !== "head";
-    })();
-
-  const controlFlowEdges =
-    Number.isFinite(tokenIndex) && !skipControlFlow
-      ? buildControlFlowPreviewEdges(
-          chipEl,
-          controlFlowIndex,
-          sourceFlowId,
-          memberId,
-          lineNumber,
-          tokenIndex,
-          edgeKey,
-        )
       : [];
 
   if (

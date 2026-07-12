@@ -71,16 +71,22 @@ function extractParams(
   return out;
 }
 
-/** `for (const x of items)` loop variable. */
+/** `for (const x of items)` loop variable + iterable source for binding init. */
 function extractForOfBinding(
   line: string,
   memberId: string,
   lineNumber: number,
-): { name: string; tokenIndex: number; defId: string } | null {
+): {
+  name: string;
+  tokenIndex: number;
+  defId: string;
+  iterable: { tokenIndex: number; token: string };
+} | null {
   const tokens = tokenizeLine(line).tokens;
   let inFor = false;
   let inParen = false;
   let decl: "const" | "let" | null = null;
+  let loopVar: { name: string; tokenIndex: number; defId: string } | null = null;
 
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i]!;
@@ -100,11 +106,27 @@ function extractForOfBinding(
       decl = t.text;
       continue;
     }
-    if (decl && t.kind === "identifier") {
-      const defId = localDefId(memberId, t.text, lineNumber, "local");
-      return { name: t.text, tokenIndex: i, defId };
+    if (decl && !loopVar && t.kind === "identifier") {
+      loopVar = {
+        name: t.text,
+        tokenIndex: i,
+        defId: localDefId(memberId, t.text, lineNumber, "local"),
+      };
+      decl = null;
+      continue;
     }
-    if (t.text === "of") break;
+    if (loopVar && t.text === "of") {
+      let j = i + 1;
+      while (j < tokens.length && tokens[j]?.kind === "whitespace") j++;
+      const iterable = tokens[j];
+      if (iterable?.kind === "identifier") {
+        return {
+          ...loopVar,
+          iterable: { tokenIndex: j, token: iterable.text },
+        };
+      }
+      break;
+    }
   }
   return null;
 }
@@ -283,6 +305,15 @@ export function buildMemberSymbolIndex(
     if (forOf) {
       scope.set(forOf.name, forOf.defId);
       defSites.set(`${lineNumber}:${forOf.tokenIndex}`, forOf.defId);
+      bindingInitOf.set(forOf.defId, {
+        lineNumber,
+        tokenIndex: forOf.iterable.tokenIndex,
+        token: forOf.iterable.token,
+      });
+      bindingInitSites.set(
+        `${lineNumber}:${forOf.iterable.tokenIndex}`,
+        forOf.defId,
+      );
     }
 
     const tokenized = tokenizeLine(line, inBlockComment);

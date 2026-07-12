@@ -7,7 +7,9 @@ import { registerTraceHost } from "@/lib/elementRegistry";
 import {
   makeSigParamDefKey,
   makeSignatureTypeKey,
+  makeUsageTokenKey,
 } from "@/lib/traceKeys";
+import { typeTokenIndexOnParamSignature } from "@/lib/paramTypeAnchors";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import type { SymbolEntry } from "@/types";
 import type { Node } from "@xyflow/react";
@@ -68,10 +70,27 @@ describe("buildParamTypeCascadeEdges", () => {
     pane.appendChild(paramDef);
     registerTraceHost(paramDef);
 
+    const bodyWrap = document.createElement("div");
+    bodyWrap.className = "member-body-wrap";
+    pane.appendChild(bodyWrap);
+
+    const bodyParamDef = document.createElement("span");
+    bodyParamDef.dataset.traceKey = makeUsageTokenKey(FLOW, MEMBER, 10, 0, PARAM);
+    bodyParamDef.dataset.localDefId = paramDef.dataset.localDefId;
+    bodyWrap.appendChild(bodyParamDef);
+    registerTraceHost(bodyParamDef);
+
+    const tokenIndex = typeTokenIndexOnParamSignature(METHOD_CODE.split("\n")[0]!, PARAM, TYPE)!;
     const sigType = document.createElement("span");
-    sigType.dataset.traceKey = makeSignatureTypeKey(FLOW, MEMBER, TYPE);
+    sigType.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      MEMBER,
+      10,
+      tokenIndex,
+      TYPE,
+    );
     sigType.dataset.tokenKind = "type";
-    pane.appendChild(sigType);
+    bodyWrap.appendChild(sigType);
     registerTraceHost(sigType);
 
     const symbols = new Map<string, SymbolEntry[]>([
@@ -96,7 +115,9 @@ describe("buildParamTypeCascadeEdges", () => {
     expect(edges[1]?.load?.filePath).toBe("/proj/types.ts");
     expect(edges[0]?.from.type).toBe("element");
     expect((edges[0]?.from as { el: HTMLElement }).el).toBe(sigType);
-    expect((edges[0]?.to as { el: HTMLElement }).el).toBe(paramDef);
+    expect((edges[0]?.to as { el: HTMLElement }).el).toBe(bodyParamDef);
+    expect(edges[0]?.liveTo?.traceKey).toBe(bodyParamDef.dataset.traceKey);
+    expect(edges[0]?.liveTo?.traceKey).not.toContain("sig-param");
 
     document.body.innerHTML = "";
   });

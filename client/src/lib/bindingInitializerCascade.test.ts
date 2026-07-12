@@ -1,87 +1,172 @@
 import { describe, expect, it } from "vitest";
 import { buildBindingInitializerCascadeEdges } from "@/lib/bindingInitializerCascade";
-import { buildMemberSymbolIndex } from "@/lib/localSymbolLinks";
 import { registerTraceHost } from "@/lib/elementRegistry";
+import { buildMemberSymbolIndex, bindingInitFor } from "@/lib/localSymbolLinks";
+import { typeTokenIndexOnParamSignature } from "@/lib/paramTypeAnchors";
 import { makeSigParamDefKey, makeUsageTokenKey } from "@/lib/traceKeys";
 import { tokenizeLine } from "@/lib/tokenizeLine";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import type { Node } from "@xyflow/react";
 import type { SymbolEntry } from "@/types";
 
-const MEMBER = "fn:file:extract";
-const FLOW = "flow:file:helpers.ts";
-const START = 52;
-
-const CODE = `export function extractFieldValue(
-  result: GeocoderSearchResult,
-  field: AddressFieldKind,
-): string | null {
-  const addr = result.address;
-  return addr;
-}`;
+const FLOW = "flow:file:svc.ts";
+const MEMBER = "fn:svc:filter";
 
 describe("buildBindingInitializerCascadeEdges", () => {
-  it("wires param result to its usage in result.address at hop 3", () => {
-    const index = buildMemberSymbolIndex(MEMBER, CODE, START);
-    const declLine = "  const addr = result.address;";
-    const tokens = tokenizeLine(declLine).tokens;
-    const resultIdx = tokens.findIndex((t) => t.text === "result");
-    const declFileLine = START + 4;
-
-    const pane = document.createElement("div");
-    pane.className = "graph-pane";
-
-    const addrDefId = `local-def::${MEMBER}::local::addr::${declFileLine}`;
-    const resultDefId = `local-def::${MEMBER}::param::result::${START + 1}`;
-
-    const addrDef = document.createElement("span");
-    addrDef.dataset.localDefId = addrDefId;
-    registerTraceHost(addrDef);
-
-    const resultParam = document.createElement("span");
-    resultParam.dataset.traceKey = makeSigParamDefKey(FLOW, MEMBER, "result");
-    resultParam.dataset.localDefId = resultDefId;
-    registerTraceHost(resultParam);
-
-    const resultUse = document.createElement("span");
-    resultUse.dataset.traceKey = makeUsageTokenKey(
-      FLOW,
+  it("does not cascade member-access bindings (addr = result.address)", () => {
+    const index = buildMemberSymbolIndex(
       MEMBER,
-      declFileLine,
-      resultIdx,
-      "result",
+      `filter(results: SearchResult[]): void {
+  const addr = result.address;
+}`,
     );
-    resultUse.dataset.localTargetId = resultDefId;
-    registerTraceHost(resultUse);
-
-    pane.append(addrDef, resultParam, resultUse);
-    document.body.appendChild(pane);
+    const addrDef = document.createElement("span");
+    addrDef.dataset.localDefId = [...index.defSites.values()].find((id) =>
+      id.includes("::local::addr::"),
+    );
 
     const edges = buildBindingInitializerCascadeEdges({
-      bindingDefEl: addrDef,
+      bindingDefEl: addrDef!,
       symbolIndex: index,
       flowNodeId: FLOW,
       memberId: MEMBER,
-      methodCode: CODE,
-      methodStartLine: START,
+      methodCode: "",
+      methodStartLine: 1,
       edgeIdPrefix: "test",
-      symbols: new Map<string, SymbolEntry[]>([
-        ["GeocoderSearchResult", [{ filePath: "/proj/types.ts", kind: "type", line: 1 }]],
-      ]),
+      symbols: new Map(),
       graphData: null,
       getNode: () => undefined,
-      hasSymbol: (n) => n === "GeocoderSearchResult",
+      hasSymbol: () => false,
+    });
+    expect(edges).toEqual([]);
+  });
+
+  it("cascades for-of bindings through the param and sig-type chain", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    document.body.appendChild(pane);
+
+    const METHOD = `filterAndMap(results: GeocoderSearchResult[]): void {
+  for (const result of results) {
+    void result;
+  }
+}`;
+    const START = 135;
+    const index = buildMemberSymbolIndex(MEMBER, METHOD, START);
+
+    const loopLine = "  for (const result of results) {";
+    const loopLineNumber = START + 1;
+    const tokens = tokenizeLine(loopLine).tokens;
+    const resultsIdx = tokens.findIndex(
+      (t) => t.kind === "identifier" && t.text === "results",
+    );
+
+    const resultDefId = [...index.defSites.values()].find((id) =>
+      id.includes("::local::result::"),
+    )!;
+    expect(bindingInitFor(index, resultDefId)).toEqual({
+      lineNumber: loopLineNumber,
+      tokenIndex: resultsIdx,
+      token: "results",
     });
 
-    expect(edges.some((e) => e.hop === 3 && e.connectionKind !== "binding")).toBe(true);
-    const resultWire = edges.find(
-      (e) =>
-        e.hop === 3 &&
-        e.from.type === "element" &&
-        (e.from as { el: HTMLElement }).el === resultParam,
+    const resultDef = document.createElement("span");
+    resultDef.dataset.localDefId = resultDefId;
+    pane.appendChild(resultDef);
+
+    const resultsParamDef = document.createElement("span");
+    resultsParamDef.dataset.traceKey = makeSigParamDefKey(FLOW, MEMBER, "results");
+    resultsParamDef.dataset.localDefId = `local-def::${MEMBER}::param::results::${START}`;
+    pane.appendChild(resultsParamDef);
+    registerTraceHost(resultsParamDef);
+
+    const resultsUsage = document.createElement("span");
+    resultsUsage.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      MEMBER,
+      loopLineNumber,
+      resultsIdx,
+      "results",
     );
-    expect(resultWire).toBeDefined();
-    if (resultWire?.to.type === "element") {
-      expect(resultWire.to.el).toBe(resultUse);
-    }
+    pane.appendChild(resultsUsage);
+    registerTraceHost(resultsUsage);
+
+    const bodyWrap = document.createElement("div");
+    bodyWrap.className = "member-body-wrap";
+    pane.appendChild(bodyWrap);
+
+    const sigLine = METHOD.split("\n")[0]!;
+    const typeIdx = typeTokenIndexOnParamSignature(
+      sigLine,
+      "results",
+      "GeocoderSearchResult",
+    )!;
+    const sigType = document.createElement("span");
+    sigType.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      MEMBER,
+      START,
+      typeIdx,
+      "GeocoderSearchResult",
+    );
+    bodyWrap.appendChild(sigType);
+    registerTraceHost(sigType);
+
+    const classNode = (): Node => ({
+      id: FLOW,
+      type: "class",
+      position: { x: 0, y: 0 },
+      data: {
+        label: "Svc",
+        fileName: "svc.ts",
+        filePath: "/proj/svc.ts",
+        graphNodeId: "class:svc",
+        nodeKind: "class",
+        properties: [],
+        methods: [
+          {
+            id: MEMBER,
+            label: "filter And Map",
+            symbolName: "filterAndMap",
+            code: METHOD,
+            startLine: START,
+          },
+        ],
+        expandedPropertyIds: [],
+        expandedMethodIds: [MEMBER],
+        propertiesSectionCollapsed: false,
+        methodsSectionCollapsed: false,
+        collapsed: false,
+        pinnedMemberIds: [],
+      } satisfies ClassNodeData,
+    });
+
+    const symbols = new Map<string, SymbolEntry[]>([
+      [
+        "GeocoderSearchResult",
+        [{ filePath: "/proj/types.ts", kind: "type", line: 1 }],
+      ],
+    ]);
+
+    const edges = buildBindingInitializerCascadeEdges({
+      bindingDefEl: resultDef,
+      symbolIndex: index,
+      flowNodeId: FLOW,
+      memberId: MEMBER,
+      methodCode: METHOD,
+      methodStartLine: START,
+      edgeIdPrefix: "test",
+      symbols,
+      graphData: null,
+      getNode: classNode,
+      hasSymbol: (name) => name === "GeocoderSearchResult",
+    });
+
+    expect(edges.length).toBeGreaterThanOrEqual(2);
+    expect(edges[0]?.hop).toBe(3);
+    expect((edges[0]?.from as { el: HTMLElement }).el).toBe(resultsParamDef);
+    expect((edges[0]?.to as { el: HTMLElement }).el).toBe(resultsUsage);
+    expect(edges.some((e) => e.load != null)).toBe(true);
 
     document.body.innerHTML = "";
   });

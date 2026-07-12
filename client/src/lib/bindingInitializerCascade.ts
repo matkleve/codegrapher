@@ -1,7 +1,6 @@
 import { buildElementPreviewEdge } from "@/lib/buildPreviewEdges";
 import { getByTraceKey } from "@/lib/elementRegistry";
 import { findLocalDefElement } from "@/lib/localDefElements";
-import { memberAccessReceiverIndices } from "@/lib/memberAccessChain";
 import {
   bindingInitFor,
   type MemberSymbolIndex,
@@ -15,7 +14,6 @@ import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { graphPane } from "@/lib/graphPaneDom";
 import type { GraphData, SymbolEntry } from "@/types";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
-import { tokenizeLine } from "@/lib/tokenizeLine";
 import type { Node } from "@xyflow/react";
 
 export type BindingInitializerCascadeContext = {
@@ -32,18 +30,7 @@ export type BindingInitializerCascadeContext = {
   hasSymbol: (name: string) => boolean;
 };
 
-function snippetLine(
-  methodCode: string,
-  fileLine: number,
-  methodStartLine: number,
-): string | null {
-  const idx = fileLine - methodStartLine;
-  const lines = methodCode.split("\n");
-  if (idx < 0 || idx >= lines.length) return null;
-  return lines[idx] ?? null;
-}
-
-function findReceiverChip(
+function findInitChip(
   pane: HTMLElement,
   flowNodeId: string,
   memberId: string,
@@ -60,9 +47,11 @@ function findReceiverChip(
 }
 
 /**
- * When a binding reads through a receiver (`const addr = result.address`), walk
- * left from the binding init anchor and wire each lexical receiver (e.g. `result`)
- * back to its param/local def at hop 3.
+ * When a binding initializer is a direct param reference (`for…of results`,
+ * `const x = param`), extend the trace to the param def and its sig-type chain.
+ *
+ * Does **not** walk member-access receivers (`const addr = result.address`) —
+ * those only light on explicit hover of each token in the chain.
  */
 export function buildBindingInitializerCascadeEdges(
   ctx: BindingInitializerCascadeContext,
@@ -73,68 +62,59 @@ export function buildBindingInitializerCascadeEdges(
   const site = bindingInitFor(ctx.symbolIndex, defId);
   if (!site) return [];
 
-  const lineText = snippetLine(ctx.methodCode, site.lineNumber, ctx.methodStartLine);
-  if (!lineText) return [];
-
-  const tokens = tokenizeLine(lineText).tokens;
-  const receivers = memberAccessReceiverIndices(tokens, site.tokenIndex);
-  if (receivers.length === 0) return [];
+  const paramTargetId = usageTargetFor(
+    ctx.symbolIndex,
+    site.lineNumber,
+    site.tokenIndex,
+  );
+  if (!paramTargetId?.includes("::param::")) return [];
 
   const pane = graphPane();
   if (!pane) return [];
 
-  const edges: PreviewEdgeSpec[] = [];
-  let idx = 0;
+  const initEl = findInitChip(
+    pane,
+    ctx.flowNodeId,
+    ctx.memberId,
+    site.lineNumber,
+    site.tokenIndex,
+    site.token,
+  );
+  const paramDefEl = findLocalDefElement(pane, paramTargetId);
+  if (!initEl || !paramDefEl) return [];
 
-  for (const receiverIdx of receivers) {
-    const tok = tokens[receiverIdx];
-    if (!tok || tok.kind !== "identifier") continue;
-
-    const targetId = usageTargetFor(ctx.symbolIndex, site.lineNumber, receiverIdx);
-    if (!targetId) continue;
-
-    const receiverEl = findReceiverChip(
-      pane,
-      ctx.flowNodeId,
-      ctx.memberId,
-      site.lineNumber,
-      receiverIdx,
-      tok.text,
-    );
-    const paramDefEl = findLocalDefElement(pane, targetId);
-    if (!receiverEl || !paramDefEl) continue;
-
-    edges.push({
+  const edges: PreviewEdgeSpec[] = [
+    {
       ...buildElementPreviewEdge(
-        `${ctx.edgeIdPrefix}-init-${idx}`,
+        `${ctx.edgeIdPrefix}-init-param`,
         paramDefEl,
-        receiverEl,
+        initEl,
         "variable",
       ),
       hop: 3,
-    });
-    idx++;
+    },
+  ];
 
-    const paramName = paramNameFromDefId(targetId);
-    if (paramName && targetId.includes("::param::")) {
-      const typeEdges = buildParamTypeCascadeEdges({
-        paramName,
-        paramDefEl,
-        flowNodeId: ctx.flowNodeId,
-        memberId: ctx.memberId,
-        symbols: ctx.symbols,
-        graphData: ctx.graphData,
-        getNode: ctx.getNode,
-        hasSymbol: ctx.hasSymbol,
-        edgeIdPrefix: `${ctx.edgeIdPrefix}-init-type-${paramName}`,
-      });
-      for (const edge of typeEdges) {
-        edges.push({
-          ...edge,
-          hop: edge.hop === 2 ? 3 : edge.hop,
-        });
-      }
-    }
+  const paramName = paramNameFromDefId(paramTargetId);
+  if (!paramName) return edges;
+
+  const typeEdges = buildParamTypeCascadeEdges({
+    paramName,
+    paramDefEl,
+    flowNodeId: ctx.flowNodeId,
+    memberId: ctx.memberId,
+    symbols: ctx.symbols,
+    graphData: ctx.graphData,
+    getNode: ctx.getNode,
+    hasSymbol: ctx.hasSymbol,
+    edgeIdPrefix: `${ctx.edgeIdPrefix}-init-type-${paramName}`,
+  });
+
+  for (const edge of typeEdges) {
+    edges.push({
+      ...edge,
+      hop: edge.hop === 2 ? 3 : edge.hop,
+    });
   }
 
   return edges;

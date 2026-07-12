@@ -11,6 +11,7 @@ import { TokenConnectionMenu } from "@/components/code/TokenConnectionMenu";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
+import { LoadStubAnchors } from "@/components/graph/LoadStubAnchors";
 import { FlowPointOverlay } from "@/components/graph/FlowPointOverlay";
 import { ConnectionLegend } from "@/components/graph/ConnectionLegend";
 import { flowNodeTypes } from "@/components/nodes/flowNodeTypes";
@@ -98,6 +99,7 @@ export function GraphFlowCanvas({
         panOnDrag
       >
         <PreviewEdgeOverlay />
+        <LoadStubAnchors />
         <FlowPointOverlay />
       </ReactFlow>
       <GraphPinchZoomBoost />

@@ -475,6 +475,19 @@ export function computeTraceLit(
 
     if (edge.liveFrom) absorbLiveHint(edge.liveFrom, state, true, activeTokenKey);
     if (edge.liveTo) absorbLiveHint(edge.liveTo, state, true, activeTokenKey);
+
+    if (edge.load) {
+      const loadEl = document.querySelector<HTMLElement>(
+        `[data-load-edge-id="${CSS.escape(edge.id)}"]`,
+      );
+      if (loadEl) {
+        absorbToken(loadEl, state, true);
+        const loadKey = traceKeyFromElement(loadEl);
+        if (loadKey && loadKey !== activeTokenKey && edge.hop != null && edge.hop >= 2) {
+          state.siblingEndpointTokenKeys.add(loadKey);
+        }
+      }
+    }
   }
 
   spreadLocalLinkChain(activeTokenKey, activeTokenKey, state);

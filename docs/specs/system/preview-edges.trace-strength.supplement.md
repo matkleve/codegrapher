@@ -70,9 +70,7 @@ flowchart LR
 | # | Trigger | System Response | Strength |
 | --- | ------- | --------------- | -------- |
 | 1 | Hover/pin **body usage** of indexed param `field` | Usage wire param def → this usage | tier 1 |
-| 1b | Same trace | Additional wire sig-type chip → param def (when param has indexed type) | tier 2 |
-| 1c | Same trace, type def off canvas | Load stub sig-type chip → index target (same as direct sig-type hover) | tier 3 |
-| 1d | Same trace, type def on canvas | Usage wire type def → sig-type chip | tier 3 |
+| 1b | Same trace | **No** sig-type → param wire (signature provenance is hover-only on param/type chips) | — |
 | 2 | Hover/pin **param def** `field` in signature | Fan-out param def → **each** in-body usage | tier 1 each |
 | 2b | Same trace | sig-type → param def | tier 2 |
 | 2c | Same trace | type def → sig-type (or Load stub) | tier 3 |
@@ -86,7 +84,7 @@ flowchart LR
 | Direction (usage segment) | param/local def → usage (unchanged) |
 | Direction (type segment) | type definition → sig-type chip → param def (type flows into signature slot) |
 | Connection kind | **Usage** for all provenance segments (same legend toggle as today) |
-| Builder | `buildParamTypeCascadeEdges` (new) merged in `assembleCodeLinePreviewEdges` / `buildParamDefPreviewEdges` |
+| Builder | `buildParamTypeCascadeEdges` merged in **`buildParamDefPreviewEdges` only** (signature param chip hover) |
 | Type lookup | `MemberSignature` / `param.type` + `primaryIndexedSymbolInType` → sig-type `traceKey` |
 | Load menu | **Primary hover only** opens `TokenConnectionMenu` — cascaded tier-3 Load stubs do not spawn a second menu (same rule as [member-access cascade](preview-edges.interactions.supplement.md) § Member-access cascade) |
 | Sibling usages | When hovering **one** body usage, other usages of the same binding get **tier-2** wires (≈½ opacity) and grey sibling endpoint styling — not tier-1 |
@@ -108,7 +106,7 @@ The signature **param name chip** and any **in-body usages** share one `localDef
 
 | Host hovered | Param name chip | Body usage chip |
 | ------------ | --------------- | --------------- |
-| Body usage (tier 1) | tier 2 endpoint (sibling styling) | tier 1 focus |
+| Body usage (tier 1) | tier 2 endpoint when param def hovered | tier 1 focus |
 | Param def (tier 1 fan-out source) | tier 1 focus | tier 1 usage endpoints |
 
 The sig-type chip is **not** a `localDefId` sibling of the param name — it is a separate indexed symbol linked only via provenance wires.

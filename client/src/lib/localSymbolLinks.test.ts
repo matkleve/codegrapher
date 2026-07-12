@@ -106,6 +106,15 @@ describe("buildMemberSymbolIndex destructuring and for-of", () => {
     const tokens = tokenizeLine(loopLine).tokens;
     const itemIdx = tokens.findIndex((t) => t.kind === "identifier" && t.text === "item");
     expect(defSiteFor(index, 2, itemIdx)).toContain("::local::item::");
+
+    const itemsIdx = tokens.findIndex((t) => t.kind === "identifier" && t.text === "items");
+    const itemDefId = defSiteFor(index, 2, itemIdx);
+    expect(bindingInitFor(index, itemDefId!)).toEqual({
+      lineNumber: 2,
+      tokenIndex: itemsIdx,
+      token: "items",
+    });
+    expect(bindingDefForInit(index, 2, itemsIdx)).toBe(itemDefId);
   });
 });
 

@@ -45,6 +45,7 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
         if (wire) layer.update(wire, box, options.getNode);
       }
     }
+    for (const listener of tickListeners) listener();
   };
 
   const stopLoop = (): void => {
@@ -85,9 +86,15 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
 }
 
 let activeEngine: WireEngine | null = null;
+const tickListeners = new Set<() => void>();
 
 export function registerWireEngine(engine: WireEngine | null): void {
   activeEngine = engine;
+}
+
+export function subscribeWireTicks(listener: () => void): () => void {
+  tickListeners.add(listener);
+  return () => tickListeners.delete(listener);
 }
 
 export function notifyWireTransform(): void {

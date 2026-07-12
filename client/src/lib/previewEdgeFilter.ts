@@ -13,6 +13,8 @@ export function isDegeneratePreviewEdge(
   spec: PreviewEdgeSpec,
   getNode: (id: string) => Node | undefined,
 ): boolean {
+  if (spec.load) return false;
+
   const { from, to } = refinePreviewEdge(spec, getNode);
   if (isSameElementAnchor(from, to)) return true;
   if (

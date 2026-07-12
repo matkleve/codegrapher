@@ -125,7 +125,7 @@ Persistent taxonomy wires (inheritance, implementation, composition, module impo
 
 Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColors.ts`.
 
-Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** hops (usage → param → type) reuse the same hue with tiered opacity (`preview-wire--hop2` ≈ ½, `--hop3` ≈ ¼) — see [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Usage.
+Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** hops reuse the same hue with tiered opacity: `--preview-wire-hop2-opacity` (58%), `--preview-wire-hop3-opacity` (36%) on path; glow uses `--preview-wire-hop2-glow-opacity` / `--preview-wire-hop3-glow-opacity`. See [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md).
 
 Preview **binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
 

@@ -19,7 +19,7 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
       <div
         ref={ref}
         className={cn(
-          "graph-pane relative min-h-0 flex-1 bg-background",
+          "graph-pane relative min-h-0 flex-1 overflow-hidden bg-background",
           isCtrlActive && "graph-ctrl-preview",
           isTraceActive && "graph-trace-active",
           isTraceActive && isWarm && "graph-trace-warm",
