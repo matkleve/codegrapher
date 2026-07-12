@@ -61,7 +61,7 @@
   On-demand dash-dot preview wire from a signature **type chip** to its **param def slot** (e.g. `GeocoderSearchResult` → `result` in `result: GeocoderSearchResult`). **Rounded orthogonal** path geometry. Direction is **type annotation → param slot** — static typing, not runtime value flow. Summoned at **hop 2** in the param provenance cascade; hop 3 (type def → sig-type) remains Usage.
 
 - **Trace hop (graph distance)**  
-  Steps from the hovered/pinned focus token along summoned wires. `PreviewEdgeSpec.hop` is **omitted at distance 1**; otherwise `2…RELATIVE_MAX_DEPTH`. Opacity from `tracePathOpacity(depth)` in `traceDepth.ts` — not a fixed tier enum. Legacy spec language "tier 1/2/3" meant hop distance in the param→type provenance vignette only. See [preview-edges.trace-strength.supplement.md](specs/system/preview-edges.trace-strength.supplement.md).
+  Steps from the hovered/pinned focus token along summoned wires. `PreviewEdgeSpec.hop` is **omitted at distance 1**; otherwise `2…RELATIVE_MAX_DEPTH`. Opacity from `tracePathOpacity(depth)` in `traceDepth.ts`. See [preview-edges.trace-strength.supplement.md](specs/system/preview-edges.trace-strength.supplement.md).
 
 - **Control-flow edge (branch)**  
   On-demand dash-dot preview wire from a `switch`/`if` keyword (or its condition/discriminant identifier) to every `case`/`default`/`else`/`else if` branch of that statement. Direction is **condition/keyword → branch**. Hovering one branch instead draws a single wire back to the head. Answers "which branch does this decision lead to?" — distinct from usage and binding. See [connection-taxonomy.md](specs/system/connection-taxonomy.md) § Control flow.

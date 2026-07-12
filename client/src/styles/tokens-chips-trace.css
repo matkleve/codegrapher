@@ -1,3 +1,48 @@
+/* Dwell pending — same wash as trace hover-preview (focal chip does not jump on commit) */
+.token-chip.token-chip-pending-trace[data-token-kind="class"],
+.token-def-label.token-chip-pending-trace[data-token-kind="class"] {
+  background: color-mix(in srgb, var(--token-edge-class) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-class) 42%, transparent);
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="function"],
+.token-def-label.token-chip-pending-trace[data-token-kind="function"] {
+  background: color-mix(in srgb, var(--token-edge-function) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-function) 42%, transparent);
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="type"],
+.token-def-label.token-chip-pending-trace[data-token-kind="type"] {
+  background: color-mix(in srgb, var(--token-edge-type) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-type) 42%, transparent);
+}
+
+.token-chip.token-chip-pending-trace[data-token-kind="variable"],
+.token-def-label.token-chip-pending-trace[data-token-kind="variable"] {
+  background: color-mix(in srgb, var(--token-edge-variable) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-variable) 42%, transparent);
+}
+
+.dark .token-chip.token-chip-pending-trace[data-token-kind="class"],
+.dark .token-def-label.token-chip-pending-trace[data-token-kind="class"] {
+  background: color-mix(in srgb, var(--token-edge-class) 38%, var(--background));
+}
+
+.dark .token-chip.token-chip-pending-trace[data-token-kind="function"],
+.dark .token-def-label.token-chip-pending-trace[data-token-kind="function"] {
+  background: color-mix(in srgb, var(--token-edge-function) 38%, var(--background));
+}
+
+.dark .token-chip.token-chip-pending-trace[data-token-kind="type"],
+.dark .token-def-label.token-chip-pending-trace[data-token-kind="type"] {
+  background: color-mix(in srgb, var(--token-edge-type) 38%, var(--background));
+}
+
+.dark .token-chip.token-chip-pending-trace[data-token-kind="variable"],
+.dark .token-def-label.token-chip-pending-trace[data-token-kind="variable"] {
+  background: color-mix(in srgb, var(--token-edge-variable) 38%, var(--background));
+}
+
 /* Trace dim — restore semantic ink on hovered / focused chips (fill from rules above) */
 .graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:hover:not(.token-chip-lit) .token-chip-text,
 .graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:focus-visible:not(.token-chip-lit) .token-chip-text,

@@ -78,7 +78,7 @@ When a trace session is active (`graph-trace-active` or pinned), pointer positio
 
 **Planned refactor:** split `traceTokenKey` (session) from `pointerTokenKey` (emphasis) — [trace-strength-refactor-plan.md](../../project/trace-strength-refactor-plan.md) PR 4.
 
-**`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Tier B snaps ink/fill inside cards (`transition-duration: 0s`), but endpoint **socket dots** may use a short Tier-A transition while warm so sockets ease in when hopping token→token (`preview-wires.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
+**`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Reveal motion snaps ink/fill inside cards (`transition-duration: 0s`), but endpoint **socket dots** may use a short affordance transition while warm so sockets ease in when hopping token→token (`preview-wires.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
 
 ## Member container & signature fills (normative)
 

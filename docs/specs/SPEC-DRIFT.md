@@ -70,7 +70,7 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | Keyboard focus trace | Focus on indexed token fires instant trace (no dwell); Enter pins. |
 | Trace strength stack undocumented (session/emphasis/backdrop) | **Spec sync 2026-07-12** — strength stack in trace-strength supplement + interaction-emphasis + playbook. |
 | `--trace-depth-opacity` in spec/tokens but inline opacity in code | **Documented** — inline `style.opacity` today; optional CSS var in refactor PR 7. |
-| "Tier 1/2/3" trace strength vs dynamic `tracePathOpacity` | **Resolved 2026-07-12** — docs/comments use **hop** / **graph distance**; tier was narrative shorthand only. |
+| Fixed trace-strength steps vs dynamic `tracePathOpacity` | **Resolved 2026-07-12** — docs/comments use **hop** / **graph distance** only. |
 
 ---
 

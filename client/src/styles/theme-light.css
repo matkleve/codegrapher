@@ -122,14 +122,14 @@
   --brand-border: oklch(0.86 0.06 88);
   --interactive-toggle-bg: var(--surface-active);
   --interactive-toggle-border: var(--surface-active-border);
-  /* Motion is two-tier (see docs/design/state-visuals.md → Motion philosophy):
-     Tier A — affordance (direct hover only): one fast clock, 120ms.
-     Tier B — reveal (trace / Ctrl / sim mode): instant, 0ms, so ink & fill
+  /* Motion classes (see docs/design/state-visuals.md → Motion philosophy):
+     Affordance — direct hover only: one fast clock, 120ms.
+     Reveal — trace / Ctrl / sim mode: instant, 0ms, so ink & fill
      never crossfade or desync. The four affordance tokens share one value;
-     they stay split by property only so a single tier can be retuned later. */
+     they stay split by property only so affordance timing can be retuned later. */
   --motion-hover-surface: 120ms;
   --motion-hover-color: 120ms;
-  --motion-dim: 0ms;
+  --motion-dim: 80ms;
   --motion-chip-surface: 120ms;
   --motion-chip-color: 120ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);

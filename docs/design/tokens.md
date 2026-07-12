@@ -45,20 +45,20 @@ Registered in Tailwind as `brand`, `brand-surface`, `brand-border`.
 
 Emitted in `:root` (`index.css`):
 
-Two tiers by **meaning** (see [state-visuals.md → Motion philosophy](state-visuals.md#motion-philosophy)):
+Three motion classes by **meaning** (see [state-visuals.md → Motion philosophy](state-visuals.md#motion-philosophy)):
 
-| Tier | Token | Value | Role |
-| ---- | ----- | ----- | ---- |
-| A · affordance | `--motion-hover-surface` | 120ms | Background, border, box-shadow (`.hoverable`, buttons) |
-| A · affordance | `--motion-hover-color` | 120ms | Text, icon, stroke, chevron rotation |
-| A · affordance | `--motion-chip-surface` | 120ms | Token chip background/shadow |
-| A · affordance | `--motion-chip-color` | 120ms | Token chip text color |
-| B · reveal | `--motion-dim` | 0ms | Trace/Ctrl/sim reveal — instant, never a crossfade |
+| Class | Token | Value | Role |
+| ----- | ----- | ----- | ---- |
+| Affordance | `--motion-hover-surface` | 120ms | Background, border, box-shadow (`.hoverable`, buttons) |
+| Affordance | `--motion-hover-color` | 120ms | Text, icon, stroke, chevron rotation |
+| Affordance | `--motion-chip-surface` | 120ms | Token chip background/shadow |
+| Affordance | `--motion-chip-color` | 120ms | Token chip text color |
+| Reveal | `--motion-dim` | 80ms | Trace/Ctrl/sim reveal crossfade (syntax dim, chip lit, wire opacity) |
 | — | `--ease` | cubic-bezier | Standard deceleration |
 | — | `--spring` | cubic-bezier | Preview edge / socket pop |
 
-The four Tier-A tokens share one value; they stay split by property so a tier can be
-retuned later. Tier B is 0ms **and** enforced structurally: `trace-modes.css` snaps every
+The four affordance tokens share one value; they stay split by property so affordance
+timing can be retuned later. Reveal is 0ms **and** enforced structurally: `trace-modes.css` snaps every
 transition inside `.react-flow__node` while a reveal mode is active, so per-element reveal
 timing must never be re-added.
 

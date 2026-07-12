@@ -3,26 +3,6 @@
  * Proto: .wire-path / .wire-glow / .wire-hit → .preview-edge-*
  */
 
-@keyframes preview-edge-bloom {
-  from {
-    opacity: 0;
-    stroke-width: 0;
-  }
-  to {
-    opacity: 1;
-    stroke-width: 1.1;
-  }
-}
-
-@keyframes preview-edge-bloom-glow {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.16;
-  }
-}
-
 @keyframes proto-flow {
   to {
     stroke-dashoffset: -14;
@@ -51,16 +31,15 @@
   stroke-dasharray: 10 4;
   stroke-linecap: round;
   stroke-dashoffset: 0;
-  animation:
-    proto-flow 700ms linear infinite,
-    preview-edge-bloom 180ms var(--ease) both;
+  animation: proto-flow 700ms linear infinite;
+  transition: opacity var(--motion-dim) var(--ease);
 }
 
 .preview-edge-glow {
   stroke-linecap: round;
   stroke-width: 5;
   opacity: 0.12;
-  animation: preview-edge-bloom-glow 200ms var(--ease) both;
+  transition: opacity var(--motion-dim) var(--ease);
 }
 
 .preview-edge-path.preview-edge-warm {
@@ -70,16 +49,12 @@
 .preview-edge-path.preview-edge-load {
   stroke-dasharray: 6 4;
   opacity: 0.9;
-  animation:
-    proto-flow 700ms linear infinite,
-    preview-edge-bloom 180ms var(--ease) both;
+  animation: proto-flow 700ms linear infinite;
 }
 
 .preview-edge-path.preview-edge-binding {
   stroke-dasharray: 2 4;
-  animation:
-    proto-flow 900ms linear infinite,
-    preview-edge-bloom 180ms var(--ease) both;
+  animation: proto-flow 900ms linear infinite;
 }
 
 .preview-edge-glow.preview-edge-binding {
@@ -94,9 +69,7 @@
   stroke-dasharray: 5 3 1 3;
   stroke-linejoin: round;
   stroke-linecap: round;
-  animation:
-    proto-flow 850ms linear infinite,
-    preview-edge-bloom 180ms var(--ease) both;
+  animation: proto-flow 850ms linear infinite;
 }
 
 .preview-edge-path.preview-edge-typesetting.preview-edge-warm {
@@ -109,9 +82,7 @@
 
 .preview-edge-path.preview-edge-branch {
   stroke-dasharray: 7 3 2 3;
-  animation:
-    proto-flow 800ms linear infinite,
-    preview-edge-bloom 180ms var(--ease) both;
+  animation: proto-flow 800ms linear infinite;
 }
 
 .preview-edge-glow.preview-edge-branch {
@@ -139,7 +110,6 @@
 }
 
 .preview-edge-glow.preview-edge-warm {
-  animation: none;
   opacity: 0.16;
 }
 

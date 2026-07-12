@@ -13,8 +13,8 @@
 .graph-trace-active .member-row,
 .graph-pane.graph-ctrl-preview .member-row {
   transition:
-    border-color 0s,
-    box-shadow 0s,
+    border-color var(--motion-dim) var(--ease),
+    box-shadow var(--motion-dim) var(--ease),
     background-color var(--motion-dim) var(--ease),
     color var(--motion-dim) var(--ease);
 }
@@ -44,11 +44,17 @@
 .node-card-caret,
 .member-row-caret,
 .node-card-title,
-.file-type-chip {
+.file-type-chip,
+.token-chip,
+.token-def-label,
+.control-flow-chip,
+.flow-anchor-on {
   transition:
     color var(--motion-dim) var(--ease),
     background-color var(--motion-dim) var(--ease),
-    opacity var(--motion-dim) var(--ease);
+    opacity var(--motion-dim) var(--ease),
+    box-shadow var(--motion-dim) var(--ease),
+    border-color var(--motion-dim) var(--ease);
 }
 
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */

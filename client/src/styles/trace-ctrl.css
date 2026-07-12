@@ -21,20 +21,12 @@
   }
 }
 
-/* ── Motion Tier B — reveal is instant ──────────────────────────────────
-   The moment a reveal mode (trace / Ctrl / sim) is on, every ink & fill
-   change inside a class/function card snaps with no crossfade, so nothing
-   desyncs while you scan tokens. Affordance motion (Tier A, ~120ms) lives
-   only in the calm/idle state. Ambient keyframes (shimmer, breathe, wire
-   dash) use `animation`, not `transition`, so they are unaffected.
-   This one rule owns reveal timing — do not add per-element reveal
-   transitions. See docs/design/state-visuals.md → Motion philosophy. */
-.graph-pane.graph-trace-active .react-flow__node *,
-.graph-pane.graph-trace-pinned .react-flow__node *,
-.graph-pane.graph-ctrl-preview .react-flow__node *,
-.graph-pane.graph-sim-active .react-flow__node * {
-  transition-duration: 0s !important;
-}
+/* ── Reveal motion — fast crossfade via --motion-dim (80ms) ─────────────
+   Trace / Ctrl / sim ink & fill changes inside class cards ease over
+   --motion-dim so pending dwell → committed trace does not hard-jump.
+   Affordance motion (~120ms) lives in the calm/idle state. Ambient
+   keyframes (shimmer, breathe, wire dash / stroke reveal) use
+   `animation`, not `transition`. See docs/design/state-visuals.md. */
 
 /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
 .graph-pane.graph-ctrl-preview .member-body-wrap,

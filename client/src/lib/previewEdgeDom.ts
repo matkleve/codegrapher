@@ -23,6 +23,7 @@ import {
   isTraceSessionActive,
   isWireHovered,
 } from "@/lib/wireHoverBoost";
+import { playWireReveal } from "@/lib/wireReveal";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -94,7 +95,8 @@ function applyWireDepthOpacity(
     return;
   }
 
-  const backdrop = isTraceEmphasisActive() && !emphasized;
+  // Provenance hops 2+ keep hop-decay strength; only hop-1 siblings recede during pointer emphasis.
+  const backdrop = isTraceEmphasisActive() && !emphasized && depth <= 1;
 
   const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(
     depth,
@@ -103,9 +105,20 @@ function applyWireDepthOpacity(
     backdrop,
   );
   path.style.opacity = String(pathOpacity);
-  glow.style.opacity = String(glowOpacity);
+  const group = path.parentElement as SVGGElement | null;
+  const revealing =
+    group?.dataset.revealStarted === "1" && group?.dataset.revealed !== "1";
+  if (!revealing) {
+    glow.style.opacity = String(glowOpacity);
+  }
   path.classList.toggle("preview-edge-branch-emphasis", emphasized);
   glow.classList.toggle("preview-edge-branch-emphasis", emphasized);
+}
+
+function revealWireIfReady(wire: WireElements): void {
+  const warm = wire.path.classList.contains("preview-edge-warm");
+  const stagger = Number.parseInt(wire.group.dataset.drawIndex ?? "0", 10);
+  playWireReveal(wire, warm, stagger);
 }
 
 export function createWireGroup(
@@ -261,12 +274,14 @@ export function updateWireGeometry(
       wireHitMidSegment(fromPt.x, fromPt.y, toPt.x, toPt.y),
     );
     setWireJunction(wire, null, stroke);
+    revealWireIfReady(wire);
     return true;
   }
 
   if (fanLayout) {
     wire.group.style.display = "";
     applyFanWireLayout(wire, fanLayout, stroke);
+    revealWireIfReady(wire);
     return true;
   }
 
@@ -337,6 +352,8 @@ export function updateWireGeometry(
     setWireJunction(wire, null, stroke);
   }
 
+  revealWireIfReady(wire);
+
   return true;
 }
 
@@ -372,7 +389,7 @@ export function syncWireDom(
     wires.delete(id);
   }
 
-  for (const spec of specs) {
+  for (const [index, spec] of specs.entries()) {
     let wire = wires.get(spec.id);
     const hadLoad = wire?.spec.load != null;
     const hasLoad = spec.load != null;
@@ -383,10 +400,12 @@ export function syncWireDom(
     }
     if (!wire) {
       wire = createWireGroup(spec, warm);
+      wire.group.dataset.drawIndex = String(index);
       wires.set(spec.id, wire);
       container.append(wire.group);
     } else {
       wire.spec = spec;
+      wire.group.dataset.drawIndex = String(index);
       setWireWarm(wire, warm);
       const { path: pathClasses, glow: glowClasses } = previewWireClasses(spec, warm);
       wire.path.className.baseVal = pathClasses.join(" ");

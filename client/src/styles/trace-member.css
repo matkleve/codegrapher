@@ -16,7 +16,8 @@
     .member-row-label:hover,
     .member-row-label:focus-visible,
     .member-row-label.token-chip-on,
-    .member-row-label.token-chip-hover-preview
+    .member-row-label.token-chip-hover-preview,
+    .member-row-label.token-chip-pending-trace
   ) {
   background: var(--member-row-trace-lit-bg) !important;
   border-color: var(--member-row-trace-lit-border) !important;
@@ -27,7 +28,8 @@
     .member-row-label:hover,
     .member-row-label:focus-visible,
     .member-row-label.token-chip-on,
-    .member-row-label.token-chip-hover-preview
+    .member-row-label.token-chip-hover-preview,
+    .member-row-label.token-chip-pending-trace
   ) {
   background: var(--member-row-trace-lit-bg) !important;
   border-color: var(--member-row-trace-lit-border) !important;

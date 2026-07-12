@@ -1,6 +1,6 @@
 # Visual strength stacks
 
-**Terminology:** use **hop** / **graph distance** (not "tier"). `PreviewEdgeSpec.hop` is omitted at distance 1; opacity from `tracePathOpacity(depth)` in `traceDepth.ts`.
+**Terminology:** **hop** / **graph distance**. `PreviewEdgeSpec.hop` is omitted at distance 1; opacity from `tracePathOpacity(depth)` in `traceDepth.ts`.
 
 Copy this doc with the agent playbook. Project-specific constants live in that
 project's specs and `traceDepth.ts` (or equivalent).

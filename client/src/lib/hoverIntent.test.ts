@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireDelayMs, shouldCommitHoverClear } from "@/lib/hoverIntent";
+import { fireDelayMs, leaveGraceMs, shouldCommitHoverClear } from "@/lib/hoverIntent";
 
 describe("fireDelayMs", () => {
   it("fires instantly when Ctrl is held", () => {
@@ -11,8 +11,18 @@ describe("fireDelayMs", () => {
   });
 
   it("uses cold/warm delays for plain pointer hover", () => {
-    expect(fireDelayMs(false, false)).toBe(150);
-    expect(fireDelayMs(true, false)).toBe(80);
+    expect(fireDelayMs(false, false)).toBe(80);
+    expect(fireDelayMs(true, false)).toBe(50);
+  });
+});
+
+describe("leaveGraceMs", () => {
+  it("skips grace when dwell never committed a trace", () => {
+    expect(leaveGraceMs(false)).toBe(0);
+  });
+
+  it("applies grace after a trace fired", () => {
+    expect(leaveGraceMs(true)).toBe(80);
   });
 });
 

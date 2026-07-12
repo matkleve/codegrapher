@@ -67,7 +67,7 @@ Audit baseline: ~8% of men have some form of colour-vision deficiency (deuterano
 
 - Indexed token **role** is encoded as chip surface (`--token-surface-{kind}`) **and** optional def/usage label pills — not hue alone.
 - Trace dim (`--faint*`) reduces non-lit ink; lit endpoints use `token-chip-lit` + border/socket weight — redundant with opacity.
-- Ctrl shimmer is **motion** (Tier C in [state-visuals.md](state-visuals.md)), not a sole indicator of interactivity — chips also use cursor and hover fill.
+- Ctrl shimmer is **ambient motion** ([state-visuals.md](state-visuals.md)), not a sole indicator of interactivity — chips also use cursor and hover fill.
 
 ---
 

@@ -6,6 +6,7 @@ export const CHIP_LIT = "token-chip-lit";
 export const CHIP_ON = "token-chip-on";
 export const CHIP_SOURCE = "token-chip-source";
 export const CHIP_HOVER_PREVIEW = "token-chip-hover-preview";
+export const CHIP_PENDING_TRACE = "token-chip-pending-trace";
 export const MEMBER_LIT = "trace-member-lit";
 export const MEMBER_OWNER_LIT = "trace-member-owner-lit";
 export const LINE_LIT = "trace-lit-line";

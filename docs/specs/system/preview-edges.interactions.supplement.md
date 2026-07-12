@@ -53,30 +53,32 @@ sequenceDiagram
   participant B as beginTrace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 150ms
-  U->>H: leave A before 150ms
+  H->>T: fire in 80ms
+  U->>H: leave A before 80ms
   H->>T: cancel fire
   Note over B: no trace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 150ms
+  H->>T: fire in 80ms
   T->>B: onFire → edges + lit
   U->>H: enter token B (warm)
   H->>T: fire in 80ms
   T->>B: replace trace with B
 
   U->>H: leave token
-  H->>T: clear in 150ms grace
+  H->>T: clear in 80ms grace (0ms if dwell never fired)
   T->>B: endTrace (if unpinned)
 ```
 
 | Constant | Value | Effect |
 | -------- | ----- | ------ |
-| `FIRE_COLD_MS` | 150 | First hover dwell |
-| `FIRE_WARM_MS` | 80 | Adjacent token while warm |
-| `LEAVE_GRACE_MS` | 150 | Anti-flicker between neighbors |
+| `FIRE_COLD_MS` | 80 | First hover dwell |
+| `FIRE_WARM_MS` | 50 | Adjacent token while warm |
+| `LEAVE_GRACE_MS` | 80 | Anti-flicker between neighbors (skipped when dwell never committed) |
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
 | Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
+| Dwell never committed | 0 leave grace | `leaveGraceMs(false)` — instant clear on pointer leave |
+| Wire reveal (cold) | 80ms + 20ms stagger | `playWireReveal` stroke draw source→target; warm retarget skips |
 
 **Leave-clear commit rule:** after `LEAVE_GRACE_MS`, clear runs when the leaving
 token is still the latest entry in `hoverClearRef` — **not** when it matches

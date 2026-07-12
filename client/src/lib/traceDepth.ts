@@ -6,16 +6,20 @@ export const TRACE_DEPTH_MIN_OPACITY = 0.2;
 /** Lit distance-1 chips/wires dimmed only while pointer emphasizes another trace member. */
 export const TRACE_UNINVOLVED_IN_TRACE = 0.68;
 
+/** Baseline path for hop-1 wires during an active trace (emphasis pops to full). */
+export const TRACE_WIRE_SESSION_PATH_AT_FOCUS = 0.8;
+
 /** Non-emphasized wires recede while pointer is on a direct branch. */
 export const TRACE_WIRE_BACKDROP_PATH_OPACITY = 0.36;
 export const TRACE_WIRE_BACKDROP_GLOW_OPACITY = 0.05;
 
 /** Wire path + glow when pointer is on the wire or its endpoint chip. */
 export const TRACE_WIRE_EMPHASIS_PATH_OPACITY = 1;
-export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.58;
+/** Subtle halo — the dashed path carries hover brightness, not the glow layer. */
+export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.18;
 
-/** Power curve for provenance decay during a committed trace. */
-export const TRACE_DEPTH_CURVE = 1.25;
+/** Power curve for provenance decay during a committed trace (lower = flatter). */
+export const TRACE_DEPTH_CURVE = 0.85;
 
 /** Flatter curve while pointer emphasizes one branch — hops stay readable. */
 export const TRACE_DEPTH_CURVE_EMPHASIS = 0.55;
@@ -103,15 +107,13 @@ export function traceWireOpacity(
     };
   }
   if (backdrop) {
-    const path =
-      depth <= 1
-        ? TRACE_WIRE_BACKDROP_PATH_OPACITY
-        : tracePathOpacity(depth, maxDepth, "baseline") * 0.72;
+    // Backdrop only applies to hop-1 siblings; hop 2+ keeps provenance decay (see previewEdgeDom).
+    const path = TRACE_WIRE_BACKDROP_PATH_OPACITY;
     return {
       path,
       glow: Math.max(path * TRACE_GLOW_BASELINE_RATIO, TRACE_WIRE_BACKDROP_GLOW_OPACITY),
     };
   }
-  const path = tracePathOpacity(depth, maxDepth, "baseline");
+  const path = depth <= 1 ? TRACE_WIRE_SESSION_PATH_AT_FOCUS : tracePathOpacity(depth, maxDepth, "baseline");
   return { path, glow: traceGlowOpacity(depth, maxDepth, "baseline") };
 }

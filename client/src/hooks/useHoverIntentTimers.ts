@@ -8,10 +8,11 @@ import {
   emptyHoverTimers,
   fireDelayMs,
   INFO_DELAY_MS,
-  LEAVE_GRACE_MS,
+  leaveGraceMs,
   shouldCommitHoverClear,
   type HoverIntentTimers,
 } from "@/lib/hoverIntent";
+import { clearPendingTraceHost, setPendingTraceHost } from "@/lib/pendingTraceChip";
 
 type UseHoverIntentTimersArgs = {
   isCtrlActive: boolean;
@@ -56,6 +57,7 @@ export function useHoverIntentTimers({
     pendingFireRef.current = null;
     hoveredTokenKeyRef.current = null;
     hoverClearRef.current = null;
+    clearPendingTraceHost();
     clearTraceAnchorHost();
   }, []);
 
@@ -79,6 +81,7 @@ export function useHoverIntentTimers({
       hoverClearRef.current = { tokenKey, onClear };
 
       const runFire = () => {
+        clearPendingTraceHost();
         hoveredTokenKeyRef.current = tokenKey;
         setTraceAnchorHost(options?.traceHost ?? null);
         setHoveredTokenKey(tokenKey);
@@ -96,6 +99,7 @@ export function useHoverIntentTimers({
       if (delay === 0) {
         runFire();
       } else {
+        setPendingTraceHost(options?.traceHost ?? null);
         timers.fire = setTimeout(runFire, delay);
       }
 
@@ -122,9 +126,11 @@ export function useHoverIntentTimers({
       timers.fire = null;
       timers.info = null;
 
-      timers.clear = setTimeout(() => {
+      const traceHadFired = hoveredTokenKeyRef.current != null;
+      const grace = leaveGraceMs(traceHadFired);
+
+      const commitClear = () => {
         if (!shouldCommitHoverClear(tokenKey, hoverClearRef.current)) {
-          timers.clear = null;
           return;
         }
         clearTimeout(timers.fire ?? undefined);
@@ -133,9 +139,20 @@ export function useHoverIntentTimers({
         hoveredTokenKeyRef.current = null;
         pendingFireRef.current = null;
         hoverClearRef.current = null;
+        clearPendingTraceHost();
         onClear();
+      };
+
+      if (grace === 0) {
+        commitClear();
         timers.clear = null;
-      }, LEAVE_GRACE_MS);
+        return;
+      }
+
+      timers.clear = setTimeout(() => {
+        commitClear();
+        timers.clear = null;
+      }, grace);
     },
     [],
   );
@@ -165,6 +182,7 @@ export function useHoverIntentTimers({
 
     clearTimeout(timers.fire);
     timers.fire = null;
+    clearPendingTraceHost();
     hoveredTokenKeyRef.current = pending.tokenKey;
     pending.onFire();
     pendingFireRef.current = null;

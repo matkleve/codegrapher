@@ -9,15 +9,15 @@ Last updated: 2026-07-10
 
 ## Identity
 
-codegrapher is a **cool blue-gray developer tool** with two accent tiers:
+codegrapher is a **cool blue-gray developer tool** with two accent roles:
 
-| Tier | Hue | Role |
-| ---- | --- | ---- |
+| Accent | Hue | Role |
+| ------ | --- | ---- |
 | **Brand gold** | oklch ~88 | Pointer hover — "you can interact here" |
 | **Primary periwinkle** | oklch ~278 | Committed actions, focus rings, toggles, graph entities |
 | **Token semantics** | per kind | Graph meaning — class, function, type, variable |
 
-Gold is the **discovery** accent (hover). Periwinkle is the **commitment** accent (click, toggle, CTA). Never swap them on the same interaction tier.
+Gold is the **discovery** accent (hover). Periwinkle is the **commitment** accent (click, toggle, CTA). Never swap them on the same interaction role.
 
 ---
 
@@ -70,10 +70,10 @@ Normative contract: [state-visuals.md](state-visuals.md) · [interaction-emphasi
 | `--ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | Standard deceleration |
 | `--spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Preview edge / socket pop |
 
-### Motion tiers (target standard)
+### Motion duration clocks (target standard)
 
-| Tier | Duration | Examples |
-| ---- | -------- | -------- |
+| Clock | Duration | Examples |
+| ----- | -------- | -------- |
 | Micro | 120ms | Sidebar collapse warning fade |
 | Surface | 320ms | `.hoverable`, buttons (target) |
 | Color | 380ms | Caret rotation, icon color |

@@ -32,9 +32,9 @@ describe("traceDepth", () => {
     expect(TRACE_UNINVOLVED_IN_TRACE).toBeLessThan(1);
   });
 
-  it("fades path opacity with distance at baseline", () => {
-    expect(tracePathOpacity(2, 5, "baseline")).toBeCloseTo(0.76, 1);
-    expect(tracePathOpacity(3, 5, "baseline")).toBeCloseTo(0.54, 1);
+  it("fades path opacity with distance at baseline (flatter curve)", () => {
+    expect(tracePathOpacity(2, 5, "baseline")).toBeCloseTo(0.83, 1);
+    expect(tracePathOpacity(3, 5, "baseline")).toBeCloseTo(0.64, 1);
     expect(tracePathOpacity(5, 5, "baseline")).toBeCloseTo(0.2, 2);
   });
 
@@ -53,13 +53,15 @@ describe("traceDepth", () => {
     expect(tracePathOpacity(5, 10, "baseline")).toBeGreaterThan(atTen);
   });
 
-  it("snaps emphasized wires to full path + bright glow", () => {
+  it("snaps emphasized wires to full path + modest glow", () => {
     const emphasized = traceWireOpacity(2, 5, true, false);
     const backdrop = traceWireOpacity(1, 5, false, true);
     const baseline = traceWireOpacity(1, 5, false, false);
+    const hop2Baseline = traceWireOpacity(2, 5, false, false);
     expect(emphasized.path).toBe(1);
-    expect(emphasized.glow).toBeGreaterThanOrEqual(0.58);
-    expect(emphasized.glow).toBeGreaterThan(baseline.glow * 2);
+    expect(emphasized.glow).toBeLessThanOrEqual(0.2);
+    expect(emphasized.path).toBeGreaterThan(baseline.path);
+    expect(hop2Baseline.path).toBeGreaterThan(backdrop.path);
     expect(backdrop.path).toBeLessThan(baseline.path);
   });
 });

@@ -4,7 +4,7 @@ Normative supplement to [preview-edges.md](preview-edges.md) and [connection-tax
 
 Parent interaction rules (direction, dwell, pin lock): [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md).
 
-**Terminology:** **hop** / **graph distance** = steps from the focus token (`PreviewEdgeSpec.hop` omitted at distance 1, else `2…RELATIVE_MAX_DEPTH`). Opacity comes from `tracePathOpacity(depth)` — not a fixed tier enum. Legacy docs said "tier 1/2/3"; that meant hop distance in the param provenance vignette only.
+**Terminology:** **hop** / **graph distance** = steps from the focus token (`PreviewEdgeSpec.hop` omitted at distance 1, else `2…RELATIVE_MAX_DEPTH`). Opacity comes from `tracePathOpacity(depth)`.
 
 ---
 
