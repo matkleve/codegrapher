@@ -15,6 +15,7 @@ type UseTraceLitStateArgs = {
   previewEdges: PreviewEdgeSpec[];
   hoverPreviewEdges: PreviewEdgeSpec[];
   pinnedTraces: PinnedTrace[];
+  anchorTrace: { tokenKey: string; edges: PreviewEdgeSpec[] } | null;
   pinnedTokenKeySet: ReadonlySet<string>;
   hoveredTokenKey: string | null;
   traceTokenKey: string | null;
@@ -35,6 +36,7 @@ export function useTraceLitState({
   previewEdges,
   hoverPreviewEdges,
   pinnedTraces,
+  anchorTrace,
   pinnedTokenKeySet,
   hoveredTokenKey,
   traceTokenKey,
@@ -44,7 +46,7 @@ export function useTraceLitState({
   registryRevision,
 }: UseTraceLitStateArgs) {
   const refineCacheRef = useRef(createRefinePreviewEdgeCache());
-  const lastFingerprintRef = useRef("");
+  const lastApplyRef = useRef({ fingerprint: "", hovered: "" });
 
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
@@ -69,6 +71,19 @@ export function useTraceLitState({
       activeHandleKinds.get(handle) ?? null,
     [activeHandleKinds],
   );
+
+  const anchorTraceLit = useMemo(() => {
+    if (!anchorTrace) return EMPTY_TRACE_LIT;
+    const cache = refineCacheRef.current;
+    cache.clear();
+    return computeTraceLit(
+      anchorTrace.tokenKey,
+      filterPreviewEdgesByVisibility(anchorTrace.edges, visibleEdgeKinds),
+      getNode,
+      cache,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute after DOM reveal, not read directly
+  }, [anchorTrace, getNode, revealRevision, registryRevision, visibleEdgeKinds]);
 
   const pinnedTraceLit = useMemo(() => {
     const cache = refineCacheRef.current;
@@ -114,22 +129,26 @@ export function useTraceLitState({
   ]);
 
   const traceLit = useMemo(
-    () => mergeTraceLit(pinnedTraceLit, hoverTraceLit),
-    [hoverTraceLit, pinnedTraceLit],
+    () => mergeTraceLit(mergeTraceLit(pinnedTraceLit, anchorTraceLit), hoverTraceLit),
+    [anchorTraceLit, hoverTraceLit, pinnedTraceLit],
   );
 
   useLayoutEffect(() => {
     if (!traceTokenKey) {
-      lastFingerprintRef.current = "";
+      lastApplyRef.current = { fingerprint: "", hovered: "" };
       clearTraceLit();
       return;
     }
     const fingerprint = traceLitFingerprint(traceLit);
-    if (fingerprint === lastFingerprintRef.current) {
+    const hovered = hoveredTokenKey ?? "";
+    if (
+      fingerprint === lastApplyRef.current.fingerprint &&
+      hovered === lastApplyRef.current.hovered
+    ) {
       notifyWireTransform();
       return;
     }
-    lastFingerprintRef.current = fingerprint;
+    lastApplyRef.current = { fingerprint, hovered };
     applyTraceLit(traceLit, {
       pinnedTokenKeys: pinnedTokenKeySet,
       hoveredTokenKey,

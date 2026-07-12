@@ -1,4 +1,34 @@
-/* Compact explorer / menu rows (file-row density) */
+/* Explorer folder path — edge fade when text overflows (scroll to reveal) */
+.explorer-path-input-mask-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 0.75rem), transparent);
+}
+
+.explorer-path-input-mask-left {
+  mask-image: linear-gradient(to right, transparent, #000 0.75rem);
+}
+
+.explorer-path-input-mask-both {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 0.75rem,
+    #000 calc(100% - 0.75rem),
+    transparent
+  );
+}
+
+/* Load folder — keep title/icon foreground; stuck :hover after click must not brand the title */
+.load-folder-busy.hoverable:hover .load-folder-title,
+.load-folder-busy.hoverable:hover .load-folder-title svg {
+  color: var(--foreground);
+  stroke: var(--foreground);
+}
+
+.load-folder-busy.hoverable:hover {
+  background-color: var(--muted);
+  border-color: transparent;
+  color: var(--foreground);
+}
 .control-row-compact {
   height: var(--control-height-compact);
   min-height: var(--control-height-compact);

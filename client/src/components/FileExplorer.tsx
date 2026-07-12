@@ -1,6 +1,6 @@
 import { FolderSearch, FolderSync, PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FolderPathInput } from "@/components/explorer/FolderPathInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { TreeNode } from "@/components/explorer/FileTree";
@@ -108,15 +108,11 @@ export default function FileExplorer({
               onClear={handleClearRecentFolders}
             />
           </div>
-          <Input
+          <FolderPathInput
             value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleOpen()}
-            placeholder="/absolute/path/to/project"
+            onChange={setFolderPath}
+            onEnter={handleOpen}
             disabled={folderBusy}
-            title={folderPath || undefined}
-            aria-label="Project folder path"
-            className="min-w-0 flex-1 font-mono text-[length:var(--font-size-xs)]"
           />
         </div>
         <Button
@@ -125,19 +121,11 @@ export default function FileExplorer({
           onClick={handleOpen}
           disabled={folderBusy}
           className={cn(
-            "relative w-full overflow-hidden",
+            "relative !h-[var(--control-height-double)] !max-h-[var(--control-height-double)] !min-h-[var(--control-height-double)] w-full shrink-0 overflow-hidden",
             folderBusy &&
-              "border-transparent bg-muted text-foreground disabled:cursor-wait disabled:opacity-100",
+              "load-folder-busy border-transparent bg-muted text-foreground disabled:cursor-wait disabled:opacity-100",
+            "hover:[&_.load-folder-title]:text-foreground disabled:hover:[&_.load-folder-title]:text-foreground",
           )}
-          style={
-            folderBusy
-              ? {
-                  height: "var(--control-height-double)",
-                  minHeight: "var(--control-height-double)",
-                  maxHeight: "var(--control-height-double)",
-                }
-              : undefined
-          }
           aria-busy={opening || indexing}
           aria-label={folderBusy ? busyLabel : "Load folder"}
           aria-valuenow={
@@ -153,13 +141,18 @@ export default function FileExplorer({
               aria-hidden
             />
           )}
-          <span className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 px-[var(--control-padding-x-md)]">
-            <span className="inline-flex max-w-full items-center justify-center gap-[var(--control-gap)]">
-              <FolderSync data-icon="inline-start" aria-hidden />
+          <span className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 px-[var(--control-padding-x-md)]">
+            <span className="load-folder-title inline-flex max-w-full items-center justify-center gap-[var(--control-gap)] leading-none text-foreground">
+              <FolderSync data-icon="inline-start" className="text-current" aria-hidden />
               <span className="truncate font-medium">{busyLabel}</span>
             </span>
             {folderBusy && (
-              <span className="h-[0.875rem] w-full max-w-full truncate text-center text-[length:var(--font-size-xs)] leading-[0.875rem] text-muted-foreground">
+              <span
+                className={cn(
+                  "h-[0.875rem] w-full max-w-full truncate text-center text-[length:var(--font-size-xs)] leading-[0.875rem] text-muted-foreground transition-[color] duration-[var(--motion-hover-color)] ease-[var(--ease)]",
+                  indexing && "text-brand",
+                )}
+              >
                 {progressSubtitle ?? "\u00a0"}
               </span>
             )}

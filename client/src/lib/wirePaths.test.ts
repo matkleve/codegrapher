@@ -116,17 +116,17 @@ describe("layoutBranchFanPaths", () => {
       SVG_BOX,
     );
     expect(paths).toHaveLength(2);
-    expect(paths[0]).toContain("L 24 130");
-    expect(paths[0]).toContain("L 24 169");
-    expect(paths[1]).toMatch(/^M 24 169/);
+    expect(paths[0]).toContain("L 4 139");
+    expect(paths[0]).not.toContain("L 4 169");
+    expect(paths[1]).toMatch(/^M 4 169/);
     expect(paths[1]).not.toContain("M 163");
   });
 });
 
 describe("layoutCubicFanPaths", () => {
-  it("uses only cubic segments — no orthogonal bus taps", () => {
+  it("uses gutter taps before clustered same-line targets", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
-    const { paths } = layoutCubicFanPaths(
+    const { paths, clusterKind } = layoutCubicFanPaths(
       240,
       109,
       defEl,
@@ -136,10 +136,53 @@ describe("layoutCubicFanPaths", () => {
       ],
       SVG_BOX,
     );
-    for (const path of paths) {
-      expect(path).toMatch(/C /);
-      expect(path).not.toMatch(/\bL /);
-    }
+    expect(clusterKind).toBe("horizontal");
+    expect(paths[0]).toMatch(/C .+ C .+ C /);
+    expect(paths[1]).toMatch(/^M [\d.+-]+ [\d.+-]+ C /);
+    expect(paths[1]).not.toMatch(/\bL /);
+  });
+
+  it("keeps solo cubic spurs when targets are far apart vertically", () => {
+    const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
+    const { paths, clusterKind } = layoutCubicFanPaths(
+      240,
+      109,
+      defEl,
+      [
+        { x2: 420, y2: 130, toEl: mockEl({ left: 400, right: 440, top: 122, bottom: 138 }) },
+        { x2: 420, y2: 190, toEl: mockEl({ left: 400, right: 440, top: 182, bottom: 198 }) },
+      ],
+      SVG_BOX,
+    );
+    expect(clusterKind).toBe("vertical");
+    expect(paths[1]).toMatch(/^M .+ C /);
+    expect(paths[1]).not.toMatch(/\bL [\d.]+ [\d.]+ L /);
+  });
+
+  it("aims the fan trunk toward the gutter when the bus is left of the source", () => {
+    const lineRect = { left: 80, top: 100, right: 400, bottom: 118 };
+    const defEl = mockEl({ left: 200, right: 280, top: 104, bottom: 114 }, { lineRect });
+    const { paths } = layoutCubicFanPaths(
+      240,
+      109,
+      defEl,
+      [
+        {
+          x2: 300,
+          y2: 109,
+          toEl: mockEl({ left: 280, right: 320, top: 104, bottom: 114 }, { lineRect }),
+        },
+        {
+          x2: 360,
+          y2: 109,
+          toEl: mockEl({ left: 340, right: 380, top: 104, bottom: 114 }, { lineRect }),
+        },
+      ],
+      SVG_BOX,
+    );
+    const firstCubic = paths[0]!.match(/C ([\d.-]+) ([\d.-]+),/);
+    expect(firstCubic).toBeTruthy();
+    expect(Number(firstCubic![1])).toBeLessThan(240);
   });
 });
 

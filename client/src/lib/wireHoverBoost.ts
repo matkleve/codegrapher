@@ -1,0 +1,57 @@
+import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
+import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { Node } from "@xyflow/react";
+
+/** Live hovered token — read during wire rAF ticks (no React render required). */
+let hoveredTokenKey: string | null = null;
+
+export function setWireHoveredTokenKey(key: string | null): void {
+  hoveredTokenKey = key;
+}
+
+export function getWireHoveredTokenKey(): string | null {
+  return hoveredTokenKey;
+}
+
+function hopRank(hop: number | undefined): number {
+  if (hop == null || hop <= 1) return 1;
+  return hop;
+}
+
+/** When pin + parallel hover emit the same wire id, keep the stronger (closer) hop. */
+export function mergePreviewEdgesByStrength(
+  base: PreviewEdgeSpec[],
+  overlay: PreviewEdgeSpec[],
+): PreviewEdgeSpec[] {
+  const byId = new Map<string, PreviewEdgeSpec>();
+  for (const edge of base) byId.set(edge.id, edge);
+  for (const edge of overlay) {
+    const prev = byId.get(edge.id);
+    if (!prev || hopRank(edge.hop) < hopRank(prev.hop)) {
+      byId.set(edge.id, edge);
+    }
+  }
+  return [...byId.values()];
+}
+
+function traceKeyFromElement(el: HTMLElement): string | null {
+  return (
+    el.dataset.traceKey ?? el.dataset.localDefId ?? el.dataset.localTargetId ?? null
+  );
+}
+
+/** True when either endpoint is the chip currently under the cursor. */
+export function edgeTouchesHoveredToken(
+  spec: PreviewEdgeSpec,
+  getNode: (id: string) => Node | undefined,
+  hoverKey: string | null = hoveredTokenKey,
+): boolean {
+  if (!hoverKey) return false;
+  const { from, to } = refinePreviewEdge(spec, getNode);
+  for (const ref of [from, to]) {
+    if (ref.type !== "element" || !ref.el.isConnected) continue;
+    const key = traceKeyFromElement(ref.el);
+    if (key === hoverKey) return true;
+  }
+  return false;
+}

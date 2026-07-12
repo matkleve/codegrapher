@@ -120,6 +120,18 @@
   filter: none;
 }
 
+/* Ctrl + trace: ctrl keyword brightness (--faint-ctrl) wins over plain trace dim.
+   Trace lit/hover/pin layers stack on chips, wires, and member rows separately. */
+.graph-pane.graph-ctrl-preview.graph-trace-active .code-line:not(.trace-lit-line) {
+  color: var(--faint-ctrl) !important;
+}
+
+.graph-pane.graph-ctrl-preview.graph-trace-active
+  .code-line:not(.trace-lit-line)
+  :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
+}
+
 .graph-pane:not(.graph-ctrl-preview) .graph-trace-active .token-shimmer-target::after {
   content: none;
   animation: none;
@@ -131,20 +143,4 @@
   -webkit-text-fill-color: currentColor;
   animation: none;
   filter: none;
-}
-
-.graph-pane.graph-ctrl-preview .graph-trace-active .member-body-wrap,
-.graph-pane.graph-ctrl-preview .graph-trace-active .list-row-graph-chrome,
-.graph-pane.graph-ctrl-preview .graph-trace-active .node-card-caret,
-.graph-pane.graph-ctrl-preview .graph-trace-active .member-row-caret,
-.graph-pane.graph-ctrl-preview .graph-trace-active .file-type-chip {
-  color: var(--faint) !important;
-}
-
-.graph-pane.graph-ctrl-preview .graph-trace-active .code-line {
-  color: var(--faint) !important;
-}
-
-.graph-pane.graph-ctrl-preview .graph-trace-active .code-line :where(:not(.token-chip):not(.token-chip *)) {
-  color: inherit !important;
 }

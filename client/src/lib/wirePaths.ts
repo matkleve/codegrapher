@@ -1,5 +1,5 @@
 import type { PreviewConnectionKind } from "@/lib/previewEdgeTypes";
-import { chipClearance, cubicPath, type CubicPathOptions } from "@/lib/resolvePreviewAnchor";
+import { chipClearance, cubicPath, cubicPortSides, treeSpinePath, type CubicPathOptions } from "@/lib/resolvePreviewAnchor";
 
 const ORTHOGONAL_STUB = 24;
 const ORTHOGONAL_TRUNK_PAD = 12;
@@ -58,6 +58,29 @@ export type BranchSpurInput = {
   toEl: HTMLElement | null;
 };
 
+/** Same-line fan targets share one fork row (px). */
+export const FAN_CLUSTER_Y_SPREAD = 10;
+/** Extra gutter before a tight cluster so the knot forks left of the chips. */
+export const FAN_CLUSTER_BUS_EXTRA = 20;
+
+export type FanClusterKind = "solo" | "horizontal" | "vertical";
+
+export function fanClusterKind(spurs: BranchSpurInput[]): FanClusterKind {
+  if (spurs.length < 2) return "solo";
+  const ys = spurs.map((spur) => spur.y2);
+  const spread = Math.max(...ys) - Math.min(...ys);
+  return spread <= FAN_CLUSTER_Y_SPREAD ? "horizontal" : "vertical";
+}
+
+function computeFanBusX(
+  spurs: BranchSpurInput[],
+  svgBox: DOMRect,
+  kind: FanClusterKind,
+): number {
+  const base = computeBranchBusX(spurs, svgBox);
+  return kind === "solo" ? base : base - FAN_CLUSTER_BUS_EXTRA;
+}
+
 /** Left gutter column — left of every branch chip, never through token text. */
 export function computeBranchBusX(
   spurs: BranchSpurInput[],
@@ -85,12 +108,13 @@ export function computeBranchTrunk(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
   trunkBottomY: number,
+  busXOverride?: number,
 ): BranchTrunkGeometry {
   const fromRect = elRectInSvg(fromEl, svgBox);
   const lineRect = lineRectInSvg(fromEl, svgBox);
   const chipRight = fromRect?.right ?? x1;
   const startX = Math.max(x1, chipRight + ORTHOGONAL_TRUNK_PAD * 0.25);
-  const busX = computeBranchBusX(spurs, svgBox);
+  const busX = busXOverride ?? computeBranchBusX(spurs, svgBox);
   const busTopY = belowRectY(lineRect, y1);
 
   return {
@@ -142,6 +166,7 @@ export function branchSpurPath(
 export type FanPathLayout = {
   paths: string[];
   busX: number;
+  clusterKind: FanClusterKind;
 };
 
 export function layoutBranchFanPaths(
@@ -151,16 +176,28 @@ export function layoutBranchFanPaths(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
 ): FanPathLayout {
-  if (spurs.length === 0) return { paths: [], busX: 0 };
+  if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
 
-  const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
-  const trunk = computeBranchTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
+  const clusterKind = fanClusterKind(spurs);
+  const ys = spurs.map((spur) => spur.y2);
+  const trunkBottomY = Math.min(...ys);
+  const busX = computeFanBusX(spurs, svgBox, clusterKind);
+  const trunk = computeBranchTrunk(
+    x1,
+    y1,
+    fromEl,
+    spurs,
+    svgBox,
+    trunkBottomY,
+    busX,
+  );
   const spurPaths = spurs.map((spur) =>
     branchSpurPath(trunk.busX, spur.x2, spur.y2, spur.toEl, svgBox),
   );
 
   return {
     busX: trunk.busX,
+    clusterKind,
     paths: [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)],
   };
 }
@@ -181,15 +218,17 @@ function computeCubicFanTrunk(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
   trunkBottomY: number,
+  clusterKind: FanClusterKind,
 ): BranchTrunkGeometry {
-  const busX = computeBranchBusX(spurs, svgBox);
+  const busX = computeFanBusX(spurs, svgBox, clusterKind);
   const lineRect = lineRectInSvg(fromEl, svgBox);
   const busTopY = belowRectY(lineRect, y1);
   const clearance = chipClearance(fromEl, spurs[0]?.toEl ?? null);
-  const approach = cubicPath(x1, y1, busX, busTopY, "right", "left", { clearance });
-  const busDrop = cubicPath(busX, busTopY, busX, trunkBottomY, "left", "left", {
+  const approachSides = cubicPortSides(x1, busX);
+  const approach = cubicPath(x1, y1, busX, busTopY, approachSides.fromSide, approachSides.toSide, {
     clearance,
   });
+  const busDrop = treeSpinePath(busX, busTopY, trunkBottomY, "left");
 
   return {
     startX: x1,
@@ -203,12 +242,12 @@ function computeCubicFanTrunk(
 export function cubicFanSpurPath(
   busX: number,
   spur: BranchSpurInput,
-  _svgBox: DOMRect,
+  svgBox: DOMRect,
   fromEl: HTMLElement | null,
+  _clusterKind: FanClusterKind,
 ): string {
-  return cubicPath(busX, spur.y2, spur.x2, spur.y2, "left", "left", {
-    clearance: chipClearance(fromEl, spur.toEl),
-  });
+  const clearance = chipClearance(fromEl, spur.toEl);
+  return cubicPath(busX, spur.y2, spur.x2, spur.y2, "right", "left", { clearance });
 }
 
 export function layoutCubicFanPaths(
@@ -218,16 +257,27 @@ export function layoutCubicFanPaths(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
 ): FanPathLayout {
-  if (spurs.length === 0) return { paths: [], busX: 0 };
+  if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
 
-  const trunkBottomY = Math.max(...spurs.map((spur) => spur.y2));
-  const trunk = computeCubicFanTrunk(x1, y1, fromEl, spurs, svgBox, trunkBottomY);
+  const clusterKind = fanClusterKind(spurs);
+  const ys = spurs.map((spur) => spur.y2);
+  const trunkBottomY = Math.min(...ys);
+  const trunk = computeCubicFanTrunk(
+    x1,
+    y1,
+    fromEl,
+    spurs,
+    svgBox,
+    trunkBottomY,
+    clusterKind,
+  );
   const spurPaths = spurs.map((spur) =>
-    cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl),
+    cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl, clusterKind),
   );
 
   return {
     busX: trunk.busX,
+    clusterKind,
     paths: [
       appendSvgPath(trunk.trunkPrefix, spurPaths[0] ?? ""),
       ...spurPaths.slice(1),

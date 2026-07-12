@@ -172,9 +172,14 @@ function layoutFanGroup(
   wires.forEach((wire, index) => {
     const pathD = layout.paths[index];
     if (!pathD) return;
+    const clusterYs = wires.map((w) => w.toPt.y);
+    const forkY = Math.min(...clusterYs);
+    const showJunction = wires.length === 1 || index === 0;
     out.set(wire.spec.id, {
       pathD,
-      junction: { x: layout.busX, y: wire.toPt.y },
+      junction: showJunction
+        ? { x: layout.busX, y: forkY }
+        : null,
       drawHitFrom: index === 0,
       drawTrunkClass: index === 0 && wires.length > 1,
       fromX: head.fromPt.x,

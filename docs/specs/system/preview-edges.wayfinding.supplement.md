@@ -7,13 +7,13 @@ Normative routing rules for **orthogonal** and **fan/bus** preview wires. Parent
 When **2+ wires** share the same source element and the same `connectionKind`, the overlay routes them as a **fan** when their targets form a **Y-proximity cluster** (maximal consecutive groups sorted by target Y where span ≤ **104px**, `FAN_TARGET_Y_SPAN`). A distant outlier (e.g. `if (!addr)`) does not prevent bus grouping for nearer targets on the same line (e.g. `addr.city ?? addr.town ?? addr.vil`).
 
 1. **Trunk** — exit source, drop beside the head line, run to a shared **bus column**
-2. **Knot** — junction disc at `(busX, busTopY)` where trunk meets the bus
-3. **Spurs** — tap from the bus into each target
+2. **Knot** — one junction disc at `(busX, forkY)` on the **first** fan member only (`forkY` = topmost target Y in the cluster). The trunk stops at `forkY` — it does not run through the cluster to the lowest chip. Tight clusters (`≤10px` Y spread) also shift the bus **left of the chip row** (`FAN_CLUSTER_BUS_EXTRA`).
+3. **Spurs** — cubic branches from the bus column into each target (tree-style curves, no straight gutter taps)
 
 | Kind | Spur geometry |
 | ---- | ------------- |
 | Control flow (`branch`) | Orthogonal gutter bus + horizontal tap |
-| Usage / binding / transitive | **Cubic trunk** (same exit curve as solo wires) + cubic bus drop + cubic spurs |
+| Usage / binding / transitive | **Cubic trunk** (exit curve + curved `treeSpinePath` bus drop) + cubic spurs |
 | Typesetting | Solo rounded Manhattan only — never bus-fanned |
 
 Explicit `branchFan` groups (built at trace time) always fan. Other kinds fan at **render time** via `wireFanLayout.ts` when clustering rules pass (same `connectionKind` + source element only).
@@ -24,7 +24,7 @@ Within one member row, multiple **orthogonal** wires (`branch`, `typesetting`) r
 
 ## Junction knots
 
-Each fan member draws `preview-edge-junction` at its **spur fork** `(busX, targetY)` — where the shared trunk meets that wire's tap. No separate bus-guide overlay; the trunk is part of the dashed wire path.
+Grouped fans draw **one** `preview-edge-junction` at `(busX, forkY)` on the first member. Additional members branch from the bus column at their own Y without a second knot.
 
 ## Acceptance
 

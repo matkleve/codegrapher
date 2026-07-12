@@ -43,6 +43,13 @@
   color: var(--muted-foreground) !important;
 }
 
+/* Ctrl + trace: lit-line syntax stays at ctrl brightness unless hover-boosted */
+.graph-pane.graph-ctrl-preview.graph-trace-active
+  .code-line.trace-lit-line:not(:has(.token-chip-hover-preview)):not(:hover)
+  :where(.code-kw, .control-flow-chip-text, .code-pn, .code-comment, .code-string, .code-number, .code-type) {
+  color: inherit !important;
+}
+
 .graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-kw,
 .graph-trace-active .code-line.trace-lit-line.trace-depth-faded .control-flow-chip-text,
 .graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-pn,
@@ -52,5 +59,56 @@
 .graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-type {
   color: var(--muted-foreground) !important;
   /* line opacity set inline on .code-line */
+}
+
+/* Hover > focused — brighten provenance lines under the cursor or hovered chip */
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded:hover,
+.graph-trace-active .code-line.trace-lit-line:has(.token-chip-hover-preview) {
+  opacity: 1 !important;
+  background-color: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px var(--brand-border);
+}
+
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded:hover .code-line-gutter,
+.graph-trace-active .code-line.trace-lit-line:has(.token-chip-hover-preview) .code-line-gutter {
+  opacity: 0.9;
+  color: color-mix(in oklch, var(--brand) 70%, var(--muted-foreground));
+}
+
+/* Ctrl+trace keeps lines faint — restore foreground on hover focus */
+.graph-pane.graph-ctrl-preview .graph-trace-active .code-line.trace-lit-line.trace-depth-faded:hover,
+.graph-pane.graph-ctrl-preview .graph-trace-active .code-line.trace-lit-line:has(.token-chip-hover-preview) {
+  color: var(--foreground) !important;
+}
+
+.graph-pane.graph-ctrl-preview
+  .graph-trace-active
+  .code-line.trace-lit-line.trace-depth-faded:hover
+  :where(:not(.token-chip):not(.token-chip *)),
+.graph-pane.graph-ctrl-preview
+  .graph-trace-active
+  .code-line.trace-lit-line:has(.token-chip-hover-preview)
+  :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
+}
+
+.graph-pane.graph-ctrl-preview .graph-trace-active .trace-member-lit .code-line:hover,
+.graph-pane.graph-ctrl-preview .graph-trace-active .trace-member-owner-lit .code-line:hover {
+  color: var(--foreground) !important;
+  background-color: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px var(--brand-border);
+}
+
+.graph-pane.graph-ctrl-preview
+  .graph-trace-active
+  .trace-member-lit
+  .code-line:hover
+  :where(:not(.token-chip):not(.token-chip *)),
+.graph-pane.graph-ctrl-preview
+  .graph-trace-active
+  .trace-member-owner-lit
+  .code-line:hover
+  :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
 }
 

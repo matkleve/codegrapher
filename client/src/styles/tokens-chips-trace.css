@@ -57,21 +57,29 @@
 }
 
 /* Ephemeral hover preview endpoint — same semantic fill as chip-on */
+.graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {
   background: var(--token-surface-class);
 }
 
+.graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"] {
   background: var(--token-surface-function);
 }
 
+.graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"] {
   background: var(--token-surface-type);
 }
 
+.graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"] {
   background: var(--token-surface-variable);

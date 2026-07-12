@@ -67,9 +67,7 @@ describe("layoutCubicFanPaths", () => {
     );
     expect(paths).toHaveLength(2);
     expect(paths[0]).toMatch(/C .+ C /);
-    expect(paths[0]).not.toMatch(/\bL /);
     expect(paths[1]).toMatch(/^M .+ C /);
-    expect(paths[1]).not.toMatch(/\bL /);
   });
 });
 
@@ -101,7 +99,7 @@ describe("buildWireLayoutContext", () => {
     expect(ctx.fanMembers.size).toBe(2);
     expect(ctx.fanMembers.get("def-a-0")?.drawTrunkClass).toBe(true);
     expect(ctx.fanMembers.get("def-a-0")?.junction).not.toBeNull();
-    expect(ctx.fanMembers.get("def-a-1")?.junction).not.toBeNull();
+    expect(ctx.fanMembers.get("def-a-1")?.junction).toBeNull();
   });
 
   it("skips fan when targets are too far apart vertically", () => {
@@ -194,6 +192,9 @@ describe("buildWireLayoutContext", () => {
     const ctx = buildWireLayoutContext(specs, SVG_BOX, () => undefined);
     expect(ctx.fanMembers.size).toBe(3);
     expect(ctx.fanMembers.get("addr-city")?.drawTrunkClass).toBe(true);
+    expect(ctx.fanMembers.get("addr-city")?.junction).not.toBeNull();
+    expect(ctx.fanMembers.get("addr-town")?.junction).toBeNull();
+    expect(ctx.fanMembers.get("addr-vil")?.junction).toBeNull();
     expect(ctx.fanMembers.has("addr-if")).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import type { TraceLitState } from "@/lib/computeTraceLit";
-import { getAllByLocalDefId, getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
+import { getAllByLocalDefId, getByLocalDefId, getByLocalTargetId, getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
 import {
   memberDefSiblingHosts,
   resolveMemberDefEndpoint,
@@ -46,11 +46,15 @@ function primaryHostInDefGroup(
   hoveredTokenKey: string | null,
   pinnedTokenKeys: ReadonlySet<string>,
 ): HTMLElement | null {
+  if (hoveredTokenKey) {
+    for (const host of hosts) {
+      const key = traceKeyFromHost(host);
+      if (key === hoveredTokenKey) return host;
+    }
+  }
   for (const host of hosts) {
     const key = traceKeyFromHost(host);
-    if (key && (hoveredTokenKey === key || pinnedTokenKeys.has(key))) {
-      return host;
-    }
+    if (key && pinnedTokenKeys.has(key)) return host;
   }
   return null;
 }
@@ -156,6 +160,62 @@ function applyEndpointHost(
     portSidesForHost(host, endpointPortSide),
     depth,
   );
+}
+
+/** Hover beats pin/focus depth — full strength on the token under the cursor and its line. */
+function applyHoverFocusBoost(
+  next: Map<HTMLElement, HostState>,
+  state: TraceLitState,
+  hoveredTokenKey: string | null,
+  pinnedTokenKeys: ReadonlySet<string>,
+): void {
+  if (!hoveredTokenKey) return;
+
+  const boostChip = (host: HTMLElement, traceKey: string | null): void => {
+    const hostState = ensureHost(next, host);
+    mergeClasses(hostState, [CHIP_LIT, CHIP_ON]);
+    if (traceKey && pinnedTokenKeys.has(traceKey)) {
+      mergeClasses(hostState, [CHIP_SOURCE]);
+    } else {
+      mergeClasses(hostState, [CHIP_HOVER_PREVIEW]);
+    }
+    setDepth(hostState, 1);
+    attachEndpointSockets(
+      host,
+      hostState,
+      portSidesForHost(host, state.endpointPortSide),
+      1,
+    );
+    boostHoveredLine(next, host);
+  };
+
+  const memberSiblings = memberDefSiblingHosts(hoveredTokenKey);
+  if (memberSiblings) {
+    const primary = resolveMemberDefEndpoint(hoveredTokenKey);
+    for (const host of memberSiblings) {
+      if (primary && host !== primary && host.classList.contains("member-row-label")) {
+        continue;
+      }
+      if (!primary || host === primary) {
+        boostChip(host, hoveredTokenKey);
+      }
+    }
+    return;
+  }
+
+  const host =
+    chipHostForTraceKey(hoveredTokenKey) ??
+    getByLocalDefId(hoveredTokenKey) ??
+    getByLocalTargetId(hoveredTokenKey);
+  if (host) boostChip(host, traceKeyFromHost(host) ?? hoveredTokenKey);
+}
+
+function boostHoveredLine(next: Map<HTMLElement, HostState>, host: HTMLElement): void {
+  const line = host.closest<HTMLElement>(".code-line");
+  if (!line) return;
+  const lineState = ensureHost(next, line);
+  mergeClasses(lineState, [LINE_LIT]);
+  setDepth(lineState, 1);
 }
 
 export type TraceLitApplyOptions = {
@@ -284,6 +344,8 @@ export function applyTraceLit(
     mergeClasses(lineState, [LINE_LIT]);
     setDepth(lineState, depth);
   }
+
+  applyHoverFocusBoost(next, state, hoveredTokenKey, pinnedTokenKeys);
 
   for (const state of next.values()) {
     if (state.depth <= 0) state.depth = 1;

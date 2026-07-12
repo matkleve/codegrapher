@@ -15,6 +15,10 @@ import {
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
 import { traceGlowOpacity, tracePathOpacity } from "@/lib/traceDepth";
+import {
+  edgeTouchesHoveredToken,
+  getWireHoveredTokenKey,
+} from "@/lib/wireHoverBoost";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -61,7 +65,16 @@ function applyWireDepthOpacity(
   path: SVGPathElement,
   glow: SVGPathElement,
   spec: PreviewEdgeSpec,
+  getNode?: (id: string) => Node | undefined,
 ): void {
+  if (
+    getNode &&
+    edgeTouchesHoveredToken(spec, getNode, getWireHoveredTokenKey())
+  ) {
+    path.style.removeProperty("opacity");
+    glow.style.removeProperty("opacity");
+    return;
+  }
   if (spec.hop != null && spec.hop >= 2) {
     path.style.opacity = String(tracePathOpacity(spec.hop));
     glow.style.opacity = String(traceGlowOpacity(spec.hop));
@@ -303,11 +316,29 @@ export function updateWireGeometry(
   return true;
 }
 
+/** Re-apply hop / hover opacity after geometry or hovered token changes. */
+export function refreshWireDepthOpacity(
+  wires: Map<string, WireElements>,
+  getNode: (id: string) => Node | undefined,
+): void {
+  for (const wire of wires.values()) {
+    applyWireDepthOpacity(wire.path, wire.glow, wire.spec, getNode);
+  }
+}
+
+export function refreshOneWireDepthOpacity(
+  wire: WireElements,
+  getNode: (id: string) => Node | undefined,
+): void {
+  applyWireDepthOpacity(wire.path, wire.glow, wire.spec, getNode);
+}
+
 export function syncWireDom(
   container: SVGGElement,
   specs: PreviewEdgeSpec[],
   wires: Map<string, WireElements>,
   warm: boolean,
+  getNode?: (id: string) => Node | undefined,
 ): void {
   const nextIds = new Set(specs.map((s) => s.id));
 
@@ -344,9 +375,11 @@ export function syncWireDom(
       applyWireMarkers(wire, spec);
       wire.glow.style.stroke = previewWireStroke(spec);
       wire.path.style.stroke = previewWireStroke(spec);
-      applyWireDepthOpacity(wire.path, wire.glow, spec);
+      applyWireDepthOpacity(wire.path, wire.glow, spec, getNode);
     }
   }
+
+  if (getNode) refreshWireDepthOpacity(wires, getNode);
 
   const order = new Map(specs.map((s, i) => [s.id, i]));
   for (const wire of wires.values()) {

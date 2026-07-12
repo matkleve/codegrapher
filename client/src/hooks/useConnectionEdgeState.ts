@@ -12,6 +12,7 @@ import {
 } from "@/lib/connectionVisibility";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import { pinnedKeys, type PinnedTrace } from "@/lib/pinnedTraces";
+import { mergePreviewEdgesByStrength } from "@/lib/wireHoverBoost";
 import { filterRenderablePreviewEdges } from "@/lib/previewEdgeFilter";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
@@ -27,6 +28,8 @@ type UseConnectionEdgeStateArgs = {
   getNode: (id: string) => Node | undefined;
   symbols: Map<string, SymbolEntry[]>;
   usageSiteIndex: Map<string, UsageSiteRecord[]>;
+  anchorPreviewEdges?: PreviewEdgeSpec[];
+  anchorTokenKey?: string | null;
   hoverPreviewEdges: PreviewEdgeSpec[];
   pinnedPreviewEdges: PreviewEdgeSpec[];
   pinnedTraces: PinnedTrace[];
@@ -47,6 +50,8 @@ export function useConnectionEdgeState({
   symbols,
   usageSiteIndex,
   hoverPreviewEdges,
+  anchorPreviewEdges = [],
+  anchorTokenKey = null,
   pinnedPreviewEdges,
   pinnedTraces,
   hoveredTokenKey,
@@ -78,11 +83,21 @@ export function useConnectionEdgeState({
       !pinnedKeys(pinnedTraces).includes(hoveredTokenKey) &&
       hoverPreviewEdges.length > 0;
 
+    const hasEphemeralAnchor =
+      pinnedTraces.length === 0 &&
+      anchorPreviewEdges.length > 0 &&
+      anchorTokenKey != null &&
+      hoveredTokenKey != null &&
+      anchorTokenKey !== hoveredTokenKey &&
+      hoverPreviewEdges.length > 0;
+
     let edges: PreviewEdgeSpec[];
     if (pinnedPreviewEdges.length > 0) {
       edges = hasParallelHover
-        ? [...pinnedPreviewEdges, ...hoverPreviewEdges]
+        ? mergePreviewEdgesByStrength(pinnedPreviewEdges, hoverPreviewEdges)
         : pinnedPreviewEdges;
+    } else if (hasEphemeralAnchor) {
+      edges = mergePreviewEdgesByStrength(anchorPreviewEdges, hoverPreviewEdges);
     } else {
       edges = hoverPreviewEdges;
     }
@@ -112,6 +127,8 @@ export function useConnectionEdgeState({
     graphData,
     getNode,
     hoverPreviewEdges,
+    anchorPreviewEdges,
+    anchorTokenKey,
     hoveredTokenKey,
     pinnedPreviewEdges,
     pinnedTraces,

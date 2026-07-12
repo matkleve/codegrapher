@@ -39,8 +39,14 @@ type PinSnapshot = {
  * that pin's edges instead of opening a parallel hover trace), so splitting
  * them would just relay the same refs back and forth between two files.
  */
+type AnchorTrace = {
+  tokenKey: string;
+  edges: PreviewEdgeSpec[];
+};
+
 export function useTokenTraceState(isCtrlActive: boolean) {
   const [hoverPreviewEdges, setHoverPreviewEdges] = useState<PreviewEdgeSpec[]>([]);
+  const [anchorTrace, setAnchorTrace] = useState<AnchorTrace | null>(null);
   const [pinnedTraces, setPinnedTraces] = useState<PinnedTrace[]>([]);
   const [activePinKey, setActivePinKeyState] = useState<string | null>(null);
   const [hoveredTokenKey, setHoveredTokenKey] = useState<string | null>(null);
@@ -56,6 +62,10 @@ export function useTokenTraceState(isCtrlActive: boolean) {
   const tokenInfoRef = useRef<TokenInfoState>(null);
   tokenInfoRef.current = tokenInfo;
   const pinHistoryRef = useRef<PinSnapshot[]>([]);
+  const hoverPreviewEdgesRef = useRef<PreviewEdgeSpec[]>([]);
+  hoverPreviewEdgesRef.current = hoverPreviewEdges;
+  const lastTraceKeyRef = useRef<string | null>(null);
+  const lastTraceEdgesRef = useRef<PreviewEdgeSpec[]>([]);
 
   const clearConnectionMenu = useCallback(() => {
     setConnectionMenu(null);
@@ -67,6 +77,9 @@ export function useTokenTraceState(isCtrlActive: boolean) {
 
   const endTrace = useCallback(() => {
     setHoverPreviewEdges([]);
+    setAnchorTrace(null);
+    lastTraceKeyRef.current = null;
+    lastTraceEdgesRef.current = [];
     setHoveredTokenKey(null);
     setIsWarm(false);
     setConnectionMenu(null);
@@ -86,6 +99,22 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       setHoverPreviewEdges([]);
       return;
     }
+
+    const priorKey = lastTraceKeyRef.current;
+    const priorEdges = lastTraceEdgesRef.current;
+    if (
+      priorKey &&
+      priorKey !== tokenKey &&
+      priorEdges.length > 0 &&
+      !pinnedTracesRef.current.some((t) => t.tokenKey === priorKey)
+    ) {
+      setAnchorTrace((anchor) => anchor ?? { tokenKey: priorKey, edges: priorEdges });
+    } else if (!priorKey || priorKey === tokenKey) {
+      setAnchorTrace(null);
+    }
+
+    lastTraceKeyRef.current = tokenKey;
+    lastTraceEdgesRef.current = edges;
     setHoverPreviewEdges(edges);
   }, []);
 
@@ -175,6 +204,9 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     (tokenKey: string, shiftKey = false, traceHost?: HTMLElement | null) => {
       pushPinHistory();
       resetHoverIntent();
+      setAnchorTrace(null);
+      lastTraceKeyRef.current = null;
+      lastTraceEdgesRef.current = [];
       if (traceHost) setTraceAnchorHost(traceHost);
       const mode = shiftKey
         ? pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)
@@ -241,13 +273,19 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     [pinnedTraces],
   );
   const traceTokenKey =
-    activePinKey ?? hoveredTokenKey ?? pinnedTraces[0]?.tokenKey ?? null;
-  const isTraceActive = pinnedTraces.length > 0 || hoveredTokenKey != null;
+    activePinKey ??
+    hoveredTokenKey ??
+    anchorTrace?.tokenKey ??
+    pinnedTraces[0]?.tokenKey ??
+    null;
+  const isTraceActive =
+    pinnedTraces.length > 0 || hoveredTokenKey != null || anchorTrace != null;
   const canGoBackPin = pinHistoryLength > 0;
 
   return useMemo(
     () => ({
       hoverPreviewEdges,
+      anchorTrace,
       pinnedPreviewEdges,
       pinnedTraces,
       pinnedTokenKeySet,
@@ -282,6 +320,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     }),
     [
       hoverPreviewEdges,
+      anchorTrace,
       pinnedPreviewEdges,
       pinnedTraces,
       pinnedTokenKeySet,

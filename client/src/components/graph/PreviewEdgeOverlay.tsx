@@ -17,7 +17,8 @@ import {
   registerWireEngine,
   type WireEngine,
 } from "@/lib/wireEngine";
-import { syncWireDom, updateWireGeometry, type WireElements } from "@/lib/previewEdgeDom";
+import { syncWireDom, updateWireGeometry, refreshWireDepthOpacity, refreshOneWireDepthOpacity, type WireElements } from "@/lib/previewEdgeDom";
+import { setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
 import {
   syncStructuralWireDom,
   updateStructuralWireGeometry,
@@ -34,6 +35,7 @@ export function PreviewEdgeOverlay() {
     pulseEdges,
     isWarm,
     traceTokenKey,
+    hoveredTokenKey,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
   } = useGraphInteraction();
@@ -147,8 +149,11 @@ export function PreviewEdgeOverlay() {
         {
           getSpecs: () => specsRef.current,
           getWires: () => wiresRef.current,
-          update: (wire, box, node) =>
-            updateWireGeometry(wire as WireElements, box, node, specsRef.current),
+          update: (wire, box, getNode) => {
+            const ok = updateWireGeometry(wire as WireElements, box, getNode, specsRef.current);
+            refreshOneWireDepthOpacity(wire as WireElements, getNode);
+            return ok;
+          },
         },
         {
           getSpecs: () => structuralSpecsRef.current,
@@ -176,6 +181,12 @@ export function PreviewEdgeOverlay() {
   }, [getNode]);
 
   useLayoutEffect(() => {
+    setWireHoveredTokenKey(hoveredTokenKey);
+    refreshWireDepthOpacity(wiresRef.current, getNode);
+    engineRef.current?.tickOnce();
+  }, [getNode, hoveredTokenKey]);
+
+  useLayoutEffect(() => {
     specsRef.current = previewEdges;
     const svg = svgRef.current;
     if (!svg || previewEdges.length === 0) {
@@ -191,7 +202,7 @@ export function PreviewEdgeOverlay() {
       }
 
       const warm = isWarm && prevEdgeCountRef.current > 0;
-      syncWireDom(layer, previewEdges, wiresRef.current, warm);
+      syncWireDom(layer, previewEdges, wiresRef.current, warm, getNode);
       prevEdgeCountRef.current = previewEdges.length;
       for (const wire of wiresRef.current.values()) {
         bindHitHandlers(wire);

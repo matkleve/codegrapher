@@ -16,14 +16,23 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 
 ## Emphasis stack
 
+Modes are **independent** and **combinable** — not a single gesture. Priority when multiple are active: **Ctrl → hover (dwell trace) → focused (pin)**.
+
 ```mermaid
 flowchart TB
   Base[Resting UI] --> Hover[.hoverable brand hover]
-  Base --> Ctrl[graph-ctrl-preview: dim keywords + shimmer indexed tokens]
-  Base --> Trace[graph-trace-active dim + lit endpoints]
-  Trace --> Pin[graph-trace-pinned: pin lit + foreign hover preview]
-  Hover -.->|suppressed on dim tokens during trace| Trace
+  Base --> Ctrl["graph-ctrl-preview: dim keywords + shimmer indexed tokens"]
+  Base --> Trace["graph-trace-active: dwell hover trace — wires + lit endpoints"]
+  Trace --> Pin["graph-trace-pinned: click pin — token-chip-source"]
+  Ctrl --> Combo["Ctrl + hover + pin stack; Ctrl keyword brightness is never replaced by trace --faint-*"]
+  Trace --> Combo
+  Pin --> Combo
+  Hover -.->|suppressed on dim tokens during plain trace| Trace
 ```
+
+- **Ctrl** (hold): `graph-ctrl-preview` — syntax to `--faint-ctrl`, shimmer on indexed chips. Does not start a trace.
+- **Hover** (dwell on chip, with or without Ctrl): `graph-trace-active` — wires, `token-chip-lit` / `token-chip-on` / `token-chip-hover-preview`. Ctrl only shortens dwell; releasing Ctrl does not clear an active hover trace.
+- **Focused** (click pin): `graph-trace-pinned` + `token-chip-source` — anchor trace; foreign hover still runs dwell preview on other tokens.
 
 ## Actions
 
@@ -68,7 +77,7 @@ Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`
 | 6 | **Trace active, row lit** (`trace-member-lit`) | `--member-row-trace-lit-bg` + inset function-blue border | pill bg transparent; lit signature chips → same `token-chip-lit` + `token-chip-on` as body | lit lines → `trace-lit-line`; syntax → `--muted-foreground` (no saturated primitives) | `token-chip-lit` + `token-chip-on` fill |
 | 7 | **Trace active, owner row** (`trace-member-owner-lit`) | same as lit row 6 | same as lit | same as lit | same as lit |
 | 8 | **Pinned** (`graph-trace-pinned`) | pinned trace stays lit (row 6/7); foreign hover → ephemeral preview | pinned source keeps semantic ink on hover | — | pin source: `token-chip-source`; foreign preview: same semantic fill as `token-chip-on` |
-| 9 | **Ctrl + trace** | Ctrl shimmer wins on indexed chips; row fills unchanged from 5–7 | indexed sig types stay semantic under Ctrl | `--faint` body text | shimmer + lit semantic ink |
+| 9 | **Ctrl + trace** | Ctrl shimmer wins on indexed chips; row fills unchanged from 5–7 | indexed sig types stay semantic under Ctrl | non-lit syntax stays `--faint-ctrl` (ctrl wins over trace `--faint-*`) | shimmer + lit semantic ink; hover/pin stack on top |
 
 **Cascade rule** (from [token-interactions.md](token-interactions.md)): tracing a **function** endpoint spreads `trace-member-lit` to that member's whole body; class/type/variable endpoints do not spread body fill.
 
