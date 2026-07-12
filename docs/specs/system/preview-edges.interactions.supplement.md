@@ -22,6 +22,11 @@ stateDiagram-v2
   Pinned --> Pinned: click different token (replace pin set)
   Pinned --> Pinned: Shift+click different token (accumulate pin)
 
+  note right of HoverPending
+    graph-trace-pending
+    token-chip-pending-trace
+  end note
+
   note right of Tracing
     traceTokenKey = hoveredTokenKey
     graph-trace-active
@@ -33,7 +38,7 @@ stateDiagram-v2
   end note
 ```
 
-**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub.
+**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub. **Wire glow is not independent:** halo opacity and stroke draw are owned by `playWireReveal` — path and glow share one dash-offset reveal; neither may appear before draw arms.
 
 **Signature type trace keys:** `{flowNodeId}::{memberId}::sig-type::{symbolName}` — parsed by `liveToFromUsageEl` without a line number; anchor resolves via `getByTraceKey` on the `MemberSignatureTypeLabel` chip.
 
@@ -53,32 +58,34 @@ sequenceDiagram
   participant B as beginTrace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 80ms
-  U->>H: leave A before 80ms
+  H->>T: fire in 40ms
+  U->>H: leave A before 40ms
   H->>T: cancel fire
   Note over B: no trace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 80ms
+  H->>T: fire in 40ms
   T->>B: onFire → edges + lit
   U->>H: enter token B (warm)
-  H->>T: fire in 80ms
+  H->>T: fire in 40ms
   T->>B: replace trace with B
 
   U->>H: leave token
-  H->>T: clear in 80ms grace (0ms if dwell never fired)
+  H->>T: clear in 50ms grace (0ms if dwell never fired)
   T->>B: endTrace (if unpinned)
 ```
 
 | Constant | Value | Effect |
 | -------- | ----- | ------ |
-| `FIRE_COLD_MS` | 80 | First hover dwell |
-| `FIRE_WARM_MS` | 50 | Adjacent token while warm |
-| `LEAVE_GRACE_MS` | 80 | Anti-flicker between neighbors (skipped when dwell never committed) |
+| `FIRE_COLD_MS` | 40 | First hover dwell |
+| `FIRE_WARM_MS` | 40 | Adjacent token while warm |
+| `LEAVE_GRACE_MS` | 50 | Anti-flicker between neighbors (skipped when dwell never committed) |
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
 | Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
 | Dwell never committed | 0 leave grace | `leaveGraceMs(false)` — instant clear on pointer leave |
-| Wire reveal (cold) | 80ms + 20ms stagger | `playWireReveal` stroke draw source→target; warm retarget skips |
+| Wire reveal (cold) | 40ms dwell + ~240ms draw + 25ms stagger | WAAPI solid stroke **path + glow** source→target (same dash draw); marching dash after draw |
+| Load stub wire | after `data-load-stub-ready` | Stub must finish fixed layout before wire geometry/reveal — no corner anchor |
+| Surround motion | `--motion-trace` (120ms) | Member rows, syntax, chips, sockets, wire opacity — one importance clock ([tokens.md](../../design/tokens.md)) |
 
 **Leave-clear commit rule:** after `LEAVE_GRACE_MS`, clear runs when the leaving
 token is still the latest entry in `hoverClearRef` — **not** when it matches
@@ -86,6 +93,57 @@ token is still the latest entry in `hoverClearRef` — **not** when it matches
 B's dwell fires while token A's trace is still active (A's clear was cancelled on
 entering B). Hover `TokenConnectionMenu` cancels the grace timer on `mouseenter`;
 leaving the menu re-schedules clear via `scheduleHoverLeaveGrace`.
+
+---
+
+## Visual commit timeline (normative)
+
+Single reference for **what changes when** during a cold hover (no Ctrl, unpinned). Motion uses `--motion-trace` (120ms) unless noted. Parent visual contract: [interaction-emphasis.md](interaction-emphasis.md). Tokens: [state-visuals.md](../../design/state-visuals.md).
+
+```mermaid
+sequenceDiagram
+  participant P as Pointer
+  participant Pane as graph-pane classes
+  participant Chip as Hovered chip
+  participant Surround as Rows / syntax / body
+  participant Lit as computeTraceLit DOM
+  participant Wire as playWireReveal
+
+  P->>Chip: enter (0ms)
+  Chip->>Chip: token-chip-pending-trace
+  Pane->>Pane: graph-trace-pending
+  Surround->>Surround: faint-* + trace-dim-surface (ease 120ms)
+
+  Note over Pane: dwell 40ms
+
+  P->>Pane: beginTrace
+  Pane->>Pane: graph-trace-active (+ warm after first commit)
+  Chip->>Chip: pending → token-chip-lit / token-chip-on
+  Lit->>Surround: trace-member-lit, trace-lit-line, sockets
+  Wire->>Wire: path+glow dash draw 240ms (+25ms stagger)
+
+  P->>Pane: leave (trace had fired)
+  Note over Pane: grace 50ms → clear
+```
+
+| Phase | Pane class | Chip | Member rows | Body / syntax | Wires / glow |
+| ----- | ---------- | ---- | ----------- | ------------- | ------------ |
+| **Idle** | — | resting ink | `bg-muted` | full color | hidden |
+| **Pending dwell** (0–40ms) | `graph-trace-pending` | `token-chip-pending-trace` | dim surface eases in | `--faint-*` eases in | hidden |
+| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | `token-chip-lit` `token-chip-on` | lit row + dim others | lit lines + faint non-lit | WAAPI stroke reveal 240ms; marching dash after |
+| **Ctrl held** | `graph-ctrl-preview` (+ trace classes if active) | shimmer on indexed | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
+| **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | per merged lit | per merged lit | pinned edges persist |
+| **Foreign hover while pinned** | trace + pin | dwell preview on other token | ephemeral lit | ephemeral lit | preview wires |
+
+\*`graph-trace-warm` — set after the first committed dwell this session; shortens socket transition only ([interaction-emphasis.md](interaction-emphasis.md)).
+
+**Ownership rules (no staggered pops):**
+
+- **Surround dim** starts at pending (`graph-trace-pending`), not only at `beginTrace`.
+- **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); `LEAVE_GRACE_MS` only defers host `onClear` / ref cleanup for neighbor anti-flicker.
+- **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
+- **Wire path + glow** share one dash-offset reveal in `playWireReveal`; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
+- **Importance easing** — color, background, border, box-shadow, opacity on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
 
 ---
 

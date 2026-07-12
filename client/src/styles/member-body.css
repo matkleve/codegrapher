@@ -5,9 +5,6 @@
   margin-inline: -0.25rem;
   padding-inline: 0.25rem;
   border-radius: 4px;
-  transition:
-    background-color var(--motion-hover-surface) var(--ease),
-    box-shadow var(--motion-hover-surface) var(--ease);
 }
 
 .code-line-gutter {
@@ -22,8 +19,8 @@
   opacity: 0.55;
   user-select: none;
   transition:
-    color var(--motion-hover-surface) var(--ease),
-    opacity var(--motion-hover-surface) var(--ease);
+    color var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease);
 }
 
 .code-line-body {

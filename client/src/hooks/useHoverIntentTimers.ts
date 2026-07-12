@@ -22,6 +22,8 @@ type UseHoverIntentTimersArgs = {
   setHoveredTokenKey: (tokenKey: string | null) => void;
   setIsWarm: (warm: boolean) => void;
   onCtrlRelease: () => void;
+  /** Drop trace visuals immediately on leave; grace only defers host cleanup. */
+  onVisualLeave: () => void;
 };
 
 /**
@@ -39,6 +41,7 @@ export function useHoverIntentTimers({
   setHoveredTokenKey,
   setIsWarm,
   onCtrlRelease,
+  onVisualLeave,
 }: UseHoverIntentTimersArgs) {
   const isCtrlActiveRef = useRef(isCtrlActive);
   isCtrlActiveRef.current = isCtrlActive;
@@ -125,8 +128,16 @@ export function useHoverIntentTimers({
       clearTimeout(timers.info ?? undefined);
       timers.fire = null;
       timers.info = null;
+      clearPendingTraceHost();
 
       const traceHadFired = hoveredTokenKeyRef.current != null;
+      if (traceHadFired) {
+        hoveredTokenKeyRef.current = null;
+        onVisualLeave();
+      } else {
+        pendingFireRef.current = null;
+      }
+
       const grace = leaveGraceMs(traceHadFired);
 
       const commitClear = () => {
@@ -154,7 +165,7 @@ export function useHoverIntentTimers({
         timers.clear = null;
       }, grace);
     },
-    [],
+    [onVisualLeave],
   );
 
   const cancelHoverLeaveGrace = useCallback(() => {

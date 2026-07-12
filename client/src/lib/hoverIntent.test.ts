@@ -11,8 +11,8 @@ describe("fireDelayMs", () => {
   });
 
   it("uses cold/warm delays for plain pointer hover", () => {
-    expect(fireDelayMs(false, false)).toBe(80);
-    expect(fireDelayMs(true, false)).toBe(50);
+    expect(fireDelayMs(false, false)).toBe(40);
+    expect(fireDelayMs(true, false)).toBe(40);
   });
 });
 
@@ -22,7 +22,7 @@ describe("leaveGraceMs", () => {
   });
 
   it("applies grace after a trace fired", () => {
-    expect(leaveGraceMs(true)).toBe(80);
+    expect(leaveGraceMs(true)).toBe(50);
   });
 });
 

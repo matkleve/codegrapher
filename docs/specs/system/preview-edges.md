@@ -22,9 +22,9 @@ Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessib
 
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
-| 1 | Hovers indexed token (cold) | Preview after 80ms | `FIRE_COLD_MS` |
-| 2 | Switches token while warm | Re-fire after 50ms | `FIRE_WARM_MS` |
-| 3 | Leaves token (unpinned) | Clear after 80ms grace when trace fired; instant if dwell never committed | `LEAVE_GRACE_MS` / `leaveGraceMs` |
+| 1 | Hovers indexed token (cold) | Preview after 40ms | `FIRE_COLD_MS` |
+| 2 | Switches token while warm | Re-fire after 40ms | `FIRE_WARM_MS` |
+| 3 | Leaves token (unpinned) | Clear after 50ms grace when trace fired; instant if dwell never committed | `LEAVE_GRACE_MS` / `leaveGraceMs` |
 | 4 | Holds Ctrl | Instant fire + `graph-ctrl-preview` (dims keywords, shimmers indexed tokens) | `fireDelayMs(..., ctrl)=0` |
 | 5 | Clicks token | Pin trace (replaces pin set) + `TokenContextBar` | `pinTrace`, `graph-trace-pinned` |
 | 5b | Shift+clicks token | Add pin to accumulated set (keep prior pins lit); toggle off if already pinned | `pinnedTraces` + `mergePinnedEdges` |
@@ -67,7 +67,8 @@ GraphFlowInner
 | `pinnedTraces` | `[]` | Locked traces; plain click replaces set; Shift+click accumulates |
 | `traceTokenKey` | derived | active pin or hovered key → lit computation |
 | `previewEdges` | `[]` | Overlay path specs |
-| `isWarm` | false | 50ms vs 80ms dwell |
+| `isWarm` | false | 40ms dwell (cold and warm); enables `graph-trace-warm` after first commit |
+| `graph-trace-pending` | derived | Dwell phase: surround dim before `beginTrace` (`pendingTraceChip.ts` + `GraphPane`) |
 | `tokenInfo` | null | Pinned `TokenContextBar` payload |
 
 ```mermaid
@@ -104,9 +105,9 @@ stateDiagram-v2
 
 Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md) §1 Usage.
 
-- [x] Cold hover fires only after 80ms; pass-over does not flash edges
+- [x] Cold hover fires only after 40ms; pass-over does not flash edges
 - [x] Ctrl fires immediately; release returns to plain-hover rules
-- [x] Leave grace 80ms prevents flicker between adjacent tokens; pending dwell clears instantly
+- [x] Leave grace 50ms prevents flicker between adjacent tokens; pending dwell clears instantly
 - [x] Edge direction definition → usage for usage hover and def fan-out
 - [x] Collapsed target → class/member handle; expanded method → line chip
 - [x] Expand/collapse retargets wires without re-hover

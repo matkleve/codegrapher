@@ -1,4 +1,4 @@
-import { tracePathOpacity, traceStrengthAtDistance } from "@/lib/traceDepth";
+import { traceStrength, type TraceSituation } from "@/lib/traceDepth";
 import { isTraceSessionActive } from "@/lib/wireHoverBoost";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
@@ -11,7 +11,7 @@ export const MEMBER_LIT = "trace-member-lit";
 export const MEMBER_OWNER_LIT = "trace-member-owner-lit";
 export const LINE_LIT = "trace-lit-line";
 export const TRACE_DEPTH_FADED = "trace-depth-faded";
-export const TRACE_POINTER_EMPHASIS = "trace-pointer-emphasis";
+export const TRACE_STRENGTH_VAR = "--trace-strength";
 export const ANCHOR_ON = "flow-anchor-on";
 export const ANCHOR_OFF = "flow-anchor-off";
 export const ANCHOR_ENDPOINT_SIBLING = "flow-anchor-endpoint-sibling";
@@ -53,27 +53,22 @@ function removeAnchorColorClasses(anchor: HTMLElement): void {
 
 function applyDepth(el: HTMLElement, depth: number, pointerHover = false): void {
   if (!isTraceSessionActive()) {
-    el.classList.remove(TRACE_DEPTH_FADED, TRACE_POINTER_EMPHASIS);
+    el.classList.remove(TRACE_DEPTH_FADED);
+    el.style.removeProperty(TRACE_STRENGTH_VAR);
     el.style.removeProperty("opacity");
     return;
   }
 
-  const base = tracePathOpacity(depth);
-  const opacity = traceStrengthAtDistance(depth, undefined, pointerHover);
+  const situation: TraceSituation = pointerHover ? "hover" : "focus";
+  const strength = traceStrength(situation, "chip", depth);
   el.classList.toggle(TRACE_DEPTH_FADED, depth > 1);
-  el.classList.toggle(
-    TRACE_POINTER_EMPHASIS,
-    pointerHover && base >= 0.98 && opacity >= 0.98,
-  );
-  if (opacity >= 1) {
-    el.style.removeProperty("opacity");
-  } else {
-    el.style.opacity = String(opacity);
-  }
+  el.style.removeProperty("opacity");
+  el.style.setProperty(TRACE_STRENGTH_VAR, String(strength));
 }
 
 function revertDepth(el: HTMLElement): void {
-  el.classList.remove(TRACE_DEPTH_FADED, TRACE_POINTER_EMPHASIS);
+  el.classList.remove(TRACE_DEPTH_FADED);
+  el.style.removeProperty(TRACE_STRENGTH_VAR);
   el.style.removeProperty("opacity");
 }
 
@@ -96,7 +91,7 @@ function revertSocket(el: HTMLElement): void {
   el.classList.remove(ANCHOR_ON, ANCHOR_ENDPOINT_SIBLING, TRACE_DEPTH_FADED);
   el.classList.add(ANCHOR_OFF, "bg-border");
   removeAnchorColorClasses(el);
-  el.style.removeProperty("opacity");
+  revertDepth(el);
   appliedSockets.delete(el);
 }
 

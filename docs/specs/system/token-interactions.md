@@ -15,7 +15,7 @@ usage, or binding / control-flow per kind), an **info box**, a **jump tip**, a *
 code **dims** so the answer stands alone. Nothing is a standing preview layer — release
 the gesture and the node returns to its calm resting state. This spec catalogs
 the gestures; edge mechanism lives in [preview-edges.md](preview-edges.md), dim/lit
-in [interaction-emphasis.md](interaction-emphasis.md).
+in [interaction-emphasis.md](interaction-emphasis.md). **Visual commit order** (pending dwell → trace → wires): [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) § Visual commit timeline.
 
 ## Where It Lives
 
@@ -30,7 +30,7 @@ to the `.graph-pane`. Gesture routing: `useTokenTrace` (hover/pin),
 
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
-| 1 | Plain **hover** an indexed token (dwell) | Trace: edge **def → usage**, endpoints lit, rest dim | `hoverIntent` cold/warm |
+| 1 | Plain **hover** an indexed token (dwell) | Pending: chip fill + surround dim ease (`graph-trace-pending`); after 40ms trace: edge **def → usage**, endpoints lit, rest dim | `hoverIntent` + `pendingTraceChip` |
 | 2 | Hover a **definition** (member/class name) | Fan-out edges to in-graph usages; dashed **Load stub** for off-canvas caller files; counts show **on canvas · in project** | `buildDefinitionPreviewEdges` + reference index |
 | 3 | Hover a **usage** | Single edge from its definition to this site (or Load stub + menu if def off-canvas) | `resolveVisibleTarget` + `buildPreviewEdges` |
 | 4 | Hold **Ctrl** (reveal, no pin) | Instant preview; all indexed tokens shimmer; syntax/keywords dampen | `graph-ctrl-preview` |

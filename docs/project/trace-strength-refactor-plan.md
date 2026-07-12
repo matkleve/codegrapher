@@ -1,11 +1,26 @@
 # Trace strength refactor plan
 
 Ordered PRs to align code with the **strength stack** spec
-(`preview-edges.trace-strength.supplement.md` § Strength stack,
-`interaction-emphasis.md` § Pointer emphasis).
+(`preview-edges.trace-strength.supplement.md`,
+`interaction-emphasis.md` § Chip hover preview,
+`visual-strength-stacks.md`).
 
-**Status:** Spec + playbook updated 2026-07-12. Code partially implements the model;
-these PRs close the remaining gaps.
+**Status:** Spec + playbook synced **2026-07-12 (evening)**. Core model implemented in code:
+dual curves (focus vs hover), `--trace-strength` on chips, `traceWireOpacity` on wires,
+backdrop/boost layers removed. Remaining work is consolidation + fragile-path fixes.
+
+---
+
+## Completed in code (2026-07-12)
+
+| Change | Files |
+| ------ | ----- |
+| Dual brightness curves (focus + hover) | `traceDepth.ts` |
+| Chips/sockets use `--trace-strength`, not element opacity | `traceLitApply.ts`, `trace-chip-lit.css`, `flow-anchors.css` |
+| Wire path + glow from `traceWireOpacity(depth, emphasized)` | `previewEdgeDom.ts` |
+| Removed backdrop / pointer-boost / CSS filter emphasis | `wireHoverBoost.ts`, `traceLitController.ts`, CSS |
+| Hop-1 snaps (wire 0.8 focus / 1.0 hover; chip 0.55 focus / 1.0 hover) | `traceDepth.ts` |
+| Unit tests: hover > focus, wire > glow > chip | `traceDepth.test.ts`, `traceLitController.test.ts` |
 
 ---
 
@@ -13,78 +28,63 @@ these PRs close the remaining gaps.
 
 | Area | Today | Target |
 | ---- | ----- | ------ |
-| State | Module globals in `wireHoverBoost.ts` + React `hoveredTokenKey` | `TraceStrengthContext` passed to lit + wire engine |
-| Dwell vs pointer | Same `hoveredTokenKey` | `traceTokenKey` (session) + `pointerTokenKey` (emphasis) |
-| Chip opacity | Inline `style.opacity` in `traceLitApply.ts` | Inline **or** `--trace-strength` — one documented path |
-| Wire glow | CSS default `0.12` + inline + `!important` classes | `traceWireOpacity` only; CSS carries hue/dash |
-| Wire emphasis | `edgeTouchesHoveredToken` (binary) | Subgraph BFS 1–2 hops from pointer token |
+| Curves | Dual curve + hop-1 snaps in `traceDepth.ts` | Single `TRACE_TUNING` object + `traceStrength(situation, surface, d)` |
+| Chip emission | `--trace-strength` + `color-mix` | Same (done) — optionally unify wires |
+| Wire emission | SVG `opacity` inline | `--trace-strength` or shared helper (optional) |
+| State | Module globals in `wireHoverBoost.ts` | `TraceStrengthContext` passed to lit + wire engine |
+| Dwell vs pointer | Same `hoveredTokenKey` | `traceTokenKey` (session) + `pointerTokenKey` (emphasis) — optional split |
 | Boost paths | 3 functions in `traceLitController.ts` | Single `applyPointerBoost(keys[])` |
+| Endpoint sibling CSS | Fixed 50% muted in `tokens-chips-base.css` | Derive from `--trace-strength` |
+| `CHIP_HOVER_PREVIEW` | Only at depth 1 in `applyEndpointHost` | Any depth when `hoverPreview` |
 
 ---
 
-## PR 1 — Spec + playbook (this change)
+## PR 1 — Spec + playbook
 
 **Scope:** Docs only.
 
-- [x] Strength stack section in trace-strength supplement
+- [x] Dual-curve strength model in trace-strength supplement
 - [x] Pointer emphasis in interaction-emphasis
-- [x] `docs/agent-playbook/core/visual-strength-stacks.md`
-- [x] This refactor plan
+- [x] `docs/agent-playbook/core/visual-strength-stacks.md` (focus vs hover, emission paths, tuning)
+- [x] This refactor plan (status update)
 
-**Risk:** None. **Verify:** `npm run lint:specs`
+**Verify:** `npm run lint:specs`
 
 ---
 
 ## PR 2 — Glow single authority
 
-**Scope:** `preview-edge.css`, `previewEdgeDom.ts`, `traceDepth.ts`
+**Scope:** `preview-edge.css`, `previewEdgeDom.ts`
 
-| Task | File |
-| ---- | ---- |
-| Remove or neutralize `.preview-edge-glow { opacity: 0.12 }` as default strength | `preview-edge.css` |
-| Always set path + glow opacity from `traceWireOpacity` in rAF | `previewEdgeDom.ts` |
-| Drop redundant `!important` on emphasis classes where inline wins | `preview-edge.css` |
-| Unit test: emphasized glow > baseline glow at depth 1 | `traceDepth.test.ts` |
-
-**Acceptance:** Direct wire hover visibly brighter than trace-only; no glow reset to 0.12.
-
-**Est. impact:** Effectiveness +25%, complexity −15%
+| Task | Status |
+| ---- | ------ |
+| Glow opacity from `traceWireOpacity` in rAF (not CSS default) | Mostly done |
+| Neutralize `.preview-edge-glow { opacity: 0.12 }` as strength default | Open — verify CSS |
+| Unit test: emphasized glow > baseline at depth 1 | Done (`traceDepth.test.ts`) |
 
 ---
 
 ## PR 3 — `TraceStrengthContext` (replace globals)
 
-**Scope:** `wireHoverBoost.ts` → `traceStrengthContext.ts`, `useTraceLitState.ts`,
-`PreviewEdgeOverlay.tsx`, `traceLitApply.ts`
+**Scope:** `wireHoverBoost.ts` → context module, hooks, overlay
 
 | Task | Detail |
 | ---- | ------ |
-| Define `TraceStrengthContext` type | `{ sessionActive, pointerTokenKey, pointerWireId }` |
-| `getTraceStrength()` for rAF | Replaces individual global getters |
-| `subscribeTraceStrength` unchanged API | Listeners on context snapshot |
-| Sync from `useTraceLitState` | Single writer from React |
-| Delete duplicate `hoveredTokenKey` global | Read context in `previewEdgeDom` |
+| Define `TraceStrengthContext` | `{ sessionActive, pointerTokenKey, pointerWireId }` |
+| Single writer from React | `useTraceLitState` |
+| rAF reads context snapshot | `previewEdgeDom`, `traceLitApply` |
 
-**Acceptance:** Pin + leave class — opacity unchanged; no desync between chip and wire.
-
-**Est. impact:** Effectiveness +20%, speed +25%, complexity −30%
+**Status:** Open
 
 ---
 
 ## PR 4 — Split dwell vs pointer token
 
-**Scope:** `GraphInteractionContext.tsx`, `useTraceLitState.ts`, `traceLitController.ts`
+**Scope:** `GraphInteractionContext.tsx`, `useTraceLitState.ts`
 
-| Task | Detail |
-| ---- | ------ |
-| `traceTokenKey` | Committed trace (dwell/pin) — drives session |
-| `pointerTokenKey` | Chip under cursor within trace — drives emphasis only |
-| Emphasis active when | `pointerTokenKey != null \|\| pointerWireId != null` |
-| Clear pointer on leave | Do **not** clear `traceTokenKey` |
+Optional — current `hoveredTokenKey` + `isTraceSessionActive` works if boost order is stable.
 
-**Acceptance:** Dwell trace without pointer on a chip = pure hop model (no backdrop).
-
-**Est. impact:** Effectiveness +35%, complexity +10% (short term)
+**Status:** Open (low priority)
 
 ---
 
@@ -93,54 +93,53 @@ these PRs close the remaining gaps.
 **Scope:** `traceLitController.ts`
 
 Replace `applyHoverFocusBoost`, `applyHoveredWireEndpointBoost`, `applyWireHoverBoost`
-with one `applyPointerBoost(next, state, keys: Set<string>, …)`.
+with one `applyPointerBoost`.
 
-**Acceptance:** Existing `traceLitController.test.ts` pass; no behavior change.
-
-**Est. impact:** Speed +20%, complexity −25%
+**Status:** Open
 
 ---
 
-## PR 6 — Wire subgraph emphasis
+## PR 6 — Wire subgraph emphasis (optional)
 
-**Scope:** `wireHoverBoost.ts`, `previewEdgeDom.ts`, `lexicalGraph.ts` or trace edge list
+BFS 1–2 hops from pointer token for `emphasized` set. Today: `edgeTouchesHoveredToken` + wire-under-cursor.
 
-| Task | Detail |
-| ---- | ------ |
-| `edgesInPointerSubgraph(spec, pointerKey, edges, maxHops=2)` | BFS on active preview edges |
-| `emphasized` = wire hovered OR in subgraph | Replaces `edgeTouchesHoveredToken` only |
-| Backdrop = emphasis active AND NOT emphasized | Unchanged rule, wider emphasized set |
-
-**Acceptance:** Hover body usage — param→usage wire emphasized; type chain may backdrop
-or partial emphasize per hop policy (document in AC).
-
-**Est. impact:** Effectiveness +30%, complexity +15%
+**Status:** Open (product decision)
 
 ---
 
-## PR 7 — Opacity emission unify (optional)
+## PR 7 — Emission unify (optional)
 
-**Scope:** `traceLitApply.ts`, `tokens-chips-trace.css`, theme CSS
+**Decision (2026-07-12):** chips use **`--trace-strength`** (option A for chips). Wires still SVG opacity.
 
-Either:
+Optional next step: wires also set `--trace-strength` on a host element, or one `traceStrength()` returns value consumed by both paths.
 
-- **A)** Implement `--trace-strength` on lit elements; CSS consumes it; remove inline opacity, **or**
-- **B)** Spec amendment: chips use inline opacity only; remove `--trace-depth-opacity` from tokens.md
-
-Recommendation: **B** for minimal churn now; **A** if adding reduced-motion or theme tuning later.
+**Status:** Partial — chips done; wire unify open
 
 ---
 
-## PR 8 — Visual regression AC + manual checklist
+## PR 8 — Fragile-path fixes
 
-Add to trace-strength supplement AC (unchecked until verified):
+| Task | File |
+| ---- | ---- |
+| `CHIP_HOVER_PREVIEW` at any depth in `applyEndpointHost` | `traceLitController.ts` |
+| Lit non-endpoint chips: `CHIP_ON` or relax CSS selector | `traceLitController.ts`, `trace-chip-lit.css` |
+| Endpoint-sibling grey → `--trace-strength` | `tokens-chips-base.css` |
+| Consolidate `TRACE_TUNING` object | `traceDepth.ts` |
 
-- [ ] Pin trace, pointer leaves class card — hop-1 wires stay at trace baseline
-- [ ] Pointer on token — direct wires full glow; other trace wires backdrop
-- [ ] Lit chips do not dim below trace baseline when emphasizing another branch
-- [ ] Dwell without pointer on chip — no wire backdrop layer
+**Status:** Open
 
-Manual pass on `fixtures/demo/OrderService` or equivalent class-heavy file.
+---
+
+## PR 9 — Visual regression AC + manual checklist
+
+Manual pass on multi-hop trace (e.g. `extractFieldValue` / `AddressFieldKind` cascade):
+
+- [ ] Pin trace, pointer leaves card — focus baseline holds
+- [ ] Pointer on token — hover curve on chip + touched wires
+- [ ] Hop 3 at rest visibly dimmer than hop 1; hop 3 on hover brighter than hop 3 at rest
+- [ ] Lit chips full element opacity; only color strength fades
+
+**Status:** Open
 
 ---
 
@@ -148,14 +147,11 @@ Manual pass on `fixtures/demo/OrderService` or equivalent class-heavy file.
 
 ```mermaid
 flowchart LR
-  PR1[PR1 Spec] --> PR2[PR2 Glow]
-  PR1 --> PR3[PR3 Context]
-  PR3 --> PR4[PR4 Dwell vs pointer]
-  PR3 --> PR5[PR5 Merge boosts]
-  PR4 --> PR6[PR6 Subgraph]
-  PR2 --> PR8[PR8 AC verify]
-  PR6 --> PR8
-  PR7[PR7 Opacity unify] -. optional .-> PR8
+  PR1[PR1 Spec] --> PR8[PR8 Fragile fixes]
+  PR1 --> PR9[PR9 Manual AC]
+  PR8 --> PR9
+  PR3[PR3 Context] -. optional .-> PR5[PR5 Merge boosts]
+  PR7[PR7 Wire unify] -. optional .-> PR9
 ```
 
 ---
@@ -164,14 +160,14 @@ flowchart LR
 
 | File | PRs |
 | ---- | --- |
-| `client/src/lib/traceDepth.ts` | 2, 6 |
-| `client/src/lib/wireHoverBoost.ts` | 3, 4, 6 |
-| `client/src/lib/traceLitApply.ts` | 3, 7 |
-| `client/src/lib/traceLitController.ts` | 4, 5 |
-| `client/src/lib/previewEdgeDom.ts` | 2, 3, 6 |
+| `client/src/lib/traceDepth.ts` | 7, 8 |
+| `client/src/lib/wireHoverBoost.ts` | 3 |
+| `client/src/lib/traceLitApply.ts` | 7 (done) |
+| `client/src/lib/traceLitController.ts` | 5, 8 |
+| `client/src/lib/previewEdgeDom.ts` | 2, 7 |
 | `client/src/hooks/useTraceLitState.ts` | 3, 4 |
-| `client/src/context/GraphInteractionContext.tsx` | 4 |
-| `client/src/components/graph/PreviewEdgeOverlay.tsx` | 3 |
 | `client/src/styles/preview-edge.css` | 2 |
-| `docs/specs/system/preview-edges.trace-strength.supplement.md` | 1, 8 |
-| `docs/specs/system/interaction-emphasis.md` | 1, 8 |
+| `client/src/styles/tokens-chips-base.css` | 8 |
+| `docs/specs/system/preview-edges.trace-strength.supplement.md` | 1 |
+| `docs/specs/system/interaction-emphasis.md` | 1 |
+| `docs/agent-playbook/core/visual-strength-stacks.md` | 1 |

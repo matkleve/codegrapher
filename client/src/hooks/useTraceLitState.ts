@@ -9,7 +9,12 @@ import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
-import { subscribeTraceStrength, setTraceSessionActive, setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
+import {
+  setHoverPreviewEdgeIds,
+  setTraceSessionActive,
+  setWireHoveredTokenKey,
+  subscribeTraceStrength,
+} from "@/lib/wireHoverBoost";
 import { notifyWireTransform } from "@/lib/wireEngine";
 
 type UseTraceLitStateArgs = {
@@ -49,6 +54,14 @@ export function useTraceLitState({
   const [strengthRevision, setStrengthRevision] = useState(0);
 
   useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
+
+  useLayoutEffect(() => {
+    setHoverPreviewEdgeIds(
+      hoveredTokenKey != null
+        ? new Set(hoverPreviewEdges.map((edge) => edge.id))
+        : new Set(),
+    );
+  }, [hoverPreviewEdges, hoveredTokenKey]);
 
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
@@ -127,6 +140,7 @@ export function useTraceLitState({
       lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
       setTraceSessionActive(false);
       setWireHoveredTokenKey(null);
+      setHoverPreviewEdgeIds(new Set());
       clearTraceLit();
       return;
     }

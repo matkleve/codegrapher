@@ -4,7 +4,7 @@ Normative supplement to [preview-edges.md](preview-edges.md) and [connection-tax
 
 Parent interaction rules (direction, dwell, pin lock): [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md).
 
-**Terminology:** **hop** / **graph distance** = steps from the focus token (`PreviewEdgeSpec.hop` omitted at distance 1, else `2…RELATIVE_MAX_DEPTH`). Opacity comes from `tracePathOpacity(depth)`.
+**Terminology:** **hop** / **graph distance** = steps from the focus token (`PreviewEdgeSpec.hop` omitted at distance 1, else `2…RELATIVE_MAX_DEPTH`). **Brightness** comes from `traceStrength(situation, surface, depth)` in `traceDepth.ts` — **two situations** (focus vs hover), unified emission as `--trace-strength` on wires, chips, and sockets.
 
 ---
 
@@ -33,16 +33,29 @@ This supplement defines trace **strength by graph distance** and adds **Typesett
 
 ## UX contract — strength by graph distance
 
-**Trace strength** is an independent visual dimension from connection **kind**. Kind picks hue and dash pattern; strength picks opacity (and endpoint emphasis).
+**Trace strength** is an independent visual dimension from connection **kind**. Kind picks hue and dash pattern; strength picks brightness via `--trace-strength` (`color-mix` on chips/sockets; `opacity` on SVG wires).
 
-| Distance | Label (informal) | Wire path opacity | Glow opacity | Endpoint chip | When |
-| -------- | ---------------- | ----------------- | ------------ | ------------- | ---- |
-| **1** | Focus | `tracePathOpacity(1)` → 100% | `traceGlowOpacity(1)` (~16%) | `token-chip-on` + semantic ink | Hovered/pinned token; direct wire (`hop` omitted) |
-| **2** | Provenance | `tracePathOpacity(2)` (~83% at maxDepth 5) | `traceGlowOpacity(2)` | `trace-depth-faded` + semantic ink | One step from focus (`hop: 2`) |
-| **3** | Origin | `tracePathOpacity(3)` (~64%) | `traceGlowOpacity(3)` | `trace-depth-faded` + semantic ink | Two steps from focus (`hop: 3`) |
-| **N** | Distant | `tracePathOpacity(N)` → floor `--trace-depth-min-opacity` | scales with path | `trace-depth-faded` | N steps (up to `RELATIVE_MAX_DEPTH`) |
+### Situations (normative)
 
-**Normative scale:** one continuous power curve in `tracePathOpacity(depth, maxDepth)` — same function for **wires**, **socket dots**, **token chips**, and **lit code lines** (`traceLitApply.ts`, `previewEdgeDom.ts`). Walk reach is capped separately upstream (`TRACE_DEPTH_UP` / `TRACE_DEPTH_DOWN` in `lexicalGraph.ts`). Non-lit syntax stays `--faint` (binary off-curve).
+| Situation | When | API |
+| --------- | ---- | --- |
+| **Focus / rest** | Trace committed (`traceTokenKey` set); pointer not emphasizing this element | `traceStrength('focus', surface, d)` |
+| **Pointer hover** | `token-chip-hover-preview` on chip/socket **or** wire `emphasized` (touches hovered token / under cursor) | `traceStrength('hover', surface, d)` |
+
+**Invariant:** at every distance `d`, **hover brightness > focus brightness** for the same surface.
+
+### Distance table (maxDepth = 5, illustrative)
+
+| Distance | Label | Focus wire path | Hover wire path | Focus chip color | Hover chip color |
+| -------- | ----- | --------------- | --------------- | ---------------- | ---------------- |
+| **1** | Focus token | 0.80 | 1.00 | 0.55 | 1.00 |
+| **2** | Provenance | ~0.83 | ~0.94 | ~0.73 (× provenance ratio) | ~0.94 |
+| **3** | Origin | ~0.64 | ~0.88 | ~0.57 | ~0.88 |
+| **5** | Floor | 0.20 | 0.58 | ~0.18 | 0.58 |
+
+Glow opacity = path × ratio (`TRACE_GLOW_*_RATIO`); glow stroke width steps down at hop ≥ 2. **Wires stay louder than chip fill** at the same hop (chip provenance uses `TRACE_CHIP_PROVENANCE_RATIO`).
+
+**Walk reach** is capped separately upstream (`TRACE_DEPTH_UP` / `TRACE_DEPTH_DOWN` in `lexicalGraph.ts`). Non-lit syntax stays `--faint` (binary off-curve).
 
 **Kind overrides strength hue, not distance decay (one exemption):**
 
@@ -54,11 +67,11 @@ This supplement defines trace **strength by graph distance** and adds **Typesett
 | Control flow (`branch`) | `--edge-control-flow` | **No** — branch fan-out stays at distance 1; kind color separates it |
 | Transitive (call-graph) | `--edge-usage` | Yes — `hop: 2|3|…` on `PreviewEdgeSpec` (unchanged) |
 
-**Lit vs wire:** Distance-faded endpoints receive `token-chip-lit` + `trace-depth-faded` with **full semantic ink** at reduced inline opacity — not grey wash. Sockets use the same semantic color at matching opacity.
+**Lit vs wire:** Distance-faded endpoints receive `token-chip-lit` + `token-chip-on` + `trace-depth-faded` with semantic ink/fill scaled via `--trace-strength` (`color-mix` in `trace-chip-lit.css`) — **not** element `opacity`, not grey wash. Sockets use the same `--trace-strength` on semantic fill. Resting `token-chip-endpoint-sibling` grey applies only outside trace (`:not(.token-chip-lit)`).
 
 ---
 
-## Brightness curve (normative)
+## Brightness curves (normative)
 
 ```
 focus token = distance 1
@@ -69,29 +82,40 @@ focus token = distance 1
      ▼
 every lit wire / chip / socket / code line gets distance d ∈ [1, maxDepth]
      │
+     ├─► focus/rest  → traceStrength('focus', surface, d)
+     └─► pointer hover → traceStrength('hover', surface, d)
+     │
      ▼
-brightness(d) = tracePathOpacity(d, maxDepth)   // single curve, all surfaces
+DOM: style.setProperty('--trace-strength', strength)
 ```
 
-| Surface | Distance source | Application |
-| ------- | ----------------- | ----------- |
-| Wires | `PreviewEdgeSpec.hop` → `depthFromHop` | `traceWireOpacity` inline on path + glow |
-| Token chips & sockets | `TraceLitState.traceDepth` per key | `traceLitApply.applyDepth` |
-| Lit code lines | `TraceLitState.litLineDepth` | same `applyDepth` on `.code-line` |
-| Load stub chip | `edge.hop` | inline opacity on stub host |
-| Non-lit syntax | — | `--faint-*` (not on curve) |
+Tuning lives in `TRACE_TUNING` (`focus` / `hover` floors + curves; hop-1 wire/chip anchors). Shared formula for hop ≥ 2: `floor + (1 − floor) × ((maxDepth − d) / (maxDepth − 1))^curve`.
+
+| Surface | Distance source | Emission | API |
+| ------- | ----------------- | -------- | --- |
+| Wires | `PreviewEdgeSpec.hop` → `depthFromHop` | `--trace-strength` on path + glow (class `preview-edge-trace-strength`) | `traceStrength(situation, 'wire' \| 'wireGlow', d)` |
+| Token chips & sockets | `TraceLitState.traceDepth` per key | `--trace-strength` + `color-mix` | `traceStrength(situation, 'chip', d)` |
+| Lit code lines | `TraceLitState.litLineDepth` | `--trace-strength` (member chrome separate) | same `applyDepth` |
+| Load stub chip | `edge.hop` | `--trace-strength` on stub host | same |
+| Non-lit syntax | — | `--faint-*` (not on curve) | — |
 
 **Session:** trace strength applies while `traceTokenKey` is set (`isTraceSessionActive`). Pointer leaving a card MUST NOT clear the curve.
 
-**Wire hit-zone hover:** stroke-width only (`preview-edge-line-hover`) — opacity stays on the distance curve.
+**Wire emphasis:** when `emphasized` (wire under cursor, touches `hoveredTokenKey`, or edge id is in the current **hover-preview overlay** from `beginTrace`), path + glow use the **hover** curve. Anchor/pin wires outside that overlay stay on focus until the pointer touches them.
+
+**Chip emphasis:** `token-chip-hover-preview` at **any hop** when pointer matches (`applyEndpointHost` / `boostChipHost`) — same hover curve as emphasized wires.
+
+**Do not** dim lit chips with element `opacity` — only color strength (`--trace-strength`). Element opacity stays 1.
 
 ### Constants (`traceDepth.ts`)
 
-| Constant | Role |
-| -------- | ---- |
-| `TRACE_DEPTH_CURVE` | Power exponent (lower = flatter fade) |
-| `TRACE_DEPTH_MIN_OPACITY` | Floor at `maxDepth` |
-| `TRACE_GLOW_*_RATIO` | Glow halo = path × ratio |
+| Export | Role |
+| ------ | ---- |
+| `TRACE_TUNING` | Canonical `focus` / `hover` floors, curves, hop-1 anchors, glow ratios |
+| `traceStrength(situation, surface, depth)` | Unified API — `surface`: `wire` \| `wireGlow` \| `chip` |
+| `tracePathOpacity` / `traceEmphasisPathOpacity` | Focus / hover base curves (peak 1 at d=1) |
+| `traceWireOpacity` / `traceChipColorStrength` | Thin wrappers over `traceStrength` |
+| `TRACE_GLOW_STROKE_FOCUS` / `PROVENANCE` | Glow stroke width by hop |
 
 ---
 
@@ -146,7 +170,7 @@ Tunable in `client/src/lib/lexicalGraph.ts`:
 | `TRACE_DEPTH_UP` / `BACKWARD_LEXICAL_MAX_DEPTH` | 5 | Max hops upstream from a usage |
 | `RELATIVE_FAN_OUT_CAP` | 24 | Max wires per relative walk |
 
-**Unified depth → opacity:** `traceDepth.ts` maps graph distance to `PreviewEdgeSpec.hop` and `tracePathOpacity` / `traceGlowOpacity` / `traceWireOpacity`. Increasing `RELATIVE_MAX_DEPTH` extends both walk reach and the fade curve — no per-hop CSS classes.
+**Unified depth → strength:** `traceDepth.ts` maps graph distance to `PreviewEdgeSpec.hop` and `traceStrength`. Increasing `RELATIVE_MAX_DEPTH` extends both walk reach and the fade curve — no per-hop CSS classes.
 
 **Lexical graph edge kinds** (`buildLexicalGraph`):
 
@@ -193,9 +217,9 @@ The sig-type chip is **not** a `localDefId` sibling of the param name — linked
 
 ### `PreviewEdgeSpec.hop`
 
-Graph distance from focus; **omitted at distance 1**. Opacity from `traceDepth.ts` — not CSS hop classes. Hop-2 sig-type→param uses `connectionKind: "typesetting"`; hop-3 type-def→sig-type stays `connectionKind: "usage"`. Do **not** conflate with `connectionKind: "transitive"`.
+Graph distance from focus; **omitted at distance 1**. Strength from `traceDepth.ts` — not CSS hop classes. Hop-2 sig-type→param uses `connectionKind: "typesetting"`; hop-3 type-def→sig-type stays `connectionKind: "usage"`. Do **not** conflate with `connectionKind: "transitive"`.
 
-`TraceLitState.traceDepth` stores numeric distance per token key; `litLineDepth` for line context fade. Endpoints at `depth >= 2` get `token-chip-endpoint-sibling` grey styling.
+`TraceLitState.traceDepth` stores numeric distance per token key; `litLineDepth` for line context fade. Endpoints at `depth >= 2` get `trace-depth-faded` + `--trace-strength` (not fixed grey `token-chip-endpoint-sibling` during trace).
 
 ### Resolution — module-level types
 
@@ -212,22 +236,22 @@ Graph distance from focus; **omitted at distance 1**. Opacity from `traceDepth.t
 | `lexicalGraph.ts` | Adjacency graph; `walkLexical*` |
 | `lexicalWalkPreviewEdges.ts` | `LexicalWalkHop[]` → `PreviewEdgeSpec[]` with `hop` |
 | `paramTypeCascadeEdges.ts` | Hop 2/3 edges from param usage/def + signature type |
-| `traceDepth.ts` | `tracePathOpacity`, `traceGlowOpacity`, `traceWireOpacity` |
-| `wireHoverBoost.ts` | Session + pointer strength (rAF) |
-| `traceLitApply.ts` | Chip/socket inline opacity |
-| `previewEdgeDom.ts` | Per-frame wire opacity |
+| `traceDepth.ts` | `TRACE_TUNING`, `traceStrength`, wire/chip wrappers |
+| `wireHoverBoost.ts` | Session + pointer state (`isTraceSessionActive`, `hoveredTokenKey`) |
+| `traceLitApply.ts` | `--trace-strength` on chips/sockets/lines (never element opacity) |
+| `previewEdgeDom.ts` | Per-frame wire `--trace-strength` on path + glow |
 
 ---
 
 ## Acceptance Criteria
 
 - [x] Given body usage of `field: AddressFieldKind`, when hovered past dwell, then hop-1 usage wire, hop-2 Typesetting wire, and hop-3 Usage wire (or Load stub) are drawn.
-- [ ] Given the same trace, when rendered, then hop ≥ 2 wires/chips are visibly weaker than hop 1 (`tracePathOpacity` decay).
-- [ ] Given hop ≥ 2 sig-type endpoint, when lit, then chip uses `trace-depth-faded` with semantic ink at hop-reduced inline opacity.
-- [ ] Given pin or dwell trace active, when pointer leaves the class card, then hop-1 wires and lit chips stay at trace baseline.
-- [ ] Given pointer on one token, when rendered, then wires touching that token are emphasized and other trace wires use backdrop opacity.
-- [ ] Given pointer on one token, when another lit endpoint is visible, then that endpoint stays at trace baseline strength.
-- [ ] Given trace session with no pointer on chip/wire, when rendered, then no wire backdrop layer applies.
+- [ ] Given the same trace at rest (pointer elsewhere), when rendered, then hop ≥ 2 wires/chips are visibly weaker than hop 1 (focus curve).
+- [ ] Given pointer on a lit chip or its wire, when rendered, then that branch is **brighter** than the same branch at rest (hover curve > focus curve at every hop).
+- [ ] Given hop ≥ 2 lit endpoint, when rendered, then chip uses `trace-depth-faded` + semantic ink/fill via `--trace-strength` (not element opacity, not grey wash).
+- [ ] Given pin or dwell trace active, when pointer leaves the class card, then hop-1 wires and lit chips stay at **focus** baseline (session survives).
+- [ ] Given pointer on one token, when another lit endpoint is visible, then that endpoint stays at **focus** strength until pointer emphasizes it.
+- [ ] Given trace session with no pointer on chip/wire, when rendered, then all lit surfaces use the focus curve only.
 - [ ] Given hover on body usage only, when trace is active, then other usages of `field` do **not** receive usage wires.
 - [ ] Given hover on param def `field`, when trace is active, then every in-body usage has a hop-1 wire and type chain at hop 2/3 behind the param.
 - [ ] Given direct hover on sig-type in header or inline signature line, when trace fires, then hop-2 typesetting connects to co-located param and hop-3 wires continue into the body.
@@ -235,6 +259,7 @@ Graph distance from focus; **omitted at distance 1**. Opacity from `traceDepth.t
 - [ ] Given Load on type from stub/menu, when merge completes, then type node is on canvas and re-hover resolves solid graph wire.
 - [ ] Given `switch (field)` in the same method, when `field` usage is hovered, then control-flow branch wires stay `--edge-control-flow` green — no hop decay.
 - [ ] Given transitive and provenance hops in the same trace, when rendered, then each edge uses its own `hop` / kind — no double-decay.
+- [ ] Given lit chip at any hop, when rendered, then element `opacity` is 1 — only `--trace-strength` tints fill/ink.
 
 ## References
 

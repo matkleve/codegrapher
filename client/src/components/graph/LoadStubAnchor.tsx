@@ -7,11 +7,12 @@ import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { loadStubPanePosition } from "@/lib/loadStubPosition";
+import { LOAD_STUB_READY_ATTR, loadStubPanePosition } from "@/lib/loadStubPosition";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
-import { tracePathOpacity } from "@/lib/traceDepth";
+import { depthFromHop, traceStrength } from "@/lib/traceDepth";
+import { TRACE_STRENGTH_VAR } from "@/lib/traceLitApply";
 import { isTraceSessionActive } from "@/lib/wireHoverBoost";
 import { subscribeWireTicks } from "@/lib/wireEngine";
 import { cn } from "@/lib/utils";
@@ -27,15 +28,15 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
   const { getNode } = useReactFlow();
   const loadTarget = useLoadTargetAction();
   const { cancelHoverLeaveGrace } = useGraphInteraction();
-  const fadedOpacity =
-    edge.hop != null && edge.hop >= 2 && isTraceSessionActive()
-      ? tracePathOpacity(edge.hop)
-      : undefined;
+  const traceStrengthValue = isTraceSessionActive()
+    ? traceStrength("focus", "chip", depthFromHop(edge.hop))
+    : undefined;
 
   const reposition = useCallback(() => {
     const host = hostRef.current;
     if (!host) return;
     const { to } = refinePreviewEdge(edge, getNode);
+    host.removeAttribute(LOAD_STUB_READY_ATTR);
     if (to.type !== "element" || !to.el.isConnected) {
       host.style.visibility = "hidden";
       return;
@@ -49,6 +50,7 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
     host.style.left = `${pos.left}px`;
     host.style.top = `${pos.top}px`;
     host.style.visibility = "visible";
+    host.setAttribute(LOAD_STUB_READY_ATTR, "1");
   }, [edge, getNode]);
 
   useLayoutEffect(() => {
@@ -82,7 +84,9 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
       )}
       style={{
         visibility: "hidden",
-        ...(fadedOpacity != null ? { opacity: fadedOpacity } : {}),
+        ...(traceStrengthValue != null
+          ? ({ [TRACE_STRENGTH_VAR]: String(traceStrengthValue) } as React.CSSProperties)
+          : {}),
       }}
       onMouseEnter={cancelHoverLeaveGrace}
       onClick={onLoad}

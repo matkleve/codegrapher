@@ -16,7 +16,7 @@ Child of [connection-taxonomy.md](connection-taxonomy.md). Per-kind Actions, Dat
 
 | # | Trigger | System Response |
 | --- | ------- | --------------- |
-| 1 | Cold hover indexed token (80ms dwell) | Single def→usage wire |
+| 1 | Cold hover indexed token (40ms dwell) | Single def→usage wire |
 | 2 | Hover definition | Fan-out to all in-graph usages |
 | 3 | Ctrl held | Instant fire; no persistence change |
 | 4 | Click token | Pin trace + `TokenContextBar` |
@@ -35,7 +35,7 @@ Child of [connection-taxonomy.md](connection-taxonomy.md). Per-kind Actions, Dat
 
 ### Acceptance Criteria
 
-- [x] Cold hover fires after 80ms; pass-over does not flash edges
+- [x] Cold hover fires after 40ms; pass-over does not flash edges
 - [x] Ctrl fires immediately; release returns to plain-hover rules
 - [x] Edge direction is always definition → usage
 - [x] Wires render only in `PreviewEdgeOverlay`, not as React Flow edges

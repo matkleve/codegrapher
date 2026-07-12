@@ -34,7 +34,7 @@ eslint.shared.mjs             ← lint caps referenced in core/
 | [core/working-with-agents.md](./core/working-with-agents.md) | Agents + humans | How to work with AI agents on this codebase |
 | [core/file-split-policy.md](./core/file-split-policy.md) | All projects | Lint caps, three-bucket rule, split decision tree |
 | [core/spec-format.md](./core/spec-format.md) | All projects | Element spec template |
-| [core/visual-strength-stacks.md](./core/visual-strength-stacks.md) | Interactive UIs | Session × pointer × distance emphasis model |
+| [core/visual-strength-stacks.md](./core/visual-strength-stacks.md) | Interactive UIs | Focus vs hover curves, distance decay, `--trace-strength` emission |
 | [core/project-layout.md](./core/project-layout.md) | All projects | Generic repo buckets (lib, specs, design, scripts) |
 | [frameworks/README.md](./frameworks/README.md) | Per stack | Which framework file to read |
 | [frameworks/react.md](./frameworks/react.md) | React / Vite | components/, hooks/, context/ |

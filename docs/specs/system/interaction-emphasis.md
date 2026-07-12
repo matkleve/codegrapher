@@ -12,7 +12,7 @@ Idle controls use muted or card foreground. Hover adds gold ink, gold-tinted sur
 
 - **CSS:** `client/src/index.css` (`.hoverable`), `styles/trace-modes.css`, `styles/tokens-chips.css`
 - **JS:** `client/src/lib/controlTokens.ts`
-- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned`, `graph-trace-warm` on `.graph-pane` (graph mood root)
+- **Canvas classes:** `graph-ctrl-preview`, `graph-trace-pending`, `graph-trace-active`, `graph-trace-pinned`, `graph-trace-warm` on `.graph-pane` (graph mood root)
 
 ## Emphasis stack
 
@@ -30,9 +30,10 @@ flowchart TB
   Hover -.->|suppressed on dim tokens during plain trace| Trace
 ```
 
+- **Pending dwell** (before trace commits): `graph-trace-pending` on pane + `token-chip-pending-trace` on hovered chip — surround dim eases in with the chip ([interactions supplement](preview-edges.interactions.supplement.md) § Visual commit timeline).
 - **Ctrl** (hold): `graph-ctrl-preview` — syntax to `--faint-ctrl`, shimmer on indexed chips. Does not start a trace.
 - **Hover** (dwell on chip, with or without Ctrl): `graph-trace-active` — wires, `token-chip-lit` / `token-chip-on` / `token-chip-hover-preview`. Ctrl only shortens dwell; releasing Ctrl does not clear an active hover trace.
-- **Chip hover preview** (within an active trace): `token-chip-hover-preview` — stronger semantic **fill** on the chip under the cursor; brightness still follows `tracePathOpacity(distance)` like every other lit surface. See [trace-strength supplement](preview-edges.trace-strength.supplement.md) § Brightness curve.
+- **Chip hover preview** (within an active trace): `token-chip-hover-preview` at any hop — stronger semantic **fill** via `traceStrength('hover', 'chip', depth)`. See [trace-strength supplement](preview-edges.trace-strength.supplement.md) § Brightness curves.
 - **Focused** (click pin): `graph-trace-pinned` + `token-chip-source` — anchor trace; foreign hover still runs dwell preview on other tokens.
 
 ## Actions
@@ -42,6 +43,7 @@ flowchart TB
 | 1 | Hovers `.hoverable` control | Brand surface + border + ink (including `.control-row-text-*` children) | CSS `:hover` |
 | 2 | Hovers explorer row | `variant="explorer*"` on `InteractiveListRow` | prop + `.list-row-explorer` |
 | 3 | Ctrl held on graph | Dim syntax/keywords; shimmer indexed chips | `graph-ctrl-preview` |
+| 3b | Pointer enters chip (dwell not fired) | Pending chip fill + surround dim eases | `graph-trace-pending` + `token-chip-pending-trace` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
 | 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates | `graph-trace-pinned` + `mergeTraceLit` |
 | 6 | Member row header hover | Brand bg **hover only** (not `aria-expanded`) | `.member-row-header.hoverable` |
@@ -63,20 +65,26 @@ Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardl
 
 ## Chip hover preview (normative)
 
-Within an active trace, the chip under the cursor may receive `token-chip-hover-preview` — a stronger semantic **fill** than `token-chip-on`. **Opacity** still comes from graph distance via `tracePathOpacity` (same curve as wires and sockets).
+Within an active trace, the chip under the cursor may receive `token-chip-hover-preview` — stronger semantic **fill** than resting `token-chip-on`. **Color strength** (not element opacity) comes from the **hover** curve via `--trace-strength` (`traceStrength('hover', 'chip', depth)`).
 
 | Pointer on | Chips | Wires |
 | ---------- | ----- | ----- |
-| Token chip | `token-chip-hover-preview` fill if boosted | `tracePathOpacity(hop)` — unchanged by pointer |
-| Wire hit-zone | Endpoint chips may get hover-preview class | stroke-width bump only (`preview-edge-line-hover`) |
+| Token chip | `token-chip-hover-preview` + hover curve on `--trace-strength` (any hop) | hover curve on `--trace-strength` for touched wires |
+| Wire hit-zone | Endpoint chips may get hover-preview class | hover curve on path + glow `--trace-strength`; stroke-width bump (`preview-edge-line-hover`) |
 
-**Session:** trace curve applies while `traceTokenKey` is set; leaving a card does not reset distances.
+**Session:** focus curve applies while `traceTokenKey` is set; leaving a card does not reset distances. Non-emphasized lit surfaces stay on the **focus** curve.
 
-**`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Reveal motion snaps ink/fill inside cards (`transition-duration: 0s`), but endpoint **socket dots** may use a short affordance transition while warm so sockets ease in when hopping token→token (`preview-wires.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
+**`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Endpoint **socket dots** use a slightly shorter transition while warm (`flow-anchors.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
+
+## Motion (normative)
+
+Trace/hover **importance** changes (dim, lit, chip fill, row bg, syntax color, socket/wire opacity) share one clock: **`--motion-trace` (120ms)** — aliases `--motion-dim`, `--motion-trace-lite`, `--motion-chip-*` during trace ([tokens.md](../../design/tokens.md)). Direct chrome hover (`.hoverable`, member header brand) uses the same 120ms affordance tokens.
+
+**Exceptions:** wire **stroke draw** (~240ms WAAPI, path + glow dash together); Ctrl/node **ambient** shimmer and breathe (`animation`, not transition). See [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) § Visual commit timeline.
 
 ## Member container & signature fills (normative)
 
-Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-active`, `graph-trace-pinned`. Imperative trace classes on DOM: `trace-member-lit`, `trace-member-owner-lit`, `trace-lit-line`, `token-chip-lit`, `token-chip-on`, `token-chip-source`, `token-chip-hover-preview`.
+Canvas mode classes on `.graph-pane`: `graph-ctrl-preview`, `graph-trace-pending`, `graph-trace-active`, `graph-trace-pinned`. Imperative trace classes on DOM: `trace-member-lit`, `trace-member-owner-lit`, `trace-lit-line`, `token-chip-lit`, `token-chip-on`, `token-chip-source`, `token-chip-hover-preview`, `token-chip-pending-trace`.
 
 | # | Mode | Member row container | Signature pills (param/return) | Member body (expanded code) | Lit token in row |
 | --- | ---- | -------------------- | ------------------------------ | --------------------------- | ---------------- |
@@ -112,20 +120,25 @@ index.css (.hoverable)
 | ---- | ------- |
 | `index.css` | Global `.hoverable`; header no trace tint |
 | `controlTokens.ts` | Tailwind bundles — sync with CSS |
-| `tokens-chips.css` | Resting ink, chip-on, pinned lock |
-| `trace-modes.css` | Dim, lit, Ctrl shimmer |
+| `tokens-chips.css` | Resting ink, chip-on, pending-trace, pinned lock |
+| `trace-syntax.css` | Pending + trace dim selectors; `--motion-trace` transitions |
+| `trace-modes.css` | Barrel: trace / ctrl / member / chip-lit |
 | `preview-wires.css` | Sockets, preview wires |
-| `client/src/lib/traceLitApply.ts` | Chip/socket inline opacity during trace |
-| `client/src/lib/wireHoverBoost.ts` | Session + pointer strength (rAF) |
+| `client/src/lib/pendingTraceChip.ts` | `graph-trace-pending` + `token-chip-pending-trace` |
+| `client/src/lib/wireReveal.ts` | Path + glow dash draw (WAAPI) |
+| `client/src/lib/traceLitApply.ts` | `--trace-strength` on chips/sockets/lines during trace |
+| `client/src/lib/wireHoverBoost.ts` | Session + pointer state for rAF wire engine |
 
 ## Acceptance Criteria
 
+- [ ] Pending dwell: `graph-trace-pending` dims surround before `beginTrace`; chip uses `token-chip-pending-trace`
+- [ ] Trace importance eases on `--motion-trace` (120ms) — no snap on row/body/syntax at commit
 - [ ] New clickables use `.hoverable` or `controlTokens` — not `hover:bg-primary`
-- [ ] JS/SVG colors via CSS variables in `style`
 - [ ] Trace dim is color-only — no container opacity / bg wash on code
 - [ ] Pin or dwell trace: strength unchanged when pointer leaves class card
-- [ ] Chip hover-preview changes fill only; opacity follows distance curve
-- [ ] Wire opacity follows `tracePathOpacity(hop)` only — not pointer snap values
+- [ ] Chip hover-preview uses hover curve on `--trace-strength`; element opacity stays 1
+- [ ] Wire path uses focus curve at rest; hover curve when emphasized — not a binary snap to 1.0 without distance
+- [ ] Hover branch brighter than same branch at focus for every hop
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state

@@ -12,9 +12,10 @@
   opacity: 1;
   transform: translateY(-50%) scale(1);
   transition:
-    transform 180ms var(--spring),
-    opacity 140ms var(--ease),
-    box-shadow 200ms var(--ease);
+    background-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    transform var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease);
   /* Fill from TOKEN_ANCHOR colorClass — crisp rings, no bloom/brightness */
   filter: none;
   box-shadow:
@@ -26,15 +27,24 @@
   filter: none;
 }
 
-.flow-anchor-on.trace-depth-faded {
-  /* opacity set inline by traceLitApply */
+.graph-trace-active .flow-anchor-on,
+.graph-trace-pinned .flow-anchor-on {
+  opacity: 1;
+  background-color: color-mix(
+    in oklch,
+    currentColor calc(var(--trace-strength, 1) * 100%),
+    var(--muted)
+  ) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, currentColor calc(var(--trace-strength, 1) * 100%), var(--muted-foreground)),
+    0 0 0 3px color-mix(in oklch, currentColor calc(var(--trace-strength, 1) * 24%), transparent);
 }
 
 .graph-trace-warm .flow-anchor-on {
   transition:
     transform 120ms var(--spring),
-    opacity 100ms var(--ease),
-    box-shadow 100ms var(--ease);
+    opacity var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease);
 }
 
 .jump-tip {

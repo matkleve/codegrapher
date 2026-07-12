@@ -1,6 +1,10 @@
-import { forwardRef, type DragEvent, type MouseEvent, type ReactNode } from "react";
+import { forwardRef, useSyncExternalStore, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import {
+  isTracePending as getTracePending,
+  subscribeTracePending,
+} from "@/lib/pendingTraceChip";
 import { cn } from "@/lib/utils";
 
 type GraphPaneProps = {
@@ -15,6 +19,11 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
   function GraphPane({ children, onDragOver, onDrop, onClickCapture }, ref) {
     const { isCtrlActive } = useCtrlKey();
     const { isTraceActive, isWarm, pinnedTraces } = useGraphInteraction();
+    const isTracePending = useSyncExternalStore(
+      subscribeTracePending,
+      getTracePending,
+      () => false,
+    );
 
     return (
       <div
@@ -22,6 +31,7 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
         className={cn(
           "graph-pane relative min-h-0 flex-1 overflow-hidden bg-background",
           isCtrlActive && "graph-ctrl-preview",
+          isTracePending && "graph-trace-pending",
           isTraceActive && "graph-trace-active",
           isTraceActive && isWarm && "graph-trace-warm",
           pinnedTraces.length > 0 && "graph-trace-pinned",

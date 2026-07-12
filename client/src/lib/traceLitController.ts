@@ -19,7 +19,12 @@ import {
   syncTraceLitDom,
   type HostState,
 } from "@/lib/traceLitApply";
-import { getWireHoveredEdgeId, traceKeysFromWire, edgeTouchesHoveredToken } from "@/lib/wireHoverBoost";
+import {
+  edgeTouchesHoveredToken,
+  getWireHoveredEdgeId,
+  isHoverPreviewEdge,
+  traceKeysFromWire,
+} from "@/lib/wireHoverBoost";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
 
@@ -151,12 +156,10 @@ function applyEndpointHost(
   const hostState = ensureHost(next, host);
   const hoverPreview = traceKey != null && hoveredTokenKey === traceKey;
   const extra: string[] = [CHIP_ON];
-  if (depth === 1) {
-    if (traceKey && pinnedTokenKeys.has(traceKey)) {
-      extra.push(CHIP_SOURCE);
-    } else if (hoverPreview) {
-      extra.push(CHIP_HOVER_PREVIEW);
-    }
+  if (depth === 1 && traceKey && pinnedTokenKeys.has(traceKey)) {
+    extra.push(CHIP_SOURCE);
+  } else if (hoverPreview) {
+    extra.push(CHIP_HOVER_PREVIEW);
   }
   mergeClasses(hostState, extra);
   setDepth(hostState, depth);
@@ -177,6 +180,7 @@ function boostChipHost(
   pinnedTokenKeys: ReadonlySet<string>,
   forceHoverPreview = false,
 ): void {
+  const graphDepth = depthForKey(state, traceKey, false);
   const hostState = ensureHost(next, host);
   mergeClasses(hostState, [CHIP_LIT, CHIP_ON]);
   if (traceKey && pinnedTokenKeys.has(traceKey)) {
@@ -184,18 +188,18 @@ function boostChipHost(
   } else if (forceHoverPreview) {
     mergeClasses(hostState, [CHIP_HOVER_PREVIEW]);
   }
-  setDepth(hostState, 1);
+  setDepth(hostState, graphDepth);
   attachEndpointSockets(
     host,
     hostState,
     portSidesForHost(host, state.endpointPortSide),
-    1,
+    hostState.depth,
     forceHoverPreview,
   );
   boostHoveredLine(next, host);
 }
 
-/** Hover beats pin/focus depth — full strength on the token under the cursor and its line. */
+/** Pointer emphasis — semantic hover fill on the token under the cursor and its line. */
 function applyHoverFocusBoost(
   next: Map<HTMLElement, HostState>,
   state: TraceLitState,
@@ -240,7 +244,8 @@ function applyHoveredWireEndpointBoost(
 ): void {
   if (!hoveredTokenKey) return;
   for (const spec of previewEdges) {
-    if (!edgeTouchesHoveredToken(spec, getNode, hoveredTokenKey)) continue;
+    const touchesHover = edgeTouchesHoveredToken(spec, getNode, hoveredTokenKey);
+    if (!touchesHover && !isHoverPreviewEdge(spec.id)) continue;
     for (const key of traceKeysFromWire(spec, getNode)) {
       const memberSiblings = memberDefSiblingHosts(key);
       if (memberSiblings) {
@@ -331,11 +336,12 @@ export function applyTraceLit(
 
   for (const key of state.litTokenKeys) {
     const depth = depthForKey(state, key, false);
+    const litOnly = !state.endpointTokenKeys.has(key);
     const memberSiblings = memberDefSiblingHosts(key);
     if (memberSiblings) {
       for (const host of memberSiblings) {
         const hostState = ensureHost(next, host);
-        mergeClasses(hostState, [CHIP_LIT]);
+        mergeClasses(hostState, litOnly ? [CHIP_LIT, CHIP_ON] : [CHIP_LIT]);
         setDepth(hostState, depth);
       }
       continue;
@@ -343,7 +349,7 @@ export function applyTraceLit(
     const host = chipHostForTraceKey(key);
     if (!host) continue;
     const hostState = ensureHost(next, host);
-    mergeClasses(hostState, [CHIP_LIT]);
+    mergeClasses(hostState, litOnly ? [CHIP_LIT, CHIP_ON] : [CHIP_LIT]);
     setDepth(hostState, depth);
   }
 

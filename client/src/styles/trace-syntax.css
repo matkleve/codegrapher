@@ -1,22 +1,44 @@
 .member-row {
   border: 1px solid transparent;
+  transition:
+    background-color var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease);
+}
+
+.code-line {
+  transition:
+    background-color var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease);
+}
+
+.member-row-header {
+  transition:
+    background-color var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease);
 }
 
 .react-flow__node.class-node-root {
   transition:
-    border-color var(--motion-dim) var(--ease),
-    box-shadow var(--motion-dim) var(--ease),
-    opacity var(--motion-dim) var(--ease);
+    border-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease);
 }
 
 .graph-trace-active .react-flow__node.class-node-root,
 .graph-trace-active .member-row,
-.graph-pane.graph-ctrl-preview .member-row {
+.graph-pane.graph-ctrl-preview .member-row,
+.graph-pane.graph-trace-pending .member-row {
   transition:
-    border-color var(--motion-dim) var(--ease),
-    box-shadow var(--motion-dim) var(--ease),
-    background-color var(--motion-dim) var(--ease),
-    color var(--motion-dim) var(--ease);
+    border-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    background-color var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease);
 }
 
 .code-type {
@@ -44,66 +66,100 @@
 .node-card-caret,
 .member-row-caret,
 .node-card-title,
-.file-type-chip,
+.file-type-chip {
+  transition:
+    color var(--motion-trace) var(--ease),
+    background-color var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease);
+}
+
 .token-chip,
 .token-def-label,
 .control-flow-chip,
-.flow-anchor-on {
+.flow-anchor-on,
+.connector-chip--load-stub {
   transition:
-    color var(--motion-dim) var(--ease),
-    background-color var(--motion-dim) var(--ease),
-    opacity var(--motion-dim) var(--ease),
-    box-shadow var(--motion-dim) var(--ease),
-    border-color var(--motion-dim) var(--ease);
+    color var(--motion-trace) var(--ease),
+    background-color var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease);
 }
 
 /* ── Trace mode — plain trace (no Ctrl): Ctrl preview always wins ── */
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-kw,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-kw,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .control-flow-chip-text,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .control-flow-chip-text {
   color: var(--faint-kw) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-pn,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-pn {
   color: var(--faint-pn) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-comment,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-comment {
   color: var(--faint-comment) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-string,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-string {
   color: var(--faint-string) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-number,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-number {
   color: var(--faint-number) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .code-type,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .code-type {
   color: var(--faint-type) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-body-wrap,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-body-wrap {
   color: var(--faint-body) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .file-type-chip,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .file-type-chip,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .list-row-graph-chrome,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .list-row-graph-chrome,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-value,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-kind-icon,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-kind-icon,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-colon,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-colon,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-param-name,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-param-name,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--in,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--in,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--out,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--out,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-type--primitive,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-type--primitive,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .node-card-title,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-title,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .node-card-caret,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .node-card-caret,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-row-caret,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-caret {
   color: var(--faint) !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit),
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-row-label:not(.token-chip-lit),
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview)
+  .member-row-label:not(.token-chip-lit)
+  .token-shimmer-target,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview)
   .member-row-label:not(.token-chip-lit)
   .token-shimmer-target {
@@ -121,11 +177,14 @@
   -webkit-text-fill-color: currentColor;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .member-sig-value,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value {
   background: transparent !important;
 }
 
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .token-chip:not(.token-chip-lit) .token-chip-text,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .token-chip:not(.token-chip-lit) .token-chip-text,
+.graph-pane.graph-trace-pending:not(.graph-ctrl-preview) .token-def-label:not(.token-chip-lit),
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .token-def-label:not(.token-chip-lit) {
   color: var(--faint) !important;
   font-weight: 600;

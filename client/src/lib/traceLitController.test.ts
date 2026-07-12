@@ -78,8 +78,10 @@ describe("applyTraceLit", () => {
     expect(header.classList.contains("token-chip-endpoint-sibling")).toBe(false);
     expect(body.classList.contains("token-chip-on")).toBe(true);
     expect(body.classList.contains("trace-depth-faded")).toBe(true);
-    expect(Number(body.style.opacity)).toBeGreaterThan(0);
-    expect(Number(body.style.opacity)).toBeLessThan(1);
+    const strength = Number(body.style.getPropertyValue("--trace-strength"));
+    expect(strength).toBeGreaterThan(0);
+    expect(strength).toBeLessThan(1);
+    expect(body.style.opacity).toBe("");
 
     const headerSocket = header.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
     const bodySocket = body.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
@@ -220,6 +222,67 @@ describe("applyTraceLit", () => {
     const right = usage.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
     expect(left.classList.contains("flow-anchor-on")).toBe(true);
     expect(right.classList.contains("flow-anchor-on")).toBe(true);
+
+    clearTraceLit();
+    pane.remove();
+  });
+
+  it("adds hover-preview class on hop-2+ endpoints when pointer matches", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    pane.innerHTML = `
+      <span class="token-chip member-sig-type-chip" data-trace-key="sig::type::AddressFieldKind" data-token-kind="type">
+        <span data-flow-anchor="right" class="flow-anchor-off bg-border"></span>
+        AddressFieldKind
+      </span>
+    `;
+    document.body.append(pane);
+
+    const typeChip = pane.querySelector<HTMLElement>(".token-chip")!;
+    registerTraceHost(typeChip);
+    setTraceSessionActive(true);
+
+    applyTraceLit(
+      {
+        ...EMPTY_TRACE_LIT,
+        litTokenKeys: new Set(["sig::type::AddressFieldKind"]),
+        endpointTokenKeys: new Set(["sig::type::AddressFieldKind"]),
+        traceDepth: new Map([["sig::type::AddressFieldKind", 2]]),
+      },
+      { pinnedTokenKeys: new Set(), hoveredTokenKey: "sig::type::AddressFieldKind" },
+    );
+
+    expect(typeChip.classList.contains("token-chip-hover-preview")).toBe(true);
+    expect(typeChip.classList.contains("token-chip-source")).toBe(false);
+
+    clearTraceLit();
+    pane.remove();
+  });
+
+  it("gives lit-only tokens chip-on so --trace-strength styles apply", () => {
+    const pane = document.createElement("div");
+    pane.className = "graph-pane";
+    pane.innerHTML = `
+      <span class="token-chip" data-trace-key="flow::ref::other" data-token-kind="variable">other</span>
+    `;
+    document.body.append(pane);
+
+    const chip = pane.querySelector<HTMLElement>(".token-chip")!;
+    registerTraceHost(chip);
+    setTraceSessionActive(true);
+
+    applyTraceLit(
+      {
+        ...EMPTY_TRACE_LIT,
+        litTokenKeys: new Set(["flow::ref::other"]),
+        traceDepth: new Map([["flow::ref::other", 3]]),
+      },
+      { pinnedTokenKeys: new Set(), hoveredTokenKey: null },
+    );
+
+    expect(chip.classList.contains("token-chip-lit")).toBe(true);
+    expect(chip.classList.contains("token-chip-on")).toBe(true);
+    expect(chip.style.getPropertyValue("--trace-strength")).not.toBe("");
 
     clearTraceLit();
     pane.remove();

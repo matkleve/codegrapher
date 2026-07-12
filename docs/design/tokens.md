@@ -53,14 +53,12 @@ Three motion classes by **meaning** (see [state-visuals.md → Motion philosophy
 | Affordance | `--motion-hover-color` | 120ms | Text, icon, stroke, chevron rotation |
 | Affordance | `--motion-chip-surface` | 120ms | Token chip background/shadow |
 | Affordance | `--motion-chip-color` | 120ms | Token chip text color |
-| Reveal | `--motion-dim` | 80ms | Trace/Ctrl/sim reveal crossfade (syntax dim, chip lit, wire opacity) |
+| Reveal (unified) | `--motion-trace` | 120ms | Dim, lit chips, sockets, wires, rows — one importance clock |
 | — | `--ease` | cubic-bezier | Standard deceleration |
 | — | `--spring` | cubic-bezier | Preview edge / socket pop |
 
-The four affordance tokens share one value; they stay split by property so affordance
-timing can be retuned later. Reveal is 0ms **and** enforced structurally: `trace-modes.css` snaps every
-transition inside `.react-flow__node` while a reveal mode is active, so per-element reveal
-timing must never be re-added.
+`--motion-dim`, `--motion-trace-lite`, and chip tokens alias `--motion-trace` (120ms).
+Pending dwell uses `graph-trace-pending` so dim starts with the chip.
 
 **Rule:** New clickable/draggable surfaces MUST use brand tokens via `.hoverable` or `INTERACTIVE_SURFACE` / `INTERACTIVE_ROW` in `client/src/lib/controlTokens.ts`. Do not route interactive hover through `--primary`.
 
@@ -131,7 +129,7 @@ Persistent taxonomy wires (inheritance, implementation, composition, module impo
 
 Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColors.ts`.
 
-Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** distance reuses the same hue with opacity from `tracePathOpacity(depth)` (inline on wires and chips via `traceLitApply.ts` / `previewEdgeDom.ts`). See [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md) and [visual-strength-stacks.md](../agent-playbook/core/visual-strength-stacks.md).
+Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** distance reuses the same hue with brightness from `traceDepth.ts`: wires via SVG opacity (`traceWireOpacity`), chips/sockets via `--trace-strength` + `color-mix` (`traceLitApply.ts`, `trace-chip-lit.css`). Two curves — focus/rest vs pointer hover. See [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md) and [visual-strength-stacks.md](../agent-playbook/core/visual-strength-stacks.md).
 
 Preview **binding** wires use `--edge-binding` (cyan **188°** — hue-separated from typesetting), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
 

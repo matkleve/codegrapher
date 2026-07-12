@@ -1,5 +1,8 @@
 import { graphPane } from "@/lib/graphPaneDom";
 
+/** Set on the stub host after the first successful fixed-position layout. */
+export const LOAD_STUB_READY_ATTR = "data-load-stub-ready";
+
 const NODE_GAP_PX = 20;
 const PANE_MARGIN_PX = 8;
 

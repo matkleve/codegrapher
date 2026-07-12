@@ -21,12 +21,17 @@
   }
 }
 
-/* ── Reveal motion — fast crossfade via --motion-dim (80ms) ─────────────
-   Trace / Ctrl / sim ink & fill changes inside class cards ease over
-   --motion-dim so pending dwell → committed trace does not hard-jump.
-   Affordance motion (~120ms) lives in the calm/idle state. Ambient
-   keyframes (shimmer, breathe, wire dash / stroke reveal) use
-   `animation`, not `transition`. See docs/design/state-visuals.md. */
+/* ── Reveal motion — trace/hover importance eases on one clock (--motion-trace) ─ */
+
+.graph-pane.graph-ctrl-preview .code-line,
+.graph-pane.graph-ctrl-preview .member-row {
+  transition:
+    background-color var(--motion-trace) var(--ease),
+    border-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease);
+}
 
 /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
 .graph-pane.graph-ctrl-preview .member-body-wrap,

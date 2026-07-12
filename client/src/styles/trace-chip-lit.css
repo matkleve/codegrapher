@@ -1,49 +1,129 @@
-.graph-trace-active .token-chip.trace-depth-faded,
-.graph-trace-active .token-def-label.trace-depth-faded,
-.graph-trace-active .control-flow-chip.trace-depth-faded {
-  /* opacity set inline by traceLitApply */
+/* Lit chips — full element opacity; distance scales fill + ink via --trace-strength only. */
+.graph-trace-active .token-chip.token-chip-lit,
+.graph-trace-active .token-def-label.token-chip-lit,
+.graph-trace-active .control-flow-chip.token-chip-lit {
+  opacity: 1;
 }
 
-.graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"],
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="class"] {
-  color: var(--token-edge-class) !important;
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on {
+  background: color-mix(
+    in oklch,
+    var(--token-surface-class) calc(var(--trace-strength, 1) * 100%),
+    transparent
+  );
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on {
+  color: color-mix(
+    in oklch,
+    var(--token-edge-class) calc(var(--trace-strength, 1) * 100%),
+    var(--muted-foreground)
+  ) !important;
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"],
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="function"] .token-chip-text,
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="function"] {
-  color: var(--token-edge-function) !important;
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="function"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="function"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="function"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="function"] {
+  background: color-mix(
+    in oklch,
+    var(--token-surface-function) calc(var(--trace-strength, 1) * 100%),
+    transparent
+  );
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="function"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="function"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="function"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="function"] {
+  color: color-mix(
+    in oklch,
+    var(--token-edge-function) calc(var(--trace-strength, 1) * 100%),
+    var(--muted-foreground)
+  ) !important;
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"],
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="type"] .token-chip-text,
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="type"] {
-  color: var(--token-edge-type) !important;
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="type"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="type"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="type"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="type"] {
+  background: color-mix(
+    in oklch,
+    var(--token-surface-type) calc(var(--trace-strength, 1) * 100%),
+    transparent
+  );
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="type"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="type"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="type"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="type"] {
+  color: color-mix(
+    in oklch,
+    var(--token-edge-type) calc(var(--trace-strength, 1) * 100%),
+    var(--muted-foreground)
+  ) !important;
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"],
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit[data-token-kind="variable"] .token-chip-text,
-.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit[data-token-kind="variable"] {
-  color: var(--token-edge-variable) !important;
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="variable"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="variable"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="variable"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="variable"] {
+  background: color-mix(
+    in oklch,
+    var(--token-surface-variable) calc(var(--trace-strength, 1) * 100%),
+    transparent
+  );
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="variable"] .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="variable"],
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-chip.token-chip-lit.token-chip-on[data-token-kind="variable"] .token-chip-text,
+.graph-pane.graph-ctrl-preview .graph-trace-active .token-def-label.token-chip-lit.token-chip-on[data-token-kind="variable"] {
+  color: color-mix(
+    in oklch,
+    var(--token-edge-variable) calc(var(--trace-strength, 1) * 100%),
+    var(--muted-foreground)
+  ) !important;
   -webkit-text-fill-color: currentColor;
 }
 
-/* Provenance distance — semantic ink at reduced opacity (not grey wash) */
-.graph-trace-active .token-chip.token-chip-lit.trace-depth-faded .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit.trace-depth-faded {
-  -webkit-text-fill-color: currentColor;
+/* Pointer hover on lit chips — emphasis strength + inset ring */
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.graph-trace-pinned .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.graph-trace-pinned .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-class) 50%, transparent);
 }
 
-.graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit.trace-depth-faded .token-chip-text {
-  -webkit-text-fill-color: currentColor;
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.graph-trace-pinned .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.graph-trace-pinned .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="function"] {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-function) 50%, transparent);
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.graph-trace-pinned .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.graph-trace-pinned .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="type"] {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-type) 50%, transparent);
+}
+
+.graph-trace-active .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.graph-trace-active .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.graph-trace-pinned .token-chip.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.graph-trace-pinned .token-def-label.token-chip-lit.token-chip-on.token-chip-hover-preview[data-token-kind="variable"] {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-variable) 50%, transparent);
 }
 
 .graph-trace-active .member-row-header:hover:not(:has(

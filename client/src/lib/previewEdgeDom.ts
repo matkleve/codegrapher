@@ -15,14 +15,21 @@ import {
   previewWireMarkerStart,
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
-import { depthFromHop, TRACE_GLOW_BASELINE_RATIO, traceWireOpacity } from "@/lib/traceDepth";
 import {
-  edgeTouchesHoveredToken,
-  getWireHoveredTokenKey,
+  depthFromHop,
+  TRACE_GLOW_BASELINE_RATIO,
+  traceGlowStrokeWidth,
+  traceStrength,
+  type TraceSituation,
+} from "@/lib/traceDepth";
+import { TRACE_STRENGTH_VAR } from "@/lib/traceLitApply";
+import {
   isTraceSessionActive,
-  isWireHovered,
+  isWireEmphasized,
 } from "@/lib/wireHoverBoost";
-import { playWireReveal } from "@/lib/wireReveal";
+import { LOAD_STUB_READY_ATTR } from "@/lib/loadStubPosition";
+import { isWireRevealing, playWireReveal } from "@/lib/wireReveal";
+import { MOTION_TRACE_MS } from "@/lib/motionTokens";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -71,46 +78,101 @@ function setWireJunction(
   chevron.style.fill = stroke;
 }
 
+const WIRE_TRACE_STRENGTH = "preview-edge-trace-strength";
+
+function clearWireTraceStrength(path: SVGPathElement, glow: SVGPathElement): void {
+  path.style.removeProperty(TRACE_STRENGTH_VAR);
+  glow.style.removeProperty(TRACE_STRENGTH_VAR);
+  path.style.removeProperty("opacity");
+  glow.style.removeProperty("opacity");
+  path.classList.remove(WIRE_TRACE_STRENGTH);
+  glow.classList.remove(WIRE_TRACE_STRENGTH);
+}
+
+function setWireTraceStrength(
+  path: SVGPathElement,
+  glow: SVGPathElement,
+  pathStrength: number,
+  glowStrength: number,
+): void {
+  path.classList.add(WIRE_TRACE_STRENGTH);
+  glow.classList.add(WIRE_TRACE_STRENGTH);
+  path.style.removeProperty("opacity");
+  glow.style.removeProperty("opacity");
+  path.style.setProperty(TRACE_STRENGTH_VAR, String(pathStrength));
+  glow.style.setProperty(TRACE_STRENGTH_VAR, String(glowStrength));
+}
+
 function applyWireDepthOpacity(
   path: SVGPathElement,
   glow: SVGPathElement,
   spec: PreviewEdgeSpec,
   getNode?: (id: string) => Node | undefined,
 ): void {
+  const group = path.parentElement as SVGGElement | null;
+  if (group && isWireRevealing(group)) {
+    return;
+  }
+
+  const pendingReveal =
+    group != null &&
+    group.dataset.revealed !== "1" &&
+    group.dataset.revealStarted !== "1";
+
   if (!isTraceSessionActive()) {
-    path.style.removeProperty("opacity");
-    glow.style.removeProperty("opacity");
+    clearWireTraceStrength(path, glow);
     return;
   }
 
   const depth = depthFromHop(spec.hop);
-  const hoverKey = getWireHoveredTokenKey();
-  const pointerHover =
-    isWireHovered(spec, path) ||
-    (getNode != null && edgeTouchesHoveredToken(spec, getNode, hoverKey));
+  const emphasized = isWireEmphasized(spec, getNode, path);
+  const situation: TraceSituation = emphasized ? "hover" : "focus";
 
-  if (spec.opacity != null && spec.opacity < 1) {
+  if (spec.opacity != null && spec.opacity < 1 && !emphasized) {
+    path.classList.remove(WIRE_TRACE_STRENGTH);
+    glow.classList.remove(WIRE_TRACE_STRENGTH);
+    path.style.removeProperty(TRACE_STRENGTH_VAR);
+    glow.style.removeProperty(TRACE_STRENGTH_VAR);
     path.style.opacity = String(spec.opacity);
     glow.style.opacity = String(spec.opacity * TRACE_GLOW_BASELINE_RATIO);
     return;
   }
 
-  const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(depth, undefined, pointerHover);
-  path.style.opacity = String(pathOpacity);
-  const group = path.parentElement as SVGGElement | null;
-  const revealing =
-    group?.dataset.revealStarted === "1" && group?.dataset.revealed !== "1";
-  if (!revealing) {
-    glow.style.opacity = String(glowOpacity);
+  const pathStrength = traceStrength(situation, "wire", depth);
+  const glowStrength = traceStrength(situation, "wireGlow", depth);
+  if (pendingReveal) {
+    setWireTraceStrength(path, glow, 0, 0);
+    return;
   }
-  path.classList.toggle("preview-edge-line-hover", pointerHover);
-  glow.classList.toggle("preview-edge-line-hover", pointerHover);
+  setWireTraceStrength(path, glow, pathStrength, glowStrength);
+  glow.style.strokeWidth = String(traceGlowStrokeWidth(depth));
+  path.classList.toggle("preview-edge-line-hover", emphasized);
+  glow.classList.toggle("preview-edge-line-hover", emphasized);
 }
 
-function revealWireIfReady(wire: WireElements): void {
-  const warm = wire.path.classList.contains("preview-edge-warm");
+function loadStubAnchorReady(loadEl: HTMLElement): boolean {
+  return loadEl.getAttribute(LOAD_STUB_READY_ATTR) === "1";
+}
+
+function hideWireUntilReveal(wire: WireElements): void {
+  if (wire.group.dataset.revealed === "1" || wire.group.dataset.revealStarted === "1") {
+    return;
+  }
+  setWireTraceStrength(wire.path, wire.glow, 0, 0);
+}
+
+function revealWireIfReady(wire: WireElements, loadEl?: HTMLElement | null): void {
+  if (loadEl && !loadStubAnchorReady(loadEl)) {
+    hideWireUntilReveal(wire);
+    return;
+  }
   const stagger = Number.parseInt(wire.group.dataset.drawIndex ?? "0", 10);
-  playWireReveal(wire, warm, stagger);
+  const warmRetarget =
+    wire.path.classList.contains("preview-edge-warm") &&
+    wire.group.dataset.revealed === "1";
+  if (!warmRetarget) {
+    playWireReveal(wire, stagger);
+  }
 }
 
 export function createWireGroup(
@@ -207,6 +269,10 @@ export function updateWireGeometry(
   getNode: (id: string) => Node | undefined,
   allSpecs: PreviewEdgeSpec[] = [],
 ): boolean {
+  if (isWireRevealing(wire.group)) {
+    return wire.group.style.display !== "none";
+  }
+
   const spec = wire.spec;
   const stroke = previewWireStroke(spec);
   const layoutCtx = getWireLayoutContext(allSpecs, svgBox, getNode);
@@ -219,6 +285,10 @@ export function updateWireGeometry(
     const { to } = refinePreviewEdge(spec, getNode);
     const toPt = resolvePreviewAnchor(to, svgBox, "to");
     if (!loadEl?.isConnected || !toPt) {
+      wire.group.style.display = "none";
+      return false;
+    }
+    if (!loadStubAnchorReady(loadEl)) {
       wire.group.style.display = "none";
       return false;
     }
@@ -266,13 +336,15 @@ export function updateWireGeometry(
       wireHitMidSegment(fromPt.x, fromPt.y, toPt.x, toPt.y),
     );
     setWireJunction(wire, null, stroke);
-    revealWireIfReady(wire);
+    hideWireUntilReveal(wire);
+    revealWireIfReady(wire, loadEl);
     return true;
   }
 
   if (fanLayout) {
     wire.group.style.display = "";
     applyFanWireLayout(wire, fanLayout, stroke);
+    hideWireUntilReveal(wire);
     revealWireIfReady(wire);
     return true;
   }
@@ -344,6 +416,7 @@ export function updateWireGeometry(
     setWireJunction(wire, null, stroke);
   }
 
+  hideWireUntilReveal(wire);
   revealWireIfReady(wire);
 
   return true;
@@ -366,6 +439,21 @@ export function refreshOneWireDepthOpacity(
   applyWireDepthOpacity(wire.path, wire.glow, wire.spec, getNode);
 }
 
+function retireWireGroup(
+  wire: WireElements,
+  wires: Map<string, WireElements>,
+): void {
+  const id = wire.spec.id;
+  if (wire.group.dataset.retiring === "1") return;
+  wire.group.dataset.retiring = "1";
+  wire.group.style.transition = `opacity ${MOTION_TRACE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+  wire.group.style.opacity = "0";
+  window.setTimeout(() => {
+    wire.group.remove();
+    wires.delete(id);
+  }, MOTION_TRACE_MS);
+}
+
 export function syncWireDom(
   container: SVGGElement,
   specs: PreviewEdgeSpec[],
@@ -377,8 +465,7 @@ export function syncWireDom(
 
   for (const [id, wire] of wires) {
     if (nextIds.has(id)) continue;
-    wire.group.remove();
-    wires.delete(id);
+    retireWireGroup(wire, wires);
   }
 
   for (const [index, spec] of specs.entries()) {
@@ -400,8 +487,14 @@ export function syncWireDom(
       wire.group.dataset.drawIndex = String(index);
       setWireWarm(wire, warm);
       const { path: pathClasses, glow: glowClasses } = previewWireClasses(spec, warm);
+      const pathDrawing = wire.path.classList.contains("preview-edge-drawing");
+      const glowDrawing = wire.glow.classList.contains("preview-edge-glow-drawing");
+      const pathMarching = wire.path.classList.contains("preview-edge-marching");
       wire.path.className.baseVal = pathClasses.join(" ");
       wire.glow.className.baseVal = glowClasses.join(" ");
+      if (pathDrawing) wire.path.classList.add("preview-edge-drawing");
+      if (glowDrawing) wire.glow.classList.add("preview-edge-glow-drawing");
+      if (pathMarching) wire.path.classList.add("preview-edge-marching");
       if (hasLoad) {
         wire.path.classList.add("preview-edge-load");
       } else {

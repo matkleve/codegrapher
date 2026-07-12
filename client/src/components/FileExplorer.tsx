@@ -123,7 +123,7 @@ export default function FileExplorer({
           className={cn(
             "relative !h-[var(--control-height-double)] !max-h-[var(--control-height-double)] !min-h-[var(--control-height-double)] w-full shrink-0 overflow-hidden",
             folderBusy &&
-              "load-folder-busy border-transparent bg-muted disabled:cursor-wait disabled:opacity-100",
+              "load-folder-busy disabled:cursor-wait disabled:opacity-100",
           )}
           aria-busy={opening || indexing}
           aria-label={folderBusy ? busyLabel : "Load folder"}
@@ -135,7 +135,7 @@ export default function FileExplorer({
         >
           {showProgress && (
             <span
-              className="pointer-events-none absolute inset-y-0 left-0 w-full origin-left bg-brand-surface transition-transform duration-500 ease-[var(--ease)]"
+              className="load-folder-busy__progress pointer-events-none absolute inset-y-0 left-0 w-full origin-left transition-transform duration-500 ease-[var(--ease)]"
               style={{ transform: `scaleX(${progressFill})` }}
               aria-hidden
             />

@@ -17,12 +17,16 @@
   );
 }
 
-/* Load folder busy — brand ink on button; children inherit via text-current */
+/* Load folder busy — same surface stack as .hoverable:hover; children inherit via text-current */
 .load-folder-busy,
 .load-folder-busy.hoverable:hover {
-  background-color: var(--muted);
-  border-color: transparent;
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
   color: var(--brand);
+}
+
+.load-folder-busy__progress {
+  background-color: var(--brand-border);
 }
 .control-row-compact {
   height: var(--control-height-compact);

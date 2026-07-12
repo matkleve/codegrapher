@@ -1,8 +1,10 @@
 /** Hover-intent timing — mirrors connectors-proto.html */
-export const FIRE_COLD_MS = 80;
-export const FIRE_WARM_MS = 50;
-export const LEAVE_GRACE_MS = 80;
-export const INFO_DELAY_MS = 400;
+export const FIRE_COLD_MS = 40;
+export const FIRE_WARM_MS = 40;
+export const LEAVE_GRACE_MS = 50;
+export const INFO_DELAY_MS = 300;
+/** Re-exported for docs: hover → first pixel ≈ FIRE_COLD_MS + layout; full draw adds WIRE_REVEAL_MS. */
+export { WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/wireReveal";
 /** Wire hit-zone dwell before jump tooltip arms (keeps token clicks reachable). */
 export const JUMP_TOOLTIP_DWELL_MS = 450;
 export const JUMP_TOOLTIP_DWELL_WARM_MS = 280;

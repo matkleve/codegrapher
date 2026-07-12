@@ -24,9 +24,10 @@
   line-height: 1;
   white-space: nowrap;
   transition:
-    background-color var(--motion-chip-surface) var(--ease),
-    box-shadow var(--motion-chip-surface) var(--ease),
-    color var(--motion-chip-color) var(--ease);
+    background-color var(--motion-trace) var(--ease),
+    box-shadow var(--motion-trace) var(--ease),
+    color var(--motion-trace) var(--ease),
+    opacity var(--motion-trace) var(--ease);
 }
 
 .token-def-label {
@@ -134,43 +135,43 @@
   box-shadow: none;
 }
 
-/* Local-def siblings (sig chip + in-body def) — same chip-on + socket, desaturated */
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] .token-chip-text,
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] {
+/* Local-def siblings (sig chip + in-body def) — resting only; trace uses --trace-strength */
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="class"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="class"] {
   color: color-mix(in oklch, var(--token-edge-class) 36%, var(--muted-foreground));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"],
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="class"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="class"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="class"] {
   background: color-mix(in oklch, var(--token-surface-class) 50%, var(--muted));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] .token-chip-text,
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="function"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="function"] {
   color: color-mix(in oklch, var(--token-edge-function) 36%, var(--muted-foreground));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"],
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="function"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="function"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="function"] {
   background: color-mix(in oklch, var(--token-surface-function) 50%, var(--muted));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] .token-chip-text,
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="type"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="type"] {
   color: color-mix(in oklch, var(--token-edge-type) 36%, var(--muted-foreground));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"],
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="type"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="type"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="type"] {
   background: color-mix(in oklch, var(--token-surface-type) 50%, var(--muted));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] .token-chip-text,
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="variable"] .token-chip-text,
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="variable"] {
   color: color-mix(in oklch, var(--token-edge-variable) 36%, var(--muted-foreground));
 }
 
-.token-chip.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"],
-.token-def-label.token-chip-on.token-chip-endpoint-sibling[data-token-kind="variable"] {
+.token-chip.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="variable"],
+.token-def-label.token-chip-on.token-chip-endpoint-sibling:not(.token-chip-lit)[data-token-kind="variable"] {
   background: color-mix(in oklch, var(--token-surface-variable) 50%, var(--muted));
 }

@@ -1,20 +1,58 @@
 import { RELATIVE_MAX_DEPTH } from "@/lib/lexicalGraph";
 
-/** Floor opacity at `maxDepth` — keep in sync with `--trace-depth-min-opacity` in theme CSS. */
-export const TRACE_DEPTH_MIN_OPACITY = 0.2;
+/** Canonical tuning — focus (committed trace) vs hover (pointer emphasis). */
+export const TRACE_TUNING = {
+  focus: {
+    floor: 0.2,
+    curve: 0.85,
+    wireAtFocus: 0.8,
+    chipAtFocus: 0.55,
+    chipProvenanceRatio: 0.88,
+  },
+  hover: {
+    floor: 0.58,
+    curve: 0.5,
+    wireAtFocus: 1,
+    wireGlowAtFocus: 0.12,
+    chipAtFocus: 1,
+  },
+  glow: {
+    baselineRatio: 0.08,
+    pathRatio: 0.08,
+    strokeFocus: 5,
+    strokeProvenance: 3,
+  },
+} as const;
 
-/** Power curve for distance decay (lower = flatter). */
-export const TRACE_DEPTH_CURVE = 0.85;
+export type TraceSituation = "focus" | "hover";
+export type TraceSurface = "wire" | "wireGlow" | "chip";
 
-/** Glow opacity ≈ path opacity × ratio at provenance distances. */
-export const TRACE_GLOW_PATH_RATIO = 0.172;
-export const TRACE_GLOW_BASELINE_RATIO = 0.13;
-
-/** Pointer emphasis within an active trace — multiplies curve opacity, capped at 1. */
-export const TRACE_POINTER_HOVER_BOOST = 1.35;
-
-/** Extra glow scale when the pointer emphasizes a wire at focus distance. */
-export const TRACE_POINTER_GLOW_BOOST = 2.2;
+/** @deprecated Use `TRACE_TUNING.focus.floor` — keep in sync with `--trace-depth-min-opacity`. */
+export const TRACE_DEPTH_MIN_OPACITY = TRACE_TUNING.focus.floor;
+/** @deprecated Use `TRACE_TUNING.focus.curve`. */
+export const TRACE_DEPTH_CURVE = TRACE_TUNING.focus.curve;
+/** @deprecated Use `TRACE_TUNING.hover.floor`. */
+export const TRACE_EMPHASIS_MIN_OPACITY = TRACE_TUNING.hover.floor;
+/** @deprecated Use `TRACE_TUNING.hover.curve`. */
+export const TRACE_EMPHASIS_CURVE = TRACE_TUNING.hover.curve;
+/** @deprecated Use `TRACE_TUNING.glow.pathRatio`. */
+export const TRACE_GLOW_PATH_RATIO = TRACE_TUNING.glow.pathRatio;
+/** @deprecated Use `TRACE_TUNING.glow.baselineRatio`. */
+export const TRACE_GLOW_BASELINE_RATIO = TRACE_TUNING.glow.baselineRatio;
+/** @deprecated Use `TRACE_TUNING.focus.wireAtFocus`. */
+export const TRACE_WIRE_SESSION_PATH_AT_FOCUS = TRACE_TUNING.focus.wireAtFocus;
+/** @deprecated Use `TRACE_TUNING.focus.chipAtFocus`. */
+export const TRACE_CHIP_SESSION_OPACITY = TRACE_TUNING.focus.chipAtFocus;
+/** @deprecated Use `TRACE_TUNING.focus.chipProvenanceRatio`. */
+export const TRACE_CHIP_PROVENANCE_RATIO = TRACE_TUNING.focus.chipProvenanceRatio;
+/** @deprecated Use `TRACE_TUNING.hover.wireAtFocus`. */
+export const TRACE_WIRE_EMPHASIS_PATH_AT_FOCUS = TRACE_TUNING.hover.wireAtFocus;
+/** @deprecated Use `TRACE_TUNING.hover.wireGlowAtFocus`. */
+export const TRACE_WIRE_EMPHASIS_GLOW_AT_FOCUS = TRACE_TUNING.hover.wireGlowAtFocus;
+/** @deprecated Use `TRACE_TUNING.glow.strokeFocus`. */
+export const TRACE_GLOW_STROKE_FOCUS = TRACE_TUNING.glow.strokeFocus;
+/** @deprecated Use `TRACE_TUNING.glow.strokeProvenance`. */
+export const TRACE_GLOW_STROKE_PROVENANCE = TRACE_TUNING.glow.strokeProvenance;
 
 /** Graph distance from the focus token (1 = focus). */
 export function clampTraceDepth(depth: number, maxDepth = RELATIVE_MAX_DEPTH): number {
@@ -33,64 +71,121 @@ export function depthFromHop(hop: number | undefined): number {
   return hop;
 }
 
-/**
- * Single brightness curve for wires, chips, sockets, and lit code lines.
- * Distance 1 → 1.0; scales to `TRACE_DEPTH_MIN_OPACITY` at `maxDepth`.
- */
+function curveOpacity(
+  depth: number,
+  maxDepth: number,
+  floor: number,
+  curve: number,
+  peak = 1,
+): number {
+  if (depth <= 1) return peak;
+  const clamped = clampTraceDepth(depth, maxDepth);
+  if (maxDepth <= 1) return floor;
+  const t = (maxDepth - clamped) / (maxDepth - 1);
+  return floor + (peak - floor) * Math.pow(t, curve);
+}
+
+function focusPathCurve(depth: number, maxDepth: number): number {
+  return curveOpacity(depth, maxDepth, TRACE_TUNING.focus.floor, TRACE_TUNING.focus.curve);
+}
+
+function hoverPathCurve(depth: number, maxDepth: number): number {
+  return curveOpacity(
+    depth,
+    maxDepth,
+    TRACE_TUNING.hover.floor,
+    TRACE_TUNING.hover.curve,
+  );
+}
+
+/** Unified strength API — one curve family per situation, surface-specific anchors at d=1. */
+export function traceStrength(
+  situation: TraceSituation,
+  surface: TraceSurface,
+  depth: number,
+  maxDepth: number = RELATIVE_MAX_DEPTH,
+): number {
+  const clamped = clampTraceDepth(depth, maxDepth);
+
+  if (surface === "chip") {
+    if (situation === "hover") {
+      if (clamped <= 1) return TRACE_TUNING.hover.chipAtFocus;
+      return hoverPathCurve(clamped, maxDepth);
+    }
+    if (clamped <= 1) return TRACE_TUNING.focus.chipAtFocus;
+    return focusPathCurve(clamped, maxDepth) * TRACE_TUNING.focus.chipProvenanceRatio;
+  }
+
+  if (surface === "wire") {
+    if (situation === "hover") {
+      if (clamped <= 1) return TRACE_TUNING.hover.wireAtFocus;
+      return hoverPathCurve(clamped, maxDepth);
+    }
+    if (clamped <= 1) return TRACE_TUNING.focus.wireAtFocus;
+    return focusPathCurve(clamped, maxDepth);
+  }
+
+  if (situation === "hover") {
+    if (clamped <= 1) return TRACE_TUNING.hover.wireGlowAtFocus;
+    return hoverPathCurve(clamped, maxDepth) * TRACE_TUNING.glow.pathRatio;
+  }
+  const pathBase =
+    clamped <= 1 ? TRACE_TUNING.focus.wireAtFocus : focusPathCurve(clamped, maxDepth);
+  const ratio =
+    clamped <= 1 ? TRACE_TUNING.glow.baselineRatio : TRACE_TUNING.glow.pathRatio;
+  return pathBase * ratio;
+}
+
+/** Focus/rest base curve — peak 1 at d=1 (wire provenance decay uses `traceStrength`). */
 export function tracePathOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
 ): number {
-  if (depth <= 1) return 1;
-  const clamped = clampTraceDepth(depth, maxDepth);
-  if (maxDepth <= 1) return TRACE_DEPTH_MIN_OPACITY;
-  const t = (maxDepth - clamped) / (maxDepth - 1);
-  return (
-    TRACE_DEPTH_MIN_OPACITY +
-    (1 - TRACE_DEPTH_MIN_OPACITY) * Math.pow(t, TRACE_DEPTH_CURVE)
-  );
+  return focusPathCurve(depth, maxDepth);
 }
 
-export function applyPointerHoverBoost(
-  opacity: number,
-  pointerHover: boolean,
-): number {
-  if (!pointerHover) return opacity;
-  return Math.min(1, opacity * TRACE_POINTER_HOVER_BOOST);
-}
-
-/** Lit-surface strength at graph distance, optionally boosted by pointer emphasis. */
-export function traceStrengthAtDistance(
+/** Pointer hover curve — flatter, higher floor at max depth. */
+export function traceEmphasisPathOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  pointerHover = false,
 ): number {
-  return applyPointerHoverBoost(tracePathOpacity(depth, maxDepth), pointerHover);
+  return hoverPathCurve(depth, maxDepth);
 }
 
-/** Wire glow halo opacity at this graph distance. */
+/** Color strength for chip fill + ink (0–1) — never applied as element opacity. */
+export function traceChipColorStrength(
+  depth: number,
+  pointerHover = false,
+  maxDepth: number = RELATIVE_MAX_DEPTH,
+): number {
+  return traceStrength(pointerHover ? "hover" : "focus", "chip", depth, maxDepth);
+}
+
+/** @deprecated Use traceChipColorStrength — strength drives color-mix, not opacity. */
+export const traceChipOpacity = traceChipColorStrength;
+
+/** Wire glow halo — always weaker than path at the same distance. */
 export function traceGlowOpacity(
   depth: number,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  pointerHover = false,
+  emphasized = false,
 ): number {
-  const path = tracePathOpacity(depth, maxDepth);
-  const ratio = depth <= 1 ? TRACE_GLOW_BASELINE_RATIO : TRACE_GLOW_PATH_RATIO;
-  let glow = path * ratio;
-  if (pointerHover) {
-    glow = Math.min(0.42, glow * TRACE_POINTER_GLOW_BOOST);
-  }
-  return glow;
+  return traceStrength(emphasized ? "hover" : "focus", "wireGlow", depth, maxDepth);
 }
 
-/** Preview wire path + glow from graph distance, with optional pointer emphasis. */
+export function traceGlowStrokeWidth(depth: number): number {
+  return depth <= 1 ? TRACE_TUNING.glow.strokeFocus : TRACE_TUNING.glow.strokeProvenance;
+}
+
+/** Preview wire path + glow — session vs pointer emphasis. */
 export function traceWireOpacity(
   depth: number,
+  emphasized = false,
   maxDepth: number = RELATIVE_MAX_DEPTH,
-  pointerHover = false,
 ): { path: number; glow: number } {
+  const situation = emphasized ? "hover" : "focus";
   return {
-    path: traceStrengthAtDistance(depth, maxDepth, pointerHover),
-    glow: traceGlowOpacity(depth, maxDepth, pointerHover),
+    path: traceStrength(situation, "wire", depth, maxDepth),
+    glow: traceStrength(situation, "wireGlow", depth, maxDepth),
   };
 }

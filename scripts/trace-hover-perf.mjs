@@ -12,136 +12,107 @@ const DEMO = path.resolve(__dirname, "../fixtures/demo");
 const URL = "http://localhost:5173/";
 
 async function main() {
-  let browser;
-  try {
-    browser = await chromium.launch({ headless: true });
-  } catch (err) {
-    console.error("Playwright chromium not available:", err.message);
-    console.error("Install: npx playwright install chromium");
-    process.exit(1);
-  }
-
+  const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto(URL, { waitUntil: "networkidle" });
 
-  // Open fixtures folder
   await page.fill("input", DEMO);
-  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await page.getByRole("button", { name: "Load folder" }).click();
+  await page.waitForSelector("text=OrderService.ts", { timeout: 60_000 });
+  await page.getByText("OrderService.ts", { exact: true }).first().click();
+  await page.waitForSelector(".member-sig-token-chip", { timeout: 30_000 });
   await page.waitForTimeout(500);
 
-  // Click OrderService to load graph
-  await page.locator(".file-tree-leaf", { hasText: "OrderService.ts" }).click();
-  await page.waitForTimeout(800);
+  const chip = page.locator(".member-sig-token-chip").first();
+  const box = await chip.boundingBox();
+  if (!box) throw new Error("no sig param chip box");
 
-  const metrics = await page.evaluate(async () => {
-    const pane = document.querySelector(".graph-pane");
-    if (!pane) return { error: "no graph pane" };
+  const samples = [];
 
-    const chip = pane.querySelector(
-      ".token-chip.cursor-pointer, .token-def-label.cursor-pointer",
-    );
-    if (!chip) return { error: "no token chip on canvas" };
+  for (let run = 0; run < 5; run++) {
+    await page.mouse.move(10, 10);
+    await page.waitForTimeout(200);
 
-    const rect = chip.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
+    const t0 = Date.now();
 
-    const samples = [];
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
-    for (let run = 0; run < 5; run++) {
-      // leave
-      pane.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 200));
+    const pendingAt = await page
+      .waitForFunction(
+        () => {
+          const el = document.querySelector(".member-sig-token-chip.token-chip-pending-trace");
+          return el != null;
+        },
+        { timeout: 200 },
+      )
+      .then(() => Date.now())
+      .catch(() => null);
 
-      const t0 = performance.now();
-      chip.dispatchEvent(
-        new MouseEvent("mouseenter", { bubbles: true, clientX: x, clientY: y }),
-      );
+    const traceAt = await page
+      .waitForSelector(".graph-pane.graph-trace-active", { timeout: 500 })
+      .then(() => Date.now())
+      .catch(() => null);
 
-      // wait for trace-active (committed trace)
-      const deadline = t0 + 500;
-      while (performance.now() < deadline) {
-        if (document.querySelector(".graph-pane.graph-trace-active")) break;
-        await new Promise((r) => requestAnimationFrame(r));
+    const wiresAt = await page
+      .waitForSelector(".preview-edge-path", { timeout: 500 })
+      .then(() => Date.now())
+      .catch(() => null);
+
+    const wireCount = await page.locator(".preview-edge-path").count();
+    const token = await chip.innerText();
+
+    await page.mouse.move(10, 10);
+    await page.waitForTimeout(200);
+
+    samples.push({
+      pendingMs: pendingAt != null ? pendingAt - t0 : null,
+      traceMs: traceAt != null ? traceAt - t0 : null,
+      wiresMs: wiresAt != null ? wiresAt - t0 : null,
+      wireCount,
+      token: token.trim(),
+    });
+  }
+
+  const med = (key) => {
+    const arr = samples.map((s) => s[key]).filter((v) => v != null);
+    if (!arr.length) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)];
+  };
+
+  const rafPerSec = await page.evaluate(async () => {
+    let frames = 0;
+    const start = performance.now();
+    await new Promise((resolve) => {
+      function frame() {
+        frames++;
+        if (performance.now() - start < 1000) requestAnimationFrame(frame);
+        else resolve(undefined);
       }
-      const traceAt = performance.now();
-
-      // wait for wires
-      while (performance.now() < deadline) {
-        const wires = document.querySelectorAll(".preview-edge-path");
-        if (wires.length > 0) break;
-        await new Promise((r) => requestAnimationFrame(r));
-      }
-      const wiresAt = performance.now();
-
-      chip.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-
-      samples.push({
-        traceMs: traceAt - t0,
-        wiresMs: wiresAt - t0,
-        wireCount: document.querySelectorAll(".preview-edge-path").length,
-      });
-      await new Promise((r) => setTimeout(r, 250));
-    }
-
-    const med = (arr) => {
-      const s = [...arr].sort((a, b) => a - b);
-      return s[Math.floor(s.length / 2)];
-    };
-
-    return {
-      chip: chip.textContent?.trim().slice(0, 30),
-      medianTraceMs: med(samples.map((s) => s.traceMs)),
-      medianWiresMs: med(samples.map((s) => s.wiresMs)),
-      wireCount: samples[0]?.wireCount ?? 0,
-      samples,
-      longTasks: performance.getEntriesByType("longtask").map((e) => ({
-        duration: e.duration,
-        start: e.startTime,
-      })),
-      rafBudget: (() => {
-        let frames = 0;
-        const start = performance.now();
-        return new Promise((resolve) => {
-          function frame() {
-            frames++;
-            if (performance.now() - start < 1000) requestAnimationFrame(frame);
-            else resolve(frames);
-          }
-          requestAnimationFrame(frame);
-        });
-      })(),
-    };
+      requestAnimationFrame(frame);
+    });
+    return frames;
   });
 
-  if (metrics.error) {
-    console.error("Browser perf failed:", metrics.error);
-    await browser.close();
-    process.exit(1);
-  }
-
-  metrics.rafBudget = await metrics.rafBudget;
-
-  console.log("\n=== Browser trace-hover perf ===");
-  console.log(`Chip: ${metrics.chip}`);
-  console.log(`Wires on trace: ${metrics.wireCount}`);
-  console.log(`Median enter → graph-trace-active: ${metrics.medianTraceMs.toFixed(1)}ms`);
-  console.log(`Median enter → wires in DOM: ${metrics.medianWiresMs.toFixed(1)}ms`);
-  console.log(`Idle RAF rate (~1s): ${metrics.rafBudget} frames`);
-  if (metrics.longTasks.length) {
-    console.log(`Long tasks (>50ms): ${metrics.longTasks.length}`);
-    for (const t of metrics.longTasks.slice(0, 5)) {
-      console.log(`  ${t.duration.toFixed(1)}ms at ${t.startTime.toFixed(0)}ms`);
-    }
-  } else {
-    console.log("Long tasks during session: none recorded");
-  }
-  console.log("\nPer-run samples (enter ms):");
-  for (const s of metrics.samples) {
+  console.log("\n=== Browser trace-hover perf (real pointer) ===");
+  console.log(`Token: ${samples[0]?.token}`);
+  console.log(`Median pending chip: ${med("pendingMs")?.toFixed(1) ?? "n/a"}ms`);
+  console.log(`Median → graph-trace-active: ${med("traceMs")?.toFixed(1) ?? "TIMEOUT"}ms`);
+  console.log(`Median → wires visible: ${med("wiresMs")?.toFixed(1) ?? "TIMEOUT"}ms`);
+  console.log(`Wires on last trace: ${samples.at(-1)?.wireCount}`);
+  console.log(`Idle RAF (~1s): ${rafPerSec} frames`);
+  console.log("\nPer-run (ms from mouseenter):");
+  for (const s of samples) {
     console.log(
-      `  trace=${s.traceMs.toFixed(1)}ms wires=${s.wiresMs.toFixed(1)}ms (${s.wireCount} wires)`,
+      `  pending=${s.pendingMs ?? "—"} trace=${s.traceMs ?? "—"} wires=${s.wiresMs ?? "—"} (${s.wireCount} wires)`,
     );
   }
+
+  const jsBench = `see: npm test -- src/lib/traceHoverPerf.test.ts`;
+  console.log(`\nJS-only bench: ${jsBench}`);
+  console.log(
+    "Note: FIRE_COLD_MS=80 + motion-dim=80ms → ~160ms minimum by design even if CPU is fast.",
+  );
 
   await browser.close();
 }

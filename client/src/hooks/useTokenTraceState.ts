@@ -125,6 +125,19 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     [],
   );
 
+  const beginHoverVisualLeave = useCallback(() => {
+    if (pinnedTracesRef.current.length > 0) {
+      setHoveredTokenKey(null);
+      setHoverPreviewEdges([]);
+      setConnectionMenu(null);
+      return;
+    }
+    setHoveredTokenKey(null);
+    setHoverPreviewEdges([]);
+    setAnchorTrace(null);
+    clearJumpTooltip();
+  }, []);
+
   const {
     hoveredTokenKeyRef,
     resetHoverIntent,
@@ -140,6 +153,7 @@ export function useTokenTraceState(isCtrlActive: boolean) {
     setHoveredTokenKey,
     setIsWarm,
     onCtrlRelease: clearConnectionMenu,
+    onVisualLeave: beginHoverVisualLeave,
   });
 
   const endHoverPreview = useCallback(() => {

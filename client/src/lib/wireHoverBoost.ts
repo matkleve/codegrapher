@@ -11,6 +11,9 @@ let hoveredWireEdgeId: string | null = null;
 /** Committed trace (pin / dwell) — strength must not drop when the pointer leaves a card. */
 let traceSessionActive = false;
 
+/** Edges from the current hover preview (`beginTrace` / parallel hover) — full hover curve. */
+let hoverPreviewEdgeIds: ReadonlySet<string> = new Set();
+
 const strengthListeners = new Set<() => void>();
 
 function notifyStrengthListeners(): void {
@@ -24,6 +27,21 @@ export function subscribeTraceStrength(listener: () => void): () => void {
 
 export function setWireHoveredTokenKey(key: string | null): void {
   hoveredTokenKey = key;
+}
+
+export function setHoverPreviewEdgeIds(ids: ReadonlySet<string>): void {
+  if (
+    ids.size === hoverPreviewEdgeIds.size &&
+    [...ids].every((id) => hoverPreviewEdgeIds.has(id))
+  ) {
+    return;
+  }
+  hoverPreviewEdgeIds = ids;
+  notifyStrengthListeners();
+}
+
+export function isHoverPreviewEdge(id: string): boolean {
+  return hoverPreviewEdgeIds.has(id);
 }
 
 export function getWireHoveredTokenKey(): string | null {
@@ -113,6 +131,18 @@ export function isWireHovered(
 ): boolean {
   if (hoveredWireEdgeId != null && spec.id === hoveredWireEdgeId) return true;
   return wirePath?.classList.contains("preview-edge-line-hover") ?? false;
+}
+
+/** Pointer emphasis on this wire — direct touch, wire hit-zone, or hover-preview overlay. */
+export function isWireEmphasized(
+  spec: PreviewEdgeSpec,
+  getNode?: (id: string) => Node | undefined,
+  wirePath?: SVGPathElement | null,
+): boolean {
+  if (isWireHovered(spec, wirePath)) return true;
+  if (!hoveredTokenKey) return false;
+  if (isHoverPreviewEdge(spec.id)) return true;
+  return getNode != null && edgeTouchesHoveredToken(spec, getNode, hoveredTokenKey);
 }
 
 /** Pointer is emphasizing a specific token or wire within an active trace. */

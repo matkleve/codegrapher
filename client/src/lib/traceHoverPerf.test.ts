@@ -221,7 +221,7 @@ describe("trace hover perf", () => {
     );
     // eslint-disable-next-line no-console -- perf report
     console.log(
-      `[perf] intentional dwell (FIRE_COLD_MS) + motion-dim crossfade: 80ms + 80ms = 160ms minimum perceived`,
+      `[perf] hover → trace: ${40}ms dwell; full wire draw: +240ms draw`,
     );
 
     expect(edgeBuildMs).toBeLessThan(50);
