@@ -6,6 +6,7 @@ import {
   previewWireClasses,
   previewWireStroke,
   structuralWireClasses,
+  wireStyleForKind,
 } from "@/lib/connectionWireStyle";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
@@ -39,6 +40,7 @@ describe("connectionWireStyle", () => {
       [
         previewEdge({ id: "u", connectionKind: "usage" }),
         previewEdge({ id: "b", connectionKind: "binding" }),
+        previewEdge({ id: "s", connectionKind: "typesetting", hop: 2 }),
         previewEdge({ id: "t", hop: 2, connectionKind: "transitive" }),
       ],
       [structuralEdge({ id: "e", edgeType: "extends" })],
@@ -46,7 +48,7 @@ describe("connectionWireStyle", () => {
     );
 
     expect([...active].sort()).toEqual(
-      ["binding", "inheritance", "usage"].sort(),
+      ["binding", "inheritance", "typesetting", "usage"].sort(),
     );
   });
 
@@ -98,6 +100,33 @@ describe("connectionWireStyle", () => {
     expect(
       previewWireStroke(previewEdge({ id: "b", connectionKind: "binding" })),
     ).toBe("var(--edge-binding)");
+    expect(
+      previewWireStroke(
+        previewEdge({ id: "s", connectionKind: "typesetting", hop: 2 }),
+      ),
+    ).toBe("var(--edge-typesetting)");
+  });
+
+  it("previewWireClasses matches warm typesetting edges", () => {
+    const edge = previewEdge({ id: "x", connectionKind: "typesetting", hop: 2 });
+    expect(previewWireClasses(edge, true)).toEqual({
+      path: [
+        "preview-edge-path",
+        "preview-edge-typesetting",
+        "preview-edge-warm",
+        "preview-wire--hop2",
+      ],
+      glow: [
+        "preview-edge-glow",
+        "preview-edge-typesetting",
+        "preview-edge-warm",
+        "preview-wire--hop2",
+      ],
+    });
+  });
+
+  it("typesetting legend swatch uses rounded orthogonal path", () => {
+    expect(wireStyleForKind("typesetting").legendPathD).toMatch(/Q /);
   });
 
   it("previewWireClasses matches warm binding edges", () => {

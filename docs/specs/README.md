@@ -15,6 +15,7 @@ Last updated: 2026-07-11
 | [docs/design/tokens.md](../design/tokens.md) | Color/motion tokens |
 | [docs/design/brand-book.md](../design/brand-book.md) | Brand identity, accent matrix, consistency audit |
 | [docs/design/state-visuals.md](../design/state-visuals.md) | Hover/focus contract |
+| [docs/design/accessibility.md](../design/accessibility.md) | WCAG 1.4.1 wire differentiation, connection kind matrix |
 | [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md) | Who owns what |
 | [SPEC-DRIFT.md](SPEC-DRIFT.md) | Open spec ↔ code mismatches (human decision) |
 
@@ -55,7 +56,7 @@ Split strategy: see [element-spec-format.md](../agent-workflows/element-spec-for
 - **Keyword interactions:** [system/token-interactions.md](system/token-interactions.md) · use cases: [design/token-interaction-use-cases.md](../design/token-interaction-use-cases.md)
 - **Graph chrome:** [component/graph-chrome.md](component/graph-chrome.md) — legend, connection menu, path highlight
 - **Symbol index:** [service/parser-index.md](service/parser-index.md)
-- **Connection taxonomy:** [system/connection-taxonomy.md](system/connection-taxonomy.md) — usage, binding, control flow, inheritance, composition, transitive reach, … · [per-kind AC](system/connection-taxonomy.acceptance-criteria.md)
+- **Connection taxonomy:** [system/connection-taxonomy.md](system/connection-taxonomy.md) — usage, binding, **typesetting**, control flow, inheritance, composition, transitive reach, … · [per-kind AC](system/connection-taxonomy.acceptance-criteria.md) · [accessibility](../../design/accessibility.md)
 - **Execution simulator (Option A static walk — MVP implemented):** [system/execution-simulator.md](system/execution-simulator.md) · [interactions index](system/execution-simulator.interactions.supplement.md) · engine: `client/src/lib/staticWalk/`, orchestration: `SimulationContext`
 
 ---

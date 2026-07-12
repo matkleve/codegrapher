@@ -84,6 +84,12 @@ function AppContent() {
     void loadFileGraph(path, true);
   }, [loadFileGraph]);
 
+  const handleFolderOpened = useCallback((_folderPath: string) => {
+    setGraphData(null);
+    setGraphResetKey((k) => k + 1);
+    setError(null);
+  }, []);
+
   const graphFilePaths = useMemo(() => collectGraphFilePaths(graphData), [graphData]);
 
   return (
@@ -92,7 +98,7 @@ function AppContent() {
         <ResizableSidebar>
           <FileExplorer
             onFileClick={handleFileClick}
-            treeDisabled={loading}
+            onFolderOpened={handleFolderOpened}
             graphFilePaths={graphFilePaths}
           />
         </ResizableSidebar>

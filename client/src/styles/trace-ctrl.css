@@ -1,0 +1,152 @@
+/**
+ * Ctrl preview + trace dim/lit — proto .proto.ctrl / .proto.trace
+ * Mapping: .tok.lit → .token-chip-lit · .member.lit → .trace-member-lit
+ */
+
+@keyframes graph-edge-breathe {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes proto-glint {
+  0% {
+    background-position: 128% 0;
+  }
+  55% {
+    background-position: -28% 0;
+  }
+  100% {
+    background-position: -28% 0;
+  }
+}
+
+/* ── Motion Tier B — reveal is instant ──────────────────────────────────
+   The moment a reveal mode (trace / Ctrl / sim) is on, every ink & fill
+   change inside a class/function card snaps with no crossfade, so nothing
+   desyncs while you scan tokens. Affordance motion (Tier A, ~120ms) lives
+   only in the calm/idle state. Ambient keyframes (shimmer, breathe, wire
+   dash) use `animation`, not `transition`, so they are unaffected.
+   This one rule owns reveal timing — do not add per-element reveal
+   transitions. See docs/design/state-visuals.md → Motion philosophy. */
+.graph-pane.graph-trace-active .react-flow__node *,
+.graph-pane.graph-trace-pinned .react-flow__node *,
+.graph-pane.graph-ctrl-preview .react-flow__node *,
+.graph-pane.graph-sim-active .react-flow__node * {
+  transition-duration: 0s !important;
+}
+
+/* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
+.graph-pane.graph-ctrl-preview .member-body-wrap,
+.graph-pane.graph-ctrl-preview .member-section-label,
+.graph-pane.graph-ctrl-preview .member-section-bulk,
+.graph-pane.graph-ctrl-preview .node-card-caret,
+.graph-pane.graph-ctrl-preview .member-row-caret,
+.graph-pane.graph-ctrl-preview .file-type-chip,
+.graph-pane.graph-ctrl-preview .member-row-label:not(.cursor-pointer),
+.graph-pane.graph-ctrl-preview .node-card-title:not(.cursor-pointer),
+.graph-pane.graph-ctrl-preview .member-sig-kind-icon,
+.graph-pane.graph-ctrl-preview .member-sig-sep,
+.graph-pane.graph-ctrl-preview .member-sig-colon,
+.graph-pane.graph-ctrl-preview .member-sig-param-name,
+.graph-pane.graph-ctrl-preview .member-sig-type--primitive {
+  color: var(--faint-ctrl) !important;
+}
+
+.graph-pane.graph-ctrl-preview .code-line {
+  color: var(--faint-ctrl) !important;
+}
+
+.graph-pane.graph-ctrl-preview .code-line :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
+}
+
+.graph-pane.graph-ctrl-preview .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
+  background: var(--trace-dim-surface) !important;
+}
+
+.graph-pane.graph-ctrl-preview .react-flow__node.class-node-root {
+  border-color: color-mix(in oklch, var(--foreground) 24%, var(--border));
+}
+
+.graph-pane.graph-ctrl-preview .react-flow__node.class-node-root::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-node);
+  pointer-events: none;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand) 34%, transparent);
+  opacity: 0.5;
+  animation: graph-edge-breathe 4.6s ease-in-out infinite alternate;
+}
+
+.graph-pane.graph-ctrl-preview .token-chip.cursor-pointer,
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer,
+.graph-pane.graph-ctrl-preview .control-flow-chip.cursor-pointer {
+  background: transparent;
+  box-shadow: none;
+}
+
+.graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after,
+.graph-pane.graph-ctrl-preview .control-flow-chip.cursor-pointer .token-shimmer-target::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 43%,
+    color-mix(in oklch, currentColor 48%, var(--glint-hi)) 50%,
+    transparent 57%,
+    transparent 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: proto-glint 1.9s var(--ease) infinite;
+  animation-delay: var(--shimmer-delay, 0s);
+}
+
+.graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-chip-text,
+.graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer {
+  filter: none;
+}
+
+.graph-pane:not(.graph-ctrl-preview) .graph-trace-active .token-shimmer-target::after {
+  content: none;
+  animation: none;
+}
+
+.graph-pane:not(.graph-ctrl-preview) .graph-trace-active .token-chip.cursor-pointer .token-chip-text,
+.graph-pane:not(.graph-ctrl-preview) .graph-trace-active .token-def-label.cursor-pointer {
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+  filter: none;
+}
+
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-body-wrap,
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-section-label,
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-section-bulk,
+.graph-pane.graph-ctrl-preview .graph-trace-active .node-card-caret,
+.graph-pane.graph-ctrl-preview .graph-trace-active .member-row-caret,
+.graph-pane.graph-ctrl-preview .graph-trace-active .file-type-chip {
+  color: var(--faint) !important;
+}
+
+.graph-pane.graph-ctrl-preview .graph-trace-active .code-line {
+  color: var(--faint) !important;
+}
+
+.graph-pane.graph-ctrl-preview .graph-trace-active .code-line :where(:not(.token-chip):not(.token-chip *)) {
+  color: inherit !important;
+}

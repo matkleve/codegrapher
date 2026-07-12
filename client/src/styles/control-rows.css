@@ -1,0 +1,67 @@
+/* Compact explorer / menu rows (file-row density) */
+.control-row-compact {
+  height: var(--control-height-compact);
+  min-height: var(--control-height-compact);
+  padding-inline: var(--control-padding-x-compact);
+  font-size: var(--control-row-font-size);
+  line-height: var(--control-row-line-height);
+  border-radius: var(--radius-sm);
+  gap: var(--control-gap);
+}
+
+.control-row-text-primary {
+  font-size: var(--control-row-font-size);
+  line-height: var(--control-row-line-height);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.control-row-text-secondary {
+  font-size: var(--control-row-font-size);
+  line-height: var(--control-row-line-height);
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.control-row-compact svg:not([class*="size-"]):not(.connection-legend-swatch),
+.control-row-compact [data-icon] {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.connection-legend-swatch {
+  width: 2.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* Two-line menu rows — sm type, auto height for title + subtitle */
+.control-row-double {
+  height: auto;
+  min-height: var(--control-height-compact);
+  padding-block: 0.3125rem;
+  padding-inline: var(--control-padding-x-compact);
+  gap: var(--control-gap);
+  align-items: center;
+  font-size: var(--control-row-font-size);
+  line-height: var(--control-row-line-height);
+  border-radius: var(--radius-sm);
+}
+
+.control-row-double .control-row-text-title {
+  font-weight: 500;
+  line-height: var(--control-row-line-height);
+  color: var(--foreground);
+}
+
+.control-row-double .control-row-text-subtitle {
+  line-height: var(--control-row-line-height);
+  color: var(--muted-foreground);
+}
+
+.control-row-double svg:not([class*="size-"]),
+.control-row-double [data-icon] {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}

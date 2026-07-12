@@ -6,7 +6,7 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 ## What It Looks Like
 
-**ConnectionLegend** — compact "Legend" button, top-right of canvas overlay. Dropdown lists each connection kind with a swatch and label; click toggles visibility. While open, kinds with live wires on the overlay are emphasized (brand glow on swatch, semibold label). Module import off by default.
+**ConnectionLegend** — `Waypoints` icon in the **bottom-right map control stack** (same secondary icon button as grid/fit). Opens upward. Each row: swatch, kind name, and one-line description; click toggles visibility. Typesetting and Control flow swatches use polyline paths as redundant cues beside hue. Kinds with live wires emphasize the swatch (not bold label text). Module import off by default.
 
 **TokenConnectionMenu** — anchored dropdown below a token chip on hover (external/off-canvas targets) or on right-click (full Jump + Load + Open in editor). Shows **Load all · N** when ≥2 off-canvas rows.
 
@@ -14,7 +14,7 @@ Canvas-overlay controls beside the graph pane: connection-kind legend toggles, t
 
 ## Where It Lives
 
-- `ConnectionLegend.tsx` — canvas overlay (`GraphFlowCanvas`, top-right)
+- `ConnectionLegend.tsx` — bottom-right map control stack (`GraphFlowInner`), driven by `GraphInteractionContext`
 - `TokenConnectionMenu.tsx` — portal menu, driven by `GraphInteractionContext`
 - `connectionMenu.ts` — row builders (`buildHoverLoadMenu`, `buildContextMenu`)
 - `graphPathHighlight.ts` — shortest path over React Flow `edges`
@@ -60,5 +60,6 @@ GraphFlowCanvas
 ## References
 
 - [connection-taxonomy.md](../system/connection-taxonomy.md)
+- [accessibility.md](../../design/accessibility.md)
 - [token-interactions.md](../system/token-interactions.md)
 - [ego-graph-model.md](../system/ego-graph-model.md)

@@ -14,15 +14,15 @@ import { cn } from "@/lib/utils";
 
 interface FileExplorerProps {
   onFileClick: (filePath: string) => void;
-  /** Disables folder tree only; recent files stay clickable. */
-  treeDisabled?: boolean;
+  /** Called after a folder is indexed and the tree is ready. */
+  onFolderOpened?: (folderPath: string) => void;
   /** Files currently shown in the graph (highlighted in the tree). */
   graphFilePaths?: Set<string>;
 }
 
 export default function FileExplorer({
   onFileClick,
-  treeDisabled: disabled,
+  onFolderOpened,
   graphFilePaths,
 }: FileExplorerProps) {
   const {
@@ -45,7 +45,8 @@ export default function FileExplorer({
     handleBrowse,
     handleRecentFolderSelect,
     handleClearRecentFolders,
-  } = useFolderExplorer(onFileClick);
+    folderBusy,
+  } = useFolderExplorer(onFileClick, onFolderOpened);
   const { toggleCollapsed } = useSidebarLayout();
 
   return (
@@ -73,7 +74,7 @@ export default function FileExplorer({
               variant="outline"
               size="icon"
               onClick={handleBrowse}
-              disabled={disabled || opening}
+              disabled={folderBusy}
               title="Browse for folder"
               aria-label="Browse for folder"
               aria-haspopup="listbox"
@@ -94,7 +95,7 @@ export default function FileExplorer({
             onChange={(e) => setFolderPath(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleOpen()}
             placeholder="/absolute/path/to/project"
-            disabled={disabled || opening}
+            disabled={folderBusy}
             title={folderPath || undefined}
             className="min-w-0 flex-1 font-mono text-[length:var(--font-size-xs)]"
           />
@@ -103,7 +104,7 @@ export default function FileExplorer({
           type="button"
           variant={rootPath ? "secondary" : "default"}
           onClick={handleOpen}
-          disabled={disabled || opening}
+          disabled={folderBusy}
           className="w-full"
         >
           <FolderOpen data-icon="inline-start" />
@@ -137,7 +138,7 @@ export default function FileExplorer({
                 entry={entry}
                 depth={0}
                 onFileClick={handleFileClick}
-                disabled={disabled}
+                disabled={folderBusy}
                 graphFilePaths={graphFilePaths}
               />
             ))}

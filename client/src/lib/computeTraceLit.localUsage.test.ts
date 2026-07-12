@@ -66,6 +66,9 @@ describe("computeTraceLit local usage hover", () => {
     expect(lit.endpointTokenKeys.has(siblingKey)).toBe(true);
     expect(lit.siblingEndpointTokenKeys.has(siblingKey)).toBe(true);
     expect(lit.siblingEndpointTokenKeys.has(def.dataset.traceKey!)).toBe(true);
+    expect(lit.traceStrength.get(focusKey)).toBe(1);
+    expect(lit.traceStrength.get(def.dataset.traceKey!)).toBe(1);
+    expect(lit.traceStrength.get(siblingKey)).toBe(2);
   });
 
   it("marks sibling usages grey on usage hover even without edge hop hints", () => {
@@ -80,5 +83,7 @@ describe("computeTraceLit local usage hover", () => {
 
     expect(lit.siblingEndpointTokenKeys.has(siblingKey)).toBe(true);
     expect(lit.siblingEndpointTokenKeys.has(focusKey)).toBe(false);
+    expect(lit.traceStrength.get(siblingKey)).toBe(2);
+    expect(lit.traceStrength.get(focusKey)).toBe(1);
   });
 });

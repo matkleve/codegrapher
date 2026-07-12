@@ -1,0 +1,209 @@
+/* Class node card — header, file chips, member row chrome. */
+
+.class-node-root {
+  border-radius: var(--radius-node);
+  box-shadow: var(--node-shadow);
+}
+
+.node-card-header {
+  background-color: transparent;
+}
+
+.node-card-header:hover .node-card-caret,
+.node-card-header[aria-expanded="true"] .node-card-caret {
+  color: var(--brand);
+}
+
+.node-card-header .expand-chevron-icon {
+  transition: transform var(--motion-hover-color) var(--ease);
+}
+
+.node-card-header[aria-expanded="false"]:hover:not(:has(.node-card-title:hover))
+  .expand-chevron-icon {
+  transform: rotate(90deg);
+}
+
+.node-card-header[aria-expanded="true"]:hover:not(:has(.node-card-title:hover))
+  .expand-chevron-icon {
+  transform: rotate(-90deg);
+}
+
+/* File-type chip — language identity via --file-chip-*; brand hover on the pill only */
+.file-type-chip {
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease);
+}
+
+.file-type-chip--ts {
+  border-color: color-mix(in oklch, var(--file-chip-ts) 35%, transparent);
+  background-color: color-mix(in oklch, var(--file-chip-ts) 10%, transparent);
+}
+
+.file-type-chip--react {
+  border-color: color-mix(in oklch, var(--file-chip-react) 35%, transparent);
+  background-color: color-mix(in oklch, var(--file-chip-react) 10%, transparent);
+}
+
+.file-type-chip--angular {
+  border-color: color-mix(in oklch, var(--file-chip-angular) 35%, transparent);
+  background-color: color-mix(in oklch, var(--file-chip-angular) 10%, transparent);
+}
+
+.file-type-chip--test {
+  border-color: color-mix(in oklch, var(--file-chip-test) 35%, transparent);
+  background-color: color-mix(in oklch, var(--file-chip-test) 10%, transparent);
+}
+
+.file-type-chip:hover {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+
+.node-drag-grip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: var(--control-padding-x-sm) var(--control-padding-x-compact);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  background-color: transparent;
+  color: var(--muted-foreground);
+  transition: background-color var(--motion-hover-surface) var(--ease);
+}
+
+.node-drag-grip:hover {
+  background-color: var(--brand-surface);
+}
+
+.node-drag-grip:active {
+  cursor: grabbing;
+}
+
+.node-drag-grip svg {
+  color: currentColor;
+  stroke: currentColor;
+}
+
+.member-row-header {
+  background-color: transparent;
+  border-color: transparent;
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-color) var(--ease);
+}
+
+.member-row-header--collapsed {
+  border-radius: var(--radius-md);
+}
+
+.member-row-header--expanded {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+/* Title hover/trace — function-blue row container (existing trace-lit tokens) */
+.member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+  .member-row-label:hover,
+  .member-row-label:focus-visible,
+  .member-row-label.token-chip-on,
+  .member-row-label.token-chip-hover-preview
+) {
+  background: var(--member-row-trace-lit-bg);
+  border-color: var(--member-row-trace-lit-border);
+}
+
+.member-row-header:hover {
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
+}
+
+/* Indexed token hover — chip lights up; header chrome stays flat (see interaction-emphasis.md §3) */
+.member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: inherit;
+}
+
+.member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) .member-row-caret {
+  color: var(--muted-foreground) !important;
+}
+
+/* Indexed chip hover — semantic fill in tokens-chips.css; header chrome keeps brand below */
+
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-caret,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label .token-shimmer-target {
+  color: var(--brand) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.member-row-header--collapsed:hover {
+  border-radius: var(--radius-md);
+}
+
+.member-row-header--expanded:hover {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.node-card-caret,
+.member-row-caret,
+.member-section-label,
+.member-section-bulk {
+  transition: color var(--motion-hover-color) var(--ease);
+}
+
+.expand-chevron {
+  translate: 0 -0.06em;
+}
+
+.member-row-header .expand-chevron-icon {
+  transition: transform var(--motion-hover-color) var(--ease);
+}
+
+.member-row-header[aria-expanded="false"]:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .expand-chevron-icon {
+  transform: rotate(90deg);
+}
+
+.member-row-header[aria-expanded="true"]:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .expand-chevron-icon {
+  transform: rotate(-90deg);
+}
+
+.member-body-wrap {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    color var(--motion-dim) var(--ease);
+}

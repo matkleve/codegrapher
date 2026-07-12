@@ -1,0 +1,170 @@
+/* Member body source lines — gutter, hover, sim markers. */
+.code-line-gutter-wrap {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.sim-gutter-marker {
+  display: flex;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 2px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--motion-hover-surface) var(--ease),
+    color var(--motion-hover-surface) var(--ease);
+}
+
+.sim-gutter-action {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.group\/code-line:hover .sim-gutter-marker,
+.sim-gutter-marker--visible,
+.sim-gutter-marker--start,
+.sim-gutter-marker--end,
+.sim-gutter-marker--pause,
+.sim-gutter-marker--current {
+  opacity: 1;
+}
+
+.sim-gutter-marker__icon {
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+}
+
+.sim-gutter-marker--start {
+  color: var(--token-edge-function, var(--brand));
+}
+
+.sim-gutter-marker--end {
+  color: color-mix(in oklch, var(--destructive) 85%, var(--muted-foreground));
+}
+
+.sim-gutter-marker--pause,
+.sim-gutter-marker--pause-hint {
+  color: color-mix(in oklch, var(--brand) 75%, var(--muted-foreground));
+}
+
+.sim-gutter-marker--current {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.sim-gutter-marker--in-range {
+  opacity: 0.45;
+}
+
+.sim-gutter-marker--disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.sim-gutter-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  min-width: 7.5rem;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--card);
+  padding: 2px;
+  box-shadow: var(--node-shadow);
+}
+
+.sim-gutter-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: none;
+  border-radius: 2px;
+  padding: 0.25rem 0.375rem;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--font-size-2xs);
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sim-gutter-menu__item:hover,
+.sim-gutter-menu__item--primary {
+  background: var(--brand-surface);
+  color: var(--foreground);
+}
+
+.sim-gutter-menu__item--primary {
+  font-weight: 600;
+}
+
+/* Simulation toolbar — compact per-step ticks (scales down for long traces) */
+.sim-tick-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-block: 2px;
+  scrollbar-width: thin;
+}
+
+.sim-tick {
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--motion-hover-surface) var(--ease);
+}
+
+.sim-tick:hover {
+  transform: scale(1.35);
+}
+
+.sim-tick--past {
+  background: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
+}
+
+.sim-tick--current {
+  background: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand-border);
+}
+
+.sim-tick--future {
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.sim-tick--call {
+  border-radius: 1px;
+}
+
+.sim-tick--cross-class {
+  box-shadow: 0 0 0 1px var(--token-surface-class);
+}
+
+.sim-tick--current.sim-tick--cross-class {
+  box-shadow:
+    0 0 0 1px var(--brand-border),
+    0 0 0 2px var(--token-surface-class);
+}
+
+.code-line--sim-range {
+  background: color-mix(in oklch, var(--brand) 4%, transparent);
+}

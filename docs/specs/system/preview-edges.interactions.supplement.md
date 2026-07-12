@@ -115,7 +115,7 @@ flowchart TB
 | Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
 | Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
 | Property in a `a.b.c` chain | `buildReceiverCascadeEdges` (merged with the property's own edges, if any) | Own edge (0 or 1) + 1 per resolvable receiver leftward in the chain |
-| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Tier 1: param def → usage; tier 2: sig-type → param def; tier 3: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
+| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Tier 1 Usage: param def → usage; tier 2 **Typesetting**: sig-type → param def; tier 3 Usage: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
 | Param def in signature (fan-out) | `buildParamDefPreviewEdges` + type cascade | Tier 1: def → each usage; tier 2/3: type chain behind param |
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
@@ -154,8 +154,9 @@ flowchart LR
 | Binding def → later reference | Usage | def → usage | `buildLocalPreviewEdges` |
 | Initializer expr → bound name | **Binding** | initializer → binding | `buildBindingPreviewEdges` |
 | Param def → reference in body | Usage | def → usage | `buildParamDefPreviewEdges` / local |
+| Sig-type chip → param def slot | **Typesetting** | type annotation → param | `buildParamTypeCascadeEdges` (tier 2) |
 
-**Normative — binding vs usage:** Usage answers "where is this name referenced later?" Binding answers "where does this binding get its value on the declaring line?" They MUST NOT share one kind or one legend toggle.
+**Normative — binding vs usage vs typesetting:** Usage answers "where is this name referenced later?" Binding answers "where does this binding get its value on the declaring line?" Typesetting answers "which type annotates this param slot?" — static typing, not runtime value flow. Each MUST have its own `ConnectionKind` and legend toggle.
 
 **Initializer resolution:** For `const|let <name> = <expr>;` on a single line, the binding source anchor is the **rightmost identifier token** in `<expr>`. Property reads (`result.address`) anchor on the property identifier (`address`); the receiver (`result`) keeps its own usage wire to the param def when hovered independently.
 
@@ -218,17 +219,18 @@ Each `ConnectionLegend` row toggles exactly one `ConnectionKind` in `visibleEdge
 
 | Legend label | Affects | Does **not** affect |
 | ------------ | ------- | ------------------- |
-| Usage | Indexed + local def→usage preview, transitive decay wires | Binding, control flow, structural |
-| Binding | Initializer→binding preview wires | Usage fan-out, control flow, structural |
-| Control flow | `switch`/`if` branch fan-out wires | Usage, Binding, structural |
+| Usage | Indexed + local def→usage preview, transitive decay wires | Binding, typesetting, control flow, structural |
+| Binding | Initializer→binding preview wires | Usage fan-out, typesetting, control flow, structural |
+| Typesetting | Sig-type→param def preview wires (provenance tier 2) | Usage, Binding, control flow, structural |
+| Control flow | `switch`/`if` branch fan-out wires | Usage, Binding, typesetting, structural |
 | Inheritance | Persistent `extends` structural wires | Preview wires of any kind |
 | Implementation | Persistent `implements` structural wires | Preview wires |
 | Composition | Persistent `composition` structural wires | Preview wires |
 | Module import | Persistent `imports` structural wires (toggle-gated) | Preview wires |
 
-**Common confusion:** Usage preview wires are always **function blue** (`--edge-usage`), regardless of whether you trace a class, param, or type token — they are **not** Inheritance (solid lila, class-header to class-header). Toggling Inheritance off MUST leave usage wires visible unless Usage is also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, and `branch` separately.
+**Common confusion:** Usage preview wires are **function blue** (`--edge-usage`). Typesetting wires (sig-type → param def) use **type teal** (`--edge-typesetting`) — they are not Usage, Binding, or Inheritance. Toggling Inheritance off MUST leave usage/typesetting wires visible unless those kinds are also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, `typesetting`, and `branch` separately.
 
-Default on: usage, binding, control flow, inheritance, implementation, composition. Default off: module import.
+Default on: usage, binding, typesetting, control flow, inheritance, implementation, composition. Default off: module import.
 
 ---
 

@@ -1,0 +1,161 @@
+/* Signature param/return tags and type chips. */
+.member-signature-tags {
+  gap: 0.375rem;
+}
+
+.member-sig-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.member-sig-kind-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  color: var(--muted-foreground);
+  line-height: 0;
+}
+
+.member-sig-value {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: var(--token-chip-radius);
+  padding: 0.125rem 0.375rem;
+  white-space: nowrap;
+  font-size: inherit;
+  line-height: 1;
+}
+
+.member-sig-value:has(.member-sig-type--expanded) {
+  align-items: flex-start;
+  line-height: 1.375;
+  white-space: normal;
+}
+
+.member-sig-type {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+}
+
+.member-sig-type--expandable {
+  cursor: pointer;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-sig-type--expandable.member-sig-type--expanded {
+  max-width: min(100%, 16rem);
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+}
+
+.member-sig-type-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.member-sig-type-line {
+  display: block;
+  white-space: nowrap;
+}
+
+.member-sig-value--in {
+  background: var(--member-sig-bg-in);
+}
+
+.member-sig-value--out {
+  background: var(--member-sig-bg-out);
+}
+
+/* Ctrl reveal — neutral grey pills (nodes.css loads after trace-modes) */
+.graph-pane.graph-ctrl-preview .member-sig-value--in,
+.graph-pane.graph-ctrl-preview .member-sig-value--out {
+  background: var(--trace-dim-surface) !important;
+}
+
+.member-sig-colon {
+  opacity: 0.5;
+}
+
+.member-sig-param-name {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.member-sig-type--in {
+  color: var(--token-edge-type);
+}
+
+.member-sig-type--out {
+  color: var(--token-edge-class);
+}
+
+.member-sig-type--primitive.member-sig-type--in,
+.member-sig-type--primitive.member-sig-type--out {
+  color: var(--code-type-primitive);
+}
+
+.member-sig-type-expand-host {
+  display: inline-flex;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+/* Signature tags inherit TokenChip ink/fill from tokens-chips.css — layout only here. */
+.member-signature-tags .token-chip.member-sig-token-chip,
+.member-signature-tags .token-chip.member-sig-type-chip {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.member-sig-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: var(--icon-size-xs);
+  margin-inline: 0.125rem;
+  background: color-mix(in oklch, var(--border) 85%, transparent);
+}
+
+@keyframes node-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.react-flow__node.node-fade-in {
+  animation: node-fade-in 400ms ease-out;
+}
+
+@keyframes token-ref-dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.token-ref-connector-path {
+  stroke-dashoffset: 16;
+  animation: token-ref-dash 800ms linear infinite;
+}

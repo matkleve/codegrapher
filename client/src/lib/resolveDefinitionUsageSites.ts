@@ -22,6 +22,7 @@ export type DefinitionEdgeContext = {
     token: string,
     sourceFlowId: string,
     sourceMemberId?: string,
+    anchorLineNumber?: number,
   ) => UsageSiteRecord[];
   /** Project-wide call sites from the server reference index. */
   lookupProjectReferences?: (token: string) => ReferenceEntry[];

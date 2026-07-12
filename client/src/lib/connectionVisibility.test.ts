@@ -22,6 +22,7 @@ describe("filterPreviewEdgesByVisibility", () => {
     const edges = [
       edge({ id: "u" }),
       edge({ id: "b", connectionKind: "binding" }),
+      edge({ id: "s", connectionKind: "typesetting", hop: 2 }),
       edge({ id: "t", hop: 2, connectionKind: "transitive" }),
     ];
 
@@ -32,6 +33,10 @@ describe("filterPreviewEdgesByVisibility", () => {
     expect(
       filterPreviewEdgesByVisibility(edges, new Set(["binding"])).map((e) => e.id),
     ).toEqual(["b"]);
+
+    expect(
+      filterPreviewEdgesByVisibility(edges, new Set(["typesetting"])).map((e) => e.id),
+    ).toEqual(["s"]);
 
     expect(
       filterPreviewEdgesByVisibility(edges, new Set(["inheritance"])).map((e) => e.id),

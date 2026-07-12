@@ -1,0 +1,78 @@
+/* Structural wires (persistent taxonomy kinds) */
+.structural-edge-path {
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.structural-edge-path--solid {
+  stroke-dasharray: unset;
+}
+
+.structural-edge-path--dotted {
+  stroke-dasharray: 2 3;
+}
+
+.structural-edge-path--imports {
+  stroke-width: 0.9;
+}
+
+.structural-edge-path--pulse {
+  stroke-dasharray: 8 6;
+  animation: proto-flow 500ms linear infinite;
+}
+
+.structural-edge-path--faded {
+  opacity: 0.5;
+}
+
+/* Legend swatches — reuse map wire classes + always-on motion at map speeds */
+.connection-legend-swatch-line--dotted-flow {
+  animation: proto-flow 700ms linear infinite;
+}
+
+.connection-legend-swatch--firing .connection-legend-swatch-line {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
+}
+
+.connection-legend-swatch--idle .connection-legend-swatch-line {
+  opacity: 0.72;
+}
+
+.connection-legend-row--firing .control-row-text-primary {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.connection-legend-panel {
+  width: min(18rem, calc(100vw - 1.5rem));
+}
+
+.connection-legend-panel .control-row-double {
+  align-items: flex-start;
+}
+
+.connection-legend-panel .connection-legend-swatch {
+  margin-top: 0.1875rem;
+}
+
+.connection-legend-panel .control-row-text-title {
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+}
+
+.connection-legend-panel .control-row-text-subtitle {
+  font-size: var(--font-size-2xs);
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.connection-legend-row--live .connection-legend-swatch-line {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
+}
+
+.hoverable:hover .connection-legend-swatch--inactive {
+  opacity: 1;
+}

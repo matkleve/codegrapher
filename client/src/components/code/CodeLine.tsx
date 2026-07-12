@@ -46,6 +46,8 @@ export function CodeLine(props: CodeLineProps) {
         inSimRange && !isSimCurrent && "code-line--sim-range",
         simShimmering && "code-line--sim-shimmer",
       )}
+      data-line-number={lineNumber}
+      data-member-id={memberId}
       style={
         simShimmering && sim
           ? ({ "--sim-shimmer-duration": `${sim.substepFallbackShimmerMs}ms` } as React.CSSProperties)

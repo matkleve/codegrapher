@@ -6,6 +6,8 @@ import { registerTraceHost } from "@/lib/elementRegistry";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import { templateInterpolationSites } from "@/lib/templateInterpolations";
 import { tokenizeLine } from "@/lib/tokenizeLine";
+import type { ClassNodeData } from "@/components/nodes/flowNodeData";
+import type { Node } from "@xyflow/react";
 
 const MEMBER = "fn:file:buildViewbox";
 const FLOW = "flow:file:geo.ts";
@@ -129,5 +131,112 @@ describe("assembleCodeLinePreviewEdges", () => {
 
     expect(condEdges.some((e) => e.connectionKind === "branch")).toBe(false);
     expect(condEdges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("includes type cascade when hovering inline signature param def", () => {
+    const EXTRACT_MEMBER = "fn:order:extract";
+    const EXTRACT_FLOW = "flow:file:order.ts";
+    const PARAM = "result";
+    const TYPE = "GeocoderSearchResult";
+    const START = 53;
+    const EXTRACT_CODE = `extractFieldValue(${PARAM}: ${TYPE}, field: string): string | null {
+  return ${PARAM}.address;
+}`;
+    const classNode = (): Node => {
+      const data: ClassNodeData = {
+        label: "OrderService",
+        fileName: "order.ts",
+        filePath: "/proj/order.ts",
+        graphNodeId: "class:order",
+        nodeKind: "class",
+        properties: [],
+        methods: [
+          {
+            id: EXTRACT_MEMBER,
+            label: "extract Field Value",
+            symbolName: "extractFieldValue",
+            code: EXTRACT_CODE,
+            startLine: START,
+          },
+        ],
+        expandedPropertyIds: [],
+        expandedMethodIds: [EXTRACT_MEMBER],
+        collapsed: false,
+      };
+      return { id: EXTRACT_FLOW, type: "class", data, position: { x: 0, y: 0 } };
+    };
+    const index = buildMemberSymbolIndex(EXTRACT_MEMBER, EXTRACT_CODE, START);
+    const paramDefId = `local-def::${EXTRACT_MEMBER}::param::${PARAM}::${START}`;
+
+    const pane = document.querySelector(".graph-pane")!;
+    const bodyWrap = document.createElement("div");
+    bodyWrap.className = "member-body-wrap";
+    pane.appendChild(bodyWrap);
+
+    const sigLine = EXTRACT_CODE.split("\n")[0]!;
+    const paramTokenIndex = tokenizeLine(sigLine).tokens.findIndex((t) => t.text === PARAM);
+    const typeTokenIndex = tokenizeLine(sigLine).tokens.findIndex((t) => t.text === TYPE);
+
+    const def = document.createElement("span");
+    def.dataset.traceKey = makeUsageTokenKey(
+      EXTRACT_FLOW,
+      EXTRACT_MEMBER,
+      START,
+      paramTokenIndex,
+      PARAM,
+    );
+    def.dataset.localDefId = paramDefId;
+    bodyWrap.appendChild(def);
+    registerTraceHost(def);
+
+    const sigType = document.createElement("span");
+    sigType.dataset.traceKey = makeUsageTokenKey(
+      EXTRACT_FLOW,
+      EXTRACT_MEMBER,
+      START,
+      typeTokenIndex,
+      TYPE,
+    );
+    sigType.dataset.tokenKind = "type";
+    bodyWrap.appendChild(sigType);
+    registerTraceHost(sigType);
+
+    const useLine = EXTRACT_CODE.split("\n")[1]!;
+    const useIndex = tokenizeLine(useLine).tokens.findIndex((t) => t.text === PARAM);
+    const use = document.createElement("span");
+    use.dataset.traceKey = makeUsageTokenKey(
+      EXTRACT_FLOW,
+      EXTRACT_MEMBER,
+      START + 1,
+      useIndex,
+      PARAM,
+    );
+    use.dataset.localTargetId = paramDefId;
+    bodyWrap.appendChild(use);
+    registerTraceHost(use);
+
+    const edges = assembleCodeLinePreviewEdges({
+      name: PARAM,
+      chipEl: def,
+      kind: "variable",
+      tokenIndex: paramTokenIndex,
+      edgeKey: "test-result-def",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, START),
+      sourceFlowId: EXTRACT_FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: START,
+      symbols: new Map([[TYPE, [{ filePath: "/proj/geo.ts", kind: "type", line: 1 }]]]),
+      graphData: null,
+      getNode: classNode,
+      hasSymbol: (name) => name === TYPE,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    const cascade = edges.filter((e) => e.hop === 2 || e.hop === 3);
+    expect(cascade).toHaveLength(2);
+    expect(cascade[0]?.connectionKind).toBe("typesetting");
+    expect(cascade[1]?.load?.filePath).toBe("/proj/geo.ts");
   });
 });

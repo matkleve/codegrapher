@@ -6,6 +6,7 @@ import type { StructuralEdgeType } from "@/types";
 export type ConnectionKind =
   | "usage"
   | "binding"
+  | "typesetting"
   | "branch"
   | "transitive"
   | "inheritance"
@@ -24,6 +25,7 @@ export type LegendConnectionKind = Exclude<
 export const LEGEND_CONNECTION_KINDS: readonly LegendConnectionKind[] = [
   "usage",
   "binding",
+  "typesetting",
   "branch",
   "inheritance",
   "implementation",
@@ -49,11 +51,14 @@ type WireStyleDef = {
   legendFlow: boolean;
   /** Dotted structural kinds: legend marches the dash pattern (map is static unless pulse). */
   legendDottedFlow: boolean;
+  /** Non-linear legend swatch (viewBox 0 0 44 12) — redundant cue beside color. */
+  legendPathD?: string;
 };
 
 export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
   usage: "Usage",
   binding: "Binding",
+  typesetting: "Typesetting",
   branch: "Control flow",
   transitive: "Transitive",
   inheritance: "Inheritance",
@@ -62,6 +67,18 @@ export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
   override: "Override",
   "shared-dependency": "Shared dependency",
   "module-import": "Module import",
+};
+
+/** One-line legend copy — redundant with swatch shape/dash (WCAG 1.4.1). */
+export const CONNECTION_KIND_DESCRIPTION: Record<LegendConnectionKind, string> = {
+  usage: "Links a symbol definition to where it is referenced later.",
+  binding: "Shows where a param or local gets its value on the declaring line.",
+  typesetting: "Connects a signature type annotation to its parameter slot.",
+  branch: "Fans out from a switch or if to each case or else branch.",
+  inheritance: "Persistent extends relationship between two loaded classes.",
+  implementation: "Persistent implements link between a class and interface.",
+  composition: "Constructor-injected dependency wired to its owner class.",
+  "module-import": "File imports another file — off by default.",
 };
 
 const WIRE_STYLE: Record<LegendConnectionKind, WireStyleDef> = {
@@ -83,6 +100,16 @@ const WIRE_STYLE: Record<LegendConnectionKind, WireStyleDef> = {
     legendFlow: true,
     legendDottedFlow: false,
   },
+  typesetting: {
+    label: "Typesetting",
+    layer: "preview",
+    stroke: "var(--edge-typesetting)",
+    pathClasses: ["preview-edge-path", "preview-edge-typesetting"],
+    markerId: "wire-arrow-open",
+    legendFlow: true,
+    legendDottedFlow: false,
+    legendPathD: "M 3 10 L 3 5 Q 3 3 5 3 L 38 3",
+  },
   branch: {
     label: "Control flow",
     layer: "preview",
@@ -91,6 +118,7 @@ const WIRE_STYLE: Record<LegendConnectionKind, WireStyleDef> = {
     markerId: "wire-arrow-open",
     legendFlow: true,
     legendDottedFlow: false,
+    legendPathD: "M 3 10 L 3 3 L 38 3",
   },
   inheritance: {
     label: "Inheritance",
@@ -216,6 +244,10 @@ export function previewWireClasses(
     path.push("preview-edge-binding");
     glow.push("preview-edge-binding");
   }
+  if (spec.connectionKind === "typesetting") {
+    path.push("preview-edge-typesetting");
+    glow.push("preview-edge-typesetting");
+  }
   if (spec.connectionKind === "branch") {
     path.push("preview-edge-branch");
     glow.push("preview-edge-branch");
@@ -239,6 +271,7 @@ export function previewWireClasses(
 export function previewWireStroke(spec: PreviewEdgeSpec): string {
   if (spec.connectionKind === "branch") return "var(--edge-control-flow)";
   if (spec.connectionKind === "binding") return "var(--edge-binding)";
+  if (spec.connectionKind === "typesetting") return "var(--edge-typesetting)";
   return "var(--edge-usage)";
 }
 

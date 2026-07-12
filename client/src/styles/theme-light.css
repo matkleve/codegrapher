@@ -1,0 +1,147 @@
+/* Light theme — canonical token emission (:root). */
+:root {
+  --radius: 0.625rem;
+  /* Typography (rem) — 2xs/caption are the only sub-xs sizes */
+  --font-size-2xs: 0.625rem;
+  --font-size-caption: 0.6875rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  /* Icons (rem) — mirror typography scale */
+  --icon-size-xs: 0.75rem;
+  --icon-size-sm: 0.875rem;
+  --icon-size-md: 1rem;
+  /* Control heights (rem) — compact = single-line list rows (24px, WCAG target) */
+  --control-height-compact: 1.5rem;
+  --control-height-sm: 1.75rem;
+  --control-height-md: 2rem;
+  --control-height-lg: 2.25rem;
+  /* Row typography — sm body for readable list labels (WCAG-friendly) */
+  --control-row-font-size: var(--font-size-sm);
+  --control-row-line-height: 1.25;
+  /* Horizontal padding + gap (rem) */
+  --control-padding-x-compact: 0.375rem;
+  --control-padding-x-sm: 0.5rem;
+  --control-padding-x-md: 0.625rem;
+  --control-gap: 0.375rem;
+  /* Token chips — both use the same tight horizontal pad so the pill hugs
+     its label instead of padding the row out; margin below cancels it back
+     to the label's own width so tokens don't add extra space to the flow. */
+  --token-chip-pad-y: 0.0625rem;
+  --token-chip-pad-x: 0.25rem;
+  --token-def-label-pad-y: 0.125rem;
+  --token-def-label-pad-x: var(--token-chip-pad-x);
+  --token-chip-radius: 0.3125rem;
+  --connector-chip-load-pad-y: 0.3125rem;
+  --connector-chip-load-pad-x: 0.75rem;
+  --connector-chip-load-radius: var(--radius-sm);
+  --connector-chip-load-font-size: var(--font-size-caption);
+  --token-def-label-radius: var(--radius-sm);
+  --background: oklch(0.99 0.005 250);
+  --foreground: oklch(0.18 0.03 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 260);
+  --primary: oklch(0.46 0.17 278);
+  --primary-foreground: oklch(0.99 0.01 278);
+  --secondary: oklch(0.94 0.02 250);
+  --secondary-foreground: oklch(0.28 0.06 260);
+  --muted: oklch(0.95 0.015 250);
+  --muted-foreground: oklch(0.48 0.04 260);
+  --accent: oklch(0.93 0.025 250);
+  --accent-foreground: oklch(0.22 0.05 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.9 0.02 250);
+  --input: oklch(0.9 0.02 250);
+  --ring: oklch(0.55 0.12 250);
+  --sidebar: oklch(0.98 0.008 250);
+  --sidebar-foreground: oklch(0.18 0.03 260);
+  --sidebar-primary: oklch(0.48 0.14 250);
+  --sidebar-primary-foreground: oklch(0.99 0.01 250);
+  --sidebar-accent: oklch(0.94 0.02 250);
+  --sidebar-accent-foreground: oklch(0.28 0.06 260);
+  --sidebar-border: oklch(0.9 0.02 250);
+  --sidebar-ring: oklch(0.55 0.12 250);
+  --chart-1: oklch(0.52 0.16 278);
+  --chart-2: oklch(0.58 0.14 255);
+  --chart-3: oklch(0.54 0.11 200);
+  --chart-4: oklch(0.48 0.08 258);
+  --chart-5: oklch(0.38 0.03 260);
+  --token-edge-function: oklch(0.50 0.17 255);
+  --token-edge-class: oklch(0.48 0.16 278);
+  --token-edge-type: oklch(0.50 0.11 200);
+  --token-edge-variable: oklch(0.47 0.14 292);
+  /* Chip hover / chip-on — srgb mix preserves ink hue (oklch + achromatic neutral snaps red) */
+  --token-surface-class: color-mix(in srgb, var(--token-edge-class) 14%, white);
+  --token-surface-function: color-mix(in srgb, var(--token-edge-function) 14%, white);
+  --token-surface-type: color-mix(in srgb, var(--token-edge-type) 14%, white);
+  --token-surface-variable: color-mix(in srgb, var(--token-edge-variable) 14%, white);
+  --edge-inheritance: oklch(0.48 0.14 310);
+  --edge-implementation: oklch(0.50 0.12 175);
+  --edge-composition: oklch(0.46 0.15 25);
+  --edge-import: oklch(0.50 0.06 250);
+  --edge-transitive: var(--edge-usage);
+  --edge-control-flow: oklch(0.50 0.13 145);
+  --edge-binding: oklch(0.48 0.13 188);
+  --edge-typesetting: var(--token-edge-type);
+  --edge-usage: var(--token-edge-function);
+  --preview-wire-hop2-opacity: 0.58;
+  --preview-wire-hop3-opacity: 0.36;
+  --preview-wire-hop2-glow-opacity: 0.1;
+  --preview-wire-hop3-glow-opacity: 0.065;
+  --trace-chip-hop2-opacity: var(--preview-wire-hop2-opacity);
+  --trace-chip-hop3-opacity: var(--preview-wire-hop3-opacity);
+  --code-type-primitive: oklch(0.52 0.05 258);
+  --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 9%, var(--background));
+  --member-sig-bg-out: var(--surface-neutral-strong);
+  --member-row-trace-lit-bg: color-mix(in oklch, var(--token-edge-function) 16%, var(--background));
+  --member-row-trace-lit-border: color-mix(in oklch, var(--token-edge-function) 40%, var(--border));
+  --surface-neutral-strong: oklch(0.955 0.001 0);
+  --trace-dim-surface: color-mix(in oklch, var(--foreground) 3%, var(--card));
+  --code-keyword: oklch(0.42 0.14 295);
+  --code-string: oklch(0.46 0.11 55);
+  --code-number: oklch(0.48 0.14 300);
+  --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
+  --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
+  --explorer-file-in-graph: oklch(0.46 0.17 278);
+  --file-chip-ts: oklch(0.52 0.14 250);
+  --file-chip-react: oklch(0.72 0.12 220);
+  --file-chip-angular: var(--file-chip-ts);
+  --file-chip-test: oklch(0.68 0.16 75);
+  --radius-node: calc(var(--radius) + 0.1875rem);
+  /* Brand gold hover accent — clearly interactive, distinct from primary periwinkle */
+  --brand: oklch(0.52 0.13 88);
+  --brand-surface: oklch(0.96 0.03 88);
+  --brand-border: oklch(0.86 0.06 88);
+  --interactive-toggle-bg: var(--surface-active);
+  --interactive-toggle-border: var(--surface-active-border);
+  /* Motion is two-tier (see docs/design/state-visuals.md → Motion philosophy):
+     Tier A — affordance (direct hover only): one fast clock, 120ms.
+     Tier B — reveal (trace / Ctrl / sim mode): instant, 0ms, so ink & fill
+     never crossfade or desync. The four affordance tokens share one value;
+     they stay split by property only so a single tier can be retuned later. */
+  --motion-hover-surface: 120ms;
+  --motion-hover-color: 120ms;
+  --motion-dim: 0ms;
+  --motion-chip-surface: 120ms;
+  --motion-chip-color: 120ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Two dimming levels: --faint = hover/trace (prototype value); --faint-ctrl =
+     Ctrl "search" mode, bleached harder toward the background so revealed
+     clickables pop. */
+  --faint: oklch(0.68 0.02 258);
+  --faint-ctrl: oklch(0.8 0.014 258);
+  /* Trace dim — desaturate syntax ink instead of flat grey */
+  --faint-body: color-mix(in oklch, var(--foreground) 30%, var(--muted-foreground));
+  --faint-kw: color-mix(in oklch, var(--code-keyword) 30%, var(--muted-foreground));
+  --faint-pn: color-mix(in oklch, var(--foreground) 26%, var(--muted-foreground));
+  --faint-comment: color-mix(in oklch, var(--muted-foreground) 88%, var(--faint));
+  --faint-string: color-mix(in oklch, var(--code-string) 30%, var(--muted-foreground));
+  --faint-number: color-mix(in oklch, var(--code-number) 30%, var(--muted-foreground));
+  --faint-type: color-mix(in oklch, var(--token-edge-type) 28%, var(--muted-foreground));
+  /* Ctrl-shimmer glint highlight — white streak in both themes. */
+  --glint-hi: oklch(1 0 0);
+  --node-shadow: 0 12px 34px -14px rgb(30 40 70 / 0.28);
+}

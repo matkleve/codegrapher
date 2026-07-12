@@ -5,6 +5,10 @@ const ORTHOGONAL_STUB = 24;
 const ORTHOGONAL_TRUNK_PAD = 12;
 const ORTHOGONAL_LANE = 14;
 const ORTHOGONAL_LINE_PAD = 8;
+/** Corner fillet on typesetting Manhattan wires — visible at 1.1px stroke. */
+export const TYPESETTING_CORNER_RADIUS = 6;
+
+type XY = { x: number; y: number };
 
 export type OrthogonalPathOptions = {
   stub?: number;
@@ -153,6 +157,73 @@ export function branchOrthogonalPath(
   return paths[0] ?? "";
 }
 
+/** Manhattan waypoints — horizontal exit, vertical trunk, horizontal entry. */
+export function orthogonalPathPoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  fromSide: "left" | "right" = "right",
+  toSide: "left" | "right" = "left",
+  opts?: OrthogonalPathOptions,
+): XY[] {
+  const stub = opts?.stub ?? ORTHOGONAL_STUB;
+  const lane = opts?.lane ?? 0;
+  const laneSpread = lane * ORTHOGONAL_LANE;
+
+  const exitX = fromSide === "right" ? x1 + stub : x1 - stub;
+  const entryX = toSide === "left" ? x2 - stub : x2 + stub;
+  const flowRight = x2 >= x1;
+  const outerX = flowRight
+    ? Math.max(exitX, entryX) + ORTHOGONAL_TRUNK_PAD + Math.abs(laneSpread)
+    : Math.min(exitX, entryX) - ORTHOGONAL_TRUNK_PAD - Math.abs(laneSpread);
+
+  return [
+    { x: x1, y: y1 },
+    { x: exitX, y: y1 },
+    { x: outerX, y: y1 },
+    { x: outerX, y: y2 },
+    { x: entryX, y: y2 },
+    { x: x2, y: y2 },
+  ];
+}
+
+/** Fillet sharp corners on an orthogonal polyline with quadratic beziers. */
+export function roundedPolylinePath(points: XY[], radius: number): string {
+  const n = points.length;
+  if (n < 2) return "";
+  if (n === 2) {
+    return `M ${points[0]!.x} ${points[0]!.y} L ${points[1]!.x} ${points[1]!.y}`;
+  }
+
+  const parts: string[] = [`M ${points[0]!.x} ${points[0]!.y}`];
+
+  for (let i = 1; i < n - 1; i++) {
+    const prev = points[i - 1]!;
+    const curr = points[i]!;
+    const next = points[i + 1]!;
+
+    const inLen = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+    const outLen = Math.hypot(next.x - curr.x, next.y - curr.y);
+    if (inLen === 0 || outLen === 0) continue;
+
+    const r = Math.min(radius, inLen / 2, outLen / 2);
+    const inDx = (curr.x - prev.x) / inLen;
+    const inDy = (curr.y - prev.y) / inLen;
+    const outDx = (next.x - curr.x) / outLen;
+    const outDy = (next.y - curr.y) / outLen;
+
+    parts.push(`L ${curr.x - inDx * r} ${curr.y - inDy * r}`);
+    parts.push(
+      `Q ${curr.x} ${curr.y} ${curr.x + outDx * r} ${curr.y + outDy * r}`,
+    );
+  }
+
+  const last = points[n - 1]!;
+  parts.push(`L ${last.x} ${last.y}`);
+  return parts.join(" ");
+}
+
 /**
  * Manhattan wire — horizontal exit, vertical trunk, horizontal entry.
  * Used for non-token structural routing when port sides are authoritative.
@@ -166,25 +237,26 @@ export function orthogonalPath(
   toSide: "left" | "right" = "left",
   opts?: OrthogonalPathOptions,
 ): string {
-  const stub = opts?.stub ?? ORTHOGONAL_STUB;
-  const lane = opts?.lane ?? 0;
-  const laneSpread = lane * ORTHOGONAL_LANE;
+  const points = orthogonalPathPoints(x1, y1, x2, y2, fromSide, toSide, opts);
+  return points
+    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+    .join(" ");
+}
 
-  const exitX = fromSide === "right" ? x1 + stub : x1 - stub;
-  const entryX = toSide === "left" ? x2 - stub : x2 + stub;
-  const flowRight = x2 >= x1;
-  const outerX = flowRight
-    ? Math.max(exitX, entryX) + ORTHOGONAL_TRUNK_PAD + Math.abs(laneSpread)
-    : Math.min(exitX, entryX) - ORTHOGONAL_TRUNK_PAD - Math.abs(laneSpread);
-
-  return [
-    `M ${x1} ${y1}`,
-    `L ${exitX} ${y1}`,
-    `L ${outerX} ${y1}`,
-    `L ${outerX} ${y2}`,
-    `L ${entryX} ${y2}`,
-    `L ${x2} ${y2}`,
-  ].join(" ");
+/** Typesetting preview wire — rounded-corner Manhattan between sig-type and param. */
+export function typesettingOrthogonalPath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  fromSide: "left" | "right",
+  toSide: "left" | "right",
+  opts?: OrthogonalPathOptions,
+): string {
+  return roundedPolylinePath(
+    orthogonalPathPoints(x1, y1, x2, y2, fromSide, toSide, opts),
+    TYPESETTING_CORNER_RADIUS,
+  );
 }
 
 export type PreviewWirePathInput = {
@@ -204,6 +276,7 @@ export type PreviewWirePathInput = {
 /**
  * Path geometry per preview connection kind:
  * - branch (control flow): left-gutter bus + side taps into branches
+ * - typesetting: rounded-corner Manhattan (sig-type → param def)
  * - usage, binding, transitive, load: cubic (data/value)
  */
 export function previewWirePath(input: PreviewWirePathInput): string {
@@ -223,6 +296,10 @@ export function previewWirePath(input: PreviewWirePathInput): string {
 
   if (connectionKind === "branch") {
     return branchOrthogonalPath(x1, y1, x2, y2, fromEl, toEl, svgBox);
+  }
+
+  if (connectionKind === "typesetting") {
+    return typesettingOrthogonalPath(x1, y1, x2, y2, fromSide, toSide, { lane });
   }
 
   const cubicOpts: CubicPathOptions = {

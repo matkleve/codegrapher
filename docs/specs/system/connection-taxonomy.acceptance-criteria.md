@@ -331,8 +331,8 @@ Example: `const addr = result.address;`
 | ----- | ----- |
 | Direction | **initializer → binding** (value flows into the bound name) |
 | Persistent | No — hover/Ctrl/pin only |
-| Color | `var(--token-edge-variable)` |
-| Line | **Dotted** preview overlay (`preview-edge-path--binding`) — not structural `implements` dotted |
+| Color | `var(--edge-binding)` (cyan **188°** — hue-separated from Typesetting) |
+| Line | **Dotted** preview overlay (`preview-edge-binding`) — not structural `implements` dotted |
 | Arrowhead | Open, at binding end |
 | Animation | Dot/dash flow **toward binding** (value sink) |
 | Scope | Same method body only (`localSymbolLinks.ts`) |
@@ -344,7 +344,7 @@ Example: `const addr = result.address;`
 - [x] `const addr = result.address;` — hovering `addr` shows binding wire from `address` → `addr` in addition to usage fan-out
 - [x] Hovering `address` in the initializer shows the same binding wire (initializer → binding)
 - [x] Hovering `result` in the initializer still resolves param def → usage only (no binding wire)
-- [x] Binding wire uses dotted line + variable color — visually distinct from usage dashed and inheritance solid
+- [x] Binding wire uses dotted line + dedicated `--edge-binding` hue — visually distinct from usage dashed, typesetting dash-dot orthogonal, and inheritance solid
 - [x] Legend **Binding** toggle hides only binding wires; **Inheritance** toggle hides only `extends` structural wires
 - [ ] Assignment-step pulses in [execution-simulator.md](execution-simulator.md) travel along the binding wire when present
 
@@ -429,7 +429,7 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 | Tier 1 opacity | 100% (no hop class) |
 | Tier 2 opacity | ~42% (`preview-wire--hop2`) |
 | Tier 3 opacity | ~22% (`preview-wire--hop3`) |
-| Kind | Usage (`--edge-usage`) for provenance segments |
+| Kind | Usage (`--edge-usage`) for tier 3 type def→sig-type; **Typesetting** (`--edge-typesetting`) for tier 2 sig-type→param |
 | Endpoint tier 2/3 | `token-chip-endpoint-sibling` + `flow-anchor-endpoint-sibling` |
 | Sibling usages on single-usage hover | Lit optional; **no** extra usage wires |
 
@@ -440,8 +440,45 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 - [x] Param def fan-out keeps all usage wires at tier 1; type chain at tier 2/3
 - [x] Cascaded Load stub does not open a second connection menu
 - [ ] Load of module-level type alias mounts graph node and upgrades stub on rebuild — verify manually after Load
+- [x] Provenance tier 2 uses `connectionKind: "typesetting"`; tier 3 stays Usage
 - [x] Control-flow wires in same trace are not decayed
-- [x] Provenance `hop` does not set `connectionKind: "transitive"` (legend still buckets under Usage)
+- [x] Call-graph transitive `hop` does not set `connectionKind: "transitive"` on typesetting edges
+
+---
+
+## 12. Typesetting (sig-type → param def)
+
+**Status:** `implemented`
+
+**What it is:** On-demand dash-dot preview wire from a signature **type annotation chip** to the **param def slot** it types (e.g. `GeocoderSearchResult` → `result` in `result: GeocoderSearchResult`). Static typing — distinct from Binding (runtime initializer → slot) and Usage tier 3 (type def → sig-type chip).
+
+### Actions
+
+| # | Trigger | System Response |
+| --- | ------- | --------------- |
+| 1 | Hover/pin param def with indexed sig-type | Tier 2 typesetting wire sig-type → param def |
+| 2 | Hover/pin body usage of same param | Same tier 2 typesetting wire in provenance cascade |
+| 3 | Hover/pin sig-type chip only | No reverse typesetting wire to param (tier 1 usage to type def only) |
+
+### Data
+
+| Field | Value |
+| ----- | ----- |
+| Direction | sig-type chip → param def slot |
+| Persistent | No |
+| Color | `--edge-typesetting` (alias of `--token-edge-type`) |
+| Line | Dash-dot (`5 3 1 3`) on **rounded orthogonal** path (`TYPESETTING_CORNER_RADIUS` = 6px) |
+| Arrowhead | Open |
+| Strength | Tier 2 (`hop: 2`) in provenance cascade |
+| Builder | `buildParamTypeCascadeEdges` tier 2 segment |
+
+### Acceptance Criteria
+
+- [x] Param def hover draws typesetting wire when param has indexed type on signature
+- [x] Body usage hover includes typesetting wire at tier 2 in provenance chain
+- [x] Typesetting uses dedicated hue and dash-dot on **rounded orthogonal** paths — visually distinct from Usage and Binding
+- [x] Legend **Typesetting** toggle hides only typesetting wires
+- [x] Tier 3 type def→sig-type remains Usage kind
 
 ---
 

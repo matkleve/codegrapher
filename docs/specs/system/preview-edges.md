@@ -8,7 +8,9 @@ On-demand dashed SVG connections between indexed symbols. Summoned by hovering t
 
 ## What It Looks Like
 
-Function-blue dashed curves (`--edge-usage`) with animated dash flow toward the open arrowhead. Endpoint sockets pop in (`--spring`) with a crisp semantic ring colored by token kind — no brightness bloom. Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
+Preview wires vary by **connection kind** (see [connection-taxonomy.md](connection-taxonomy.md)): Usage and transitive use function-blue dashed **cubic** curves; Binding uses cyan dotted cubics; **Typesetting** uses type-teal dash-dot **rounded orthogonal** paths between sig-type and param chips; Control flow uses green dash-dot **sharp orthogonal** gutter buses. All kinds share animated dash flow, open arrowheads, and crisp endpoint sockets (`--spring`). Trace mode dims non-lit code via **color only** (`--faint`) — no gray background wash. Node header stays card-white during trace. Ctrl-held reveal adds indexed token shimmer (`graph-ctrl-preview`).
+
+Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessibility.md).
 
 ## Where It Lives
 
@@ -91,7 +93,8 @@ stateDiagram-v2
 | `resolveLiveAnchor.ts` | Per-frame anchor upgrade |
 | `localDefLinks.ts` | Def fan-out + usage site pairs (`linksForElement`) |
 | `buildDefinitionPreviewEdges.ts` | Definition fan-out + off-canvas Load stubs |
-| `paramTypeCascadeEdges.ts` | Param usage/def → sig-type provenance chain (tier 2/3) |
+| `paramTypeCascadeEdges.ts` | Param usage/def → sig-type provenance (tier 2 Typesetting, tier 3 Usage) |
+| `wirePaths.ts` | Path geometry: cubic vs orthogonal vs rounded typesetting |
 | `bindingPreviewEdges.ts` / `controlFlowPreviewEdges.ts` | Binding and branch wires |
 | `preview-wires.css` | Wires, sockets |
 | `trace-modes.css` | Trace dim |
@@ -118,6 +121,8 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 
 - **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
 - **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
+- **Connection kinds (incl. Typesetting):** [connection-taxonomy.md](connection-taxonomy.md)
+- **Accessibility (wire differentiation):** [../../design/accessibility.md](../../design/accessibility.md)
 - Philosophy: [preview-edges.philosophy.supplement.md](preview-edges.philosophy.supplement.md)
 - Overlay component: [../component/preview-edge-overlay.md](../component/preview-edge-overlay.md)
 - Prototype: [docs/prototypes/connectors-proto.html](../../prototypes/connectors-proto.html)

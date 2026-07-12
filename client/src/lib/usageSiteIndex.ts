@@ -29,15 +29,28 @@ export function isLexicalDefinitionLine(line: string, token: string): boolean {
   return new RegExp(`\\b${escapeRegExp(token)}\\s*:`).test(line);
 }
 
-/** Precompute symbol → usage sites from visible class node method bodies. */
-export function buildUsageSiteIndex(
-  nodes: Node[],
+export function mergeUsageSiteMaps(
+  into: Map<string, UsageSiteRecord[]>,
+  partial: Map<string, UsageSiteRecord[]>,
+): void {
+  for (const [token, records] of partial) {
+    const list = into.get(token);
+    if (list) {
+      list.push(...records);
+      continue;
+    }
+    into.set(token, [...records]);
+  }
+}
+
+function scanMemberBody(
+  index: Map<string, UsageSiteRecord[]>,
+  flowNodeId: string,
+  memberId: string,
+  code: string,
+  startLine: number,
   indexedSymbols: ReadonlySet<string>,
-): Map<string, UsageSiteRecord[]> {
-  const index = new Map<string, UsageSiteRecord[]>();
-
-  if (indexedSymbols.size === 0) return index;
-
+): void {
   const add = (token: string, record: UsageSiteRecord) => {
     const list = index.get(token);
     if (list) {
@@ -47,42 +60,77 @@ export function buildUsageSiteIndex(
     index.set(token, [record]);
   };
 
+  const lines = code.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const lineNumber = fileLineFromSnippetIndex(startLine, i);
+    const tokens = tokenizeLine(line).tokens;
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
+      const tok = tokens[tokenIndex]!;
+      if (tok.kind !== "identifier") continue;
+      const token = tok.text;
+      if (!indexedSymbols.has(token)) continue;
+      if (isLexicalDefinitionLine(line, token)) continue;
+      add(token, {
+        flowNodeId,
+        memberId,
+        lineNumber,
+        tokenIndex,
+        line,
+      });
+    }
+  }
+}
+
+/** Scan one class node — used by incremental index cache. */
+export function indexUsageSitesForNode(
+  node: Node,
+  indexedSymbols: ReadonlySet<string>,
+): Map<string, UsageSiteRecord[]> {
+  const index = new Map<string, UsageSiteRecord[]>();
+  if (node.type !== "class" || indexedSymbols.size === 0) return index;
+
+  const classData = node.data as ClassNodeData;
+  const flowNodeId = node.id;
+
+  for (const method of classData.methods ?? []) {
+    if (!method.code) continue;
+    scanMemberBody(
+      index,
+      flowNodeId,
+      method.id,
+      method.code,
+      method.startLine ?? 1,
+      indexedSymbols,
+    );
+  }
+
+  for (const property of classData.properties ?? []) {
+    if (!property.code?.trim()) continue;
+    scanMemberBody(
+      index,
+      flowNodeId,
+      property.id,
+      property.code,
+      property.startLine ?? 1,
+      indexedSymbols,
+    );
+  }
+
+  return index;
+}
+
+/** Precompute symbol → usage sites from visible class node method bodies. */
+export function buildUsageSiteIndex(
+  nodes: Node[],
+  indexedSymbols: ReadonlySet<string>,
+): Map<string, UsageSiteRecord[]> {
+  const index = new Map<string, UsageSiteRecord[]>();
+  if (indexedSymbols.size === 0) return index;
+
   for (const node of nodes) {
     if (node.type !== "class") continue;
-    const classData = node.data as ClassNodeData;
-    const flowNodeId = node.id;
-
-    const scanMemberBody = (memberId: string, code: string, startLine: number) => {
-      const lines = code.split("\n");
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i] ?? "";
-        const lineNumber = fileLineFromSnippetIndex(startLine, i);
-        const tokens = tokenizeLine(line).tokens;
-        for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
-          const tok = tokens[tokenIndex]!;
-          if (tok.kind !== "identifier") continue;
-          const token = tok.text;
-          if (!indexedSymbols.has(token)) continue;
-          if (isLexicalDefinitionLine(line, token)) continue;
-          add(token, {
-            flowNodeId,
-            memberId,
-            lineNumber,
-            tokenIndex,
-            line,
-          });
-        }
-      }
-    };
-
-    for (const method of classData.methods) {
-      scanMemberBody(method.id, method.code, method.startLine ?? 1);
-    }
-
-    for (const property of classData.properties) {
-      if (!property.code?.trim()) continue;
-      scanMemberBody(property.id, property.code, property.startLine ?? 1);
-    }
+    mergeUsageSiteMaps(index, indexUsageSitesForNode(node, indexedSymbols));
   }
 
   return index;

@@ -1,0 +1,72 @@
+.graph-trace-active .hoverable:hover,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover {
+  border-color: var(--brand-border);
+  color: var(--brand) !important;
+}
+
+.graph-trace-active .hoverable:hover {
+  background-color: var(--brand-surface);
+}
+
+.graph-trace-active .member-row.trace-member-lit .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)),
+.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) {
+  background-color: var(--brand-surface) !important;
+  border-color: var(--brand-border) !important;
+  box-shadow: none;
+}
+
+.graph-trace-active .member-row.trace-member-lit .member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+),
+.graph-trace-active .member-row.trace-member-owner-lit .member-row-header:hover:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+}
+
+.graph-trace-active .hoverable:hover .member-section-label,
+.graph-trace-active .hoverable:hover .member-section-bulk,
+.graph-trace-active .hoverable:hover .node-card-caret,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-label,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-bulk,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-caret,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label,
+.graph-trace-active .member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) .member-row-label .token-shimmer-target,
+.graph-trace-active .hoverable:hover svg,
+.graph-trace-active .hoverable:hover [data-icon] {
+  color: var(--brand) !important;
+  stroke: var(--brand);
+  -webkit-text-fill-color: currentColor;
+  background-image: none;
+}
+
+.graph-trace-pinned .token-chip.cursor-pointer:not(.token-chip-lit),
+.graph-trace-pinned .token-def-label.cursor-pointer:not(.token-chip-lit) {
+  cursor: pointer;
+}

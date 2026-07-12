@@ -135,7 +135,10 @@ function lintTsx(filePath, content) {
 
 function lintCss(filePath, content) {
   const diagnostics = [];
-  const isIndex = filePath.endsWith("index.css");
+  const isThemeEmission =
+    filePath.endsWith("index.css") ||
+    filePath.endsWith("theme-light.css") ||
+    filePath.endsWith("theme-dark.css");
   const lines = content.split("\n");
 
   for (let i = 0; i < lines.length; i++) {
@@ -148,17 +151,22 @@ function lintCss(filePath, content) {
     if (fontSizeMatch) {
       const value = fontSizeMatch[1].trim();
       if (value === "inherit" || value === "unset" || value === "initial") continue;
-      if (!value.startsWith("var(--font-size-") && !value.startsWith("var(--connector-chip-load-font-size)")) {
-        diagnostics.push({
-          rule: "raw-font-size",
-          line: lineNo,
-          severity: isIndex ? "error" : "error",
-          message: `font-size must use --font-size-* token, not \`${value}\``,
-        });
+      if (
+        value.startsWith("var(--font-size-") ||
+        value.startsWith("var(--connector-chip-load-font-size)") ||
+        value.startsWith("var(--control-row-font-size)")
+      ) {
+        continue;
       }
+      diagnostics.push({
+        rule: "raw-font-size",
+        line: lineNo,
+        severity: "error",
+        message: `font-size must use --font-size-* token, not \`${value}\``,
+      });
     }
 
-    if (!isIndex) {
+    if (!isThemeEmission) {
       const heightMatch = line.match(/(?:^|\s)height:\s*([^;]+);/);
       if (heightMatch) {
         const value = heightMatch[1].trim();

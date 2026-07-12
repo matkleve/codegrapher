@@ -6,6 +6,7 @@ import type { StructuralEdgeType } from "@/types";
 export const DEFAULT_VISIBLE_EDGE_KINDS: ReadonlySet<ConnectionKind> = new Set([
   "usage",
   "binding",
+  "typesetting",
   "branch",
   "inheritance",
   "implementation",
@@ -14,7 +15,7 @@ export const DEFAULT_VISIBLE_EDGE_KINDS: ReadonlySet<ConnectionKind> = new Set([
 
 export function previewConnectionKind(
   edge: PreviewEdgeSpec,
-): "usage" | "binding" | "branch" | "transitive" {
+): "usage" | "binding" | "typesetting" | "branch" | "transitive" {
   return edge.connectionKind ?? (edge.hop != null && edge.hop >= 2 ? "transitive" : "usage");
 }
 

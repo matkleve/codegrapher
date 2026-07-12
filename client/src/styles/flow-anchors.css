@@ -1,0 +1,86 @@
+/* Connector sockets — .tok::before/::after → FlowAnchor */
+.flow-anchor {
+  transform: translateY(-50%);
+}
+
+.flow-anchor-off {
+  display: none;
+}
+
+.flow-anchor-on {
+  display: block;
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  transition:
+    transform 180ms var(--spring),
+    opacity 140ms var(--ease),
+    box-shadow 200ms var(--ease);
+  /* Fill from TOKEN_ANCHOR colorClass — crisp rings, no bloom/brightness */
+  filter: none;
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 0 3px color-mix(in oklch, currentColor 24%, transparent);
+}
+
+.flow-anchor-on.flow-anchor-endpoint-sibling {
+  background-color: var(--muted-foreground) !important;
+  color: var(--muted-foreground) !important;
+}
+
+.graph-trace-warm .flow-anchor-on {
+  transition:
+    transform 120ms var(--spring),
+    opacity 100ms var(--ease),
+    box-shadow 100ms var(--ease);
+}
+
+.jump-tip {
+  animation: token-info-pop 120ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-edge-path,
+  .preview-edge-glow,
+  .connection-legend-swatch-line,
+  .graph-pane.graph-ctrl-preview .token-chip.cursor-pointer .token-shimmer-target::after,
+  .graph-pane.graph-ctrl-preview .token-def-label.cursor-pointer .token-shimmer-target::after,
+  .graph-pane.graph-ctrl-preview .react-flow__node.class-node-root::after {
+    animation: none !important;
+  }
+
+  .flow-anchor-off,
+  .flow-anchor-on,
+  .graph-trace-warm .flow-anchor-on,
+  .member-row,
+  .react-flow__node.class-node-root,
+  .code-kw,
+  .code-pn,
+  .code-comment,
+  .code-string,
+  .code-number,
+  .member-body-wrap,
+  .member-section-label,
+  .member-section-bulk,
+  .node-card-caret,
+  .member-row-caret,
+  .node-card-title,
+  .file-type-chip,
+  .token-chip,
+  .token-def-label {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html.graph-sim-active .graph-pane {
+  outline: 2px solid color-mix(in oklch, var(--brand) 40%, transparent);
+  outline-offset: -2px;
+}
+
+html.graph-sim-active .token-context-bar {
+  opacity: 0.45;
+}
+
+.code-line--sim-current {
+  background: color-mix(in oklch, var(--brand) 12%, transparent);
+  border-radius: 4px;
+}

@@ -46,4 +46,4 @@ Adjust the **existing** token in `index.css` for **both** `:root` and `.dark`. I
 
 ## CSS file ownership
 
-`index.css` (emit + `.hoverable`) · `tokens-chips.css` (chips) · `trace-modes.css` (trace/Ctrl) · `nodes.css` (member rows) · `preview-wires.css` (wires/sockets)
+`index.css` (entry) · `theme-light.css` / `theme-dark.css` (emit) · `interactive-surfaces.css` (`.hoverable`) · `tokens-chips.css` (chips) · `trace-modes.css` (trace/Ctrl) · `nodes.css` (member rows) · `preview-wires.css` (wires/sockets)

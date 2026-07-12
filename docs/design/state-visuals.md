@@ -41,6 +41,7 @@ desynced-crossfade smear this replaced. Tier C uses `animation`, which the snap 
 - Global: `client/src/index.css` — `.hoverable:hover`, section headers, graph controls
 - JS constants: `client/src/lib/controlTokens.ts` — keep in sync with CSS
 - Connector motion: `client/src/styles/preview-wires.css`, `client/src/styles/tokens-chips.css`
+- Accessibility (WCAG 1.4.1 matrix for wires): [accessibility.md](accessibility.md)
 
 ## Focus-visible
 

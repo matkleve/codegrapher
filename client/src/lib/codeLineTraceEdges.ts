@@ -149,14 +149,22 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       : [];
 
   const localTargetId = chipEl.dataset.localTargetId;
-  const paramDefEl = canonicalLocalDefHost(chipEl);
+  const localDefId = chipEl.dataset.localDefId;
+  const paramDefEl =
+    canonicalLocalDefHost(chipEl) ??
+    (localDefId?.includes("::param::") ? chipEl : null);
   const paramName =
-    localTargetId != null ? paramNameFromDefId(localTargetId) : null;
+    (localTargetId != null ? paramNameFromDefId(localTargetId) : null) ??
+    (localDefId != null ? paramNameFromDefId(localDefId) : null);
+  const isParamToken =
+    localTargetId?.includes("::param::") === true ||
+    localDefId?.includes("::param::") === true;
+  const isParamDefHost = localDefId?.includes("::param::") === true;
   const typeCascade =
-    localEdges.length > 0 &&
     paramName != null &&
     paramDefEl != null &&
-    localTargetId?.includes("::param::")
+    isParamToken &&
+    (localEdges.length > 0 || isParamDefHost)
       ? buildParamTypeCascadeEdges({
           paramName,
           paramDefEl,

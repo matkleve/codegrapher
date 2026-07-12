@@ -130,8 +130,8 @@ pinned-token load flow. The floating Load pill (`LoadConnector`) was removed; da
   as a param chip (`field`), regardless of whether the definition is a graph
   node.
 - [ ] Given a body usage of param `field: AddressFieldKind`, when hovered past dwell,
-  then the trace includes tier-1 param→usage, tier-2 sig-type→param, and tier-3
-  type-def→sig-type (or Load stub) wires per
+  then the trace includes tier-1 Usage param→usage, tier-2 **Typesetting** sig-type→param,
+  and tier-3 Usage type-def→sig-type (or Load stub) wires per
   [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md).
 - [ ] Plain hover never fires without a dwell; Ctrl fires instantly.
 

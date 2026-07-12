@@ -23,7 +23,9 @@ import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
 import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
 import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
-import { buildUsageSiteIndex, type UsageSiteRecord } from "@/lib/usageSiteIndex";
+import { useIncrementalUsageSiteIndex } from "@/hooks/useIncrementalUsageSiteIndex";
+import { rankAndCapUsageSites } from "@/lib/usageSiteRanking";
+import type { UsageSiteRecord } from "@/lib/usageSiteIndex";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
@@ -110,6 +112,7 @@ type GraphInteractionContextValue = {
     token: string,
     sourceFlowId: string,
     sourceMemberId?: string,
+    anchorLineNumber?: number,
   ) => UsageSiteRecord[];
   /** Undo one pin/clear action, restoring the selection it replaced. */
   goBackPin: () => void;
@@ -152,15 +155,17 @@ export function GraphInteractionProvider({
   const lookups = useConnectionLookups({ graphData, symbols, references });
 
   const indexedSymbolNames = useMemo(() => new Set(symbols.keys()), [symbols]);
-  const usageSiteIndex = useMemo(
-    () => buildUsageSiteIndex(nodes, indexedSymbolNames),
-    [indexedSymbolNames, nodes],
-  );
+  const usageSiteIndex = useIncrementalUsageSiteIndex(nodes, indexedSymbolNames);
 
   const lookupIndexedUsageSites = useCallback(
-    (token: string, sourceFlowId: string, sourceMemberId?: string) => {
+    (
+      token: string,
+      sourceFlowId: string,
+      sourceMemberId?: string,
+      anchorLineNumber?: number,
+    ) => {
       const records = usageSiteIndex.get(token) ?? [];
-      return records.filter(
+      const filtered = records.filter(
         (rec) =>
           !isDefinitionSignatureLine(
             rec.line,
@@ -171,6 +176,11 @@ export function GraphInteractionProvider({
             sourceMemberId,
           ),
       );
+      return rankAndCapUsageSites(filtered, {
+        flowNodeId: sourceFlowId,
+        memberId: sourceMemberId,
+        lineNumber: anchorLineNumber,
+      });
     },
     [usageSiteIndex],
   );

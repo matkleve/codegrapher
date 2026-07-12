@@ -1,0 +1,67 @@
+.graph-trace-active .trace-member-lit,
+.graph-trace-active .trace-member-owner-lit,
+.graph-pane.graph-ctrl-preview .trace-member-lit,
+.graph-pane.graph-ctrl-preview .trace-member-owner-lit {
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-function) 55%, var(--border));
+}
+
+.graph-trace-active .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
+  background: var(--trace-dim-surface) !important;
+}
+
+.graph-trace-active
+  .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+    .member-row-label:hover,
+    .member-row-label:focus-visible,
+    .member-row-label.token-chip-on,
+    .member-row-label.token-chip-hover-preview
+  ) {
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
+}
+
+.graph-pane.graph-ctrl-preview
+  .member-row:not(.trace-member-lit):not(.trace-member-owner-lit):has(
+    .member-row-label:hover,
+    .member-row-label:focus-visible,
+    .member-row-label.token-chip-on,
+    .member-row-label.token-chip-hover-preview
+  ) {
+  background: var(--member-row-trace-lit-bg) !important;
+  border-color: var(--member-row-trace-lit-border) !important;
+}
+
+.graph-trace-active .code-line.trace-lit-line .code-kw,
+.graph-trace-active .code-line.trace-lit-line .control-flow-chip-text,
+.graph-trace-active .code-line.trace-lit-line .code-pn,
+.graph-trace-active .code-line.trace-lit-line .code-comment,
+.graph-trace-active .code-line.trace-lit-line .code-string,
+.graph-trace-active .code-line.trace-lit-line .code-number,
+.graph-trace-active .code-line.trace-lit-line .code-type {
+  color: var(--muted-foreground) !important;
+}
+
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-kw,
+.graph-trace-active .code-line.trace-lit-line-hop2 .control-flow-chip-text,
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-pn,
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-comment,
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-string,
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-number,
+.graph-trace-active .code-line.trace-lit-line-hop2 .code-type {
+  color: var(--muted-foreground) !important;
+  opacity: var(--trace-chip-hop2-opacity);
+}
+
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-kw,
+.graph-trace-active .code-line.trace-lit-line-hop3 .control-flow-chip-text,
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-pn,
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-comment,
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-string,
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-number,
+.graph-trace-active .code-line.trace-lit-line-hop3 .code-type {
+  color: var(--muted-foreground) !important;
+  opacity: var(--trace-chip-hop3-opacity);
+}
+

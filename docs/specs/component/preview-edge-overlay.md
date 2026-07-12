@@ -6,7 +6,13 @@ DOM/SVG layer above the React Flow canvas that measures anchor elements each fra
 
 ## What It Looks Like
 
-Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin). **Data** preview kinds (usage, binding, transitive, load) use cubic wires that skirt below labels; **control-flow** (`branch`) uses one shared orthogonal bus in the **left gutter** beside the case column — exit down from the decision, across below the head line, down the bus, then short taps **right** into each branch's left anchor (never through token text). Only the first branch wire draws the bus.
+Full-pane SVG with dashed paths, crisp endpoint socket rings, jump tooltip on wire hit-zones. Paths use overlay-local coordinates (client rect minus SVG origin).
+
+| Kind | Path geometry |
+| ---- | ------------- |
+| Usage, Binding, Transitive, Load | Cubic — skirt below labels |
+| **Typesetting** | **Rounded orthogonal** Manhattan (`TYPESETTING_CORNER_RADIUS` = 6px) — sig-type → param def |
+| Control flow (`branch`) | Sharp orthogonal bus in the **left gutter** — down from decision, across below head line, down bus, taps right into branch anchors (first branch draws shared trunk) |
 
 ## Where It Lives
 
@@ -71,7 +77,8 @@ GraphFlowInner
 | `PreviewEdgeSpec[]` | `buildPreviewEdges`, `localDefLinks`, `buildStructuralEdges` |
 | `liveFrom` / `liveTo` | `previewEdgeTypes.ts` |
 | Anchor geometry | `resolvePreviewAnchor` |
-| Stroke | `previewWireStroke` → `--edge-usage` / `--edge-binding` / `--edge-control-flow` via `style` |
+| Stroke | `previewWireStroke` → `--edge-usage` / `--edge-binding` / `--edge-typesetting` / `--edge-control-flow` via `style` |
+| Path builder | `wirePaths.ts` → `previewWirePath` |
 
 ## Wiring
 
@@ -93,4 +100,5 @@ Path coordinates are local to the overlay SVG — not flow-space only.
 
 - System: [preview-edges.md](../system/preview-edges.md)
 - Interactions: [preview-edges.interactions.supplement.md](../system/preview-edges.interactions.supplement.md)
+- Accessibility: [../../design/accessibility.md](../../design/accessibility.md)
 - Handles: [ctrlPreviewHandles.ts](../../../client/src/lib/ctrlPreviewHandles.ts)

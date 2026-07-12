@@ -7,6 +7,7 @@
     "lint": "npm run lint --prefix client && npm run lint --prefix server",
     "lint:specs": "node scripts/lint-specs.mjs",
     "lint:tokens": "node scripts/lint-tokens.mjs",
+    "lint:file-length": "node scripts/lint-file-length.mjs",
     "test": "npm run test --prefix client",
     "stress:load": "node scripts/stress-load-flow.mjs"
   },

@@ -1,0 +1,99 @@
+.code-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+  border-radius: 4px;
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    box-shadow var(--motion-hover-surface) var(--ease);
+}
+
+.code-line-gutter {
+  flex-shrink: 0;
+  min-width: 1.75rem;
+  text-align: right;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+  color: var(--muted-foreground);
+  opacity: 0.55;
+  user-select: none;
+  transition:
+    color var(--motion-hover-surface) var(--ease),
+    opacity var(--motion-hover-surface) var(--ease);
+}
+
+.code-line-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.code-line:hover:not(.code-line--sim-current) {
+  background-color: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px var(--brand-border);
+}
+
+.code-line:hover:not(.code-line--sim-current) .code-line-gutter {
+  opacity: 0.9;
+  color: color-mix(in oklch, var(--brand) 70%, var(--muted-foreground));
+}
+
+.code-line--sim-current .code-line-gutter {
+  opacity: 1;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap {
+  background-color: var(--surface-neutral-strong);
+  color: var(--muted-foreground) !important;
+}
+
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-line,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-kw,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-pn,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-comment,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-string,
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .code-number {
+  color: var(--muted-foreground) !important;
+}
+
+.member-row-header:hover:not(:has(
+  .member-row-label:hover,
+  .member-sig-token-chip:hover,
+  .member-sig-type-chip:hover
+)) + .member-body-wrap .token-chip .token-chip-text {
+  color: var(--muted-foreground) !important;
+  -webkit-text-fill-color: currentColor;
+}

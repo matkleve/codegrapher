@@ -109,6 +109,7 @@ export function buildParamTypeCascadeEdges(
     from: { type: "element", el: sigTypeEl },
     to: { type: "element", el: resolvedParamDef },
     kind: typeKind,
+    connectionKind: "typesetting",
     hop: 2,
     liveFrom:
       liveToFromUsageEl(symbolName, sigTypeEl) ?? {

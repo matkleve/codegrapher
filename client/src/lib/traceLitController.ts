@@ -1,4 +1,4 @@
-import type { TraceLitState } from "@/lib/computeTraceLit";
+import type { TraceLitState, TraceStrength } from "@/lib/computeTraceLit";
 import { allLocalDefElements } from "@/lib/localDefElements";
 import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
 import {
@@ -12,9 +12,13 @@ const CHIP_ON = "token-chip-on";
 const CHIP_SOURCE = "token-chip-source";
 const CHIP_HOVER_PREVIEW = "token-chip-hover-preview";
 const CHIP_ENDPOINT_SIBLING = "token-chip-endpoint-sibling";
+const CHIP_HOP2 = "token-chip-hop2";
+const CHIP_HOP3 = "token-chip-hop3";
 const MEMBER_LIT = "trace-member-lit";
 const MEMBER_OWNER_LIT = "trace-member-owner-lit";
 const LINE_LIT = "trace-lit-line";
+const LINE_LIT_HOP2 = "trace-lit-line-hop2";
+const LINE_LIT_HOP3 = "trace-lit-line-hop3";
 const ANCHOR_ON = "flow-anchor-on";
 const ANCHOR_OFF = "flow-anchor-off";
 const ANCHOR_ENDPOINT_SIBLING = "flow-anchor-endpoint-sibling";
@@ -152,6 +156,31 @@ function applyEndpointSockets(
   return restore;
 }
 
+function hopClasses(tier: TraceStrength): string[] {
+  if (tier === 3) return [CHIP_HOP3, CHIP_ENDPOINT_SIBLING];
+  if (tier === 2) return [CHIP_HOP2, CHIP_ENDPOINT_SIBLING];
+  return [];
+}
+
+function strengthForKey(
+  state: TraceLitState,
+  key: string | null,
+  fallbackSibling: boolean,
+): TraceStrength {
+  if (key) {
+    const fromMap = state.traceStrength.get(key);
+    if (fromMap != null) return fromMap;
+  }
+  return fallbackSibling ? 2 : 1;
+}
+
+function lineLitClasses(tier: TraceStrength): string[] {
+  const classes = [LINE_LIT];
+  if (tier === 3) classes.push(LINE_LIT_HOP3);
+  else if (tier === 2) classes.push(LINE_LIT_HOP2);
+  return classes;
+}
+
 function portSidesForHost(
   host: HTMLElement,
   endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
@@ -166,32 +195,26 @@ function portSidesForHost(
 
 function applyEndpointHost(
   host: HTMLElement,
-  isSibling: boolean,
+  tier: TraceStrength,
   pinnedTokenKeys: ReadonlySet<string>,
   hoveredTokenKey: string | null,
   endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
 ): void {
   const traceKey = traceKeyFromHost(host);
-  const extra: string[] = [CHIP_ON];
-  if (isSibling) {
-    extra.push(CHIP_ENDPOINT_SIBLING);
-  } else if (traceKey && pinnedTokenKeys.has(traceKey)) {
-    extra.push(CHIP_SOURCE);
-  } else if (traceKey && hoveredTokenKey === traceKey) {
-    extra.push(CHIP_HOVER_PREVIEW);
+  const extra: string[] = [CHIP_ON, ...hopClasses(tier)];
+  if (tier === 1) {
+    if (traceKey && pinnedTokenKeys.has(traceKey)) {
+      extra.push(CHIP_SOURCE);
+    } else if (traceKey && hoveredTokenKey === traceKey) {
+      extra.push(CHIP_HOVER_PREVIEW);
+    }
   }
   const restoreAnchors = applyEndpointSockets(
     host,
     portSidesForHost(host, endpointPortSide),
-    isSibling,
+    tier >= 2,
   );
   track(host, extra, restoreAnchors);
-}
-
-function litLinesForMember(memberId: string): HTMLElement[] {
-  const row = getByMemberId(memberId);
-  if (!row) return [];
-  return [...row.querySelectorAll<HTMLElement>(".code-line")];
 }
 
 export type TraceLitApplyOptions = {
@@ -207,13 +230,15 @@ export function applyTraceLit(
   clearPrevious();
 
   for (const key of state.litTokenKeys) {
+    const tier = strengthForKey(state, key, false);
+    const hop = hopClasses(tier);
     const memberSiblings = memberDefSiblingHosts(key);
     if (memberSiblings) {
-      for (const host of memberSiblings) track(host, [CHIP_LIT]);
+      for (const host of memberSiblings) track(host, [CHIP_LIT, ...hop]);
       continue;
     }
     const host = chipHostForTraceKey(key);
-    if (host) track(host, [CHIP_LIT]);
+    if (host) track(host, [CHIP_LIT, ...hop]);
   }
 
   const processedDefIds = new Set<string>();
@@ -236,9 +261,10 @@ export function applyTraceLit(
           continue;
         }
         const isSibling = primary !== null ? litHost !== primary : true;
+        const tier = strengthForKey(state, key, isSibling);
         applyEndpointHost(
           litHost,
-          isSibling,
+          tier,
           pinnedTokenKeys,
           hoveredTokenKey,
           state.endpointPortSide,
@@ -259,9 +285,14 @@ export function applyTraceLit(
       const primary = primaryHostInDefGroup(group, hoveredTokenKey, pinnedTokenKeys);
       for (const litHost of group) {
         const isSibling = primary !== null ? litHost !== primary : true;
+        const tier = strengthForKey(
+          state,
+          traceKeyFromHost(litHost),
+          isSibling,
+        );
         applyEndpointHost(
           litHost,
-          isSibling,
+          tier,
           pinnedTokenKeys,
           hoveredTokenKey,
           state.endpointPortSide,
@@ -275,9 +306,10 @@ export function applyTraceLit(
     const traceKey = traceKeyFromHost(host);
     const isProvenanceSibling =
       traceKey != null && state.siblingEndpointTokenKeys.has(traceKey);
+    const tier = strengthForKey(state, traceKey, isProvenanceSibling);
     applyEndpointHost(
       host,
-      isProvenanceSibling,
+      tier,
       pinnedTokenKeys,
       hoveredTokenKey,
       state.endpointPortSide,
@@ -294,10 +326,17 @@ export function applyTraceLit(
     if (row) track(row, [MEMBER_OWNER_LIT]);
   }
 
-  for (const memberId of state.litLineMemberIds) {
-    for (const line of litLinesForMember(memberId)) {
-      track(line, [LINE_LIT]);
-    }
+  for (const [lineKey, tier] of state.litLineStrength) {
+    const sep = lineKey.indexOf("::");
+    if (sep < 0) continue;
+    const memberId = lineKey.slice(0, sep);
+    const lineNumber = lineKey.slice(sep + 2);
+    const row = getByMemberId(memberId);
+    if (!row) continue;
+    const line = row.querySelector<HTMLElement>(
+      `.code-line[data-line-number="${CSS.escape(lineNumber)}"]`,
+    );
+    if (line) track(line, lineLitClasses(tier));
   }
 }
 

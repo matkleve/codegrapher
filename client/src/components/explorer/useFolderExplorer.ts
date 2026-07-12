@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { browseFolder, fetchTree } from "@/api";
 import { useIndex } from "@/context/IndexContext";
 import {
@@ -18,7 +18,11 @@ import {
 import type { TreeEntry } from "@/types";
 
 /** All folder-open, indexing, and recent-folder/file state for FileExplorer. */
-export function useFolderExplorer(onFileClick: (filePath: string) => void) {
+export function useFolderExplorer(
+  onFileClick: (filePath: string) => void,
+  onFolderOpened?: (folderPath: string) => void,
+) {
+  const openSeqRef = useRef(0);
   const [folderPath, setFolderPath] = useState(() => loadLastFolder() ?? "");
   const [rootEntries, setRootEntries] = useState<TreeEntry[] | null>(null);
   const [rootPath, setRootPath] = useState<string | null>(null);
@@ -53,30 +57,39 @@ export function useFolderExplorer(onFileClick: (filePath: string) => void) {
   }, []);
 
   const openFolderAt = useCallback(
-    async (dirPath: string) => {
+    async (dirPath: string): Promise<string | null> => {
+      const seq = ++openSeqRef.current;
       setOpening(true);
       setError(null);
       setStatusMessage("Indexing project...");
       try {
         await loadIndex(dirPath);
-        setStatusMessage(null);
+        if (seq !== openSeqRef.current) return null;
+
         const data = await fetchTree(dirPath);
+        if (seq !== openSeqRef.current) return null;
+
         setFolderPath(data.path);
         setRootPath(data.path);
         setRootEntries(data.entries);
         setActiveFolderRoot(data.path);
         setRecentFiles(loadRecentFiles(data.path));
         rememberFolder(data.path);
+        return data.path;
       } catch (err) {
+        if (seq !== openSeqRef.current) return null;
         setRootEntries(null);
         setRootPath(null);
         setActiveFolderRoot(null);
         setRecentFiles([]);
         setStatusMessage(null);
         setError(err instanceof Error ? err.message : "Failed to open folder");
+        return null;
       } finally {
-        setOpening(false);
-        setStatusMessage(null);
+        if (seq === openSeqRef.current) {
+          setOpening(false);
+          setStatusMessage(null);
+        }
       }
     },
     [loadIndex, rememberFolder],
@@ -97,39 +110,46 @@ export function useFolderExplorer(onFileClick: (filePath: string) => void) {
     if (path) void openFolderAt(path);
   }, [openFolderAt]);
 
+  const notifyFolderOpened = useCallback(
+    (path: string | null) => {
+      if (path) onFolderOpened?.(path);
+    },
+    [onFolderOpened],
+  );
+
   const handleOpen = useCallback(async () => {
     if (!folderPath.trim()) {
       setError("Enter an absolute folder path or browse");
       return;
     }
-    await openFolderAt(folderPath.trim());
-  }, [folderPath, openFolderAt]);
+    const opened = await openFolderAt(folderPath.trim());
+    notifyFolderOpened(opened);
+  }, [folderPath, notifyFolderOpened, openFolderAt]);
 
   const handleBrowse = useCallback(async () => {
-    setOpening(true);
     setError(null);
     try {
       const result = await browseFolder();
       if ("cancelled" in result) return;
-      await openFolderAt(result.path);
+      setFolderPath(result.path);
+      const opened = await openFolderAt(result.path);
+      notifyFolderOpened(opened);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Folder picker unavailable — install zenity or enter a path manually",
       );
-    } finally {
-      setOpening(false);
     }
-  }, [openFolderAt]);
+  }, [notifyFolderOpened, openFolderAt]);
 
   const handleRecentFolderSelect = useCallback(
     (path: string) => {
       setFolderPath(path);
-      void openFolderAt(path);
+      void openFolderAt(path).then(notifyFolderOpened);
       setRecentFoldersOpen(false);
     },
-    [openFolderAt],
+    [notifyFolderOpened, openFolderAt],
   );
 
   const handleClearRecentFolders = useCallback(() => {
@@ -158,5 +178,6 @@ export function useFolderExplorer(onFileClick: (filePath: string) => void) {
     handleBrowse,
     handleRecentFolderSelect,
     handleClearRecentFolders,
+    folderBusy: opening || indexing,
   };
 }

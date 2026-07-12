@@ -21,11 +21,11 @@ When the user hovers a **body usage** of `field` (e.g. the argument in `extractF
 
 1. They expect a **primary** wire from the param definition (`field` in the signature) to that usage — this works today.
 2. They also expect the **type annotation** (`AddressFieldKind` after `:`) to light up with a **weaker** wire back to the param slot, and `AddressFieldKind` itself to show a **still weaker** wire to its definition (on-canvas node or dashed Load stub).
-3. Today the type annotation does **not** join the trace when hovering a param usage; `AddressFieldKind` appears inert unless hovered directly.
-4. When hovering the **param definition** instead, all in-body usages fan out at **full** usage blue — visually equal to the direct path — with no decayed type chain behind the param.
-5. **Call-graph transitive** wires (A calls B calls C) already use hop decay (`preview-wire--hop2` / `--hop3`), but **provenance** hops (usage → param → type → type def) and **sibling** usages do not.
+3. **Resolved:** body-usage hover now includes the type annotation in the trace — tier-2 **Typesetting** wire (sig-type → param def) and tier-3 Usage wire (type def → sig-type or Load stub).
+4. **Resolved:** param-def hover fans out tier-1 usage wires and shows the decayed type chain at tier 2/3 behind the param.
+5. **Resolved:** provenance hops use `hop: 2|3` opacity decay; call-graph transitive keeps separate `connectionKind: "transitive"` bucketing.
 
-This supplement closes that gap without changing edge **kind** (usage / binding / branch / transitive) or on-demand philosophy.
+This supplement defines trace **strength** tiers and adds **Typesetting** as the tier-2 connection kind for sig-type → param def (see [connection-taxonomy.md](connection-taxonomy.md) §11). On-demand philosophy unchanged.
 
 ---
 
@@ -47,6 +47,7 @@ This supplement closes that gap without changing edge **kind** (usage / binding 
 | ---- | --- | --------------------- |
 | Usage | `--edge-usage` | Yes |
 | Binding | `--edge-binding` | Yes (initializer→binding stays tier 1 on binding hover) |
+| Typesetting | `--edge-typesetting` | Yes — sig-type→param def at tier 2; **rounded orthogonal** path geometry |
 | Control flow (`branch`) | `--edge-control-flow` | **No** — branch fan-out stays tier 1; kind color already separates it from usage |
 | Transitive (call-graph) | `--edge-usage` | Yes — existing `hop: 2|3` on `PreviewEdgeSpec` (unchanged) |
 
@@ -70,8 +71,8 @@ flowchart LR
 | # | Trigger | System Response | Strength |
 | --- | ------- | --------------- | -------- |
 | 1 | Hover/pin **body usage** of indexed param `field` | Usage wire param def → this usage | tier 1 |
-| 1b | Same trace | **No** sig-type → param wire (signature provenance is hover-only on param/type chips) | — |
-| 2 | Hover/pin **param def** `field` in signature | Fan-out param def → **each** in-body usage | tier 1 each |
+| 1b | Same trace | sig-type → param def; type def → sig-type (or Load stub) when type is indexed | tier 2 / tier 3 |
+| 2 | Hover/pin **param def** `field` in signature (header chip **or** inline signature line in expanded body) | Fan-out param def → **each** in-body usage | tier 1 each |
 | 2b | Same trace | sig-type → param def | tier 2 |
 | 2c | Same trace | type def → sig-type (or Load stub) | tier 3 |
 | 3 | Hover/pin **sig-type** `AddressFieldKind` only | Existing `buildSignatureTypeUsageEdges` wire (def → chip or Load stub) | tier 1 only — no forward cascade to param usages |
@@ -83,8 +84,8 @@ flowchart LR
 | ----- | ----- |
 | Direction (usage segment) | param/local def → usage (unchanged) |
 | Direction (type segment) | type definition → sig-type chip → param def (type flows into signature slot) |
-| Connection kind | **Usage** for all provenance segments (same legend toggle as today) |
-| Builder | `buildParamTypeCascadeEdges` merged in **`buildParamDefPreviewEdges` only** (signature param chip hover) |
+| Connection kind | **Typesetting** for tier 2 (sig-type → param def); **Usage** for tier 3 (type def → sig-type) |
+| Builder | `buildParamTypeCascadeEdges` merged in **`buildParamDefPreviewEdges`** (header param chip) and **`codeLineTraceEdges`** (inline signature param def/usage with `::param::` local id) |
 | Type lookup | `MemberSignature` / `param.type` + `primaryIndexedSymbolInType` → sig-type `traceKey` |
 | Load menu | **Primary hover only** opens `TokenConnectionMenu` — cascaded tier-3 Load stubs do not spawn a second menu (same rule as [member-access cascade](preview-edges.interactions.supplement.md) § Member-access cascade) |
 | Sibling usages | When hovering **one** body usage, other usages of the same binding get **tier-2** wires (≈½ opacity) and grey sibling endpoint styling — not tier-1 |
@@ -117,7 +118,7 @@ The sig-type chip is **not** a `localDefId` sibling of the param name — it is 
 
 ### `PreviewEdgeSpec` field
 
-Reuse `hop?: 2 | 3` on provenance segments (maps to `preview-wire--hop2` / `--hop3` via `previewWireClasses`). **Do not** conflate with `connectionKind: "transitive"` — call-graph transitive keeps that kind label for legend bucketing; provenance hops are still `connectionKind: "usage"` with `hop` set.
+Reuse `hop?: 2 | 3` on provenance segments (maps to `preview-wire--hop2` / `--hop3` via `previewWireClasses`). Tier 2 sig-type→param uses `connectionKind: "typesetting"`; tier 3 type-def→sig-type stays `connectionKind: "usage"`. Do **not** conflate with `connectionKind: "transitive"` — call-graph transitive keeps that kind label for legend bucketing.
 
 Optional explicit `traceStrength?: 1 | 2 | 3` MAY be added later for clarity; v1 maps `traceStrength 2 → hop 2`, `3 → hop 3`, omit field for tier 1.
 
@@ -135,17 +136,18 @@ Indexed types in the same file as an on-canvas class (e.g. `export type AddressF
 
 | File | Change |
 | ---- | ------ |
-| `paramTypeCascadeEdges.ts` (new) | Build tier 2/3 edges from param usage/def + signature type |
-| `codeLineTraceEdges.ts` | Merge cascade on local/param usage path |
+| `paramTypeCascadeEdges.ts` | Build tier 2/3 edges from param usage/def + signature type |
+| `wirePaths.ts` | `typesettingOrthogonalPath` — rounded-corner Manhattan for `connectionKind: "typesetting"` |
+| `codeLineTraceEdges.ts` | Merge cascade on inline signature param def/usage and body param usage |
 | `paramDefPreviewEdges.ts` | Merge cascade on param-def fan-out path |
 | `computeTraceLit.ts` | Apply tier-2/3 endpoint sets for sig-type + param def hosts |
-| `previewWireClasses` / `preview-wires.css` | No new classes if `hop` mapping suffices |
+| `preview-wires.css` | `--typesetting` dash-dot + `preview-edge-typesetting`; reuse `hop` classes for strength |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Given `field: AddressFieldKind` and a body usage of `field`, when the usage is hovered past dwell, then one tier-1 usage wire (param def → usage), one tier-2 wire (sig-type → param def), and one tier-3 wire (type def → sig-type or Load stub) are drawn.
+- [x] Given `field: AddressFieldKind` and a body usage of `field`, when the usage is hovered past dwell, then one tier-1 usage wire (param def → usage), one tier-2 **Typesetting** wire (sig-type → param def), and one tier-3 Usage wire (type def → sig-type or Load stub) are drawn.
 - [ ] Given the same trace, when rendered, then tier-2/3 wires are visibly weaker than tier-1 (reuse `preview-wire--hop2` / `--hop3`).
 - [ ] Given tier-2 sig-type endpoint, when lit, then chip uses `token-chip-endpoint-sibling` and socket uses `flow-anchor-endpoint-sibling`.
 - [ ] Given hover on body usage only, when trace is active, then other usages of `field` do **not** receive usage wires (counts/menu unchanged).

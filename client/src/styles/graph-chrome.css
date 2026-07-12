@@ -1,0 +1,89 @@
+/* Graph canvas — grid, pane cursors, resizer, scrollbars. */
+
+.graph-canvas-grid {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-repeat: repeat;
+}
+
+.graph-flow-container {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.react-flow__edge.path-highlight .react-flow__edge-path {
+  stroke: var(--ring) !important;
+  stroke-width: 3px !important;
+}
+
+.graph-pane {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Grab cursor only over the flow canvas, not the whole pane (drop zone). */
+.graph-pane .graph-flow-container,
+.graph-pane .graph-flow-container .react-flow__pane {
+  cursor: grab;
+}
+
+.graph-pane .graph-flow-container .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.explorer-tree-guide {
+  border-left-color: color-mix(in oklch, var(--sidebar-border) 85%, transparent);
+}
+
+.class-node-root .react-flow__resize-control.handle.class-node-resizer-handle {
+  position: absolute !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+  top: auto !important;
+  transform: translate(50%, 50%) !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  cursor: nwse-resize !important;
+  background: var(--chart-2) !important;
+  border: 2px solid var(--background) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--chart-2) 45%, transparent);
+  z-index: 10 !important;
+  transition:
+    background-color var(--motion-hover-surface) var(--ease),
+    border-color var(--motion-hover-surface) var(--ease),
+    box-shadow var(--motion-hover-surface) var(--ease);
+}
+
+.class-node-root .react-flow__resize-control.handle.class-node-resizer-handle:hover {
+  background: var(--brand) !important;
+  border-color: var(--background) !important;
+  box-shadow: 0 0 0 1px var(--brand-border) !important;
+}
+
+/* Only bottom-right handle — hide full-box resize lines */
+.react-flow__resize-control.line {
+  display: none !important;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 50%, transparent) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+}

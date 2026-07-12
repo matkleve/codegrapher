@@ -1,14 +1,19 @@
 # Design tokens
 
 **Who this is for:** anyone styling UI or referencing colors from JS/SVG.  
-**Canonical emission:** `client/src/index.css` (`:root` light default, `.dark` class for dark).  
+**Canonical emission:** `client/src/styles/theme-light.css` (`:root`) and `theme-dark.css` (`.dark`); wired from `index.css`.  
 **Agent rule:** `.cursor/rules/tailwind-tokens-only.mdc` — reuse tokens below; never add one-off CSS variables.
 
 **CSS layout:**
 
 | File | Owns |
 | ---- | ---- |
-| `index.css` | Theme emission (`:root`), `.hoverable` interactive system, explorer, graph chrome |
+| `index.css` | Tailwind entry, `@theme inline`, base layer, style imports |
+| `styles/theme-light.css` / `theme-dark.css` | Canonical `:root` / `.dark` token emission |
+| `styles/control-rows.css` | Compact menu / legend row density |
+| `styles/interactive-surfaces.css` | `.hoverable`, explorer headers, graph toggles |
+| `styles/graph-chrome.css` | Canvas grid, pane cursors, map controls, resizer |
+| `styles/panel-resize.css` | Sidebar + simulation panel resize handles |
 | `styles/tokens-chips.css` | Token chip resting ink, chip-on, load connector shell |
 | `styles/trace-modes.css` | Ctrl preview, trace dim/lit, syntax fade |
 | `styles/preview-wires.css` | Preview + structural wires, flow anchors |
@@ -121,13 +126,18 @@ Persistent taxonomy wires (inheritance, implementation, composition, module impo
 | `--edge-import` | module import toggle (thin dotted) |
 | `--edge-usage` | usage + transitive preview wires (dashed, function blue) |
 | `--edge-binding` | initializer → binding preview (dotted) |
+| `--edge-typesetting` | sig-type → param def preview (dash-dot, type teal) |
 | `--edge-control-flow` | `switch`/`if` → branch preview (dash-dot) |
 
 Mapped in JS via `STRUCTURAL_EDGE_STROKE` in `client/src/lib/structuralEdgeColors.ts`.
 
 Preview **usage** and **transitive** wires use `--edge-usage` (function blue) — one hue for every indexed symbol kind, so usage lines never mimic structural inheritance purple. **Provenance** hops reuse the same hue with tiered opacity: `--preview-wire-hop2-opacity` (58%), `--preview-wire-hop3-opacity` (36%) on path; glow uses `--preview-wire-hop2-glow-opacity` / `--preview-wire-hop3-glow-opacity`. See [preview-edges.trace-strength.supplement.md](../specs/system/preview-edges.trace-strength.supplement.md).
 
-Preview **binding** wires use `--edge-binding` (type-adjacent cyan), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
+Preview **binding** wires use `--edge-binding` (cyan **188°** — hue-separated from typesetting), dotted (`preview-edge-binding`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Binding.
+
+Preview **typesetting** wires use `--edge-typesetting` (alias of `--token-edge-type`, teal **200°**), dash-dot on **rounded orthogonal** paths (`preview-edge-typesetting`). See [connection-taxonomy.md](../specs/system/connection-taxonomy.md) § Typesetting.
+
+**Accessibility:** connection kinds MUST NOT rely on color alone — see [accessibility.md](accessibility.md).
 
 ### Trace dimming
 

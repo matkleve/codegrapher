@@ -111,6 +111,7 @@ describe("buildParamTypeCascadeEdges", () => {
 
     expect(edges).toHaveLength(2);
     expect(edges[0]?.hop).toBe(2);
+    expect(edges[0]?.connectionKind).toBe("typesetting");
     expect(edges[1]?.hop).toBe(3);
     expect(edges[1]?.load?.filePath).toBe("/proj/types.ts");
     expect(edges[0]?.from.type).toBe("element");

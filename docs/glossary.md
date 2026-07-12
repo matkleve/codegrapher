@@ -52,10 +52,13 @@
   Dashed preview overlay segment shown when one end of a trace is off-canvas — signals "elsewhere, must load." Coexists with `TokenConnectionMenu` load rows; the floating Load pill was removed. Built by `buildLoadPreviewEdge` / `buildCallSiteLoadPreviewEdge`.
 
 - **Connection kind**  
-  One of the distinct relationship types two graph elements can have (usage, **binding**, **control flow**, inheritance, composition, transitive reach, …), each with its own line style/color/arrowhead. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
+  One of the distinct relationship types two graph elements can have (usage, **binding**, **typesetting**, **control flow**, inheritance, composition, transitive reach, …), each with its own line style/color/arrowhead. Spec: [connection-taxonomy.md](specs/system/connection-taxonomy.md).
 
 - **Binding edge**  
   On-demand dotted preview wire from an initializer expression to the param/local it binds (e.g. `result.address` → `addr`). Direction is **value source → binding**, unlike usage (def → later reference). Summoned on the same hover/Ctrl/pin path as usage wires.
+
+- **Typesetting edge**  
+  On-demand dash-dot preview wire from a signature **type chip** to its **param def slot** (e.g. `GeocoderSearchResult` → `result` in `result: GeocoderSearchResult`). **Rounded orthogonal** path geometry. Direction is **type annotation → param slot** — static typing, not runtime value flow. Summoned as tier 2 in the param provenance cascade; tier 3 (type def → sig-type) remains Usage.
 
 - **Control-flow edge (branch)**  
   On-demand dash-dot preview wire from a `switch`/`if` keyword (or its condition/discriminant identifier) to every `case`/`default`/`else`/`else if` branch of that statement. Direction is **condition/keyword → branch**. Hovering one branch instead draws a single wire back to the head. Answers "which branch does this decision lead to?" — distinct from usage and binding. See [connection-taxonomy.md](specs/system/connection-taxonomy.md) § Control flow.

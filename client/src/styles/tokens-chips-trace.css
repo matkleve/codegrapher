@@ -1,0 +1,78 @@
+/* Trace dim — restore semantic ink on hovered / focused chips (fill from rules above) */
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="class"]:focus-visible:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="class"]:hover:not(.token-chip-lit),
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="class"]:focus-visible:not(.token-chip-lit) {
+  color: var(--token-edge-class) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="function"]:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="function"]:focus-visible:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="function"]:hover:not(.token-chip-lit),
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="function"]:focus-visible:not(.token-chip-lit) {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="type"]:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="type"]:focus-visible:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="type"]:hover:not(.token-chip-lit),
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="type"]:focus-visible:not(.token-chip-lit) {
+  color: var(--token-edge-type) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="variable"]:hover:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-chip.cursor-pointer[data-token-kind="variable"]:focus-visible:not(.token-chip-lit) .token-chip-text,
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="variable"]:hover:not(.token-chip-lit),
+.graph-trace-active .token-def-label.cursor-pointer[data-token-kind="variable"]:focus-visible:not(.token-chip-lit) {
+  color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Pinned trace source — lock semantic ink while hovering a foreign preview */
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="class"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="class"] {
+  color: var(--token-edge-class) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="function"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="function"] {
+  color: var(--token-edge-function) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="type"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="type"] {
+  color: var(--token-edge-type) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-source[data-token-kind="variable"] .token-chip-text,
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-source[data-token-kind="variable"] {
+  color: var(--token-edge-variable) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Ephemeral hover preview endpoint — same semantic fill as chip-on */
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {
+  background: var(--token-surface-class);
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"] {
+  background: var(--token-surface-function);
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"] {
+  background: var(--token-surface-type);
+}
+
+.graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"] {
+  background: var(--token-surface-variable);
+}

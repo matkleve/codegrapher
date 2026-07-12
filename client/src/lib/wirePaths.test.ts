@@ -5,6 +5,7 @@ import {
   layoutBranchFanPaths,
   orthogonalPath,
   previewWirePath,
+  roundedPolylinePath,
 } from "@/lib/wirePaths";
 
 const SVG_BOX = { left: 0, top: 0, width: 800, height: 600 } as DOMRect;
@@ -120,6 +121,22 @@ describe("layoutBranchFanPaths", () => {
   });
 });
 
+describe("roundedPolylinePath", () => {
+  it("fillet corners with quadratic segments", () => {
+    const path = roundedPolylinePath(
+      [
+        { x: 0, y: 0 },
+        { x: 0, y: 50 },
+        { x: 100, y: 50 },
+      ],
+      6,
+    );
+    expect(path).toMatch(/^M 0 0/);
+    expect(path).toMatch(/Q 0 50/);
+    expect(path).toMatch(/100 50$/);
+  });
+});
+
 describe("orthogonalPath", () => {
   it("uses only horizontal and vertical segments", () => {
     const path = orthogonalPath(40, 100, 200, 180, "right", "left");
@@ -165,5 +182,23 @@ describe("previewWirePath", () => {
       svgBox: SVG_BOX,
     });
     expect(path).toMatch(/^M .+ C .+, .+, .+$/);
+  });
+
+  it("returns rounded orthogonal paths for typesetting wires", () => {
+    const path = previewWirePath({
+      connectionKind: "typesetting",
+      x1: 40,
+      y1: 100,
+      x2: 200,
+      y2: 180,
+      fromSide: "right",
+      toSide: "left",
+      fromEl: null,
+      toEl: null,
+      svgBox: SVG_BOX,
+    });
+    expect(path).toMatch(/^M /);
+    expect(path).toMatch(/Q /);
+    expect(path).not.toMatch(/C /);
   });
 });
