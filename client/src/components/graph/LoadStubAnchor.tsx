@@ -12,6 +12,7 @@ import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
 import { tracePathOpacity } from "@/lib/traceDepth";
+import { isTraceEmphasisActive, isTraceSessionActive } from "@/lib/wireHoverBoost";
 import { subscribeWireTicks } from "@/lib/wireEngine";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,13 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
   const loadTarget = useLoadTargetAction();
   const { cancelHoverLeaveGrace } = useGraphInteraction();
   const fadedOpacity =
-    edge.hop != null && edge.hop >= 2 ? tracePathOpacity(edge.hop) : undefined;
+    edge.hop != null && edge.hop >= 2 && isTraceSessionActive()
+      ? tracePathOpacity(
+          edge.hop,
+          undefined,
+          isTraceEmphasisActive() ? "emphasis" : "baseline",
+        )
+      : undefined;
 
   const reposition = useCallback(() => {
     const host = hostRef.current;

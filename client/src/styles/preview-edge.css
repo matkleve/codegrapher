@@ -158,10 +158,10 @@
 }
 
 .preview-edge-path.preview-edge-line-hover {
-  stroke-width: 1.6;
+  stroke-width: 2.1;
   opacity: 1 !important;
 }
 
 .preview-edge-glow.preview-edge-line-hover {
-  opacity: 0.22 !important;
+  opacity: 0.4 !important;
 }

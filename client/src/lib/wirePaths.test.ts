@@ -117,7 +117,7 @@ describe("layoutBranchFanPaths", () => {
     );
     expect(paths).toHaveLength(2);
     expect(paths[0]).toContain("L 4 139");
-    expect(paths[0]).not.toContain("L 4 169");
+    expect(paths[0]).toContain("L 4 169");
     expect(paths[1]).toMatch(/^M 4 169/);
     expect(paths[1]).not.toContain("M 163");
   });
@@ -142,9 +142,9 @@ describe("layoutCubicFanPaths", () => {
     expect(paths[1]).not.toMatch(/\bL /);
   });
 
-  it("keeps solo cubic spurs when targets are far apart vertically", () => {
+  it("extends the shared spine through vertical clusters on wire zero", () => {
     const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
-    const { paths, clusterKind } = layoutCubicFanPaths(
+    const { paths, busX, clusterKind } = layoutCubicFanPaths(
       240,
       109,
       defEl,
@@ -155,8 +155,8 @@ describe("layoutCubicFanPaths", () => {
       SVG_BOX,
     );
     expect(clusterKind).toBe("vertical");
-    expect(paths[1]).toMatch(/^M .+ C /);
-    expect(paths[1]).not.toMatch(/\bL [\d.]+ [\d.]+ L /);
+    expect(paths[0]).toMatch(/C .+ C .+ C /);
+    expect(paths[1]).toMatch(new RegExp(`^M ${busX} 190 C `));
   });
 
   it("aims the fan trunk toward the gutter when the bus is left of the source", () => {

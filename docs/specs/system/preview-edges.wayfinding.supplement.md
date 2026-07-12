@@ -7,7 +7,7 @@ Normative routing rules for **orthogonal** and **fan/bus** preview wires. Parent
 When **2+ wires** share the same source element and the same `connectionKind`, the overlay routes them as a **fan** when their targets form a **Y-proximity cluster** (maximal consecutive groups sorted by target Y where span ≤ **104px**, `FAN_TARGET_Y_SPAN`). A distant outlier (e.g. `if (!addr)`) does not prevent bus grouping for nearer targets on the same line (e.g. `addr.city ?? addr.town ?? addr.vil`).
 
 1. **Trunk** — exit source, drop beside the head line, run to a shared **bus column**
-2. **Knot** — one junction disc at `(busX, forkY)` on the **first** fan member only (`forkY` = topmost target Y in the cluster). The trunk stops at `forkY` — it does not run through the cluster to the lowest chip. Tight clusters (`≤10px` Y spread) also shift the bus **left of the chip row** (`FAN_CLUSTER_BUS_EXTRA`).
+2. **Knot** — one junction disc at `(busX, forkY)` on the **first** fan member only (`forkY` = topmost target Y). The trunk forks at `forkY`; for vertical clusters wire 0 also draws the shared spine from `forkY` down to the lowest target so lower spurs connect visibly.
 3. **Spurs** — cubic branches from the bus column into each target (tree-style curves, no straight gutter taps)
 
 | Kind | Spur geometry |

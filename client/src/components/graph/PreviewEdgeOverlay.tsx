@@ -18,7 +18,7 @@ import {
   type WireEngine,
 } from "@/lib/wireEngine";
 import { syncWireDom, updateWireGeometry, refreshWireDepthOpacity, refreshOneWireDepthOpacity, type WireElements } from "@/lib/previewEdgeDom";
-import { setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
+import { setWireHoveredEdgeId, setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
 import {
   syncStructuralWireDom,
   updateStructuralWireGeometry,
@@ -77,13 +77,17 @@ export function PreviewEdgeOverlay() {
       wire.hitMid.classList.remove("preview-edge-hit-armed");
       wire.path.classList.remove("preview-edge-line-hover");
       wire.glow.classList.remove("preview-edge-line-hover");
+      setWireHoveredEdgeId(null);
+      refreshOneWireDepthOpacity(wire, getNode);
     };
 
     const showMidTooltip = (e: MouseEvent) => {
       cancelHoverLeaveGrace();
       setHoveredWireId(spec.id);
+      setWireHoveredEdgeId(spec.id);
       wire.path.classList.add("preview-edge-line-hover");
       wire.glow.classList.add("preview-edge-line-hover");
+      refreshOneWireDepthOpacity(wire, getNode);
 
       const jumpEnd = pickJumpWireEnd(spec, traceTokenKeyRef.current, getNode);
       setJumpTooltip({

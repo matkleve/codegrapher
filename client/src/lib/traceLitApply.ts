@@ -1,4 +1,5 @@
-import { tracePathOpacity } from "@/lib/traceDepth";
+import { tracePathOpacity, type TraceStrengthMode } from "@/lib/traceDepth";
+import { isTraceEmphasisActive, isTraceSessionActive } from "@/lib/wireHoverBoost";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
 export const CHIP_LIT = "token-chip-lit";
@@ -47,14 +48,55 @@ function removeAnchorColorClasses(anchor: HTMLElement): void {
   }
 }
 
-function applyDepth(el: HTMLElement, depth: number): void {
-  if (depth <= 1) {
+function isFocusBoosted(classes: string[]): boolean {
+  return classes.includes(CHIP_HOVER_PREVIEW) || classes.includes(CHIP_SOURCE);
+}
+
+/** Committed trace member — stays at baseline strength; only pointer emphasis pops brighter. */
+function isLitTraceMember(classes: string[]): boolean {
+  return (
+    classes.includes(CHIP_LIT) ||
+    classes.includes(CHIP_ON) ||
+    classes.includes(LINE_LIT) ||
+    classes.includes(MEMBER_LIT) ||
+    classes.includes(MEMBER_OWNER_LIT)
+  );
+}
+
+function traceStrengthMode(): TraceStrengthMode | null {
+  if (!isTraceSessionActive()) return null;
+  return isTraceEmphasisActive() ? "emphasis" : "baseline";
+}
+
+function applyDepth(el: HTMLElement, depth: number, classes: string[] = []): void {
+  if (isFocusBoosted(classes)) {
     el.classList.remove(TRACE_DEPTH_FADED);
     el.style.removeProperty("opacity");
     return;
   }
+
+  const mode = traceStrengthMode();
+  if (!mode) {
+    el.classList.remove(TRACE_DEPTH_FADED);
+    el.style.removeProperty("opacity");
+    return;
+  }
+
+  const strengthMode: TraceStrengthMode =
+    mode === "emphasis" && isLitTraceMember(classes) ? "baseline" : mode;
+
+  if (depth <= 1) {
+    el.classList.remove(TRACE_DEPTH_FADED);
+    if (strengthMode === "baseline") {
+      el.style.removeProperty("opacity");
+    } else {
+      el.style.opacity = String(tracePathOpacity(1, undefined, "emphasis"));
+    }
+    return;
+  }
+
   el.classList.add(TRACE_DEPTH_FADED);
-  el.style.opacity = String(tracePathOpacity(depth));
+  el.style.opacity = String(tracePathOpacity(depth, undefined, strengthMode));
 }
 
 function revertDepth(el: HTMLElement): void {
@@ -84,13 +126,17 @@ function revertSocket(el: HTMLElement): void {
   appliedSockets.delete(el);
 }
 
-function applySocket(el: HTMLElement, state: SocketState): void {
+function applySocket(
+  el: HTMLElement,
+  state: SocketState,
+  hostClasses: string[] = [],
+): void {
   el.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
   el.classList.add(ANCHOR_ON);
   removeAnchorColorClasses(el);
   el.classList.add(...state.colorClasses);
   el.classList.toggle(ANCHOR_ENDPOINT_SIBLING, state.endpointSibling);
-  applyDepth(el, state.depth);
+  applyDepth(el, state.depth, hostClasses);
   appliedSockets.set(el, state);
 }
 
@@ -109,9 +155,9 @@ function applyHost(el: HTMLElement, state: HostState): void {
   for (const cls of state.classes) {
     if (!el.classList.contains(cls)) el.classList.add(cls);
   }
-  applyDepth(el, state.depth);
+  applyDepth(el, state.depth, state.classes);
   for (const [socket, socketState] of state.sockets) {
-    applySocket(socket, socketState);
+    applySocket(socket, socketState, state.classes);
   }
   appliedHosts.set(el, state);
 }
@@ -129,6 +175,7 @@ export function syncTraceLitDom(next: Map<HTMLElement, HostState>): void {
       classesEqual(prev.classes, state.classes) &&
       prev.depth === state.depth
     ) {
+      applyDepth(el, state.depth, state.classes);
       const socketKeys = [...state.sockets.keys()];
       const sameSockets =
         socketKeys.length === prev.sockets.size &&
@@ -137,7 +184,13 @@ export function syncTraceLitDom(next: Map<HTMLElement, HostState>): void {
           const b = state.sockets.get(socket);
           return a != null && b != null && socketStatesEqual(a, b);
         });
-      if (sameSockets) continue;
+      if (sameSockets) {
+        for (const [socket, socketState] of state.sockets) {
+          applySocket(socket, socketState, state.classes);
+        }
+        appliedHosts.set(el, state);
+        continue;
+      }
     }
     if (prev) revertHost(el, prev);
     applyHost(el, state);

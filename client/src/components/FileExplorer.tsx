@@ -123,8 +123,7 @@ export default function FileExplorer({
           className={cn(
             "relative !h-[var(--control-height-double)] !max-h-[var(--control-height-double)] !min-h-[var(--control-height-double)] w-full shrink-0 overflow-hidden",
             folderBusy &&
-              "load-folder-busy border-transparent bg-muted text-foreground disabled:cursor-wait disabled:opacity-100",
-            "hover:[&_.load-folder-title]:text-foreground disabled:hover:[&_.load-folder-title]:text-foreground",
+              "load-folder-busy border-transparent bg-muted disabled:cursor-wait disabled:opacity-100",
           )}
           aria-busy={opening || indexing}
           aria-label={folderBusy ? busyLabel : "Load folder"}
@@ -142,17 +141,12 @@ export default function FileExplorer({
             />
           )}
           <span className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 px-[var(--control-padding-x-md)]">
-            <span className="load-folder-title inline-flex max-w-full items-center justify-center gap-[var(--control-gap)] leading-none text-foreground">
+            <span className="inline-flex max-w-full items-center justify-center gap-[var(--control-gap)] leading-none text-current">
               <FolderSync data-icon="inline-start" className="text-current" aria-hidden />
               <span className="truncate font-medium">{busyLabel}</span>
             </span>
             {folderBusy && (
-              <span
-                className={cn(
-                  "h-[0.875rem] w-full max-w-full truncate text-center text-[length:var(--font-size-xs)] leading-[0.875rem] text-muted-foreground transition-[color] duration-[var(--motion-hover-color)] ease-[var(--ease)]",
-                  indexing && "text-brand",
-                )}
-              >
+              <span className="h-[0.875rem] w-full max-w-full truncate text-center text-[length:var(--font-size-xs)] leading-[0.875rem] text-current opacity-80">
                 {progressSubtitle ?? "\u00a0"}
               </span>
             )}

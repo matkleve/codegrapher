@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   depthFromHop,
   previewHopFromDepth,
+  TRACE_UNINVOLVED_IN_TRACE,
   traceGlowOpacity,
   tracePathOpacity,
+  traceWireOpacity,
 } from "@/lib/traceDepth";
 
 describe("traceDepth", () => {
@@ -20,21 +22,41 @@ describe("traceDepth", () => {
     expect(depthFromHop(4)).toBe(4);
   });
 
-  it("fades path opacity with distance at maxDepth 5", () => {
-    expect(tracePathOpacity(1, 5)).toBe(1);
-    expect(tracePathOpacity(2, 5)).toBeCloseTo(0.76, 1);
-    expect(tracePathOpacity(3, 5)).toBeCloseTo(0.54, 1);
-    expect(tracePathOpacity(5, 5)).toBeCloseTo(0.2, 2);
+  it("keeps committed trace at full tier-1 strength", () => {
+    expect(tracePathOpacity(1, 5, "baseline")).toBe(1);
+    expect(traceGlowOpacity(1, 5, "baseline")).toBeGreaterThan(0.15);
+  });
+
+  it("dims only uninvolved tier-1 members during pointer emphasis", () => {
+    expect(tracePathOpacity(1, 5, "emphasis")).toBe(TRACE_UNINVOLVED_IN_TRACE);
+    expect(TRACE_UNINVOLVED_IN_TRACE).toBeLessThan(1);
+  });
+
+  it("fades path opacity with distance at baseline", () => {
+    expect(tracePathOpacity(2, 5, "baseline")).toBeCloseTo(0.76, 1);
+    expect(tracePathOpacity(3, 5, "baseline")).toBeCloseTo(0.54, 1);
+    expect(tracePathOpacity(5, 5, "baseline")).toBeCloseTo(0.2, 2);
+  });
+
+  it("uses a flatter emphasis curve so provenance hops stay brighter", () => {
+    const baselineHop2 = tracePathOpacity(2, 5, "baseline");
+    const emphasisHop2 = tracePathOpacity(2, 5, "emphasis");
+    const emphasisHop3 = tracePathOpacity(3, 5, "emphasis");
+    expect(emphasisHop2).toBeGreaterThan(baselineHop2);
+    expect(emphasisHop2).toBeGreaterThan(0.88);
+    expect(emphasisHop3).toBeGreaterThan(tracePathOpacity(3, 5, "baseline"));
   });
 
   it("scales fade curve when maxDepth grows", () => {
-    const atTen = tracePathOpacity(10, 10);
+    const atTen = tracePathOpacity(10, 10, "baseline");
     expect(atTen).toBeCloseTo(0.2, 2);
-    expect(tracePathOpacity(5, 10)).toBeGreaterThan(atTen);
+    expect(tracePathOpacity(5, 10, "baseline")).toBeGreaterThan(atTen);
   });
 
-  it("derives glow from path opacity", () => {
-    expect(traceGlowOpacity(2, 5)).toBeCloseTo(0.13, 1);
-    expect(traceGlowOpacity(5, 5)).toBeCloseTo(0.034, 2);
+  it("snaps emphasized wires to full path + bright glow", () => {
+    const emphasized = traceWireOpacity(2, 5, "emphasis", true);
+    const chain = traceWireOpacity(2, 5, "emphasis", false);
+    expect(emphasized.path).toBe(1);
+    expect(emphasized.glow).toBeGreaterThan(chain.glow);
   });
 });

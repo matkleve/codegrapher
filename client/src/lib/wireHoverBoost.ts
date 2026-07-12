@@ -5,12 +5,49 @@ import type { Node } from "@xyflow/react";
 /** Live hovered token — read during wire rAF ticks (no React render required). */
 let hoveredTokenKey: string | null = null;
 
+/** Wire under cursor (jump tooltip armed) — boosts endpoint chips. */
+let hoveredWireEdgeId: string | null = null;
+
+/** Committed trace (pin / dwell) — strength must not drop when the pointer leaves a card. */
+let traceSessionActive = false;
+
+const strengthListeners = new Set<() => void>();
+
+function notifyStrengthListeners(): void {
+  for (const listener of strengthListeners) listener();
+}
+
+export function subscribeTraceStrength(listener: () => void): () => void {
+  strengthListeners.add(listener);
+  return () => strengthListeners.delete(listener);
+}
+
 export function setWireHoveredTokenKey(key: string | null): void {
   hoveredTokenKey = key;
 }
 
 export function getWireHoveredTokenKey(): string | null {
   return hoveredTokenKey;
+}
+
+export function setTraceSessionActive(active: boolean): void {
+  if (traceSessionActive === active) return;
+  traceSessionActive = active;
+  notifyStrengthListeners();
+}
+
+export function isTraceSessionActive(): boolean {
+  return traceSessionActive;
+}
+
+export function setWireHoveredEdgeId(id: string | null): void {
+  if (hoveredWireEdgeId === id) return;
+  hoveredWireEdgeId = id;
+  notifyStrengthListeners();
+}
+
+export function getWireHoveredEdgeId(): string | null {
+  return hoveredWireEdgeId;
 }
 
 function hopRank(hop: number | undefined): number {
@@ -54,4 +91,31 @@ export function edgeTouchesHoveredToken(
     if (key === hoverKey) return true;
   }
   return false;
+}
+
+export function traceKeysFromWire(
+  spec: PreviewEdgeSpec,
+  getNode: (id: string) => Node | undefined,
+): string[] {
+  const { from, to } = refinePreviewEdge(spec, getNode);
+  const keys: string[] = [];
+  for (const ref of [from, to]) {
+    if (ref.type !== "element" || !ref.el.isConnected) continue;
+    const key = traceKeyFromElement(ref.el);
+    if (key) keys.push(key);
+  }
+  return keys;
+}
+
+export function isWireHovered(
+  spec: PreviewEdgeSpec,
+  wirePath?: SVGPathElement | null,
+): boolean {
+  if (hoveredWireEdgeId != null && spec.id === hoveredWireEdgeId) return true;
+  return wirePath?.classList.contains("preview-edge-line-hover") ?? false;
+}
+
+/** Pointer is emphasizing a specific token or wire within an active trace. */
+export function isTraceEmphasisActive(): boolean {
+  return hoveredTokenKey != null || hoveredWireEdgeId != null;
 }

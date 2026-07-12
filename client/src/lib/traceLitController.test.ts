@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import { EMPTY_TRACE_LIT } from "@/lib/computeTraceLit";
 import { registerTraceHost } from "@/lib/elementRegistry";
 import { setTraceAnchorHost } from "@/lib/memberDefAnchor";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
+import { setTraceSessionActive } from "@/lib/wireHoverBoost";
 
 describe("applyTraceLit", () => {
+  afterEach(() => {
+    clearTraceLit();
+    setTraceSessionActive(false);
+  });
+
   it("applies endpoint socket colors without throwing for multi-class TOKEN_ANCHOR", () => {
     const host = document.createElement("span");
     host.dataset.traceKey = "flow::def::member-1";
@@ -57,6 +63,7 @@ describe("applyTraceLit", () => {
     const body = pane.querySelector<HTMLElement>(".token-chip:not(.member-sig-token-chip)")!;
     registerTraceHost(header);
     registerTraceHost(body);
+    setTraceSessionActive(true);
 
     applyTraceLit(
       {
@@ -107,6 +114,7 @@ describe("applyTraceLit", () => {
     const bodyChip = pane.querySelector<HTMLElement>(".code-line .token-chip")!;
     registerTraceHost(label);
     registerTraceHost(bodyChip);
+    setTraceSessionActive(true);
 
     setTraceAnchorHost(bodyChip);
     applyTraceLit(

@@ -27,7 +27,7 @@ import { Container } from "@/components/ui/Container";
 import { INTERACTIVE_TOGGLE_ACTIVE } from "@/lib/controlTokens";
 import { GraphFlowCanvas } from "@/components/graph/GraphFlowCanvas";
 import { GraphPane } from "@/components/graph/GraphPane";
-import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
+import { GraphMapControlSlot } from "@/components/graph/GraphMapControlSlot";
 import { ConnectionLegend } from "@/components/graph/ConnectionLegend";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
 import { CLASS_NODE_DEFAULT_WIDTH } from "@/components/nodes/graphNodeUi";
@@ -632,58 +632,51 @@ export function GraphFlowInner({
                 activeFlashKey={mapControlFlash}
                 onFlash={flashMapControl}
               />
-              <GraphMapControlButton
+              <GraphMapControlSlot
                 flashKey="grid"
                 activeFlashKey={mapControlFlash}
                 onFlash={flashMapControl}
                 variant="secondary"
                 className={showGrid ? INTERACTIVE_TOGGLE_ACTIVE : undefined}
-                title={showGrid ? "Hide grid" : "Show grid"}
-                aria-label={showGrid ? "Hide grid" : "Show grid"}
+                label={showGrid ? "Hide grid" : "Show grid"}
+                icon={<Grip />}
                 aria-pressed={showGrid}
                 onClick={toggleGrid}
-              >
-                <Grip />
-              </GraphMapControlButton>
-              <GraphMapControlButton
+              />
+              <GraphMapControlSlot
                 flashKey="reading"
                 activeFlashKey={mapControlFlash}
                 onFlash={flashMapControl}
                 variant="secondary"
                 disabled={!hasReadingFocus}
-                title="Focus selection for reading"
-                aria-label="Focus selection for reading"
+                label="Focus selection for reading"
+                icon={<FileText />}
+                labelTone={hasReadingFocus ? "default" : "passive"}
                 onClick={focusReadingView}
-              >
-                <FileText />
-              </GraphMapControlButton>
-              <GraphMapControlButton
+              />
+              <GraphMapControlSlot
                 flashKey="center"
                 activeFlashKey={mapControlFlash}
                 onFlash={flashMapControl}
                 variant="secondary"
-                title="Center view"
-                aria-label="Center view"
+                label="Center view"
+                icon={<Crosshair />}
                 onClick={centerView}
-              >
-                <Crosshair />
-              </GraphMapControlButton>
-              <GraphMapControlButton
+              />
+              <GraphMapControlSlot
                 flashKey="fit"
                 activeFlashKey={mapControlFlash}
                 onFlash={flashMapControl}
                 variant="secondary"
-                title="Fit to screen"
-                aria-label="Fit to screen"
+                label="Fit to screen"
+                icon={<Maximize2 />}
                 onClick={() => {
                   if (nodes.length > 0) {
                     fitView({ padding: FIT_VIEW_PADDING, duration: 200 });
                     syncGrid();
                   }
                 }}
-              >
-                <Maximize2 />
-              </GraphMapControlButton>
+              />
             </div>
           </SimulationProvider>
         </GraphInteractionProvider>

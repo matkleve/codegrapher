@@ -19,6 +19,9 @@ import {
   syncTraceLitDom,
   type HostState,
 } from "@/lib/traceLitApply";
+import { getWireHoveredEdgeId, traceKeysFromWire, edgeTouchesHoveredToken } from "@/lib/wireHoverBoost";
+import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import type { Node } from "@xyflow/react";
 
 function chipHostForTraceKey(key: string): HTMLElement | null {
   return getByTraceKey(key);
@@ -162,6 +165,31 @@ function applyEndpointHost(
   );
 }
 
+function boostChipHost(
+  next: Map<HTMLElement, HostState>,
+  state: TraceLitState,
+  host: HTMLElement,
+  traceKey: string | null,
+  pinnedTokenKeys: ReadonlySet<string>,
+  forceHoverPreview = false,
+): void {
+  const hostState = ensureHost(next, host);
+  mergeClasses(hostState, [CHIP_LIT, CHIP_ON]);
+  if (traceKey && pinnedTokenKeys.has(traceKey)) {
+    mergeClasses(hostState, [CHIP_SOURCE]);
+  } else if (forceHoverPreview) {
+    mergeClasses(hostState, [CHIP_HOVER_PREVIEW]);
+  }
+  setDepth(hostState, 1);
+  attachEndpointSockets(
+    host,
+    hostState,
+    portSidesForHost(host, state.endpointPortSide),
+    1,
+  );
+  boostHoveredLine(next, host);
+}
+
 /** Hover beats pin/focus depth — full strength on the token under the cursor and its line. */
 function applyHoverFocusBoost(
   next: Map<HTMLElement, HostState>,
@@ -172,21 +200,7 @@ function applyHoverFocusBoost(
   if (!hoveredTokenKey) return;
 
   const boostChip = (host: HTMLElement, traceKey: string | null): void => {
-    const hostState = ensureHost(next, host);
-    mergeClasses(hostState, [CHIP_LIT, CHIP_ON]);
-    if (traceKey && pinnedTokenKeys.has(traceKey)) {
-      mergeClasses(hostState, [CHIP_SOURCE]);
-    } else {
-      mergeClasses(hostState, [CHIP_HOVER_PREVIEW]);
-    }
-    setDepth(hostState, 1);
-    attachEndpointSockets(
-      host,
-      hostState,
-      portSidesForHost(host, state.endpointPortSide),
-      1,
-    );
-    boostHoveredLine(next, host);
+    boostChipHost(next, state, host, traceKey, pinnedTokenKeys, true);
   };
 
   const memberSiblings = memberDefSiblingHosts(hoveredTokenKey);
@@ -210,6 +224,84 @@ function applyHoverFocusBoost(
   if (host) boostChip(host, traceKeyFromHost(host) ?? hoveredTokenKey);
 }
 
+/** Brighten both ends of wires attached to the hovered chip. */
+function applyHoveredWireEndpointBoost(
+  next: Map<HTMLElement, HostState>,
+  state: TraceLitState,
+  previewEdges: PreviewEdgeSpec[],
+  getNode: (id: string) => Node | undefined,
+  hoveredTokenKey: string | null,
+  pinnedTokenKeys: ReadonlySet<string>,
+): void {
+  if (!hoveredTokenKey) return;
+  for (const spec of previewEdges) {
+    if (!edgeTouchesHoveredToken(spec, getNode, hoveredTokenKey)) continue;
+    for (const key of traceKeysFromWire(spec, getNode)) {
+      const memberSiblings = memberDefSiblingHosts(key);
+      if (memberSiblings) {
+        const primary = resolveMemberDefEndpoint(key);
+        for (const host of memberSiblings) {
+          if (primary && host !== primary && host.classList.contains("member-row-label")) {
+            continue;
+          }
+          if (!primary || host === primary) {
+            boostChipHost(next, state, host, key, pinnedTokenKeys, true);
+          }
+        }
+        continue;
+      }
+      const host =
+        chipHostForTraceKey(key) ??
+        getByLocalDefId(key) ??
+        getByLocalTargetId(key);
+      if (host) {
+        boostChipHost(
+          next,
+          state,
+          host,
+          traceKeyFromHost(host) ?? key,
+          pinnedTokenKeys,
+          true,
+        );
+      }
+    }
+  }
+}
+
+function applyWireHoverBoost(
+  next: Map<HTMLElement, HostState>,
+  state: TraceLitState,
+  previewEdges: PreviewEdgeSpec[],
+  getNode: (id: string) => Node | undefined,
+  pinnedTokenKeys: ReadonlySet<string>,
+): void {
+  const wireId = getWireHoveredEdgeId();
+  if (!wireId) return;
+  const spec = previewEdges.find((edge) => edge.id === wireId);
+  if (!spec) return;
+
+  for (const key of traceKeysFromWire(spec, getNode)) {
+    const memberSiblings = memberDefSiblingHosts(key);
+    if (memberSiblings) {
+      const primary = resolveMemberDefEndpoint(key);
+      for (const host of memberSiblings) {
+        if (primary && host !== primary && host.classList.contains("member-row-label")) {
+          continue;
+        }
+        if (!primary || host === primary) {
+          boostChipHost(next, state, host, key, pinnedTokenKeys, true);
+        }
+      }
+      continue;
+    }
+    const host =
+      chipHostForTraceKey(key) ??
+      getByLocalDefId(key) ??
+      getByLocalTargetId(key);
+    if (host) boostChipHost(next, state, host, traceKeyFromHost(host) ?? key, pinnedTokenKeys, true);
+  }
+}
+
 function boostHoveredLine(next: Map<HTMLElement, HostState>, host: HTMLElement): void {
   const line = host.closest<HTMLElement>(".code-line");
   if (!line) return;
@@ -221,12 +313,14 @@ function boostHoveredLine(next: Map<HTMLElement, HostState>, host: HTMLElement):
 export type TraceLitApplyOptions = {
   pinnedTokenKeys: ReadonlySet<string>;
   hoveredTokenKey: string | null;
+  previewEdges?: PreviewEdgeSpec[];
+  getNode?: (id: string) => Node | undefined;
 };
 
 /** Apply trace-lit classes imperatively — diffs against prior apply. */
 export function applyTraceLit(
   state: TraceLitState,
-  { pinnedTokenKeys, hoveredTokenKey }: TraceLitApplyOptions,
+  { pinnedTokenKeys, hoveredTokenKey, previewEdges = [], getNode }: TraceLitApplyOptions,
 ): void {
   const next = new Map<HTMLElement, HostState>();
 
@@ -346,6 +440,17 @@ export function applyTraceLit(
   }
 
   applyHoverFocusBoost(next, state, hoveredTokenKey, pinnedTokenKeys);
+  if (getNode && previewEdges.length > 0) {
+    applyHoveredWireEndpointBoost(
+      next,
+      state,
+      previewEdges,
+      getNode,
+      hoveredTokenKey,
+      pinnedTokenKeys,
+    );
+    applyWireHoverBoost(next, state, previewEdges, getNode, pinnedTokenKeys);
+  }
 
   for (const state of next.values()) {
     if (state.depth <= 0) state.depth = 1;

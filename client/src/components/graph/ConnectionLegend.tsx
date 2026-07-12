@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Waypoints } from "lucide-react";
 import { ConnectionLegendKindDemo } from "@/components/graph/ConnectionLegendKindDemo";
-import { GraphMapControlButton } from "@/components/graph/GraphMapControlButton";
+import { GraphMapControlSlot } from "@/components/graph/GraphMapControlSlot";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { WireMarkerDefs } from "@/components/graph/WireMarkerDefs";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
@@ -229,21 +229,20 @@ export function ConnectionLegend({
   }, [open, hoveredKind]);
 
   return (
-    <div className="relative" ref={rootRef}>
-      <GraphMapControlButton
-        flashKey={flashKey}
-        activeFlashKey={activeFlashKey}
-        onFlash={onFlash}
-        variant="secondary"
-        className={open ? INTERACTIVE_TOGGLE_ACTIVE : undefined}
-        title="Connection legend"
-        aria-label="Connection legend"
-        aria-expanded={open}
-        aria-pressed={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Waypoints />
-      </GraphMapControlButton>
+    <GraphMapControlSlot
+      ref={rootRef}
+      flashKey={flashKey}
+      activeFlashKey={activeFlashKey}
+      onFlash={onFlash}
+      variant="secondary"
+      className={open ? INTERACTIVE_TOGGLE_ACTIVE : undefined}
+      label="Connection legend"
+      labelVisibility={open ? "hidden" : "hover"}
+      icon={<Waypoints />}
+      aria-expanded={open}
+      aria-pressed={open}
+      onClick={() => setOpen((v) => !v)}
+    >
       {open ? (
         <div
           ref={legendPanelRef}
@@ -294,6 +293,6 @@ export function ConnectionLegend({
           panelRef={detailPanelRef}
         />
       ) : null}
-    </div>
+    </GraphMapControlSlot>
   );
 }

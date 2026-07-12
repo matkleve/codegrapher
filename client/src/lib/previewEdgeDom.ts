@@ -14,10 +14,12 @@ import {
   previewWireMarkerStart,
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
-import { traceGlowOpacity, tracePathOpacity } from "@/lib/traceDepth";
+import { depthFromHop, TRACE_GLOW_BASELINE_RATIO, traceWireOpacity } from "@/lib/traceDepth";
 import {
   edgeTouchesHoveredToken,
   getWireHoveredTokenKey,
+  isTraceSessionActive,
+  isWireHovered,
 } from "@/lib/wireHoverBoost";
 import type { Node } from "@xyflow/react";
 
@@ -67,26 +69,31 @@ function applyWireDepthOpacity(
   spec: PreviewEdgeSpec,
   getNode?: (id: string) => Node | undefined,
 ): void {
-  if (
-    getNode &&
-    edgeTouchesHoveredToken(spec, getNode, getWireHoveredTokenKey())
-  ) {
+  if (!isTraceSessionActive()) {
     path.style.removeProperty("opacity");
     glow.style.removeProperty("opacity");
     return;
   }
-  if (spec.hop != null && spec.hop >= 2) {
-    path.style.opacity = String(tracePathOpacity(spec.hop));
-    glow.style.opacity = String(traceGlowOpacity(spec.hop));
-    return;
-  }
-  if (spec.opacity != null && spec.opacity < 1) {
+
+  const emphasized =
+    isWireHovered(spec, path) ||
+    (getNode != null && edgeTouchesHoveredToken(spec, getNode, getWireHoveredTokenKey()));
+  const depth = depthFromHop(spec.hop);
+
+  if (spec.opacity != null && spec.opacity < 1 && !emphasized) {
     path.style.opacity = String(spec.opacity);
-    glow.style.opacity = String(spec.opacity * 0.12);
+    glow.style.opacity = String(spec.opacity * TRACE_GLOW_BASELINE_RATIO);
     return;
   }
-  path.style.removeProperty("opacity");
-  glow.style.removeProperty("opacity");
+
+  const { path: pathOpacity, glow: glowOpacity } = traceWireOpacity(
+    depth,
+    undefined,
+    "baseline",
+    emphasized,
+  );
+  path.style.opacity = String(pathOpacity);
+  glow.style.opacity = String(glowOpacity);
 }
 
 export function createWireGroup(

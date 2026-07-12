@@ -56,31 +56,73 @@
   -webkit-text-fill-color: currentColor;
 }
 
-/* Ephemeral hover preview endpoint — same semantic fill as chip-on */
+/* Ephemeral hover preview — stronger semantic fill than focus-at-rest chip-on */
 .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {
-  background: var(--token-surface-class);
+  background: color-mix(in srgb, var(--token-edge-class) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-class) 42%, transparent);
 }
 
 .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
 .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"] {
-  background: var(--token-surface-function);
+  background: color-mix(in srgb, var(--token-edge-function) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-function) 42%, transparent);
 }
 
 .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
 .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"] {
-  background: var(--token-surface-type);
+  background: color-mix(in srgb, var(--token-edge-type) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-type) 42%, transparent);
 }
 
 .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
 .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
 .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
 .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"] {
-  background: var(--token-surface-variable);
+  background: color-mix(in srgb, var(--token-edge-variable) 30%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--token-edge-variable) 42%, transparent);
+}
+
+.dark .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.dark .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.dark .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="class"],
+.dark .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="class"] {
+  background: color-mix(in srgb, var(--token-edge-class) 38%, var(--background));
+}
+
+.dark .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.dark .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.dark .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="function"],
+.dark .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="function"] {
+  background: color-mix(in srgb, var(--token-edge-function) 38%, var(--background));
+}
+
+.dark .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.dark .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.dark .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="type"],
+.dark .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="type"] {
+  background: color-mix(in srgb, var(--token-edge-type) 38%, var(--background));
+}
+
+.dark .graph-trace-active .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.dark .graph-trace-active .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.dark .graph-trace-pinned .token-chip.token-chip-on.token-chip-hover-preview[data-token-kind="variable"],
+.dark .graph-trace-pinned .token-def-label.token-chip-on.token-chip-hover-preview[data-token-kind="variable"] {
+  background: color-mix(in srgb, var(--token-edge-variable) 38%, var(--background));
+}
+
+.graph-trace-active .token-chip.token-chip-hover-preview .flow-anchor-on,
+.graph-trace-pinned .token-chip.token-chip-hover-preview .flow-anchor-on,
+.graph-trace-active .token-def-label.token-chip-hover-preview .flow-anchor-on,
+.graph-trace-pinned .token-def-label.token-chip-hover-preview .flow-anchor-on {
+  transform: translateY(-50%) scale(1.14);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 0 4px color-mix(in oklch, currentColor 36%, transparent);
 }

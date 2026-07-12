@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Node } from "@xyflow/react";
 import { computeTraceLit, EMPTY_TRACE_LIT, mergeTraceLit } from "@/lib/computeTraceLit";
 import { filterPreviewEdgesByVisibility } from "@/lib/connectionVisibility";
@@ -9,6 +9,7 @@ import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
+import { subscribeTraceStrength, setTraceSessionActive, setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
 import { notifyWireTransform } from "@/lib/wireEngine";
 
 type UseTraceLitStateArgs = {
@@ -46,7 +47,10 @@ export function useTraceLitState({
   registryRevision,
 }: UseTraceLitStateArgs) {
   const refineCacheRef = useRef(createRefinePreviewEdgeCache());
-  const lastApplyRef = useRef({ fingerprint: "", hovered: "" });
+  const lastApplyRef = useRef({ fingerprint: "", hovered: "", strength: 0 });
+  const [strengthRevision, setStrengthRevision] = useState(0);
+
+  useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
 
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
@@ -135,32 +139,42 @@ export function useTraceLitState({
 
   useLayoutEffect(() => {
     if (!traceTokenKey) {
-      lastApplyRef.current = { fingerprint: "", hovered: "" };
+      lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
+      setTraceSessionActive(false);
+      setWireHoveredTokenKey(null);
       clearTraceLit();
       return;
     }
+    setTraceSessionActive(true);
+    setWireHoveredTokenKey(hoveredTokenKey);
     const fingerprint = traceLitFingerprint(traceLit);
     const hovered = hoveredTokenKey ?? "";
     if (
       fingerprint === lastApplyRef.current.fingerprint &&
-      hovered === lastApplyRef.current.hovered
+      hovered === lastApplyRef.current.hovered &&
+      strengthRevision === lastApplyRef.current.strength
     ) {
       notifyWireTransform();
       return;
     }
-    lastApplyRef.current = { fingerprint, hovered };
+    lastApplyRef.current = { fingerprint, hovered, strength: strengthRevision };
     applyTraceLit(traceLit, {
       pinnedTokenKeys: pinnedTokenKeySet,
       hoveredTokenKey,
+      previewEdges,
+      getNode,
     });
     notifyWireTransform();
   }, [
+    getNode,
     hoveredTokenKey,
     pinnedTokenKeySet,
+    previewEdges,
     traceLit,
     traceTokenKey,
     registryRevision,
     revealRevision,
+    strengthRevision,
   ]);
 
   return { isHandleActive, edgeKindAtHandle };

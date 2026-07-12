@@ -72,6 +72,18 @@ export function fanClusterKind(spurs: BranchSpurInput[]): FanClusterKind {
   return spread <= FAN_CLUSTER_Y_SPREAD ? "horizontal" : "vertical";
 }
 
+/** Fork row (top of cluster) and how far the shared spine runs on wire 0. */
+export function fanSpineRange(
+  spurs: BranchSpurInput[],
+  clusterKind: FanClusterKind,
+): { forkY: number; spineEndY: number } {
+  const ys = spurs.map((spur) => spur.y2);
+  const forkY = Math.min(...ys);
+  const spineEndY =
+    clusterKind === "vertical" && spurs.length > 1 ? Math.max(...ys) : forkY;
+  return { forkY, spineEndY };
+}
+
 function computeFanBusX(
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
@@ -179,8 +191,7 @@ export function layoutBranchFanPaths(
   if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
 
   const clusterKind = fanClusterKind(spurs);
-  const ys = spurs.map((spur) => spur.y2);
-  const trunkBottomY = Math.min(...ys);
+  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
   const busX = computeFanBusX(spurs, svgBox, clusterKind);
   const trunk = computeBranchTrunk(
     x1,
@@ -188,17 +199,22 @@ export function layoutBranchFanPaths(
     fromEl,
     spurs,
     svgBox,
-    trunkBottomY,
+    forkY,
     busX,
   );
   const spurPaths = spurs.map((spur) =>
     branchSpurPath(trunk.busX, spur.x2, spur.y2, spur.toEl, svgBox),
   );
 
+  let path0 = `${trunk.trunkPrefix} ${spurPaths[0] ?? ""}`;
+  if (spineEndY > forkY + 2) {
+    path0 = `${path0} M ${trunk.busX} ${forkY} L ${trunk.busX} ${spineEndY}`;
+  }
+
   return {
     busX: trunk.busX,
     clusterKind,
-    paths: [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)],
+    paths: [path0, ...spurPaths.slice(1)],
   };
 }
 
@@ -217,7 +233,7 @@ function computeCubicFanTrunk(
   fromEl: HTMLElement | null,
   spurs: BranchSpurInput[],
   svgBox: DOMRect,
-  trunkBottomY: number,
+  forkY: number,
   clusterKind: FanClusterKind,
 ): BranchTrunkGeometry {
   const busX = computeFanBusX(spurs, svgBox, clusterKind);
@@ -228,7 +244,7 @@ function computeCubicFanTrunk(
   const approach = cubicPath(x1, y1, busX, busTopY, approachSides.fromSide, approachSides.toSide, {
     clearance,
   });
-  const busDrop = treeSpinePath(busX, busTopY, trunkBottomY, "left");
+  const busDrop = treeSpinePath(busX, busTopY, forkY, "left");
 
   return {
     startX: x1,
@@ -260,28 +276,29 @@ export function layoutCubicFanPaths(
   if (spurs.length === 0) return { paths: [], busX: 0, clusterKind: "solo" };
 
   const clusterKind = fanClusterKind(spurs);
-  const ys = spurs.map((spur) => spur.y2);
-  const trunkBottomY = Math.min(...ys);
+  const { forkY, spineEndY } = fanSpineRange(spurs, clusterKind);
   const trunk = computeCubicFanTrunk(
     x1,
     y1,
     fromEl,
     spurs,
     svgBox,
-    trunkBottomY,
+    forkY,
     clusterKind,
   );
   const spurPaths = spurs.map((spur) =>
     cubicFanSpurPath(trunk.busX, spur, svgBox, fromEl, clusterKind),
   );
 
+  let path0 = appendSvgPath(trunk.trunkPrefix, spurPaths[0] ?? "");
+  if (spineEndY > forkY + 2) {
+    path0 = `${path0} ${treeSpinePath(trunk.busX, forkY, spineEndY, "left")}`;
+  }
+
   return {
     busX: trunk.busX,
     clusterKind,
-    paths: [
-      appendSvgPath(trunk.trunkPrefix, spurPaths[0] ?? ""),
-      ...spurPaths.slice(1),
-    ],
+    paths: [path0, ...spurPaths.slice(1)],
   };
 }
 

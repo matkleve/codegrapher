@@ -17,17 +17,12 @@
   );
 }
 
-/* Load folder — keep title/icon foreground; stuck :hover after click must not brand the title */
-.load-folder-busy.hoverable:hover .load-folder-title,
-.load-folder-busy.hoverable:hover .load-folder-title svg {
-  color: var(--foreground);
-  stroke: var(--foreground);
-}
-
+/* Load folder busy — brand ink on button; children inherit via text-current */
+.load-folder-busy,
 .load-folder-busy.hoverable:hover {
   background-color: var(--muted);
   border-color: transparent;
-  color: var(--foreground);
+  color: var(--brand);
 }
 .control-row-compact {
   height: var(--control-height-compact);
