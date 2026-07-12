@@ -108,8 +108,8 @@
   --code-keyword: oklch(0.42 0.14 295);
   --code-string: oklch(0.46 0.11 55);
   --code-number: oklch(0.48 0.14 300);
-  --surface-active: color-mix(in oklch, var(--primary) 14%, var(--background));
-  --surface-active-border: color-mix(in oklch, var(--primary) 38%, var(--border));
+  --surface-active: color-mix(in oklch, var(--primary) 26%, var(--background));
+  --surface-active-border: color-mix(in oklch, var(--primary) 50%, var(--border));
   --explorer-file-in-graph: oklch(0.46 0.17 278);
   --file-chip-ts: oklch(0.52 0.14 250);
   --file-chip-react: oklch(0.72 0.12 220);

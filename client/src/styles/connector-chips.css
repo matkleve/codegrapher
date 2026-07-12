@@ -45,6 +45,7 @@
   filter: none;
   cursor: pointer;
   z-index: 46;
+  transition: background-color var(--motion-hover-surface) var(--ease);
 }
 
 .connector-chip--load[data-load-socket="right"] [data-flow-anchor="left"],

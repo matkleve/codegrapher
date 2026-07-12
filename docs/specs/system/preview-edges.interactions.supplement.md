@@ -40,7 +40,7 @@ stateDiagram-v2
   end note
 ```
 
-**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub. **Wire glow is not independent:** halo opacity and stroke draw are owned by `playWireReveal` — path and glow share one dash-offset reveal; neither may appear before draw arms.
+**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub. **Wire glow is not independent:** halo opacity is owned by `playWireReveal` — path draws source→target; dashed glow appears after draw; neither may appear before draw arms.
 
 **Signature type trace keys:** `{flowNodeId}::{memberId}::sig-type::{symbolName}` — parsed by `liveToFromUsageEl` without a line number; anchor resolves via `getByTraceKey` on the `MemberSignatureTypeLabel` chip.
 
@@ -85,7 +85,7 @@ sequenceDiagram
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
 | Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
 | Dwell never committed | 0 leave grace | `leaveGraceMs(false)` — instant clear on pointer leave |
-| Wire reveal (cold) | 40ms dwell + ~240ms draw + 25ms stagger | WAAPI solid stroke **path + glow** source→target (same dash draw); marching dash after draw |
+| Wire reveal (cold) | 40ms dwell + ~240ms draw + hop stagger | WAAPI stroke draw on **path** definition→usage; hop-1 first, +100ms per hop, +25ms fan-out tie; marching after draw |
 | Load stub wire | after `data-load-stub-ready` | Stub must finish fixed layout before wire geometry/reveal — no corner anchor |
 | Surround motion | `--motion-trace` (120ms) | Member rows, syntax, chips, sockets, wire opacity — one importance clock ([tokens.md](../../design/tokens.md)) |
 
@@ -122,7 +122,7 @@ sequenceDiagram
   Pane->>Pane: graph-trace-active (+ warm after first commit)
   Chip->>Chip: pending strength → focus curve + token-chip-lit / token-chip-on
   Lit->>Surround: trace-member-lit, trace-lit-line, sockets
-  Wire->>Wire: path+glow dash draw 240ms (+25ms stagger)
+  Wire->>Wire: hop-ordered path draw 240ms (+100ms/hop, +25ms fan tie)
 
   P->>Pane: leave (trace had fired)
   Note over Pane: grace 50ms → clear
@@ -156,7 +156,7 @@ sequenceDiagram
 
 All three share the **120ms** importance clock — no instant wire `remove()`.
 - **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
-- **Wire path + glow** share one dash-offset reveal in `playWireReveal`; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
+- **Wire path** stroke-draws via WAAPI `stroke-dashoffset` in `playWireReveal`; **glow** (dashed) appears after draw; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
 - **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
 
 ---

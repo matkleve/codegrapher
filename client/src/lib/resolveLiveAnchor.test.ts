@@ -155,6 +155,40 @@ describe("refinePreviewEdge local param anchors", () => {
     document.body.innerHTML = "";
   });
 
+  it("resolves sig-type liveTo via DOM when registry misses", () => {
+    const traceKey = `${FLOW}::${MEMBER}::sig-type::GeocoderSearchResult`;
+    const pane = document.querySelector(".graph-pane")!;
+    const node = document.createElement("div");
+    node.dataset.flowNodeId = FLOW;
+    const row = document.createElement("div");
+    row.dataset.memberId = MEMBER;
+    const chip = document.createElement("span");
+    chip.className = "member-sig-type-chip";
+    chip.dataset.traceKey = traceKey;
+    chip.dataset.symbolName = "GeocoderSearchResult";
+    row.append(chip);
+    node.append(row);
+    pane.append(node);
+
+    const spec: PreviewEdgeSpec = {
+      id: "sig-type",
+      from: { type: "element", el: document.createElement("span") },
+      to: { type: "element", el: chip },
+      kind: "type",
+      liveTo: {
+        token: "GeocoderSearchResult",
+        flowNodeId: FLOW,
+        memberId: MEMBER,
+        role: "usage",
+        traceKey,
+      },
+    };
+
+    const { to } = refinePreviewEdge(spec, mockGetNode());
+    expect(to.type).toBe("element");
+    if (to.type === "element") expect(to.el).toBe(chip);
+  });
+
   it("uses file-absolute line numbers when falling back to line handles", () => {
     const returnSites = templateInterpolationSites(VIEWBOX_CODE.split("\n")[2]!);
     const lngUseIndex = returnSites[0]!.tokenIndex;

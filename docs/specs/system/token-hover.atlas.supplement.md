@@ -47,8 +47,26 @@ One clock for surround + lit unwind + wire retire: **`--motion-trace` (120ms)**.
 | Ctrl explore | `trace-ctrl.css` |
 | Wire draw / retire / march | `preview-edge.css`, `wireReveal.ts`, `wireDomSync.ts` |
 | Pane mood classes | `GraphPane.tsx` |
+| Trace session FSM | `traceSessionReducer.ts`, `useTraceSession.ts`, `traceSessionMood.ts` |
 
 **Never:** `.token-chip` color rules in `trace-syntax.css`.
+
+---
+
+## Trace session FSM (pane mood + hover)
+
+Single reducer owns pane mood and token pointer/committed keys. **Do not** add parallel `setState` / module singletons for hover mood.
+
+| Mood | Meaning | Pane class |
+| ---- | ------- | ---------- |
+| `idle` | No trace | — |
+| `pending` | Dwell before commit | `graph-trace-pending` |
+| `active` | Committed trace | `graph-trace-active` |
+| `leaving` | Grace / DOM fade | `graph-trace-leaving` |
+
+Events: `POINTER_ENTER`, `POINTER_LEAVE`, `DWELL_FIRE`, `GRACE_EXPIRE`, `TRACE_COMMIT`, `PIN`, `FADE_COMPLETE`. Timers dispatch events — they do not mutate mood directly.
+
+**Debug:** `?trace-debug=1` → `TraceSessionDebugOverlay` on the graph pane.
 
 ---
 

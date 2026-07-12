@@ -3,6 +3,10 @@
   stroke-width: 1.2;
   stroke-linecap: round;
   pointer-events: none;
+  transition:
+    opacity var(--motion-trace) var(--ease),
+    stroke var(--motion-trace) var(--ease),
+    stroke-width var(--motion-trace) var(--ease);
 }
 
 .structural-edge-path--solid {
@@ -37,6 +41,12 @@
   stroke-dasharray: 10 4;
 }
 
+/* Solid structural kinds are static on the real canvas (only pulse moves them); legend/demo still need always-on
+   motion to read as "alive", so give them the slowest crawl — slower than dotted structural's 1200ms. */
+.connection-legend-swatch-line--solid-legend:not(.structural-edge-path--pulse) {
+  animation: proto-flow 1800ms linear infinite;
+}
+
 .connection-legend-swatch-line.preview-edge-binding.connection-legend-swatch-line--animated {
   animation: proto-flow 900ms linear infinite;
 }
@@ -50,7 +60,7 @@
 }
 
 .connection-legend-swatch-line--dotted-flow {
-  animation: proto-flow 700ms linear infinite;
+  animation: proto-flow 1200ms linear infinite;
 }
 
 .connection-legend-swatch {

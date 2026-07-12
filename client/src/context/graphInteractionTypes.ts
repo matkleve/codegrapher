@@ -84,6 +84,8 @@ export type GraphInteractionContextValue = {
   /** Pointer under cursor — may lead committed trace; updates before dwell. */
   emphasisTokenKey: string | null;
   traceTokenKey: string | null;
+  sessionMood?: string;
+  debugEvents?: import("@/lib/traceSessionReducer").TraceEvent[];
   lookupIndexedUsageSites: (
     token: string,
     sourceFlowId: string,

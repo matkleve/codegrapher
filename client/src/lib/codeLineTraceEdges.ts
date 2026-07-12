@@ -10,10 +10,10 @@ import {
 import { findLocalDefElement } from "@/lib/localDefElements";
 import { graphPane } from "@/lib/graphPaneDom";
 import { bindingDefForInit } from "@/lib/localSymbolLinks";
-import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { previewHopFromDepth } from "@/lib/traceDepth";
 import { backwardLexicalEdges } from "@/lib/codeLineTraceBackward";
+import { buildUpstreamParamTypeCascade } from "@/lib/codeLineTraceTypeProvenance";
 import {
   forwardLexicalRelativesForBindingDef,
   forwardLexicalRelativesForParamDef,
@@ -120,16 +120,8 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     });
   }
 
-  const skipControlFlow =
-    localEdges.length > 0 &&
-    Number.isFinite(tokenIndex) &&
-    (() => {
-      const anchor = controlFlowAnchorFor(controlFlowIndex, lineNumber, tokenIndex);
-      return anchor != null && anchor.role !== "head";
-    })();
-
   const controlFlowEdges =
-    Number.isFinite(tokenIndex) && !skipControlFlow
+    Number.isFinite(tokenIndex)
       ? buildControlFlowPreviewEdges(
           chipEl,
           controlFlowIndex,
@@ -172,6 +164,9 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       : [];
 
   const backwardEdges = backwardLexicalEdges(ctx);
+  const skipUpstreamType =
+    paramName != null && isParamToken ? new Set([paramName]) : new Set<string>();
+  const upstreamTypeCascade = buildUpstreamParamTypeCascade(ctx, skipUpstreamType);
   const bindingForwardDefId =
     initBindingDefId ??
     (localDefId?.includes("::local::") ? localDefId : undefined);
@@ -194,6 +189,7 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
     controlFlowEdges.length > 0 ||
     cascadeEdges.length > 0 ||
     backwardEdges.length > 0 ||
+    upstreamTypeCascade.length > 0 ||
     forwardRelatives.length > 0
   ) {
     return [
@@ -204,6 +200,7 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       ...controlFlowEdges,
       ...cascadeEdges,
       ...backwardEdges,
+      ...upstreamTypeCascade,
       ...typeCascade,
     ];
   }

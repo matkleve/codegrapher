@@ -26,6 +26,7 @@ type UseTraceLitStateArgs = {
   getNode: (id: string) => Node | undefined;
   revealRevision: string;
   registryRevision: number;
+  onFadeComplete?: () => void;
 };
 
 /**
@@ -45,6 +46,7 @@ export function useTraceLitState({
   getNode,
   revealRevision,
   registryRevision,
+  onFadeComplete,
 }: UseTraceLitStateArgs) {
   const refineCacheRef = useRef(createRefinePreviewEdgeCache());
   const lastApplyRef = useRef({ fingerprint: "", hovered: "", strength: 0 });
@@ -104,15 +106,19 @@ export function useTraceLitState({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
   }, [getNode, pinnedTraces, revealRevision, registryRevision, visibleEdgeKinds]);
 
+  const hoverLitKey = useMemo(() => {
+    const candidate = emphasisTokenKey ?? hoveredTokenKey;
+    if (!candidate) return null;
+    if (pinnedKeys(pinnedTraces).includes(candidate)) return null;
+    return candidate;
+  }, [emphasisTokenKey, hoveredTokenKey, pinnedTraces]);
+
   const hoverTraceLit = useMemo(() => {
-    if (!hoveredTokenKey) return EMPTY_TRACE_LIT;
-    if (pinnedKeys(pinnedTraces).includes(hoveredTokenKey)) {
-      return EMPTY_TRACE_LIT;
-    }
+    if (!hoverLitKey) return EMPTY_TRACE_LIT;
     const cache = refineCacheRef.current;
     cache.clear();
     return computeTraceLit(
-      hoveredTokenKey,
+      hoverLitKey,
       filterPreviewEdgesByVisibility(hoverPreviewEdges, visibleEdgeKinds),
       getNode,
       cache,
@@ -120,9 +126,8 @@ export function useTraceLitState({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
   }, [
     getNode,
+    hoverLitKey,
     hoverPreviewEdges,
-    hoveredTokenKey,
-    pinnedTraces,
     revealRevision,
     registryRevision,
     visibleEdgeKinds,
@@ -146,6 +151,7 @@ export function useTraceLitState({
       lastApplyRef,
       clearLitTimerRef,
       fadingLitRef,
+      onFadeComplete,
     });
   }, [
     getNode,
@@ -158,6 +164,7 @@ export function useTraceLitState({
     registryRevision,
     revealRevision,
     strengthRevision,
+    onFadeComplete,
   ]);
 
   useLayoutEffect(

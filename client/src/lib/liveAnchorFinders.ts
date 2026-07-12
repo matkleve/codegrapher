@@ -79,3 +79,36 @@ export function usageChipInGraph(
     `[data-trace-key="${CSS.escape(traceKey)}"]`,
   );
 }
+
+/** Registry first, then DOM — sig-type/param chips can remount without registry. */
+export function chipForTraceKey(traceKey: string): HTMLElement | null {
+  const cfHost = cfHostForTraceKey(traceKey);
+  if (cfHost?.isConnected) return cfHost;
+
+  const fromRegistry = getByTraceKey(traceKey);
+  if (fromRegistry?.isConnected) return fromRegistry;
+
+  const pane = graphPane();
+  if (!pane) return null;
+  return pane.querySelector<HTMLElement>(
+    `[data-trace-key="${CSS.escape(traceKey)}"]`,
+  );
+}
+
+export function findSigSurfaceChip(
+  flowNodeId: string,
+  memberId: string,
+  token: string,
+  traceKey?: string,
+): HTMLElement | null {
+  if (traceKey) {
+    const chip = chipForTraceKey(traceKey);
+    if (chip?.isConnected) return chip;
+  }
+
+  const pane = graphPane();
+  if (!pane) return null;
+  return pane.querySelector<HTMLElement>(
+    `[data-flow-node-id="${CSS.escape(flowNodeId)}"] [data-member-id="${CSS.escape(memberId)}"] [data-trace-key$="::sig-type::${CSS.escape(token)}"]`,
+  );
+}

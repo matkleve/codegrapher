@@ -4,7 +4,6 @@ import {
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
-import { getByTraceKey } from "@/lib/elementRegistry";
 import {
   memberDefSiblingHosts,
   resolveMemberDefEndpoint,
@@ -15,9 +14,10 @@ import { parseUsageTokenKey } from "@/lib/traceKeys";
 import type { AnchorRef, LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { Node } from "@xyflow/react";
 import {
-  cfHostForTraceKey,
+  chipForTraceKey,
   findClassDefLabel,
   findMemberDefLabel,
+  findSigSurfaceChip,
   firstUsageChipOnLine,
   usageChipInGraph,
 } from "@/lib/liveAnchorFinders";
@@ -79,6 +79,9 @@ export function resolveDefinitionSiteAnchor(
   getNode: (id: string) => Node | undefined,
 ): AnchorRef {
   if (memberId) {
+    const sigChip = findSigSurfaceChip(flowNodeId, memberId, token);
+    if (sigChip?.isConnected) return { type: "element", el: sigChip };
+
     const defKey = makeMemberDefKey(flowNodeId, memberId);
     if (memberDefSiblingHosts(defKey)) {
       const endpoint = resolveMemberDefEndpoint(defKey);
@@ -128,11 +131,8 @@ function resolveHint(
   getNode: (id: string) => Node | undefined,
 ): AnchorRef {
   if (hint.traceKey) {
-    const cfHost = cfHostForTraceKey(hint.traceKey);
-    if (cfHost) return { type: "element", el: cfHost };
-
-    const fromTraceKey = getByTraceKey(hint.traceKey);
-    if (fromTraceKey?.isConnected) return { type: "element", el: fromTraceKey };
+    const chip = chipForTraceKey(hint.traceKey);
+    if (chip) return { type: "element", el: chip };
 
     const parsedUsage = parseUsageTokenKey(hint.traceKey);
     if (parsedUsage) {
@@ -149,6 +149,13 @@ function resolveHint(
 
   if (hint.role === "usage") {
     if (!hint.memberId || hint.lineNumber == null) {
+      const sigChip = findSigSurfaceChip(
+        hint.flowNodeId,
+        hint.memberId ?? "",
+        hint.token,
+        hint.traceKey,
+      );
+      if (sigChip) return { type: "element", el: sigChip };
       return { type: "handle", handle: previewMemberHandle(hint.memberId ?? "") };
     }
     const classData = getClassNodeData(hint.flowNodeId, getNode);

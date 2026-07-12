@@ -5,9 +5,9 @@ import { MOTION_TRACE_MS } from "@/lib/motionTokens";
 import { setTraceLitFading } from "@/lib/traceLitFading";
 import { applyTraceLit, clearTraceLit, unwindTraceLit } from "@/lib/traceLitController";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { getTraceSessionMood } from "@/lib/traceSessionMood";
 import {
   setHoverPreviewEdgeIds,
-  setTraceSessionActive,
   setWireHoveredTokenKey,
 } from "@/lib/wireHoverBoost";
 import { notifyWireTransform } from "@/lib/wireEngine";
@@ -26,6 +26,7 @@ export type TraceLitApplyArgs = {
   lastApplyRef: { current: LastApply };
   clearLitTimerRef: { current: number };
   fadingLitRef: { current: boolean };
+  onFadeComplete?: () => void;
 };
 
 export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
@@ -41,24 +42,35 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
     lastApplyRef,
     clearLitTimerRef,
     fadingLitRef,
+    onFadeComplete,
   } = args;
 
-  if (!traceTokenKey) {
+  const mood = getTraceSessionMood();
+  const shouldFade =
+    !traceTokenKey && (mood === "leaving" || fadingLitRef.current);
+
+  if (shouldFade && !traceTokenKey) {
     if (!fadingLitRef.current) {
       fadingLitRef.current = true;
       setTraceLitFading(true);
       setWireHoveredTokenKey(null);
       setHoverPreviewEdgeIds(new Set());
       unwindTraceLit();
+      // Drop lit classes immediately so CSS transitions run during the fade window
+      // (waiting before clearTraceLit left a dead 120ms with no visible motion).
+      clearTraceLit();
+      lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
       clearLitTimerRef.current = window.setTimeout(() => {
-        lastApplyRef.current = { fingerprint: "", hovered: "", strength: 0 };
-        clearTraceLit();
-        setTraceSessionActive(false);
         fadingLitRef.current = false;
         setTraceLitFading(false);
         clearLitTimerRef.current = 0;
+        onFadeComplete?.();
       }, MOTION_TRACE_MS);
     }
+    return;
+  }
+
+  if (!traceTokenKey) {
     return;
   }
 
@@ -66,9 +78,7 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
   setTraceLitFading(false);
   window.clearTimeout(clearLitTimerRef.current);
   clearLitTimerRef.current = 0;
-  setTraceSessionActive(true);
   const pointerKey = emphasisTokenKey ?? hoveredTokenKey;
-  setWireHoveredTokenKey(pointerKey);
   const fingerprint = traceLitFingerprint(traceLit);
   const hovered = pointerKey ?? "";
   if (

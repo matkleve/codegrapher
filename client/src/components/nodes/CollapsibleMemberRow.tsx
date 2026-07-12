@@ -66,9 +66,6 @@ export function CollapsibleMemberRow({
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
     cancelHoverLeaveGrace,
-    scheduleHoverLeaveGrace,
-    isWarm,
-    emphasisTokenKey,
     selectReadingFocus,
   } = useGraphInteraction();
   const { getNode } = useReactFlow();
@@ -192,10 +189,6 @@ export function CollapsibleMemberRow({
     [cancelHoverLeaveGrace, flowNodeId, memberId, selectReadingFocus],
   );
 
-  const onMemberRowMouseMove = useCallback(() => {
-    if (isWarm && emphasisTokenKey == null) scheduleHoverLeaveGrace();
-  }, [emphasisTokenKey, isWarm, scheduleHoverLeaveGrace]);
-
   return (
     <div
       ref={memberRowRef}
@@ -205,7 +198,6 @@ export function CollapsibleMemberRow({
         isReadingFocus && "member-row--reading-focus",
       )}
       onDoubleClick={onReadingFocusDoubleClick}
-      onMouseMove={onMemberRowMouseMove}
     >
       <MemberRowHeader
         memberId={memberId}

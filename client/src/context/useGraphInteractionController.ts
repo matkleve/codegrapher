@@ -115,6 +115,7 @@ export function useGraphInteractionController({
     getNode,
     revealRevision,
     registryRevision,
+    onFadeComplete: trace.completeFade,
   });
 
   const focusFlowNode = useCallback(
@@ -188,6 +189,8 @@ export function useGraphInteractionController({
       hoveredTokenKey: trace.hoveredTokenKey,
       emphasisTokenKey: trace.emphasisTokenKey,
       traceTokenKey: trace.traceTokenKey,
+      sessionMood: trace.sessionMood,
+      debugEvents: trace.debugEvents,
       lookupIndexedUsageSites,
       goBackPin: trace.goBackPin,
       canGoBackPin: trace.canGoBackPin,

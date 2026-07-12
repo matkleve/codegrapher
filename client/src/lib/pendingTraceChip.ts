@@ -1,4 +1,8 @@
 import { traceStrength } from "@/lib/traceDepth";
+import {
+  isTracePendingMood,
+  subscribeTraceSessionMood,
+} from "@/lib/traceSessionMood";
 import { CHIP_PENDING_TRACE, TRACE_STRENGTH_VAR } from "@/lib/traceLitApply";
 
 let pendingHost: HTMLElement | null = null;
@@ -45,9 +49,13 @@ export function clearPendingTraceHost(): void {
 
 export function subscribeTracePending(listener: () => void): () => void {
   pendingListeners.add(listener);
-  return () => pendingListeners.delete(listener);
+  const unsubMood = subscribeTraceSessionMood(listener);
+  return () => {
+    pendingListeners.delete(listener);
+    unsubMood();
+  };
 }
 
 export function isTracePending(): boolean {
-  return pendingHost != null;
+  return isTracePendingMood();
 }

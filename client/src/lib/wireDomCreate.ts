@@ -19,7 +19,7 @@ import {
   isWireEmphasized,
 } from "@/lib/wireHoverBoost";
 import { LOAD_STUB_READY_ATTR } from "@/lib/loadStubPosition";
-import { isWireRevealing, playWireReveal } from "@/lib/wireReveal";
+import { isWireRevealing, playWireReveal, wireRevealDelayMs } from "@/lib/wireReveal";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -159,12 +159,18 @@ export function revealWireIfReady(wire: WireElements, loadEl?: HTMLElement | nul
     hideWireUntilReveal(wire);
     return;
   }
-  const stagger = Number.parseInt(wire.group.dataset.drawIndex ?? "0", 10);
+  const delayMs =
+    wire.group.dataset.revealDelayMs != null
+      ? Number.parseInt(wire.group.dataset.revealDelayMs, 10)
+      : wireRevealDelayMs(
+          wire.spec.hop,
+          Number.parseInt(wire.group.dataset.drawIndex ?? "0", 10),
+        );
   const warmRetarget =
     wire.path.classList.contains("preview-edge-warm") &&
     wire.group.dataset.revealed === "1";
   if (!warmRetarget) {
-    playWireReveal(wire, stagger);
+    playWireReveal(wire, delayMs);
   }
 }
 

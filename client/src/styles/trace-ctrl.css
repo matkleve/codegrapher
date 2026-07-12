@@ -57,7 +57,7 @@
   color: inherit !important;
 }
 
-.graph-pane.graph-ctrl-preview .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
+.graph-pane.graph-ctrl-preview:not(.graph-trace-fading-out) .member-row:not(.trace-member-lit):not(.trace-member-owner-lit) {
   background: var(--trace-dim-surface) !important;
 }
 

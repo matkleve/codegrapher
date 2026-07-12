@@ -31,7 +31,10 @@
   stroke-dasharray: 10 4;
   stroke-linecap: round;
   stroke-dashoffset: 0;
-  transition: opacity var(--motion-trace) var(--ease);
+  transition:
+    opacity var(--motion-trace) var(--ease),
+    stroke var(--motion-trace) var(--ease),
+    stroke-width var(--motion-trace) var(--ease);
 }
 
 .preview-edge-path.preview-edge-marching {
@@ -41,11 +44,53 @@
 .preview-edge-glow {
   stroke-linecap: round;
   stroke-width: 5;
+  stroke-dasharray: 10 4;
+  stroke-dashoffset: 0;
   opacity: 0.12;
-  transition: opacity var(--motion-trace) var(--ease);
+  transition:
+    opacity var(--motion-trace) var(--ease),
+    stroke var(--motion-trace) var(--ease),
+    stroke-width var(--motion-trace) var(--ease);
 }
 
-/* Stroke reveal — solid draw; marching dash only after reveal completes */
+.preview-edge-glow.preview-edge-marching {
+  animation: proto-flow 700ms linear infinite;
+}
+
+.preview-edge-glow.preview-edge-load {
+  stroke-dasharray: 6 4;
+}
+
+.preview-edge-glow.preview-edge-binding {
+  stroke-dasharray: 2 4;
+}
+
+.preview-edge-glow.preview-edge-binding.preview-edge-marching {
+  animation: proto-flow 900ms linear infinite;
+}
+
+.preview-edge-glow.preview-edge-typesetting {
+  stroke-dasharray: 5 3 1 3;
+}
+
+.preview-edge-glow.preview-edge-typesetting.preview-edge-marching {
+  animation: proto-flow 850ms linear infinite;
+}
+
+.preview-edge-glow.preview-edge-branch {
+  stroke-dasharray: 7 3 2 3;
+}
+
+.preview-edge-glow.preview-edge-branch.preview-edge-marching {
+  animation: proto-flow 800ms linear infinite;
+}
+
+.preview-edge-glow.preview-edge-branch-trunk.preview-edge-marching,
+.preview-edge-glow.preview-edge-fan-trunk.preview-edge-marching {
+  animation: proto-flow 950ms linear infinite;
+}
+
+/* Stroke draw — thin path reveals source→target; dashed marching after draw */
 .preview-edge-path.preview-edge-drawing {
   animation: none !important;
   transition: none !important;

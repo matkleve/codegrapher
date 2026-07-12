@@ -9,7 +9,12 @@ import {
   isTraceLitFading as getTraceLitFading,
   subscribeTraceLitFading,
 } from "@/lib/traceLitFading";
+import {
+  isTraceDomFading as getTraceDomFading,
+  subscribeTraceSessionMood,
+} from "@/lib/traceSessionMood";
 import { cn } from "@/lib/utils";
+import { TraceSessionDebugOverlay } from "@/components/graph/TraceSessionDebugOverlay";
 
 type GraphPaneProps = {
   children: ReactNode;
@@ -33,6 +38,11 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
       getTraceLitFading,
       () => false,
     );
+    const isDomFading = useSyncExternalStore(
+      subscribeTraceSessionMood,
+      getTraceDomFading,
+      () => false,
+    );
 
     return (
       <div
@@ -41,8 +51,9 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
           "graph-pane relative min-h-0 flex-1 overflow-hidden bg-background",
           isCtrlActive && "graph-ctrl-preview",
           isTracePending && "graph-trace-pending",
-          isTraceActive && "graph-trace-active",
+          (isTraceActive || isTraceLeaving) && "graph-trace-active",
           isTraceLeaving && "graph-trace-leaving",
+          isDomFading && "graph-trace-fading-out",
           isTraceActive && isWarm && "graph-trace-warm",
           pinnedTraces.length > 0 && "graph-trace-pinned",
         )}
@@ -51,6 +62,7 @@ export const GraphPane = forwardRef<HTMLDivElement, GraphPaneProps>(
         onClickCapture={onClickCapture}
       >
         {children}
+        <TraceSessionDebugOverlay />
       </div>
     );
   },

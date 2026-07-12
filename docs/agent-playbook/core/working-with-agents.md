@@ -54,6 +54,8 @@ When behavior changes, update the **spec** (and atlas if the map changed), not a
 
 **Trace wire bug pattern:** hop 2+ faint while hop 1 glows → check `previewEdges` vs `hoverPreviewEdgeIds` sync, not `traceDepth` hop cap ([token-hover.atlas.supplement.md](../../specs/system/token-hover.atlas.supplement.md) § pitfall).
 
+**Pane mood flicker:** leave+enter must batch through `traceSessionReducer` — if mood drops between chips, check `GRACE_EXPIRE` vs `POINTER_ENTER` order, not CSS. Source of truth: `useTraceSession` + `?trace-debug=1`.
+
 ---
 
 ## What agents need from the repo

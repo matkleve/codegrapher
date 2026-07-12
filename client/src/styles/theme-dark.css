@@ -62,8 +62,8 @@
   --code-keyword: oklch(0.78 0.10 295);
   --code-string: oklch(0.80 0.09 55);
   --code-number: oklch(0.78 0.11 300);
-  --surface-active: color-mix(in oklch, var(--primary) 18%, var(--background));
-  --surface-active-border: color-mix(in oklch, var(--primary) 45%, var(--border));
+  --surface-active: color-mix(in oklch, var(--primary) 30%, var(--background));
+  --surface-active-border: color-mix(in oklch, var(--primary) 58%, var(--border));
   --explorer-file-in-graph: oklch(0.72 0.12 255);
   /* Brand gold hover accent on dark surfaces */
   --brand: oklch(0.78 0.12 88);

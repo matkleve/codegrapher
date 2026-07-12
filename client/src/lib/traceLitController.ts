@@ -49,12 +49,7 @@ export function applyTraceLit(
   { pinnedTokenKeys, hoveredTokenKey, emphasisTokenKey, previewEdges = [], getNode }: TraceLitApplyOptions,
 ): void {
   const pointerKey = emphasisTokenKey ?? hoveredTokenKey;
-  const boostKey =
-    emphasisTokenKey != null &&
-    hoveredTokenKey != null &&
-    emphasisTokenKey !== hoveredTokenKey
-      ? hoveredTokenKey
-      : pointerKey;
+  const boostKey = pointerKey;
   const next = new Map<HTMLElement, HostState>();
 
   for (const key of state.litTokenKeys) {

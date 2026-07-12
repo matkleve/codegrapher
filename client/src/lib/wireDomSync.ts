@@ -4,6 +4,7 @@ import {
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
 import { MOTION_TRACE_MS } from "@/lib/motionTokens";
+import { buildRevealSchedule, orderSpecsForReveal, stripWireRevealStroke } from "@/lib/wireReveal";
 import {
   applyWireDepthOpacity,
   applyWireMarkers,
@@ -36,10 +37,8 @@ export function retireWireGroup(
 ): void {
   const id = wire.spec.id;
   if (wire.group.dataset.retiring === "1") return;
-  wire.path.getAnimations?.().forEach((a) => a.cancel());
-  wire.glow.getAnimations?.().forEach((a) => a.cancel());
-  wire.path.classList.remove("preview-edge-drawing");
-  wire.glow.classList.remove("preview-edge-glow-drawing");
+  stripWireRevealStroke(wire.path, wire.glow);
+  wire.glow.style.opacity = "0";
   wire.group.dataset.retiring = "1";
   delete wire.group.dataset.revealStarted;
   delete wire.group.dataset.revealed;
@@ -65,8 +64,13 @@ export function syncWireDom(
     retireWireGroup(wire, wires);
   }
 
-  for (const [index, spec] of specs.entries()) {
+  const revealSchedule = buildRevealSchedule(specs);
+  const revealOrder = new Map(orderSpecsForReveal(specs).map((spec, index) => [spec.id, index]));
+
+  for (const spec of specs) {
     let wire = wires.get(spec.id);
+    const index = revealOrder.get(spec.id) ?? 0;
+    const reveal = revealSchedule.get(spec.id);
     const hadLoad = wire?.spec.load != null;
     const hasLoad = spec.load != null;
     if (wire && hadLoad !== hasLoad) {
@@ -77,21 +81,33 @@ export function syncWireDom(
     if (!wire) {
       wire = createWireGroup(spec, warm);
       wire.group.dataset.drawIndex = String(index);
+      if (reveal) {
+        wire.group.dataset.revealDepth = String(reveal.depth);
+        wire.group.dataset.revealTie = String(reveal.tie);
+        wire.group.dataset.revealDelayMs = String(reveal.delayMs);
+      }
       wires.set(spec.id, wire);
       container.append(wire.group);
     } else {
       wire.spec = spec;
       wire.group.dataset.drawIndex = String(index);
+      if (reveal) {
+        wire.group.dataset.revealDepth = String(reveal.depth);
+        wire.group.dataset.revealTie = String(reveal.tie);
+        wire.group.dataset.revealDelayMs = String(reveal.delayMs);
+      }
       setWireWarm(wire, warm);
       const { path: pathClasses, glow: glowClasses } = previewWireClasses(spec, warm);
       const pathDrawing = wire.path.classList.contains("preview-edge-drawing");
       const glowDrawing = wire.glow.classList.contains("preview-edge-glow-drawing");
       const pathMarching = wire.path.classList.contains("preview-edge-marching");
+      const glowMarching = wire.glow.classList.contains("preview-edge-marching");
       wire.path.className.baseVal = pathClasses.join(" ");
       wire.glow.className.baseVal = glowClasses.join(" ");
       if (pathDrawing) wire.path.classList.add("preview-edge-drawing");
       if (glowDrawing) wire.glow.classList.add("preview-edge-glow-drawing");
       if (pathMarching) wire.path.classList.add("preview-edge-marching");
+      if (glowMarching) wire.glow.classList.add("preview-edge-marching");
       if (hasLoad) {
         wire.path.classList.add("preview-edge-load");
       } else {
@@ -106,7 +122,7 @@ export function syncWireDom(
 
   if (getNode) refreshWireDepthOpacity(wires, getNode);
 
-  const order = new Map(specs.map((s, i) => [s.id, i]));
+  const order = revealOrder;
   for (const wire of wires.values()) {
     const idx = order.get(wire.spec.id);
     if (idx == null) continue;

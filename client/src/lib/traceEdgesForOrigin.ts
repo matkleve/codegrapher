@@ -10,12 +10,14 @@ import {
 } from "@/lib/paramTypeCascadeEdges";
 import { findParamDefCoLocated } from "@/lib/paramTypeAnchors";
 import { graphPane } from "@/lib/graphPaneDom";
+import { memberAccessReceiverIndices } from "@/lib/memberAccessChain";
 import {
   bindingInitFor,
   paramDefForName,
   type MemberSymbolIndex,
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
+import { lineTokens } from "@/lib/lexicalWalkCore";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { previewHopFromDepth } from "@/lib/traceDepth";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
@@ -44,6 +46,25 @@ function getClassNodeData(
   const node = getNode(flowNodeId);
   if (!node || node.type !== "class") return null;
   return node.data as ClassNodeData;
+}
+
+function resolveParamTargetFromInitSite(
+  symbolIndex: MemberSymbolIndex,
+  methodCode: string,
+  methodStartLine: number,
+  site: { lineNumber: number; tokenIndex: number },
+): { defId: string; direct: boolean } | null {
+  const direct = usageTargetFor(symbolIndex, site.lineNumber, site.tokenIndex);
+  if (direct?.includes("::param::")) return { defId: direct, direct: true };
+
+  const tokens = lineTokens(methodCode, methodStartLine, site.lineNumber);
+  for (const receiverIdx of memberAccessReceiverIndices(tokens, site.tokenIndex)) {
+    const viaReceiver = usageTargetFor(symbolIndex, site.lineNumber, receiverIdx);
+    if (viaReceiver?.includes("::param::")) {
+      return { defId: viaReceiver, direct: false };
+    }
+  }
+  return null;
 }
 
 export function paramUsageCount(graph: LexicalGraph, paramDefId: string): number {
@@ -179,12 +200,13 @@ export function traceBindingInitCascadeEdges(
   const site = bindingInitFor(ctx.symbolIndex, defId);
   if (!site) return [];
 
-  const paramTargetId = usageTargetFor(
+  const paramTarget = resolveParamTargetFromInitSite(
     ctx.symbolIndex,
-    site.lineNumber,
-    site.tokenIndex,
+    ctx.methodCode,
+    ctx.methodStartLine,
+    site,
   );
-  if (!paramTargetId?.includes("::param::")) return [];
+  if (!paramTarget) return [];
 
   const pane = graphPane();
   if (!pane) return [];
@@ -197,7 +219,7 @@ export function traceBindingInitCascadeEdges(
     site.tokenIndex,
     site.token,
   );
-  const paramDefEl = findLocalDefElement(pane, paramTargetId);
+  const paramDefEl = findLocalDefElement(pane, paramTarget.defId);
   if (!initEl || !paramDefEl) return [];
 
   const edges: PreviewEdgeSpec[] = [
@@ -212,8 +234,8 @@ export function traceBindingInitCascadeEdges(
     },
   ];
 
-  const paramName = paramNameFromDefId(paramTargetId);
-  if (!paramName) return edges;
+  const paramName = paramNameFromDefId(paramTarget.defId);
+  if (!paramName || !paramTarget.direct) return edges;
 
   const typeEdges = buildParamTypeCascadeEdges({
     paramName,

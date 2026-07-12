@@ -3,7 +3,7 @@ import { assembleCodeLinePreviewEdges } from "@/lib/codeLineTraceEdges";
 import { buildMemberSymbolIndex } from "@/lib/localSymbolLinks";
 import { buildControlFlowIndex } from "@/lib/controlFlowLinks";
 import { registerTraceHost } from "@/lib/elementRegistry";
-import { makeUsageTokenKey } from "@/lib/traceKeys";
+import { makeControlFlowKey, makeUsageTokenKey } from "@/lib/traceKeys";
 import { templateInterpolationSites } from "@/lib/templateInterpolations";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import type { ClassNodeData } from "@/components/nodes/flowNodeData";
@@ -74,53 +74,77 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(edges[0]?.to.type).toBe("element");
   });
 
-  it("skips control-flow wires when a local lexical trace is primary on a condition token", () => {
-    const IF_MEMBER = "fn:file:check";
-    const IF_FLOW = "flow:file:check.ts";
-    const IF_START = 1;
-    const IF_CODE = `export function check(addr: string | null) {
-  if (!addr) {
-    return null;
+  it("includes control-flow branch wires alongside local usage on a condition token", () => {
+    const SWITCH_MEMBER = "method:file:Svc.extractFieldValue";
+    const SWITCH_FLOW = "flow:file:order.ts";
+    const SWITCH_START = 10;
+    const SWITCH_CODE = `extractFieldValue(field: string): string | null {
+  switch (field) {
+    case 'city':
+      return null;
+    case 'district':
+      return null;
   }
 }`;
-    const index = buildMemberSymbolIndex(IF_MEMBER, IF_CODE, IF_START);
-    const cfIndex = buildControlFlowIndex(IF_MEMBER, IF_CODE, IF_START);
-    const addrDefId = `local-def::${IF_MEMBER}::param::addr::${IF_START}`;
+    const index = buildMemberSymbolIndex(SWITCH_MEMBER, SWITCH_CODE, SWITCH_START);
+    const cfIndex = buildControlFlowIndex(SWITCH_MEMBER, SWITCH_CODE, SWITCH_START);
+    const fieldDefId = `local-def::${SWITCH_MEMBER}::param::field::${SWITCH_START}`;
 
-    const ifLine = IF_CODE.split("\n")[1]!;
-    const addrCondIdx = tokenizeLine(ifLine).tokens.findIndex((t) => t.text === "addr");
+    const switchLine = SWITCH_CODE.split("\n")[1]!;
+    const fieldCondIdx = tokenizeLine(switchLine).tokens.findIndex((t) => t.text === "field");
+    const switchLineNo = SWITCH_START + 1;
 
     const pane = document.querySelector(".graph-pane")!;
 
     const def = document.createElement("span");
-    def.dataset.localDefId = addrDefId;
-    def.dataset.traceKey = makeUsageTokenKey(IF_FLOW, IF_MEMBER, IF_START, 0, "addr");
+    def.dataset.localDefId = fieldDefId;
+    def.dataset.traceKey = makeUsageTokenKey(
+      SWITCH_FLOW,
+      SWITCH_MEMBER,
+      SWITCH_START,
+      tokenizeLine(SWITCH_CODE.split("\n")[0]!).tokens.findIndex((t) => t.text === "field"),
+      "field",
+    );
     registerTraceHost(def);
     pane.appendChild(def);
 
     const use = document.createElement("span");
-    use.dataset.localTargetId = addrDefId;
+    use.dataset.localTargetId = fieldDefId;
     use.dataset.traceKey = makeUsageTokenKey(
-      IF_FLOW,
-      IF_MEMBER,
-      IF_START + 1,
-      addrCondIdx,
-      "addr",
+      SWITCH_FLOW,
+      SWITCH_MEMBER,
+      switchLineNo,
+      fieldCondIdx,
+      "field",
     );
     registerTraceHost(use);
     pane.appendChild(use);
 
+    for (const line of SWITCH_CODE.split("\n")) {
+      if (!line.includes("case")) continue;
+      const lineNo = SWITCH_START + SWITCH_CODE.split("\n").indexOf(line);
+      const caseIdx = tokenizeLine(line).tokens.findIndex((t) => t.text === "case");
+      const branch = document.createElement("span");
+      branch.dataset.traceKey = makeControlFlowKey(
+        SWITCH_FLOW,
+        SWITCH_MEMBER,
+        lineNo,
+        caseIdx,
+      );
+      pane.appendChild(branch);
+    }
+
     const condEdges = assembleCodeLinePreviewEdges({
-      name: "addr",
+      name: "field",
       chipEl: use,
       kind: "variable",
-      tokenIndex: addrCondIdx,
-      edgeKey: "test-addr-cond",
+      tokenIndex: fieldCondIdx,
+      edgeKey: "test-field-cond",
       symbolIndex: index,
       controlFlowIndex: cfIndex,
-      sourceFlowId: IF_FLOW,
-      memberId: IF_MEMBER,
-      lineNumber: IF_START + 1,
+      sourceFlowId: SWITCH_FLOW,
+      memberId: SWITCH_MEMBER,
+      lineNumber: switchLineNo,
       symbols: new Map(),
       graphData: null,
       getNode: () => undefined,
@@ -129,8 +153,11 @@ describe("assembleCodeLinePreviewEdges", () => {
       cascadeEdges: [],
     });
 
-    expect(condEdges.some((e) => e.connectionKind === "branch")).toBe(false);
-    expect(condEdges.length).toBeGreaterThanOrEqual(1);
+    expect(condEdges.some((e) => e.connectionKind === "usage" || e.kind === "variable")).toBe(
+      true,
+    );
+    expect(condEdges.some((e) => e.connectionKind === "branch")).toBe(true);
+    expect(condEdges.length).toBeGreaterThanOrEqual(3);
   });
 
   it("includes type cascade when hovering inline signature param def", () => {
@@ -469,6 +496,113 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(edges.some((e) => e.id.includes("chain-p-") && e.liveTo?.token === "city")).toBe(true);
     const cityEdge = edges.find((e) => e.liveTo?.token === "city");
     expect(cityEdge?.hop).toBe(3);
+  });
+
+  it("wires sig-type provenance when backward walk reaches a param", () => {
+    const EXTRACT_MEMBER = "method:file:Geo.extractFieldValue";
+    const TYPE = "GeocoderSearchResult";
+    const EXTRACT_CODE = `export function extractFieldValue(
+  result: ${TYPE},
+  field: AddressFieldKind,
+): string | null {
+  const addr = result.address;
+  if (!addr) return null;
+  return addr.city;
+}`;
+    const EXTRACT_START = 52;
+    const index = buildMemberSymbolIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START);
+    const declLine = EXTRACT_CODE.split("\n")[4]!;
+    const declLineNo = EXTRACT_START + 4;
+    const tokens = tokenizeLine(declLine).tokens;
+    const addressIdx = tokens.findIndex(
+      (t, i) => t.kind === "identifier" && t.text === "address" && tokens[i - 1]?.text === ".",
+    );
+    const paramDefId = [...index.defSites.values()].find((id) => id.includes("::param::result::"))!;
+    const typeLine = EXTRACT_CODE.split("\n")[1]!;
+    const typeIdx = tokenizeLine(typeLine).tokens.findIndex((t) => t.text === TYPE);
+    const typeLineNo = EXTRACT_START + 1;
+
+    const pane = document.querySelector(".graph-pane")!;
+    const bodyWrap = document.createElement("div");
+    bodyWrap.className = "member-body-wrap";
+    pane.appendChild(bodyWrap);
+
+    const addressEl = document.createElement("span");
+    addressEl.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      EXTRACT_MEMBER,
+      declLineNo,
+      addressIdx,
+      "address",
+    );
+    bodyWrap.appendChild(addressEl);
+    registerTraceHost(addressEl);
+
+    const paramDefEl = document.createElement("span");
+    paramDefEl.dataset.localDefId = paramDefId;
+    bodyWrap.appendChild(paramDefEl);
+    registerTraceHost(paramDefEl);
+
+    const sigTypeEl = document.createElement("span");
+    sigTypeEl.dataset.traceKey = makeUsageTokenKey(
+      FLOW,
+      EXTRACT_MEMBER,
+      typeLineNo,
+      typeIdx,
+      TYPE,
+    );
+    sigTypeEl.dataset.tokenKind = "type";
+    bodyWrap.appendChild(sigTypeEl);
+    registerTraceHost(sigTypeEl);
+
+    const classData: ClassNodeData = {
+      label: "Geo",
+      filePath: "/geo.ts",
+      expandedMethodIds: [EXTRACT_MEMBER],
+      methods: [
+        {
+          id: EXTRACT_MEMBER,
+          label: "extractFieldValue",
+          symbolName: "extractFieldValue",
+          code: EXTRACT_CODE,
+          startLine: EXTRACT_START,
+        },
+      ],
+      properties: [],
+    };
+
+    const edges = assembleCodeLinePreviewEdges({
+      name: "address",
+      chipEl: addressEl,
+      kind: "variable",
+      tokenIndex: addressIdx,
+      edgeKey: "test-address-type-up",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START),
+      sourceFlowId: FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: declLineNo,
+      methodCode: EXTRACT_CODE,
+      methodStartLine: EXTRACT_START,
+      symbols: new Map([[TYPE, [{ filePath: "/proj/geo.ts", kind: "type", line: 1 }]]]),
+      graphData: null,
+      getNode: () =>
+        ({
+          id: FLOW,
+          type: "class",
+          position: { x: 0, y: 0 },
+          data: classData,
+        }) as Node,
+      hasSymbol: (name) => name === TYPE,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    const typeEdges = edges.filter(
+      (e) => e.connectionKind === "typesetting" || e.id.includes("up-type-result"),
+    );
+    expect(typeEdges.some((e) => e.connectionKind === "typesetting")).toBe(true);
+    expect(typeEdges.find((e) => e.connectionKind === "typesetting")?.hop).toBe(2);
   });
 
   it("binds field init -> value and does not cascade param chain from value usage", () => {
