@@ -2,7 +2,6 @@ import { createPortal } from "react-dom";
 import { useLayoutEffect } from "react";
 import { LoadStubAnchor } from "@/components/graph/LoadStubAnchor";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
-import { graphPane } from "@/lib/graphPaneDom";
 import { notifyWireTransform } from "@/lib/wireEngine";
 
 /** Off-canvas load targets rendered as floating chips left of the class node. */
@@ -16,15 +15,12 @@ export function LoadStubAnchors() {
 
   if (loadEdges.length === 0) return null;
 
-  const portalTarget = graphPane();
-  if (!portalTarget) return null;
-
   return createPortal(
     <>
       {loadEdges.map((edge) => (
         <LoadStubAnchor key={edge.id} edge={edge} />
       ))}
     </>,
-    portalTarget,
+    document.body,
   );
 }

@@ -1,4 +1,6 @@
 import {
+  getAllByLocalDefId,
+  getAllByLocalTargetId,
   getByLocalDefId,
   getByLocalTargetId,
   getByMemberId,
@@ -8,9 +10,8 @@ import {
   previewMemberHandle,
   previewTargetTop,
 } from "@/lib/ctrlPreviewHandles";
-import { allLocalDefElements, findLocalDefElement } from "@/lib/localDefElements";
+import { findLocalDefElement } from "@/lib/localDefElements";
 import { linksForElement } from "@/lib/localDefLinks";
-import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { typesettingPortSides } from "@/lib/resolvePreviewAnchor";
 import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
@@ -24,22 +25,25 @@ import {
   parseUsageTokenKey,
 } from "@/lib/traceKeys";
 
-export type TraceStrength = 1 | 2 | 3;
+import { depthFromHop } from "@/lib/traceDepth";
+import type { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
+
+type RefinePreviewEdgeCache = ReturnType<typeof createRefinePreviewEdgeCache>;
 
 export type TraceLitState = {
   litTokenKeys: ReadonlySet<string>;
   endpointTokenKeys: ReadonlySet<string>;
   /** Provenance tier 2/3 endpoints — grey sibling chip + socket. */
   siblingEndpointTokenKeys: ReadonlySet<string>;
-  /** Strongest (lowest) trace tier per token key — mirrors wire hop decay. */
-  traceStrength: ReadonlyMap<string, TraceStrength>;
-  /** Per-line keyword/context tier — key `${memberId}::${lineNumber}`. */
-  litLineStrength: ReadonlyMap<string, TraceStrength>;
+  /** Strongest (closest) graph distance per token key — mirrors wire hop decay. */
+  traceDepth: ReadonlyMap<string, number>;
+  /** Per-line keyword/context distance — key `${memberId}::${lineNumber}`. */
+  litLineDepth: ReadonlyMap<string, number>;
   /** Wire port sides per endpoint trace key (`from` → right, `to` → left). */
   endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>;
   litMemberIds: ReadonlySet<string>;
   ownerLitMemberIds: ReadonlySet<string>;
-  /** @deprecated — use litLineStrength; kept for merge compat. */
+  /** @deprecated — use litLineDepth; kept for merge compat. */
   litLineMemberIds: ReadonlySet<string>;
   litFlowNodeIds: ReadonlySet<string>;
   tokenKinds: ReadonlyMap<string, SemanticTokenKind>;
@@ -49,8 +53,8 @@ export const EMPTY_TRACE_LIT: TraceLitState = {
   litTokenKeys: new Set(),
   endpointTokenKeys: new Set(),
   siblingEndpointTokenKeys: new Set(),
-  traceStrength: new Map(),
-  litLineStrength: new Map(),
+  traceDepth: new Map(),
+  litLineDepth: new Map(),
   endpointPortSide: new Map(),
   litMemberIds: new Set(),
   ownerLitMemberIds: new Set(),
@@ -68,8 +72,8 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
       ...a.siblingEndpointTokenKeys,
       ...b.siblingEndpointTokenKeys,
     ]),
-    traceStrength: mergeTraceStrength(a.traceStrength, b.traceStrength),
-    litLineStrength: mergeTraceStrength(a.litLineStrength, b.litLineStrength),
+    traceDepth: mergeTraceDepth(a.traceDepth, b.traceDepth),
+    litLineDepth: mergeTraceDepth(a.litLineDepth, b.litLineDepth),
     endpointPortSide: mergeEndpointPortSides(a.endpointPortSide, b.endpointPortSide),
     litMemberIds: new Set([...a.litMemberIds, ...b.litMemberIds]),
     ownerLitMemberIds: new Set([...a.ownerLitMemberIds, ...b.ownerLitMemberIds]),
@@ -79,14 +83,14 @@ export function mergeTraceLit(a: TraceLitState, b: TraceLitState): TraceLitState
   };
 }
 
-function mergeTraceStrength(
-  a: ReadonlyMap<string, TraceStrength>,
-  b: ReadonlyMap<string, TraceStrength>,
-): Map<string, TraceStrength> {
-  const out = new Map<string, TraceStrength>(a);
-  for (const [key, tier] of b) {
+function mergeTraceDepth(
+  a: ReadonlyMap<string, number>,
+  b: ReadonlyMap<string, number>,
+): Map<string, number> {
+  const out = new Map<string, number>(a);
+  for (const [key, depth] of b) {
     const prev = out.get(key);
-    if (prev === undefined || tier < prev) out.set(key, tier);
+    if (prev === undefined || depth < prev) out.set(key, depth);
   }
   return out;
 }
@@ -109,8 +113,8 @@ type LitCollections = {
   litTokenKeys: Set<string>;
   endpointTokenKeys: Set<string>;
   siblingEndpointTokenKeys: Set<string>;
-  traceStrength: Map<string, TraceStrength>;
-  litLineStrength: Map<string, TraceStrength>;
+  traceDepth: Map<string, number>;
+  litLineDepth: Map<string, number>;
   endpointPortSide: Map<string, Set<"left" | "right">>;
   litMemberIds: Set<string>;
   ownerLitMemberIds: Set<string>;
@@ -119,14 +123,14 @@ type LitCollections = {
   tokenKinds: Map<string, SemanticTokenKind>;
 };
 
-function noteStrength(
+function noteDepth(
   state: LitCollections,
   key: string,
-  tier: TraceStrength,
+  depth: number,
 ): void {
-  const prev = state.traceStrength.get(key);
-  if (prev === undefined || tier < prev) {
-    state.traceStrength.set(key, tier);
+  const prev = state.traceDepth.get(key);
+  if (prev === undefined || depth < prev) {
+    state.traceDepth.set(key, depth);
   }
 }
 
@@ -148,26 +152,26 @@ function litLineKey(memberId: string, lineNumber: number): string {
   return `${memberId}::${lineNumber}`;
 }
 
-function noteLineStrength(
+function noteLineDepth(
   state: LitCollections,
   memberId: string,
   lineNumber: number,
-  tier: TraceStrength,
+  depth: number,
 ): void {
   const key = litLineKey(memberId, lineNumber);
-  const prev = state.litLineStrength.get(key);
-  if (prev === undefined || tier < prev) {
-    state.litLineStrength.set(key, tier);
+  const prev = state.litLineDepth.get(key);
+  if (prev === undefined || depth < prev) {
+    state.litLineDepth.set(key, depth);
   }
 }
 
 function noteLineFromKey(
   state: LitCollections,
   traceKey: string,
-  tier: TraceStrength,
+  depth: number,
 ): void {
   const line = lineAnchorFromKey(traceKey);
-  if (line) noteLineStrength(state, line.memberId, line.lineNumber, tier);
+  if (line) noteLineDepth(state, line.memberId, line.lineNumber, depth);
 }
 
 function noteSiblingEndpoint(
@@ -177,28 +181,26 @@ function noteSiblingEndpoint(
 ): void {
   if (key === activeTokenKey) return;
   state.siblingEndpointTokenKeys.add(key);
-  noteStrength(state, key, 2);
+  noteDepth(state, key, 2);
 }
 
-function edgeHopTier(edge: PreviewEdgeSpec): TraceStrength {
-  if (edge.hop === 3) return 3;
-  if (edge.hop === 2) return 2;
-  return 1;
+function edgeDepth(edge: PreviewEdgeSpec): number {
+  return depthFromHop(edge.hop);
 }
 
-function noteEndpointStrength(
+function noteEndpointDepth(
   state: LitCollections,
   key: string,
   activeTokenKey: string,
-  tier: TraceStrength,
+  depth: number,
 ): void {
   if (key === activeTokenKey) {
-    noteStrength(state, key, 1);
+    noteDepth(state, key, 1);
   } else {
-    noteStrength(state, key, tier);
-    if (tier >= 2) state.siblingEndpointTokenKeys.add(key);
+    noteDepth(state, key, depth);
+    if (depth >= 2) state.siblingEndpointTokenKeys.add(key);
   }
-  noteLineFromKey(state, key, key === activeTokenKey ? 1 : tier);
+  noteLineFromKey(state, key, key === activeTokenKey ? 1 : depth);
 }
 
 function markEndpointPort(
@@ -300,10 +302,7 @@ function absorbLocalDefSiblings(
   asEndpoint: boolean,
   skip?: HTMLElement,
 ): void {
-  const pane = document.querySelector(".graph-pane");
-  if (!pane) return;
-
-  for (const el of allLocalDefElements(pane, defId)) {
+  for (const el of getAllByLocalDefId(defId)) {
     if (el === skip) continue;
     const traceKey = traceKeyFromElement(el);
     if (!traceKey) continue;
@@ -331,19 +330,14 @@ function spreadLocalLinkChain(
   if (targetId) {
     absorbToken(seed, state, true);
 
-    const pane = document.querySelector(".graph-pane");
-    if (!pane) return;
-
-    const defEl = findLocalDefElement(pane, targetId);
+    const defEl = findLocalDefElement(document, targetId);
     if (defEl && defEl !== seed) {
       absorbToken(defEl, state, true);
       const defKey = traceKeyFromElement(defEl);
       if (defKey) noteSiblingEndpoint(state, defKey, activeTokenKey);
     }
 
-    for (const usageEl of pane.querySelectorAll<HTMLElement>(
-      `[data-local-target-id="${CSS.escape(targetId)}"]`,
-    )) {
+    for (const usageEl of getAllByLocalTargetId(targetId)) {
       if (usageEl === seed) continue;
       absorbToken(usageEl, state, true);
       const usageKey = traceKeyFromElement(usageEl);
@@ -474,8 +468,13 @@ function absorbLiveHint(
     if (!usageKey) return;
     state.litTokenKeys.add(usageKey);
     if (asEndpoint) state.endpointTokenKeys.add(usageKey);
-    noteStrength(state, usageKey, usageKey === activeTokenKey ? 1 : 2);
-    noteLineStrength(state, hint.memberId, hint.lineNumber, usageKey === activeTokenKey ? 1 : 2);
+    noteDepth(state, usageKey, usageKey === activeTokenKey ? 1 : 2);
+    noteLineDepth(
+      state,
+      hint.memberId,
+      hint.lineNumber,
+      usageKey === activeTokenKey ? 1 : 2,
+    );
     state.litFlowNodeIds.add(hint.flowNodeId);
 
     const chip = elementForTraceKey(usageKey);
@@ -491,9 +490,9 @@ function absorbLiveHint(
       if (!hint.traceKey) return;
       state.litTokenKeys.add(hint.traceKey);
       if (asEndpoint) state.endpointTokenKeys.add(hint.traceKey);
-      const tier: TraceStrength = hint.traceKey === activeTokenKey ? 1 : 2;
-      noteStrength(state, hint.traceKey, tier);
-      noteLineFromKey(state, hint.traceKey, tier);
+      const depth = hint.traceKey === activeTokenKey ? 1 : 2;
+      noteDepth(state, hint.traceKey, depth);
+      noteLineFromKey(state, hint.traceKey, depth);
       const chip = elementForTraceKey(hint.traceKey);
       if (chip) absorbToken(chip, state, asEndpoint);
       return;
@@ -502,8 +501,8 @@ function absorbLiveHint(
     const defKey = makeMemberDefKey(hint.flowNodeId, hint.memberId);
     state.litTokenKeys.add(defKey);
     if (asEndpoint) state.endpointTokenKeys.add(defKey);
-    const tier: TraceStrength = defKey === activeTokenKey ? 1 : 2;
-    noteStrength(state, defKey, tier);
+    const depth = defKey === activeTokenKey ? 1 : 2;
+    noteDepth(state, defKey, depth);
     state.litFlowNodeIds.add(hint.flowNodeId);
 
     const label = elementForTraceKey(defKey);
@@ -538,6 +537,7 @@ export function computeTraceLit(
   activeTokenKey: string | null,
   previewEdges: PreviewEdgeSpec[],
   getNode?: (id: string) => Node | undefined,
+  refineCache?: RefinePreviewEdgeCache,
 ): TraceLitState {
   if (!activeTokenKey) return EMPTY_TRACE_LIT;
 
@@ -545,8 +545,8 @@ export function computeTraceLit(
     litTokenKeys: new Set<string>([activeTokenKey]),
     endpointTokenKeys: new Set<string>([activeTokenKey]),
     siblingEndpointTokenKeys: new Set<string>(),
-    traceStrength: new Map<string, TraceStrength>([[activeTokenKey, 1]]),
-    litLineStrength: new Map<string, TraceStrength>(),
+    traceDepth: new Map<string, number>([[activeTokenKey, 1]]),
+    litLineDepth: new Map<string, number>(),
     endpointPortSide: new Map<string, Set<"left" | "right">>(),
     litMemberIds: new Set<string>(),
     ownerLitMemberIds: new Set<string>(),
@@ -566,9 +566,11 @@ export function computeTraceLit(
   }
 
   for (const edge of previewEdges) {
-    const hopTier = edgeHopTier(edge);
+    const hopDepth = edgeDepth(edge);
     const { from: fromRef, to: toRef } = getNode
-      ? refinePreviewEdge(edge, getNode)
+      ? refineCache
+        ? refineCache.refine(edge, getNode)
+        : refinePreviewEdge(edge, getNode)
       : { from: edge.from, to: edge.to };
 
     if (fromRef.type === "element" && fromRef.el.isConnected) {
@@ -586,7 +588,7 @@ export function computeTraceLit(
       }
       absorbToken(fromRef.el, state, true);
       const fromKey = traceKeyFromElement(fromRef.el);
-      if (fromKey) noteEndpointStrength(state, fromKey, activeTokenKey, hopTier);
+      if (fromKey) noteEndpointDepth(state, fromKey, activeTokenKey, hopDepth);
     }
     if (toRef.type === "element" && toRef.el.isConnected) {
       if (edge.connectionKind !== "typesetting") {
@@ -594,7 +596,7 @@ export function computeTraceLit(
       }
       absorbToken(toRef.el, state, true);
       const toKey = traceKeyFromElement(toRef.el);
-      if (toKey) noteEndpointStrength(state, toKey, activeTokenKey, hopTier);
+      if (toKey) noteEndpointDepth(state, toKey, activeTokenKey, hopDepth);
     }
 
     const from = resolveEndpoint(fromRef, edge.kind);
@@ -603,7 +605,7 @@ export function computeTraceLit(
       if (!ep) continue;
       state.litTokenKeys.add(ep.traceKey);
       state.endpointTokenKeys.add(ep.traceKey);
-      noteEndpointStrength(state, ep.traceKey, activeTokenKey, hopTier);
+      noteEndpointDepth(state, ep.traceKey, activeTokenKey, hopDepth);
       if (ep.kind) state.tokenKinds.set(ep.traceKey, ep.kind);
       if (ep.flowNodeId) state.litFlowNodeIds.add(ep.flowNodeId);
       if (ep.memberId && ep.kind === "function") {
@@ -622,8 +624,12 @@ export function computeTraceLit(
         absorbToken(loadEl, state, true);
         const loadKey = traceKeyFromElement(loadEl);
         if (loadKey) {
-          const loadTier: TraceStrength = edge.hop === 3 ? 3 : edge.hop === 2 ? 2 : 1;
-          noteEndpointStrength(state, loadKey, activeTokenKey, loadTier);
+          noteEndpointDepth(
+            state,
+            loadKey,
+            activeTokenKey,
+            depthFromHop(edge.hop),
+          );
         }
       }
     }
@@ -653,8 +659,8 @@ export function computeTraceLit(
     litTokenKeys: state.litTokenKeys,
     endpointTokenKeys: state.endpointTokenKeys,
     siblingEndpointTokenKeys: state.siblingEndpointTokenKeys,
-    traceStrength: state.traceStrength,
-    litLineStrength: state.litLineStrength,
+    traceDepth: state.traceDepth,
+    litLineDepth: state.litLineDepth,
     endpointPortSide: state.endpointPortSide,
     litMemberIds: state.litMemberIds,
     ownerLitMemberIds: state.ownerLitMemberIds,

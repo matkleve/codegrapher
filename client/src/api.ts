@@ -1,14 +1,15 @@
 import type { GraphData, ProjectIndexResponse, TreeResponse } from "./types";
+import type { IndexProgressEvent } from "./lib/indexProgress";
 
-const API_DOWN_MSG =
-  "API server is not running — run npm run dev from the project root";
+const API_DOWN_HINT =
+  "Can't reach the API server (port 3001). In a terminal, cd to the codegrapher folder and run npm run dev.";
 
 async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(input, init);
   } catch (err) {
     if (err instanceof TypeError) {
-      throw new Error(API_DOWN_MSG);
+      throw new Error(API_DOWN_HINT);
     }
     throw err;
   }
@@ -22,7 +23,7 @@ async function parseJsonResponse<T>(
   if (!text.trim()) {
     throw new Error(
       res.status === 502 || res.status === 503
-        ? "API server is not running — run npm run dev from the project root"
+        ? API_DOWN_HINT
         : fallbackError,
     );
   }
@@ -42,9 +43,83 @@ async function parseJsonResponse<T>(
   return body as T;
 }
 
-export async function fetchProjectIndex(folderPath: string): Promise<ProjectIndexResponse> {
+async function fetchProjectIndexOnce(
+  folderPath: string,
+): Promise<ProjectIndexResponse> {
   const res = await apiFetch(`/api/index?path=${encodeURIComponent(folderPath)}`);
   return parseJsonResponse(res, "Failed to index project");
+}
+
+function fetchProjectIndexStream(
+  folderPath: string,
+  onProgress: (event: IndexProgressEvent) => void,
+): Promise<ProjectIndexResponse> {
+  return new Promise((resolve, reject) => {
+    const url = `/api/index/stream?path=${encodeURIComponent(folderPath)}`;
+    const source = new EventSource(url);
+    let settled = false;
+
+    const finish = (result: ProjectIndexResponse) => {
+      if (settled) return;
+      settled = true;
+      source.close();
+      resolve(result);
+    };
+
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      source.close();
+      reject(new Error(message));
+    };
+
+    source.onmessage = (event) => {
+      let body: {
+        status?: IndexProgressEvent;
+        payload?: ProjectIndexResponse;
+        error?: string;
+      };
+      try {
+        body = JSON.parse(event.data) as typeof body;
+      } catch {
+        fail("Failed to index project");
+        return;
+      }
+
+      if (body.error) {
+        fail(body.error);
+        return;
+      }
+
+      if (body.status) {
+        onProgress(body.status);
+      }
+
+      if (body.payload) {
+        finish(body.payload);
+      }
+    };
+
+    source.onerror = () => {
+      if (settled) return;
+      fail("Failed to index project");
+    };
+  });
+}
+
+export async function fetchProjectIndex(
+  folderPath: string,
+  onProgress?: (event: IndexProgressEvent) => void,
+): Promise<ProjectIndexResponse> {
+  if (!onProgress) {
+    return fetchProjectIndexOnce(folderPath);
+  }
+
+  try {
+    return await fetchProjectIndexStream(folderPath, onProgress);
+  } catch {
+    return fetchProjectIndexOnce(folderPath);
+  }
 }
 
 export async function browseFolder(): Promise<{ path: string } | { cancelled: true }> {

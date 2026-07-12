@@ -1,4 +1,4 @@
-import { FolderOpen, PanelLeftClose } from "lucide-react";
+import { FolderSearch, FolderSync, PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,6 +10,11 @@ import { EXPLORER_X_PAD } from "@/components/explorer/explorerRowStyles";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useFolderExplorer } from "@/components/explorer/useFolderExplorer";
 import { useSidebarLayout } from "@/context/SidebarLayoutContext";
+import {
+  indexProgressFill,
+  indexProgressLabel,
+  indexProgressSubtitle,
+} from "@/lib/indexProgress";
 import { cn } from "@/lib/utils";
 
 interface FileExplorerProps {
@@ -34,6 +39,7 @@ export default function FileExplorer({
     opening,
     statusMessage,
     indexing,
+    indexStatus,
     recentFolders,
     recentFiles,
     recentFoldersOpen,
@@ -48,6 +54,18 @@ export default function FileExplorer({
     folderBusy,
   } = useFolderExplorer(onFileClick, onFolderOpened);
   const { toggleCollapsed } = useSidebarLayout();
+  const progressFill = indexProgressFill(indexStatus);
+  const progressSubtitle = indexing
+    ? indexProgressSubtitle(indexStatus)
+    : opening
+      ? "Reading folder tree…"
+      : null;
+  const showProgress = folderBusy && progressFill !== null;
+  const busyLabel = indexing
+    ? indexProgressLabel(indexStatus)
+    : opening
+      ? (statusMessage ?? "Loading folder…")
+      : "Load folder";
 
   return (
     <aside className="pointer-events-auto flex h-full min-w-0 flex-1 flex-col overflow-visible">
@@ -75,13 +93,13 @@ export default function FileExplorer({
               size="icon"
               onClick={handleBrowse}
               disabled={folderBusy}
-              title="Browse for folder"
-              aria-label="Browse for folder"
+              title="Choose folder"
+              aria-label="Choose folder"
               aria-haspopup="listbox"
               aria-expanded={recentFoldersOpen && recentFolders.length > 0}
               className="size-[var(--control-height-lg)] shrink-0"
             >
-              <FolderOpen data-icon="inline-start" />
+              <FolderSearch data-icon="inline-start" />
             </Button>
             <RecentFoldersDropdown
               folders={recentFolders}
@@ -97,23 +115,57 @@ export default function FileExplorer({
             placeholder="/absolute/path/to/project"
             disabled={folderBusy}
             title={folderPath || undefined}
+            aria-label="Project folder path"
             className="min-w-0 flex-1 font-mono text-[length:var(--font-size-xs)]"
           />
         </div>
         <Button
           type="button"
-          variant={rootPath ? "secondary" : "default"}
+          variant={folderBusy ? "ghost" : rootPath ? "secondary" : "default"}
           onClick={handleOpen}
           disabled={folderBusy}
-          className="w-full"
+          className={cn(
+            "relative w-full overflow-hidden",
+            folderBusy &&
+              "border-transparent bg-muted text-foreground disabled:cursor-wait disabled:opacity-100",
+          )}
+          style={
+            folderBusy
+              ? {
+                  height: "var(--control-height-double)",
+                  minHeight: "var(--control-height-double)",
+                  maxHeight: "var(--control-height-double)",
+                }
+              : undefined
+          }
+          aria-busy={opening || indexing}
+          aria-label={folderBusy ? busyLabel : "Load folder"}
+          aria-valuenow={
+            progressFill !== null ? Math.round(progressFill * 100) : undefined
+          }
+          aria-valuemin={progressFill !== null ? 0 : undefined}
+          aria-valuemax={progressFill !== null ? 100 : undefined}
         >
-          <FolderOpen data-icon="inline-start" />
-          {opening || indexing ? (statusMessage ?? "Opening…") : "Open"}
+          {showProgress && (
+            <span
+              className="pointer-events-none absolute inset-y-0 left-0 w-full origin-left bg-brand-surface transition-transform duration-500 ease-[var(--ease)]"
+              style={{ transform: `scaleX(${progressFill})` }}
+              aria-hidden
+            />
+          )}
+          <span className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 px-[var(--control-padding-x-md)]">
+            <span className="inline-flex max-w-full items-center justify-center gap-[var(--control-gap)]">
+              <FolderSync data-icon="inline-start" aria-hidden />
+              <span className="truncate font-medium">{busyLabel}</span>
+            </span>
+            {folderBusy && (
+              <span className="h-[0.875rem] w-full max-w-full truncate text-center text-[length:var(--font-size-xs)] leading-[0.875rem] text-muted-foreground">
+                {progressSubtitle ?? "\u00a0"}
+              </span>
+            )}
+          </span>
         </Button>
-        {(statusMessage || indexing) && (
-          <p className="text-xs text-muted-foreground">{statusMessage ?? "Indexing project…"}</p>
-        )}
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="whitespace-pre-line text-xs text-destructive">{error}</p>}
       </div>
 
       <Separator className="bg-sidebar-border" />

@@ -109,6 +109,31 @@ function shouldFanCluster(wires: ResolvedWireEndpoints[]): boolean {
   return sameDirection;
 }
 
+/** Split a source bucket into maximal Y-proximity clusters that may each fan. */
+export function partitionFanClusters(
+  wires: ResolvedWireEndpoints[],
+): ResolvedWireEndpoints[][] {
+  if (wires.length < 2) return [];
+  const sorted = sortFanWires(wires);
+  const raw: ResolvedWireEndpoints[][] = [];
+  let current: ResolvedWireEndpoints[] = [sorted[0]!];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const wire = sorted[i]!;
+    const ys = [...current.map((w) => w.toPt.y), wire.toPt.y];
+    const spread = Math.max(...ys) - Math.min(...ys);
+    if (spread <= FAN_TARGET_Y_SPAN) {
+      current.push(wire);
+      continue;
+    }
+    raw.push(current);
+    current = [wire];
+  }
+  raw.push(current);
+
+  return raw.filter((cluster) => shouldFanCluster(cluster));
+}
+
 function sourceClusterKey(w: ResolvedWireEndpoints): string | null {
   const el = w.fromPt.el;
   if (!el) return null;
@@ -119,6 +144,8 @@ function sortFanWires(wires: ResolvedWireEndpoints[]): ResolvedWireEndpoints[] {
   return [...wires].sort((a, b) => {
     const y = a.toPt.y - b.toPt.y;
     if (y !== 0) return y;
+    const x = a.toPt.x - b.toPt.x;
+    if (x !== 0) return x;
     return a.spec.id.localeCompare(b.spec.id);
   });
 }
@@ -208,10 +235,10 @@ export function buildWireLayoutContext(
   }
 
   for (const wires of dynamicBuckets.values()) {
-    const sorted = sortFanWires(wires);
-    if (!shouldFanCluster(sorted)) continue;
-    for (const [id, layout] of layoutFanGroup(sorted, svgBox)) {
-      fanMembers.set(id, layout);
+    for (const cluster of partitionFanClusters(wires)) {
+      for (const [id, layout] of layoutFanGroup(cluster, svgBox)) {
+        fanMembers.set(id, layout);
+      }
     }
   }
 

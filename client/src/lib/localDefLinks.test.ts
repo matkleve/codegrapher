@@ -99,7 +99,7 @@ describe("localDefLinks buildViewbox param fan-out", () => {
     expect(edges.every((e) => e.kind === "variable")).toBe(true);
   });
 
-  it("builds a primary wire plus hop-2 wires to sibling usages", () => {
+  it("builds a primary wire plus depth-2 wires to sibling usages", () => {
     const lngDefId = `local-def::${MEMBER}::param::lng::${START_LINE}`;
     const uses = pane.querySelectorAll<HTMLElement>(`[data-local-target-id="${lngDefId}"]`);
     expect(uses.length).toBeGreaterThanOrEqual(2);

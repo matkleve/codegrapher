@@ -40,7 +40,7 @@ describe("applyTraceLit", () => {
     host.remove();
   });
 
-  it("dims sibling local-def hosts with hop2 while keeping full color on the focused host", () => {
+  it("dims sibling local-def hosts at depth 2 while keeping full color on the focused host", () => {
     const pane = document.createElement("div");
     pane.className = "graph-pane";
     pane.innerHTML = `
@@ -70,12 +70,14 @@ describe("applyTraceLit", () => {
     expect(header.classList.contains("token-chip-on")).toBe(true);
     expect(header.classList.contains("token-chip-endpoint-sibling")).toBe(false);
     expect(body.classList.contains("token-chip-on")).toBe(true);
-    expect(body.classList.contains("token-chip-hop2")).toBe(true);
+    expect(body.classList.contains("trace-depth-faded")).toBe(true);
+    expect(Number(body.style.opacity)).toBeGreaterThan(0);
+    expect(Number(body.style.opacity)).toBeLessThan(1);
 
     const headerSocket = header.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
     const bodySocket = body.querySelector<HTMLElement>('[data-flow-anchor="right"]')!;
     expect(headerSocket.classList.contains("flow-anchor-endpoint-sibling")).toBe(false);
-    expect(bodySocket.classList.contains("flow-anchor-hop2")).toBe(true);
+    expect(bodySocket.classList.contains("trace-depth-faded")).toBe(true);
 
     clearTraceLit();
     pane.remove();
@@ -143,7 +145,7 @@ describe("applyTraceLit", () => {
     expect(label.classList.contains("token-chip-on")).toBe(true);
     expect(label.classList.contains("token-chip-endpoint-sibling")).toBe(false);
     expect(bodyChip.classList.contains("token-chip-endpoint-sibling")).toBe(false);
-    expect(bodyChip.classList.contains("token-chip-hop2")).toBe(true);
+    expect(bodyChip.classList.contains("trace-depth-faded")).toBe(true);
 
     clearTraceLit();
     pane.remove();

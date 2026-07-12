@@ -50,12 +50,8 @@
   --edge-binding: oklch(0.70 0.11 188);
   --edge-typesetting: var(--token-edge-type);
   --edge-usage: var(--token-edge-function);
-  --preview-wire-hop2-opacity: 0.58;
-  --preview-wire-hop3-opacity: 0.36;
-  --preview-wire-hop2-glow-opacity: 0.1;
-  --preview-wire-hop3-glow-opacity: 0.065;
-  --trace-chip-hop2-opacity: var(--preview-wire-hop2-opacity);
-  --trace-chip-hop3-opacity: var(--preview-wire-hop3-opacity);
+  /* Trace depth fade — curve constants mirrored in client/src/lib/traceDepth.ts */
+  --trace-depth-min-opacity: 0.2;
   --code-type-primitive: oklch(0.62 0.04 258);
   --member-sig-bg-in: color-mix(in oklch, var(--token-edge-function) 12%, var(--background));
   --member-sig-bg-out: var(--surface-neutral-strong);

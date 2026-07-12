@@ -16,7 +16,7 @@ export const DEFAULT_VISIBLE_EDGE_KINDS: ReadonlySet<ConnectionKind> = new Set([
 export function previewConnectionKind(
   edge: PreviewEdgeSpec,
 ): "usage" | "binding" | "typesetting" | "branch" | "transitive" {
-  return edge.connectionKind ?? (edge.hop != null && edge.hop >= 2 ? "transitive" : "usage");
+  return edge.connectionKind ?? "usage";
 }
 
 export function filterPreviewEdgesByVisibility(

@@ -23,7 +23,7 @@ describe("primaryHoverLoadEdge", () => {
     expect(primaryHoverLoadEdge([edge], chip)).toBe(edge);
   });
 
-  it("ignores cascaded hop-3 load stubs", () => {
+  it("ignores depth-2+ load stubs on the hovered chip", () => {
     const chip = document.createElement("span");
     const edge = loadEdge(3);
     edge.from = { type: "element", el: chip };

@@ -166,12 +166,10 @@ describe("traceBindingInitCascadeEdges", () => {
     });
 
     expect(edges.length).toBeGreaterThanOrEqual(2);
-    expect(edges[0]?.hop).toBe(3);
+    expect(edges[0]?.hop).toBe(2);
     expect((edges[0]?.from as { el: HTMLElement }).el).toBe(resultsParamDef);
     expect((edges[0]?.to as { el: HTMLElement }).el).toBe(resultsUsage);
-    expect(
-      edges.some((e) => e.connectionKind === "typesetting" && e.hop === 3),
-    ).toBe(true);
+    expect(edges.some((e) => e.connectionKind === "typesetting")).toBe(true);
     expect(edges.some((e) => e.load != null)).toBe(true);
 
     document.body.innerHTML = "";

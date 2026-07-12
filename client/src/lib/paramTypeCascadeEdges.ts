@@ -12,6 +12,7 @@ import {
 import { primaryIndexedSymbolInType } from "@/lib/formatSignatureType";
 import { parseMethodSignature } from "@/lib/parseMethodSignature";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { previewHopFromDepth } from "@/lib/traceDepth";
 import {
   buildExternalReferenceCards,
   resolveVisibleTarget,
@@ -30,6 +31,8 @@ export type ParamTypeCascadeContext = {
   getNode: (id: string) => Node | undefined;
   hasSymbol: (name: string) => boolean;
   edgeIdPrefix: string;
+  /** Depth of the sig-type→param wire from the hover focus (default 2). */
+  typeParamDepth?: number;
 };
 
 /** `local-def::{memberId}::param::{name}::{line}` → param name. */
@@ -62,8 +65,8 @@ function paramTypeString(
 }
 
 /**
- * Tier 2/3 provenance wires: sig-type → param def, then type def → sig-type (or Load stub).
- * See docs/specs/system/preview-edges.trace-strength.supplement.md
+ * Type provenance behind a param slot: sig-type → param, then type def → sig-type.
+ * Wire depth is graph distance from the hover focus (see traceDepth.ts).
  */
 export function buildParamTypeCascadeEdges(
   ctx: ParamTypeCascadeContext,
@@ -78,6 +81,7 @@ export function buildParamTypeCascadeEdges(
     getNode,
     hasSymbol,
     edgeIdPrefix,
+    typeParamDepth = 2,
   } = ctx;
 
   const typeStr = paramTypeString(flowNodeId, memberId, paramName, getNode);
@@ -108,13 +112,16 @@ export function buildParamTypeCascadeEdges(
 
   const typeKind: SemanticTokenKind = "type";
 
-  const tier2: PreviewEdgeSpec = {
+  const typeParamHop = previewHopFromDepth(typeParamDepth);
+  const typeDefHop = previewHopFromDepth(typeParamDepth + 1);
+
+  const typeParamEdge: PreviewEdgeSpec = {
     id: `${edgeIdPrefix}-prov-type-param`,
     from: { type: "element", el: sigTypeEl },
     to: { type: "element", el: resolvedParamDef },
     kind: typeKind,
     connectionKind: "typesetting",
-    hop: 2,
+    ...(typeParamHop != null ? { hop: typeParamHop } : {}),
     liveFrom:
       liveToFromUsageEl(symbolName, sigTypeEl) ?? {
         token: symbolName,
@@ -135,12 +142,12 @@ export function buildParamTypeCascadeEdges(
   );
   if (!resolved) {
     const indexCards = buildExternalReferenceCards(symbolName, symbols);
-    if (indexCards.length === 0) return [tier2];
+    if (indexCards.length === 0) return [typeParamEdge];
     resolved = { mode: "external", cards: indexCards };
   }
 
   if (resolved.mode === "external") {
-    if (resolved.cards.length === 0) return [tier2];
+    if (resolved.cards.length === 0) return [typeParamEdge];
     const loadEdge = buildLoadPreviewEdge(
       `${edgeIdPrefix}-prov-type-def`,
       resolved.cards,
@@ -148,14 +155,20 @@ export function buildParamTypeCascadeEdges(
       symbolName,
       typeKind,
     );
-    return [tier2, { ...loadEdge, hop: 3 }];
+    return [
+      typeParamEdge,
+      { ...loadEdge, ...(typeDefHop != null ? { hop: typeDefHop } : {}) },
+    ];
   }
 
-  const tier3 = buildUsagePreviewEdge(
+  const typeDefEdge = buildUsagePreviewEdge(
     `${edgeIdPrefix}-prov-type-def`,
     resolved,
     sigTypeEl,
     symbolName,
   );
-  return [tier2, { ...tier3, hop: 3 }];
+  return [
+    typeParamEdge,
+    { ...typeDefEdge, ...(typeDefHop != null ? { hop: typeDefHop } : {}) },
+  ];
 }

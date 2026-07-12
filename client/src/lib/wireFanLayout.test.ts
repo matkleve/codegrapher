@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildWireLayoutContext,
   FAN_TARGET_Y_SPAN,
+  partitionFanClusters,
   resetWireLayoutCache,
 } from "@/lib/wireFanLayout";
 import { layoutCubicFanPaths } from "@/lib/wirePaths";
@@ -65,8 +66,10 @@ describe("layoutCubicFanPaths", () => {
       SVG_BOX,
     );
     expect(paths).toHaveLength(2);
-    expect(paths[0]).toMatch(/C .* L .* C /);
-    expect(paths[1]).toMatch(/^M .* C /);
+    expect(paths[0]).toMatch(/C .+ C /);
+    expect(paths[0]).not.toMatch(/\bL /);
+    expect(paths[1]).toMatch(/^M .+ C /);
+    expect(paths[1]).not.toMatch(/\bL /);
   });
 });
 
@@ -129,5 +132,68 @@ describe("buildWireLayoutContext", () => {
 
     const ctx = buildWireLayoutContext(specs, SVG_BOX, () => undefined);
     expect(ctx.fanMembers.size).toBe(0);
+  });
+
+  it("sub-clusters same-line usages when an outlier exceeds Y span", () => {
+    resetWireLayoutCache();
+    const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
+    const ifUse = mockEl({ left: 360, right: 400, top: 118, bottom: 136 });
+    const returnY = 118 + FAN_TARGET_Y_SPAN + 40;
+    const cityUse = mockEl({ left: 400, right: 440, top: returnY, bottom: returnY + 18 });
+    const townUse = mockEl({ left: 480, right: 520, top: returnY, bottom: returnY + 18 });
+    const vilUse = mockEl({ left: 560, right: 600, top: returnY, bottom: returnY + 18 });
+
+    const specs: PreviewEdgeSpec[] = [
+      {
+        id: "addr-if",
+        from: { type: "element", el: defEl },
+        to: { type: "element", el: ifUse },
+        kind: "variable",
+      },
+      {
+        id: "addr-city",
+        from: { type: "element", el: defEl },
+        to: { type: "element", el: cityUse },
+        kind: "variable",
+      },
+      {
+        id: "addr-town",
+        from: { type: "element", el: defEl },
+        to: { type: "element", el: townUse },
+        kind: "variable",
+      },
+      {
+        id: "addr-vil",
+        from: { type: "element", el: defEl },
+        to: { type: "element", el: vilUse },
+        kind: "variable",
+      },
+    ];
+
+    const resolved = specs.map((spec) => ({
+      spec,
+      fromPt: { x: 240, y: 109, el: defEl },
+      toPt: {
+        x: spec.to.type === "element" ? spec.to.el.getBoundingClientRect().left + 10 : 0,
+        y:
+          spec.to.type === "element"
+            ? spec.to.el.getBoundingClientRect().top + 9
+            : 0,
+        el: spec.to.type === "element" ? spec.to.el : null,
+      },
+    }));
+
+    const clusters = partitionFanClusters(resolved);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]?.map((w) => w.spec.id)).toEqual([
+      "addr-city",
+      "addr-town",
+      "addr-vil",
+    ]);
+
+    const ctx = buildWireLayoutContext(specs, SVG_BOX, () => undefined);
+    expect(ctx.fanMembers.size).toBe(3);
+    expect(ctx.fanMembers.get("addr-city")?.drawTrunkClass).toBe(true);
+    expect(ctx.fanMembers.has("addr-if")).toBe(false);
   });
 });

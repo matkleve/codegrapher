@@ -26,12 +26,8 @@
   filter: none;
 }
 
-.flow-anchor-on.flow-anchor-hop2 {
-  opacity: var(--trace-chip-hop2-opacity);
-}
-
-.flow-anchor-on.flow-anchor-hop3 {
-  opacity: var(--trace-chip-hop3-opacity);
+.flow-anchor-on.trace-depth-faded {
+  /* opacity set inline by traceLitApply */
 }
 
 .graph-trace-warm .flow-anchor-on {

@@ -170,17 +170,17 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
               {
                 lineNo: 2,
                 parts: [
-                  { text: "  case ", tone: "kw" },
-                  { text: "A", anchorId: "caseA", tokenKind: "variable" },
-                  { text: ": break;" },
+                  { text: "  ", tone: "pn" },
+                  { text: "case", anchorId: "caseA", tokenKind: "variable", tone: "kw" },
+                  { text: " A: break;" },
                 ],
               },
               {
                 lineNo: 3,
                 parts: [
-                  { text: "  case ", tone: "kw" },
-                  { text: "B", anchorId: "caseB", tokenKind: "variable" },
-                  { text: ": break;" },
+                  { text: "  ", tone: "pn" },
+                  { text: "case", anchorId: "caseB", tokenKind: "variable", tone: "kw" },
+                  { text: " B: break;" },
                 ],
               },
               {
@@ -365,18 +365,27 @@ export const LEGEND_DEMO_SCENES: Record<LegendConnectionKind, DemoScene> = {
   },
 };
 
-export function countLegendDemoLines(scene: DemoScene): number {
-  return scene.cards.reduce(
-    (total, card) =>
-      total +
-      card.members.reduce((memberTotal, member) => memberTotal + (member.body?.length ?? 0), 0),
-    0,
-  );
-}
+export function demoAnchorSockets(
+  spec: DemoWireSpec,
+): Map<string, { left: boolean; right: boolean }> {
+  const map = new Map<string, { left: boolean; right: boolean }>();
 
-export function legendDemoNeedsTallCanvas(scene: DemoScene): boolean {
-  if (countLegendDemoLines(scene) > 2) return true;
-  return scene.cards.some((card) =>
-    card.members.some((member) => Boolean(member.signature?.length && !member.body?.length)),
-  );
+  const mark = (id: string, side: "left" | "right") => {
+    const entry = map.get(id) ?? { left: false, right: false };
+    if (side === "left") entry.left = true;
+    else entry.right = true;
+    map.set(id, entry);
+  };
+
+  if (spec.mode === "branch") {
+    mark(spec.from.id, spec.from.fromSide ?? "right");
+    for (const target of spec.to) {
+      mark(target.id, target.toSide ?? "left");
+    }
+    return map;
+  }
+
+  mark(spec.from.id, spec.from.fromSide ?? "right");
+  mark(spec.to.id, spec.to.toSide ?? "left");
+  return map;
 }

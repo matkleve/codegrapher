@@ -9,12 +9,12 @@ import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { graphPane } from "@/lib/graphPaneDom";
 import {
   tokenAtSite,
-  TRACE_VISUAL_HOP_MAX,
   type LexicalGraph,
   type LexicalHopEndpoint,
   type LexicalSite,
   type LexicalWalkHop,
 } from "@/lib/lexicalGraph";
+import { previewHopFromDepth } from "@/lib/traceDepth";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
 import type { Node } from "@xyflow/react";
 
@@ -28,15 +28,10 @@ export type LexicalPreviewContext = {
   graph: LexicalGraph;
   kind: SemanticTokenKind;
   edgeIdPrefix: string;
-  hopOffset?: number;
+  /** Added to each walk hop depth (e.g. type cascade already consumed depth 1–2). */
+  depthOffset?: number;
   getNode: (id: string) => Node | undefined;
 };
-
-function edgeHop(level: number, hopOffset = 0): number | undefined {
-  const hop = level + hopOffset;
-  if (hop <= 1) return undefined;
-  return Math.min(hop, TRACE_VISUAL_HOP_MAX);
-}
 
 function resolveSiteChip(
   ctx: LexicalPreviewContext,
@@ -101,8 +96,8 @@ function buildHopEdge(
 ): PreviewEdgeSpec | null {
   const fromToken = endpointToken(ctx, hop.from);
   const toToken = endpointToken(ctx, hop.to);
-  const tier = edgeHop(hop.depth, ctx.hopOffset ?? 0);
   const connectionKind = hopConnectionKind(hop);
+  const edgeHop = previewHopFromDepth(hop.depth + (ctx.depthOffset ?? 0));
 
   const fromEl = resolveEndpointEl(ctx, hop.from, ctx.originEl);
   const toEl = resolveEndpointEl(ctx, hop.to);
@@ -117,7 +112,7 @@ function buildHopEdge(
     return {
       ...edge,
       connectionKind,
-      hop: tier,
+      ...(edgeHop != null ? { hop: edgeHop } : {}),
       liveTo:
         hop.to.node === "site"
           ? {
@@ -177,7 +172,7 @@ function buildHopEdge(
             ),
     kind: ctx.kind,
     connectionKind,
-    hop: tier,
+    ...(edgeHop != null ? { hop: edgeHop } : {}),
     liveFrom: {
       token: fromToken,
       flowNodeId: ctx.flowNodeId,
@@ -210,7 +205,7 @@ function buildBackwardHopEdge(
   hop: LexicalWalkHop,
 ): PreviewEdgeSpec | null {
   const toToken = endpointToken(ctx, hop.to);
-  const tier = edgeHop(hop.depth, ctx.hopOffset ?? 0);
+  const edgeHop = previewHopFromDepth(hop.depth + (ctx.depthOffset ?? 0));
   const toEl =
     hop.to.node === "site"
       ? resolveSiteChip(ctx, hop.to.site, toToken)
@@ -223,7 +218,7 @@ function buildBackwardHopEdge(
       toEl,
       ctx.kind,
     );
-    return tier ? { ...edge, hop: tier } : edge;
+    return edgeHop != null ? { ...edge, hop: edgeHop } : edge;
   }
 
   const toSite = hop.to.node === "site" ? hop.to.site : ctx.graph.defSiteOf.get(hop.to.defId);
@@ -242,7 +237,7 @@ function buildBackwardHopEdge(
         toToken,
       ),
       kind: ctx.kind,
-      hop: tier,
+      ...(edgeHop != null ? { hop: edgeHop } : {}),
       liveFrom: {
         token: ctx.originToken ?? ctx.originDefId?.split("::").at(-2) ?? "",
         flowNodeId: ctx.flowNodeId,
@@ -275,7 +270,7 @@ function buildBackwardHopEdge(
       toToken,
     ),
     kind: ctx.kind,
-    hop: tier,
+    ...(edgeHop != null ? { hop: edgeHop } : {}),
     liveFrom: {
       token: ctx.originToken ?? "",
       flowNodeId: ctx.flowNodeId,

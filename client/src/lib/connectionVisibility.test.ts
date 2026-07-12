@@ -43,8 +43,8 @@ describe("filterPreviewEdgesByVisibility", () => {
     ).toEqual([]);
   });
 
-  it("classifies hop edges as transitive", () => {
-    expect(previewConnectionKind(edge({ hop: 2 }))).toBe("transitive");
+  it("classifies connectionKind on preview edges", () => {
+    expect(previewConnectionKind(edge({ connectionKind: "transitive" }))).toBe("transitive");
     expect(previewConnectionKind(edge())).toBe("usage");
   });
 });

@@ -1,16 +1,17 @@
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
-import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
-import { floatingPanelClass } from "@/components/ui/floatingPanel";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { buttonVariants } from "@/components/ui/button";
+import { INTERACTIVE_SURFACE } from "@/lib/controlTokens";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
+import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { loadStubPanePosition } from "@/lib/loadStubPosition";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
 import { TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { tracePathOpacity } from "@/lib/traceDepth";
 import { subscribeWireTicks } from "@/lib/wireEngine";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +21,13 @@ type LoadStubAnchorProps = {
 
 export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
   const load = edge.load!;
-  const hostRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLSpanElement>(null);
   useTraceHostRegistration(hostRef);
   const { getNode } = useReactFlow();
   const loadTarget = useLoadTargetAction();
   const { cancelHoverLeaveGrace } = useGraphInteraction();
-  const faded = edge.hop != null && edge.hop >= 2;
+  const fadedOpacity =
+    edge.hop != null && edge.hop >= 2 ? tracePathOpacity(edge.hop) : undefined;
 
   const reposition = useCallback(() => {
     const host = hostRef.current;
@@ -35,15 +37,15 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
       host.style.visibility = "hidden";
       return;
     }
-    const rect = host.getBoundingClientRect();
-    const pos = loadStubPanePosition(to.el, rect.width, rect.height);
+    const pos = loadStubPanePosition(to.el, host.offsetWidth, host.offsetHeight);
     if (!pos) {
       host.style.visibility = "hidden";
       return;
     }
-    host.style.visibility = "visible";
+    host.style.position = "fixed";
     host.style.left = `${pos.left}px`;
     host.style.top = `${pos.top}px`;
+    host.style.visibility = "visible";
   }, [edge, getNode]);
 
   useLayoutEffect(() => {
@@ -53,40 +55,55 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
 
   const onLoad = () => loadTarget(load.filePath);
 
+  const onKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onLoad();
+    }
+  };
+
   return (
-    <div
+    <span
       ref={hostRef}
+      role="button"
+      tabIndex={0}
       data-load-edge-id={edge.id}
       data-load-socket="right"
       data-trace-key={`load-stub::${edge.id}`}
       data-symbol-name={load.token}
       data-token-kind={edge.kind}
       className={cn(
-        floatingPanelClass(
-          "pointer-events-auto absolute z-[46] h-[var(--control-height-compact)] min-w-0 max-w-56 p-0",
-        ),
-        faded && "opacity-70",
+        "load-stub-chip token-chip connector-chip connector-chip--load connector-chip--load-stub",
+        INTERACTIVE_SURFACE,
+        "pointer-events-auto fixed z-[46] inline-flex min-w-0 max-w-64 cursor-pointer items-center",
       )}
-      style={{ visibility: "hidden" }}
+      style={{
+        visibility: "hidden",
+        ...(fadedOpacity != null ? { opacity: fadedOpacity } : {}),
+      }}
       onMouseEnter={cancelHoverLeaveGrace}
+      onClick={onLoad}
+      onKeyDown={onKeyDown}
     >
-      <InteractiveListRow
-        density="compact"
-        title={load.token}
-        actionLabel="Load"
-        className="h-full min-w-0 gap-1 rounded-[inherit] border-0 pr-1"
-        leading={<ConnectionTargetLeading kind={edge.kind} size={10} />}
-        trailing={
-          <FlowAnchor
-            side="right"
-            colorClass={TOKEN_ANCHOR[edge.kind]}
-            visible
-            highlighted
-            size="chip"
-          />
-        }
-        onClick={onLoad}
+      <ConnectionTargetLeading kind={edge.kind} size={14} />
+      <span className="load-stub-chip-label control-row-text-primary min-w-0 flex-1 truncate">
+        {load.token}
+      </span>
+      <span
+        className={cn(
+          buttonVariants({ variant: "outline", size: "xs" }),
+          "load-stub-chip-action pointer-events-none shrink-0 font-medium",
+        )}
+      >
+        Load
+      </span>
+      <FlowAnchor
+        side="right"
+        colorClass={TOKEN_ANCHOR[edge.kind]}
+        visible
+        highlighted
+        size="chip"
       />
-    </div>
+    </span>
   );
 }

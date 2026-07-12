@@ -4,6 +4,7 @@ import {
   branchOrthogonalPath,
   computeBranchBusX,
   layoutBranchFanPaths,
+  layoutCubicFanPaths,
   orthogonalPath,
   previewWirePath,
   roundedPolylinePath,
@@ -119,6 +120,26 @@ describe("layoutBranchFanPaths", () => {
     expect(paths[0]).toContain("L 24 169");
     expect(paths[1]).toMatch(/^M 24 169/);
     expect(paths[1]).not.toContain("M 163");
+  });
+});
+
+describe("layoutCubicFanPaths", () => {
+  it("uses only cubic segments — no orthogonal bus taps", () => {
+    const defEl = mockEl({ left: 200, right: 280, top: 100, bottom: 118 });
+    const { paths } = layoutCubicFanPaths(
+      240,
+      109,
+      defEl,
+      [
+        { x2: 420, y2: 130, toEl: mockEl({ left: 400, right: 440, top: 122, bottom: 138 }) },
+        { x2: 520, y2: 130, toEl: mockEl({ left: 500, right: 540, top: 122, bottom: 138 }) },
+      ],
+      SVG_BOX,
+    );
+    for (const path of paths) {
+      expect(path).toMatch(/C /);
+      expect(path).not.toMatch(/\bL /);
+    }
   });
 });
 

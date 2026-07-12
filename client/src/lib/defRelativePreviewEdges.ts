@@ -7,7 +7,6 @@ import {
   RELATIVE_MAX_DEPTH,
   TRACE_DEPTH_DOWN,
   TRACE_DEPTH_UP,
-  TRACE_VISUAL_HOP_MAX,
   walkLexicalBackward,
   walkLexicalForward,
 } from "@/lib/lexicalGraph";
@@ -22,7 +21,6 @@ export {
   RELATIVE_MAX_DEPTH,
   TRACE_DEPTH_DOWN,
   TRACE_DEPTH_UP,
-  TRACE_VISUAL_HOP_MAX,
 };
 
 type RelativeWalkContext = {
@@ -39,9 +37,9 @@ type RelativeWalkContext = {
   edgeIdPrefix: string;
   maxDepth?: number;
   maxEdges?: number;
-  hopOffset?: number;
   includeDirectUsages?: boolean;
-  preferOriginEl?: boolean;
+  /** Lexical hops are emitted at walk depth + this offset from the hover focus. */
+  depthOffset?: number;
   getNode?: (id: string) => Node | undefined;
 };
 
@@ -84,7 +82,7 @@ export function buildDefRelativePreviewEdges(ctx: RelativeWalkContext): PreviewE
     graph,
     kind: ctx.kind,
     edgeIdPrefix: ctx.edgeIdPrefix,
-    hopOffset: ctx.hopOffset,
+    depthOffset: ctx.depthOffset,
     getNode: ctx.getNode ?? noopGetNode,
   });
 }
@@ -112,7 +110,7 @@ export function buildBackwardLexicalRelatives(ctx: BackwardWalkContext): Preview
       graph,
       kind: ctx.kind,
       edgeIdPrefix: ctx.edgeIdPrefix,
-      hopOffset: 1,
+      depthOffset: 1,
       getNode: ctx.getNode ?? noopGetNode,
     },
     "backward",

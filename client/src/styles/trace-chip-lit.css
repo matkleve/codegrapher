@@ -1,13 +1,7 @@
-.graph-trace-active .token-chip.token-chip-hop2,
-.graph-trace-active .token-def-label.token-chip-hop2,
-.graph-trace-active .control-flow-chip.token-chip-hop2 {
-  opacity: var(--trace-chip-hop2-opacity);
-}
-
-.graph-trace-active .token-chip.token-chip-hop3,
-.graph-trace-active .token-def-label.token-chip-hop3,
-.graph-trace-active .control-flow-chip.token-chip-hop3 {
-  opacity: var(--trace-chip-hop3-opacity);
+.graph-trace-active .token-chip.trace-depth-faded,
+.graph-trace-active .token-def-label.trace-depth-faded,
+.graph-trace-active .control-flow-chip.trace-depth-faded {
+  /* opacity set inline by traceLitApply */
 }
 
 .graph-trace-active .token-chip.token-chip-lit[data-token-kind="class"] .token-chip-text,
@@ -42,19 +36,13 @@
   -webkit-text-fill-color: currentColor;
 }
 
-/* Provenance hops — semantic ink at reduced opacity (not grey wash) */
-.graph-trace-active .token-chip.token-chip-lit.token-chip-hop2 .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit.token-chip-hop2 {
+/* Provenance distance — semantic ink at reduced opacity (not grey wash) */
+.graph-trace-active .token-chip.token-chip-lit.trace-depth-faded .token-chip-text,
+.graph-trace-active .token-def-label.token-chip-lit.trace-depth-faded {
   -webkit-text-fill-color: currentColor;
 }
 
-.graph-trace-active .token-chip.token-chip-lit.token-chip-hop3 .token-chip-text,
-.graph-trace-active .token-def-label.token-chip-lit.token-chip-hop3 {
-  -webkit-text-fill-color: currentColor;
-}
-
-.graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit.token-chip-hop2 .token-chip-text,
-.graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit.token-chip-hop3 .token-chip-text {
+.graph-trace-active .code-line.trace-lit-line .token-chip.token-chip-lit.trace-depth-faded .token-chip-text {
   -webkit-text-fill-color: currentColor;
 }
 

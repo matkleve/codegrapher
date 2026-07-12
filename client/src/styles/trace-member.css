@@ -43,25 +43,14 @@
   color: var(--muted-foreground) !important;
 }
 
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-kw,
-.graph-trace-active .code-line.trace-lit-line-hop2 .control-flow-chip-text,
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-pn,
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-comment,
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-string,
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-number,
-.graph-trace-active .code-line.trace-lit-line-hop2 .code-type {
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-kw,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .control-flow-chip-text,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-pn,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-comment,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-string,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-number,
+.graph-trace-active .code-line.trace-lit-line.trace-depth-faded .code-type {
   color: var(--muted-foreground) !important;
-  opacity: var(--trace-chip-hop2-opacity);
-}
-
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-kw,
-.graph-trace-active .code-line.trace-lit-line-hop3 .control-flow-chip-text,
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-pn,
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-comment,
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-string,
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-number,
-.graph-trace-active .code-line.trace-lit-line-hop3 .code-type {
-  color: var(--muted-foreground) !important;
-  opacity: var(--trace-chip-hop3-opacity);
+  /* line opacity set inline on .code-line */
 }
 

@@ -405,6 +405,18 @@ flowchart TB
 
 **Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur. Sibling endpoints use `flow-anchor-endpoint-sibling` (grey dot, same ring geometry).
 
+**Load stub chips (`LoadStubAnchor`):** off-canvas dashed-wire endpoints use the `connector-chip--load` shell — **not** `InteractiveListRow` / `floatingPanelClass` (its `overflow-hidden` clips the socket). Normative contract:
+
+| Requirement | Detail |
+| ----------- | ------ |
+| Host attrs | `data-load-edge-id="{edgeId}"`, `data-load-socket="right"`, `data-symbol-name`, `data-token-kind` |
+| Socket | `FlowAnchor` on the socket side (`right` when `data-load-socket="right"`); MUST stay visible (`flow-anchor-on`) |
+| Position | `loadStubPanePosition` + `subscribeWireTicks` — **`position: fixed`** viewport coords, recomputed each wire rAF. Horizontal: flush left of `.react-flow__node` (no pane-margin clamp). Vertical: clamped to graph pane screen bounds. Portal: `document.body`. |
+| Wire resolve | `previewEdgeDom.updateWireGeometry` queries host by `data-load-edge-id`, measures socket via `resolvePreviewAnchor` |
+| Height | `--connector-chip-load-stub-height` (`connector-chip--load-stub`, default `var(--control-height-md)`) — room for swatch + Load badge + socket; neutral `--card` fill (not `--token-surface-*`) |
+
+Anchor rules for ordinary wires: handle ids are **per-node**; path coords are overlay-local. See [preview-edges.md](preview-edges.md) + `resolvePreviewAnchor.ts`.
+
 ---
 
 ## Trace hosts (where hover starts)

@@ -165,6 +165,14 @@ export function layoutBranchFanPaths(
   };
 }
 
+/** Join SVG subpaths — drop the leading moveto on continuations. */
+function appendSvgPath(base: string, segment: string): string {
+  if (!segment) return base;
+  if (!base) return segment;
+  const tail = segment.replace(/^M\s+[\d.+-]+\s+[\d.+-]+\s+/, "");
+  return `${base} ${tail}`;
+}
+
 /** Cubic approach into the shared bus column — same exit curve as solo preview wires. */
 function computeCubicFanTrunk(
   x1: number,
@@ -179,12 +187,15 @@ function computeCubicFanTrunk(
   const busTopY = belowRectY(lineRect, y1);
   const clearance = chipClearance(fromEl, spurs[0]?.toEl ?? null);
   const approach = cubicPath(x1, y1, busX, busTopY, "right", "left", { clearance });
+  const busDrop = cubicPath(busX, busTopY, busX, trunkBottomY, "left", "left", {
+    clearance,
+  });
 
   return {
     startX: x1,
     busX,
     busTopY,
-    trunkPrefix: `${approach} L ${busX} ${trunkBottomY}`,
+    trunkPrefix: appendSvgPath(approach, busDrop),
   };
 }
 
@@ -192,16 +203,12 @@ function computeCubicFanTrunk(
 export function cubicFanSpurPath(
   busX: number,
   spur: BranchSpurInput,
-  svgBox: DOMRect,
+  _svgBox: DOMRect,
   fromEl: HTMLElement | null,
 ): string {
-  const toRect = elRectInSvg(spur.toEl, svgBox);
-  const entryX = (toRect?.left ?? spur.x2) - ORTHOGONAL_STUB;
-  const tail = cubicPath(entryX, spur.y2, spur.x2, spur.y2, "right", "left", {
+  return cubicPath(busX, spur.y2, spur.x2, spur.y2, "left", "left", {
     clearance: chipClearance(fromEl, spur.toEl),
   });
-  const curve = tail.match(/^M[\d.]+ [\d.]+ (C.+)$/);
-  return `M ${busX} ${spur.y2} L ${entryX} ${spur.y2} ${curve?.[1] ?? tail}`;
 }
 
 export function layoutCubicFanPaths(
@@ -221,7 +228,10 @@ export function layoutCubicFanPaths(
 
   return {
     busX: trunk.busX,
-    paths: [`${trunk.trunkPrefix} ${spurPaths[0]}`, ...spurPaths.slice(1)],
+    paths: [
+      appendSvgPath(trunk.trunkPrefix, spurPaths[0] ?? ""),
+      ...spurPaths.slice(1),
+    ],
   };
 }
 

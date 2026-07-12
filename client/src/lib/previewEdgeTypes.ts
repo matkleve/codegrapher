@@ -43,7 +43,7 @@ export type PreviewEdgeSpec = {
   branchFan?: BranchFanSpec;
   liveFrom?: LiveAnchorHint;
   liveTo?: LiveAnchorHint;
-  /** Transitive hop distance (2+); decays opacity on wire. */
+  /** Graph distance from hover focus (2+ decays wire/chip strength). Capped by RELATIVE_MAX_DEPTH. */
   hop?: number;
   opacity?: number;
   /** Off-graph definition — dashed load stub + pill beside usage token. */

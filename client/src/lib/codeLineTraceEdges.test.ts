@@ -234,7 +234,9 @@ describe("assembleCodeLinePreviewEdges", () => {
       cascadeEdges: [],
     });
 
-    const cascade = edges.filter((e) => e.hop === 2 || e.hop === 3);
+    const cascade = edges.filter(
+      (e) => e.connectionKind === "typesetting" || e.load != null,
+    );
     expect(cascade).toHaveLength(2);
     expect(cascade[0]?.connectionKind).toBe("typesetting");
     expect(cascade[1]?.load?.filePath).toBe("/proj/geo.ts");
@@ -308,5 +310,78 @@ describe("assembleCodeLinePreviewEdges", () => {
     expect(local.length).toBeGreaterThanOrEqual(1);
     expect(binding.length).toBeGreaterThanOrEqual(1);
     expect(local.some((e) => e.hop == null || e.hop === 1)).toBe(true);
+  });
+
+  it("chains param-def hover down the lexical tree like sig-type hover", () => {
+    const EXTRACT_MEMBER = "method:file:Geo.extractFieldValue";
+    const EXTRACT_CODE = `export function extractFieldValue(
+  result: GeocoderSearchResult,
+  field: AddressFieldKind,
+): string | null {
+  const addr = result.address;
+  if (!addr) return null;
+  return addr.city;
+}`;
+    const EXTRACT_START = 52;
+    const index = buildMemberSymbolIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START);
+    const paramDef = [...index.defSites.entries()].find(([, id]) =>
+      id.includes("::param::result::"),
+    );
+    expect(paramDef).toBeTruthy();
+
+    const pane = document.querySelector(".graph-pane")!;
+    const resultDef = document.createElement("span");
+    resultDef.dataset.localDefId = paramDef![1];
+    pane.appendChild(resultDef);
+
+    const resultUse = document.createElement("span");
+    resultUse.dataset.localTargetId = paramDef![1];
+    pane.appendChild(resultUse);
+
+    const classData: ClassNodeData = {
+      label: "Geo",
+      filePath: "/geo.ts",
+      expandedMethodIds: [EXTRACT_MEMBER],
+      methods: [
+        {
+          id: EXTRACT_MEMBER,
+          label: "extractFieldValue",
+          symbolName: "extractFieldValue",
+          code: EXTRACT_CODE,
+          startLine: EXTRACT_START,
+        },
+      ],
+      properties: [],
+    };
+
+    const edges = assembleCodeLinePreviewEdges({
+      name: "result",
+      chipEl: resultDef,
+      kind: "variable",
+      tokenIndex: 0,
+      edgeKey: "test-result-param",
+      symbolIndex: index,
+      controlFlowIndex: buildControlFlowIndex(EXTRACT_MEMBER, EXTRACT_CODE, EXTRACT_START),
+      sourceFlowId: FLOW,
+      memberId: EXTRACT_MEMBER,
+      lineNumber: EXTRACT_START + 1,
+      methodCode: EXTRACT_CODE,
+      methodStartLine: EXTRACT_START,
+      symbols: new Map(),
+      graphData: null,
+      getNode: () =>
+        ({
+          id: FLOW,
+          type: "class",
+          position: { x: 0, y: 0 },
+          data: classData,
+        }) as Node,
+      hasSymbol: () => false,
+      lookup: () => undefined,
+      cascadeEdges: [],
+    });
+
+    expect(edges.some((e) => e.id.includes("chain-b-"))).toBe(true);
+    expect(edges.some((e) => e.liveTo?.token === "city")).toBe(true);
   });
 });

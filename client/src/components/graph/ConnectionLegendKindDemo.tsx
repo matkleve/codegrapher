@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { ConnectorChip } from "@/components/code/ConnectorChip";
+import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { WireMarkerDefs } from "@/components/graph/WireMarkerDefs";
 import { useLegendDemoWire } from "@/hooks/useLegendDemoWire";
 import {
@@ -7,12 +9,13 @@ import {
   type LegendConnectionKind,
 } from "@/lib/connectionWireStyle";
 import {
-  legendDemoNeedsTallCanvas,
+  demoAnchorSockets,
   LEGEND_DEMO_SCENES,
   type DemoCodeLineScene,
   type DemoCodePart,
   type DemoMemberScene,
 } from "@/lib/connectionLegendDemoScenes";
+import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
 
 type ConnectionLegendKindDemoProps = {
@@ -27,36 +30,71 @@ function DemoAnchorChip({
   lit,
   onToggle,
   defLabel = false,
+  signature = false,
+  showLeftSocket = false,
+  showRightSocket = false,
 }: {
   id: string;
   label: string;
-  tokenKind?: string;
+  tokenKind?: SemanticTokenKind;
   lit: boolean;
   onToggle: (id: string) => void;
   defLabel?: boolean;
+  signature?: boolean;
+  showLeftSocket?: boolean;
+  showRightSocket?: boolean;
 }) {
-  const Tag = defLabel ? "span" : "button";
+  const anchorColor = TOKEN_ANCHOR[tokenKind];
+
+  if (defLabel) {
+    return (
+      <span
+        data-demo-anchor={id}
+        data-token-kind={tokenKind}
+        className={cn(
+          "token-def-label relative token-chip-on",
+          "connection-legend-demo-anchor",
+          lit && "connection-legend-demo-anchor--lit",
+        )}
+      >
+        <FlowAnchor
+          side="left"
+          colorClass={anchorColor}
+          visible={showLeftSocket}
+          highlighted={showLeftSocket}
+          size="chip"
+        />
+        <FlowAnchor
+          side="right"
+          colorClass={anchorColor}
+          visible={showRightSocket}
+          highlighted={showRightSocket}
+          size="chip"
+        />
+        <span className="token-shimmer-target">{label}</span>
+      </span>
+    );
+  }
+
   return (
-    <Tag
-      type={defLabel ? undefined : "button"}
+    <ConnectorChip
+      label={label}
+      kind={tokenKind}
+      active
+      showLeftSocket={showLeftSocket}
+      showRightSocket={showRightSocket}
       data-demo-anchor={id}
-      data-token-kind={tokenKind}
       className={cn(
-        defLabel ? "token-def-label" : "token-chip",
         "connection-legend-demo-anchor",
+        signature &&
+          (tokenKind === "type" ? "member-sig-type-chip" : "member-sig-token-chip"),
         lit && "connection-legend-demo-anchor--lit",
       )}
-      onClick={
-        defLabel
-          ? undefined
-          : (e) => {
-              e.stopPropagation();
-              onToggle(id);
-            }
-      }
-    >
-      <span className="token-chip-text">{label}</span>
-    </Tag>
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(id);
+      }}
+    />
   );
 }
 
@@ -66,16 +104,28 @@ function DemoCodePartSpan({ part }: { part: DemoCodePart }) {
   );
 }
 
+type AnchorSockets = Map<string, { left: boolean; right: boolean }>;
+
+function socketFlags(id: string, anchorSockets: AnchorSockets) {
+  const sockets = anchorSockets.get(id);
+  return {
+    showLeftSocket: sockets?.left ?? false,
+    showRightSocket: sockets?.right ?? false,
+  };
+}
+
 function DemoCodeLine({
   line,
   lineNo,
   litId,
   onToggle,
+  anchorSockets,
 }: {
   line: DemoCodeLineScene;
   lineNo: number;
   litId: string | null;
   onToggle: (id: string) => void;
+  anchorSockets: AnchorSockets;
 }) {
   return (
     <div className="code-line connection-legend-demo-code-line">
@@ -89,9 +139,10 @@ function DemoCodeLine({
               key={`${part.anchorId}-${i}`}
               id={part.anchorId}
               label={part.text}
-              tokenKind={part.tokenKind}
+              tokenKind={(part.tokenKind as SemanticTokenKind) ?? "variable"}
               lit={litId === part.anchorId}
               onToggle={onToggle}
+              {...socketFlags(part.anchorId, anchorSockets)}
             />
           ) : (
             <DemoCodePartSpan key={`${part.text}-${i}`} part={part} />
@@ -106,10 +157,12 @@ function DemoMember({
   member,
   litId,
   onToggle,
+  anchorSockets,
 }: {
   member: DemoMemberScene;
   litId: string | null;
   onToggle: (id: string) => void;
+  anchorSockets: AnchorSockets;
 }) {
   const expanded = Boolean(member.body?.length || member.signature?.length);
   const signatureOnly = Boolean(member.signature?.length && !member.body?.length);
@@ -132,6 +185,7 @@ function DemoMember({
             lit={litId === member.labelAnchorId}
             onToggle={onToggle}
             defLabel
+            {...socketFlags(member.labelAnchorId, anchorSockets)}
           />
         ) : (
           <span
@@ -154,9 +208,11 @@ function DemoMember({
                   key={`${part.anchorId}-${i}`}
                   id={part.anchorId}
                   label={part.text}
-                  tokenKind={part.tokenKind}
+                  tokenKind={(part.tokenKind as SemanticTokenKind) ?? "variable"}
                   lit={litId === part.anchorId}
                   onToggle={onToggle}
+                  signature
+                  {...socketFlags(part.anchorId, anchorSockets)}
                 />
               ) : (
                 <DemoCodePartSpan key={`${part.text}-${i}`} part={part} />
@@ -174,6 +230,7 @@ function DemoMember({
               lineNo={i + 1}
               litId={litId}
               onToggle={onToggle}
+              anchorSockets={anchorSockets}
             />
           ))}
         </div>
@@ -191,7 +248,7 @@ export function ConnectionLegendKindDemo({
   const svgRef = useRef<SVGSVGElement>(null);
   const def = wireStyleForKind(kind);
   const scene = LEGEND_DEMO_SCENES[kind];
-  const tallCanvas = legendDemoNeedsTallCanvas(scene);
+  const anchorSockets = useMemo(() => demoAnchorSockets(scene.wire), [scene.wire]);
   const pathClass = legendSwatchClasses(kind, { pulse: false }).join(" ");
   const wire = useLegendDemoWire(rootRef, svgRef, scene.wire, kind);
 
@@ -204,8 +261,6 @@ export function ConnectionLegendKindDemo({
       ref={rootRef}
       className={cn(
         "connection-legend-demo canvas-dot-grid",
-        scene.layout === "split" && "connection-legend-demo--split",
-        tallCanvas && "connection-legend-demo--tall",
         !active && "connection-legend-demo--inactive",
       )}
       aria-hidden
@@ -235,6 +290,7 @@ export function ConnectionLegendKindDemo({
                   lit={litId === card.titleAnchorId}
                   onToggle={onToggle}
                   defLabel
+                  {...socketFlags(card.titleAnchorId, anchorSockets)}
                 />
               ) : (
                 <span className="node-card-title">{card.title}</span>
@@ -247,6 +303,7 @@ export function ConnectionLegendKindDemo({
                   member={member}
                   litId={litId}
                   onToggle={onToggle}
+                  anchorSockets={anchorSockets}
                 />
               ))}
             </div>

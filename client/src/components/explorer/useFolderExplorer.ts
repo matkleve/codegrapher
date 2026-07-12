@@ -15,6 +15,7 @@ import {
   saveRecentSectionOpen,
   setActiveFolderRoot,
 } from "@/lib/recentFiles";
+import { formatExplorerError } from "@/lib/explorerErrors";
 import type { TreeEntry } from "@/types";
 
 /** All folder-open, indexing, and recent-folder/file state for FileExplorer. */
@@ -29,7 +30,7 @@ export function useFolderExplorer(
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const { loadIndex, indexing } = useIndex();
+  const { loadIndex, indexing, indexStatus } = useIndex();
   const [recentFolders, setRecentFolders] = useState<string[]>(() => loadRecentFolders());
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const [recentFoldersOpen, setRecentFoldersOpen] = useState(false);
@@ -61,11 +62,13 @@ export function useFolderExplorer(
       const seq = ++openSeqRef.current;
       setOpening(true);
       setError(null);
-      setStatusMessage("Indexing project...");
+      setStatusMessage(null);
+      let phase: "index" | "tree" = "index";
       try {
         await loadIndex(dirPath);
         if (seq !== openSeqRef.current) return null;
 
+        phase = "tree";
         const data = await fetchTree(dirPath);
         if (seq !== openSeqRef.current) return null;
 
@@ -83,7 +86,7 @@ export function useFolderExplorer(
         setActiveFolderRoot(null);
         setRecentFiles([]);
         setStatusMessage(null);
-        setError(err instanceof Error ? err.message : "Failed to open folder");
+        setError(formatExplorerError(err, { folderPath: dirPath, phase }));
         return null;
       } finally {
         if (seq === openSeqRef.current) {
@@ -119,7 +122,7 @@ export function useFolderExplorer(
 
   const handleOpen = useCallback(async () => {
     if (!folderPath.trim()) {
-      setError("Enter an absolute folder path or browse");
+      setError(formatExplorerError("Enter an absolute folder path or browse"));
       return;
     }
     const opened = await openFolderAt(folderPath.trim());
@@ -135,11 +138,7 @@ export function useFolderExplorer(
       const opened = await openFolderAt(result.path);
       notifyFolderOpened(opened);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Folder picker unavailable — install zenity or enter a path manually",
-      );
+      setError(formatExplorerError(err, { phase: "browse" }));
     }
   }, [notifyFolderOpened, openFolderAt]);
 
@@ -167,6 +166,7 @@ export function useFolderExplorer(
     opening,
     statusMessage,
     indexing,
+    indexStatus,
     recentFolders,
     recentFiles,
     recentFoldersOpen,

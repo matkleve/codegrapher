@@ -18,7 +18,6 @@ export const RELATIVE_FAN_OUT_CAP = 24;
 
 export const TRACE_DEPTH_DOWN = RELATIVE_MAX_DEPTH;
 export const TRACE_DEPTH_UP = BACKWARD_LEXICAL_MAX_DEPTH;
-export const TRACE_VISUAL_HOP_MAX = 3;
 
 export type LexicalSite = {
   lineNumber: number;

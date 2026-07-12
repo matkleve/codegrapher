@@ -8,7 +8,11 @@ export type LoadStubBounds = {
   top: number;
 };
 
-/** Place a load stub left of the hosting node; coordinates are relative to `.graph-pane`. */
+/**
+ * Place a load stub flush left of the hosting class node.
+ * Returns viewport coordinates for `position: fixed` — never pane-relative,
+ * so the chip hugs the node even when that means partial off-canvas clip.
+ */
 export function loadStubPanePosition(
   toEl: HTMLElement,
   stubWidth: number,
@@ -18,18 +22,19 @@ export function loadStubPanePosition(
 
   const pane = graphPane();
   const paneRect = pane?.getBoundingClientRect();
-  if (!paneRect) return null;
 
   const toRect = toEl.getBoundingClientRect();
   const nodeEl = toEl.closest<HTMLElement>(".react-flow__node");
   const anchorRect = nodeEl?.getBoundingClientRect() ?? toRect;
 
-  let left = anchorRect.left - stubWidth - NODE_GAP_PX - paneRect.left;
-  let top = toRect.top + toRect.height / 2 - stubHeight / 2 - paneRect.top;
+  const left = anchorRect.left - stubWidth - NODE_GAP_PX;
+  let top = toRect.top + toRect.height / 2 - stubHeight / 2;
 
-  const minTop = PANE_MARGIN_PX;
-  const maxTop = paneRect.height - stubHeight - PANE_MARGIN_PX;
-  top = Math.max(minTop, Math.min(top, maxTop));
+  if (paneRect) {
+    const minTop = paneRect.top + PANE_MARGIN_PX;
+    const maxTop = paneRect.bottom - stubHeight - PANE_MARGIN_PX;
+    top = Math.max(minTop, Math.min(top, maxTop));
+  }
 
   return { left, top };
 }

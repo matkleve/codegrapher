@@ -165,19 +165,3 @@
 .preview-edge-glow.preview-edge-line-hover {
   opacity: 0.22;
 }
-
-.preview-edge-path.preview-wire--hop2 {
-  opacity: var(--preview-wire-hop2-opacity);
-}
-
-.preview-edge-path.preview-wire--hop3 {
-  opacity: var(--preview-wire-hop3-opacity);
-}
-
-.preview-edge-glow.preview-wire--hop2 {
-  opacity: var(--preview-wire-hop2-glow-opacity);
-}
-
-.preview-edge-glow.preview-wire--hop3 {
-  opacity: var(--preview-wire-hop3-glow-opacity);
-}

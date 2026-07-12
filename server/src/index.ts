@@ -13,6 +13,7 @@ import {
   indexFilePaths,
   serializeIndex,
   serializeSymbolsMap,
+  type IndexProgressEvent,
 } from "./indexer";
 import { parseFileGraph, parseFocus } from "./parser";
 
@@ -28,7 +29,7 @@ const indexCache = new Map<
 
 app.use(cors());
 
-app.get("/api/index", (req, res) => {
+app.get("/api/index", async (req, res) => {
   const dirPath = req.query.path;
   if (typeof dirPath !== "string" || !dirPath.trim()) {
     res.status(400).json({ error: "Missing or invalid path query parameter" });
@@ -44,13 +45,57 @@ app.get("/api/index", (req, res) => {
       return;
     }
 
-    const index = buildProjectIndex(folderRoot);
+    const index = await buildProjectIndex(folderRoot);
     const payload = serializeIndex(index);
     indexCache.set(folderRoot, payload);
     res.json(payload);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Index build failed";
     res.status(500).json({ error: message });
+  }
+});
+
+app.get("/api/index/stream", async (req, res) => {
+  const dirPath = req.query.path;
+  if (typeof dirPath !== "string" || !dirPath.trim()) {
+    res.status(400).json({ error: "Missing or invalid path query parameter" });
+    return;
+  }
+
+  const folderRoot = path.normalize(path.resolve(dirPath));
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: unknown) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    const flushable = res as typeof res & { flush?: () => void };
+    flushable.flush?.();
+  };
+
+  try {
+    const cached = indexCache.get(folderRoot);
+    if (cached) {
+      send({ status: { phase: "files", done: 1, total: 1 } satisfies IndexProgressEvent });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      send({ payload: cached });
+      res.end();
+      return;
+    }
+
+    const index = await buildProjectIndex(folderRoot, async (status) => {
+      send({ status });
+    });
+    const payload = serializeIndex(index);
+    indexCache.set(folderRoot, payload);
+    send({ payload });
+    res.end();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Index build failed";
+    send({ error: message });
+    res.end();
   }
 });
 

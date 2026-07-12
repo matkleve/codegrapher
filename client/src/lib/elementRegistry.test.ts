@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from "vitest";
 import {
   clearElementRegistry,
+  getAllByLocalTargetId,
   getByTraceKey,
   registerTraceHost,
 } from "@/lib/elementRegistry";
@@ -38,5 +39,18 @@ describe("getByTraceKey", () => {
 
     setTraceAnchorHost(label);
     expect(getByTraceKey("flow-1::def::member-1")).toBe(label);
+  });
+
+  it("indexes all usage chips for a local target id", () => {
+    const usageA = document.createElement("span");
+    usageA.dataset.localTargetId = "def-x";
+    usageA.dataset.traceKey = "usage-a";
+    const usageB = document.createElement("span");
+    usageB.dataset.localTargetId = "def-x";
+    usageB.dataset.traceKey = "usage-b";
+    registerTraceHost(usageA);
+    registerTraceHost(usageB);
+
+    expect(getAllByLocalTargetId("def-x")).toEqual([usageA, usageB]);
   });
 });

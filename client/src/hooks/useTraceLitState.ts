@@ -1,13 +1,14 @@
-import { useCallback, useLayoutEffect, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { Node } from "@xyflow/react";
 import { computeTraceLit, EMPTY_TRACE_LIT, mergeTraceLit } from "@/lib/computeTraceLit";
 import { filterPreviewEdgesByVisibility } from "@/lib/connectionVisibility";
 import { pinnedKeys, type PinnedTrace } from "@/lib/pinnedTraces";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { refinePreviewEdge } from "@/lib/resolveLiveAnchor";
+import { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
 import type { ConnectionKind } from "@/lib/structuralEdgeColors";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
+import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
 import { notifyWireTransform } from "@/lib/wireEngine";
 
 type UseTraceLitStateArgs = {
@@ -42,10 +43,15 @@ export function useTraceLitState({
   revealRevision,
   registryRevision,
 }: UseTraceLitStateArgs) {
+  const refineCacheRef = useRef(createRefinePreviewEdgeCache());
+  const lastFingerprintRef = useRef("");
+
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();
+    const cache = refineCacheRef.current;
+    cache.clear();
     for (const edge of previewEdges) {
-      const { from, to } = refinePreviewEdge(edge, getNode);
+      const { from, to } = cache.refine(edge, getNode);
       if (from.type === "handle") map.set(from.handle, edge.kind);
       if (to.type === "handle") map.set(to.handle, edge.kind);
     }
@@ -65,6 +71,8 @@ export function useTraceLitState({
   );
 
   const pinnedTraceLit = useMemo(() => {
+    const cache = refineCacheRef.current;
+    cache.clear();
     let lit = EMPTY_TRACE_LIT;
     for (const trace of pinnedTraces) {
       lit = mergeTraceLit(
@@ -73,6 +81,7 @@ export function useTraceLitState({
           trace.tokenKey,
           filterPreviewEdgesByVisibility(trace.edges, visibleEdgeKinds),
           getNode,
+          cache,
         ),
       );
     }
@@ -85,10 +94,13 @@ export function useTraceLitState({
     if (pinnedKeys(pinnedTraces).includes(hoveredTokenKey)) {
       return EMPTY_TRACE_LIT;
     }
+    const cache = refineCacheRef.current;
+    cache.clear();
     return computeTraceLit(
       hoveredTokenKey,
       filterPreviewEdgesByVisibility(hoverPreviewEdges, visibleEdgeKinds),
       getNode,
+      cache,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute after DOM reveal, not read directly
   }, [
@@ -108,15 +120,21 @@ export function useTraceLitState({
 
   useLayoutEffect(() => {
     if (!traceTokenKey) {
+      lastFingerprintRef.current = "";
       clearTraceLit();
       return;
     }
+    const fingerprint = traceLitFingerprint(traceLit);
+    if (fingerprint === lastFingerprintRef.current) {
+      notifyWireTransform();
+      return;
+    }
+    lastFingerprintRef.current = fingerprint;
     applyTraceLit(traceLit, {
       pinnedTokenKeys: pinnedTokenKeySet,
       hoveredTokenKey,
     });
     notifyWireTransform();
-    // Re-apply after DOM reveal / registry churn — React className resets chip/socket classes.
   }, [
     hoveredTokenKey,
     pinnedTokenKeySet,

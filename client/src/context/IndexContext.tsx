@@ -7,6 +7,10 @@ import {
   type ReactNode,
 } from "react";
 import { fetchProjectIndex } from "@/api";
+import {
+  IDLE_INDEX_PROGRESS,
+  type IndexProgressStatus,
+} from "@/lib/indexProgress";
 import type { ProjectIndexResponse, ReferenceEntry, SymbolEntry } from "@/types";
 
 type IndexContextValue = {
@@ -14,6 +18,7 @@ type IndexContextValue = {
   symbolCount: number;
   referenceCount: number;
   indexing: boolean;
+  indexStatus: IndexProgressStatus;
   symbols: Map<string, SymbolEntry[]>;
   references: Map<string, ReferenceEntry[]>;
   loadIndex: (folderPath: string) => Promise<ProjectIndexResponse>;
@@ -39,11 +44,13 @@ export function IndexProvider({ children }: { children: ReactNode }) {
     new Map(),
   );
   const [indexing, setIndexing] = useState(false);
+  const [indexStatus, setIndexStatus] = useState<IndexProgressStatus>(IDLE_INDEX_PROGRESS);
 
   const loadIndex = useCallback(async (path: string) => {
     setIndexing(true);
+    setIndexStatus({ phase: "files", done: 0, total: 0 });
     try {
-      const data = await fetchProjectIndex(path);
+      const data = await fetchProjectIndex(path, setIndexStatus);
       setFolderPath(data.folderPath);
       setSymbolCount(data.symbolCount);
       setReferenceCount(data.referenceCount ?? 0);
@@ -52,6 +59,7 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       return data;
     } finally {
       setIndexing(false);
+      setIndexStatus(IDLE_INDEX_PROGRESS);
     }
   }, []);
 
@@ -104,6 +112,7 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       symbolCount,
       referenceCount,
       indexing,
+      indexStatus,
       symbols,
       references,
       loadIndex,
@@ -118,6 +127,7 @@ export function IndexProvider({ children }: { children: ReactNode }) {
       symbolCount,
       referenceCount,
       indexing,
+      indexStatus,
       symbols,
       references,
       loadIndex,

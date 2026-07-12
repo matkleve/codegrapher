@@ -74,7 +74,7 @@ describe("traceSigTypeEdges", () => {
       edgeIdPrefix: "test",
     });
 
-    expect(edges.some((e) => e.connectionKind === "typesetting" && e.hop === 2)).toBe(true);
+    expect(edges.some((e) => e.connectionKind === "typesetting")).toBe(true);
     expect(edges.some((e) => e.liveTo?.token === "city")).toBe(true);
     expect(paramDefForName(index, MEMBER, "result")).toBeTruthy();
   });

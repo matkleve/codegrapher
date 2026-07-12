@@ -1,41 +1,29 @@
-import type { TraceLitState, TraceStrength } from "@/lib/computeTraceLit";
-import { allLocalDefElements } from "@/lib/localDefElements";
-import { getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
+import type { TraceLitState } from "@/lib/computeTraceLit";
+import { getAllByLocalDefId, getByMemberId, getByTraceKey } from "@/lib/elementRegistry";
 import {
   memberDefSiblingHosts,
   resolveMemberDefEndpoint,
 } from "@/lib/memberDefAnchor";
-import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
-
-const CHIP_LIT = "token-chip-lit";
-const CHIP_ON = "token-chip-on";
-const CHIP_SOURCE = "token-chip-source";
-const CHIP_HOVER_PREVIEW = "token-chip-hover-preview";
-const CHIP_ENDPOINT_SIBLING = "token-chip-endpoint-sibling";
-const CHIP_HOP2 = "token-chip-hop2";
-const CHIP_HOP3 = "token-chip-hop3";
-const MEMBER_LIT = "trace-member-lit";
-const MEMBER_OWNER_LIT = "trace-member-owner-lit";
-const LINE_LIT = "trace-lit-line";
-const LINE_LIT_HOP2 = "trace-lit-line-hop2";
-const LINE_LIT_HOP3 = "trace-lit-line-hop3";
-const ANCHOR_ON = "flow-anchor-on";
-const ANCHOR_OFF = "flow-anchor-off";
-const ANCHOR_ENDPOINT_SIBLING = "flow-anchor-endpoint-sibling";
-
-type Applied = {
-  el: HTMLElement;
-  classes: string[];
-  restoreAnchorOff?: HTMLElement[];
-};
-
-let previous: Applied[] = [];
+import {
+  CHIP_HOVER_PREVIEW,
+  CHIP_LIT,
+  CHIP_ON,
+  CHIP_SOURCE,
+  LINE_LIT,
+  MEMBER_LIT,
+  MEMBER_OWNER_LIT,
+  addSocketState,
+  anchorColorClasses,
+  clearTraceLitDom,
+  createHostState,
+  syncTraceLitDom,
+  type HostState,
+} from "@/lib/traceLitApply";
 
 function chipHostForTraceKey(key: string): HTMLElement | null {
   return getByTraceKey(key);
 }
 
-/** Param/local lexical groups only — not member-row title defs. */
 function isLocalDefSiblingGroup(defId: string): boolean {
   return !defId.startsWith("local-def::member::");
 }
@@ -43,72 +31,8 @@ function isLocalDefSiblingGroup(defId: string): boolean {
 function litHostsForEndpoint(host: HTMLElement): HTMLElement[] {
   const defId = host.dataset.localDefId;
   if (!defId) return [host];
-
-  const pane = document.querySelector(".graph-pane");
-  if (!pane) return [host];
-
-  const siblings = allLocalDefElements(pane, defId);
+  const siblings = getAllByLocalDefId(defId);
   return siblings.length > 0 ? siblings : [host];
-}
-
-function clearPrevious(): void {
-  for (const entry of previous) {
-    const { el, classes, restoreAnchorOff } = entry;
-    if (el.isConnected) {
-      for (const cls of classes) {
-        el.classList.remove(cls);
-      }
-    }
-    if (restoreAnchorOff) {
-      for (const anchor of restoreAnchorOff) {
-        if (!anchor.isConnected) continue;
-        anchor.classList.remove(ANCHOR_ON, ANCHOR_ENDPOINT_SIBLING);
-        anchor.classList.add(ANCHOR_OFF, "bg-border");
-        removeAnchorColorClasses(anchor);
-      }
-    }
-  }
-  previous = [];
-}
-
-function track(
-  el: HTMLElement,
-  classes: string[],
-  restoreAnchorOff?: HTMLElement[],
-): void {
-  const toAdd = classes.filter((c) => !el.classList.contains(c));
-  if (toAdd.length === 0 && !restoreAnchorOff?.length) return;
-  for (const cls of toAdd) {
-    el.classList.add(cls);
-  }
-  previous.push({ el, classes: toAdd, restoreAnchorOff });
-}
-
-function isDefinitionHost(host: HTMLElement): boolean {
-  return (
-    host.classList.contains("token-def-label") ||
-    host.dataset.symbolRole === "definition" ||
-    host.dataset.localDefId != null
-  );
-}
-
-function anchorColorClasses(host: HTMLElement): string[] {
-  if (host.dataset.controlFlowRole) {
-    return ["bg-[color:var(--edge-control-flow)]", "text-[color:var(--edge-control-flow)]"];
-  }
-  const kind = host.dataset.tokenKind as SemanticTokenKind | undefined;
-  if (kind && kind in TOKEN_ANCHOR) {
-    return TOKEN_ANCHOR[kind].split(/\s+/).filter(Boolean);
-  }
-  return ["bg-border"];
-}
-
-function removeAnchorColorClasses(anchor: HTMLElement): void {
-  for (const color of Object.values(TOKEN_ANCHOR)) {
-    for (const cls of color.split(/\s+/)) {
-      anchor.classList.remove(cls);
-    }
-  }
 }
 
 function traceKeyFromHost(host: HTMLElement): string | null {
@@ -131,52 +55,24 @@ function primaryHostInDefGroup(
   return null;
 }
 
-function applyEndpointSockets(
-  host: HTMLElement,
-  portSides: ReadonlySet<"left" | "right">,
-  tier: TraceStrength,
-): HTMLElement[] {
-  const restore: HTMLElement[] = [];
-  const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
-  const right = host.querySelector<HTMLElement>('[data-flow-anchor="right"]');
-  for (const side of portSides) {
-    const socket = side === "right" ? right : left;
-    if (!socket) continue;
-
-    restore.push(socket);
-    socket.classList.remove(ANCHOR_OFF, ANCHOR_ENDPOINT_SIBLING);
-    socket.classList.add(ANCHOR_ON);
-    removeAnchorColorClasses(socket);
-    socket.classList.add(...anchorColorClasses(host));
-    if (tier === 3) socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "flow-anchor-hop3");
-    else if (tier === 2) socket.classList.add(ANCHOR_ENDPOINT_SIBLING, "flow-anchor-hop2");
-  }
-  return restore;
+function isDefinitionHost(host: HTMLElement): boolean {
+  return (
+    host.classList.contains("token-def-label") ||
+    host.dataset.symbolRole === "definition" ||
+    host.dataset.localDefId != null
+  );
 }
 
-function hopClasses(tier: TraceStrength): string[] {
-  if (tier === 3) return [CHIP_HOP3];
-  if (tier === 2) return [CHIP_HOP2];
-  return [];
-}
-
-function strengthForKey(
+function depthForKey(
   state: TraceLitState,
   key: string | null,
-  fallbackSibling: boolean,
-): TraceStrength {
+  fallbackSibling = false,
+): number {
   if (key) {
-    const fromMap = state.traceStrength.get(key);
+    const fromMap = state.traceDepth.get(key);
     if (fromMap != null) return fromMap;
   }
   return fallbackSibling ? 2 : 1;
-}
-
-function lineLitClasses(tier: TraceStrength): string[] {
-  const classes = [LINE_LIT];
-  if (tier === 3) classes.push(LINE_LIT_HOP3);
-  else if (tier === 2) classes.push(LINE_LIT_HOP2);
-  return classes;
 }
 
 function portSidesForHost(
@@ -191,28 +87,75 @@ function portSidesForHost(
   return new Set([isDefinitionHost(host) ? "right" : "left"]);
 }
 
-function applyEndpointHost(
+function ensureHost(
+  next: Map<HTMLElement, HostState>,
+  el: HTMLElement,
+): HostState {
+  let state = next.get(el);
+  if (!state) {
+    state = createHostState([], 0);
+    next.set(el, state);
+  }
+  return state;
+}
+
+/** Furthest graph distance wins — sibling fade overrides co-located lit at depth 1. */
+function setDepth(state: HostState, depth: number): void {
+  state.depth = Math.max(state.depth, depth);
+}
+
+function mergeClasses(state: HostState, classes: string[]): void {
+  const set = new Set(state.classes);
+  for (const cls of classes) set.add(cls);
+  state.classes = [...set];
+}
+
+function attachEndpointSockets(
   host: HTMLElement,
-  tier: TraceStrength,
+  hostState: HostState,
+  portSides: ReadonlySet<"left" | "right">,
+  depth: number,
+): void {
+  const left = host.querySelector<HTMLElement>('[data-flow-anchor="left"]');
+  const right = host.querySelector<HTMLElement>('[data-flow-anchor="right"]');
+  for (const side of portSides) {
+    const socket = side === "right" ? right : left;
+    if (!socket) continue;
+    addSocketState(hostState, socket, {
+      endpointSibling: depth >= 2,
+      depth,
+      colorClasses: anchorColorClasses(host),
+    });
+  }
+  setDepth(hostState, depth);
+}
+
+function applyEndpointHost(
+  next: Map<HTMLElement, HostState>,
+  host: HTMLElement,
+  depth: number,
   pinnedTokenKeys: ReadonlySet<string>,
   hoveredTokenKey: string | null,
   endpointPortSide: ReadonlyMap<string, ReadonlySet<"left" | "right">>,
 ): void {
   const traceKey = traceKeyFromHost(host);
-  const extra: string[] = [CHIP_ON, ...hopClasses(tier)];
-  if (tier === 1) {
+  const hostState = ensureHost(next, host);
+  const extra: string[] = [CHIP_ON];
+  if (depth === 1) {
     if (traceKey && pinnedTokenKeys.has(traceKey)) {
       extra.push(CHIP_SOURCE);
     } else if (traceKey && hoveredTokenKey === traceKey) {
       extra.push(CHIP_HOVER_PREVIEW);
     }
   }
-  const restoreAnchors = applyEndpointSockets(
+  mergeClasses(hostState, extra);
+  setDepth(hostState, depth);
+  attachEndpointSockets(
     host,
+    hostState,
     portSidesForHost(host, endpointPortSide),
-    tier,
+    depth,
   );
-  track(host, extra, restoreAnchors);
 }
 
 export type TraceLitApplyOptions = {
@@ -220,23 +163,29 @@ export type TraceLitApplyOptions = {
   hoveredTokenKey: string | null;
 };
 
-/** Apply trace-lit classes imperatively — O(trace size), no React re-renders. */
+/** Apply trace-lit classes imperatively — diffs against prior apply. */
 export function applyTraceLit(
   state: TraceLitState,
   { pinnedTokenKeys, hoveredTokenKey }: TraceLitApplyOptions,
 ): void {
-  clearPrevious();
+  const next = new Map<HTMLElement, HostState>();
 
   for (const key of state.litTokenKeys) {
-    const tier = strengthForKey(state, key, false);
-    const hop = hopClasses(tier);
+    const depth = depthForKey(state, key, false);
     const memberSiblings = memberDefSiblingHosts(key);
     if (memberSiblings) {
-      for (const host of memberSiblings) track(host, [CHIP_LIT, ...hop]);
+      for (const host of memberSiblings) {
+        const hostState = ensureHost(next, host);
+        mergeClasses(hostState, [CHIP_LIT]);
+        setDepth(hostState, depth);
+      }
       continue;
     }
     const host = chipHostForTraceKey(key);
-    if (host) track(host, [CHIP_LIT, ...hop]);
+    if (!host) continue;
+    const hostState = ensureHost(next, host);
+    mergeClasses(hostState, [CHIP_LIT]);
+    setDepth(hostState, depth);
   }
 
   const processedDefIds = new Set<string>();
@@ -259,10 +208,10 @@ export function applyTraceLit(
           continue;
         }
         const isSibling = primary !== null ? litHost !== primary : true;
-        const tier = strengthForKey(state, key, isSibling);
         applyEndpointHost(
+          next,
           litHost,
-          tier,
+          depthForKey(state, key, isSibling),
           pinnedTokenKeys,
           hoveredTokenKey,
           state.endpointPortSide,
@@ -283,14 +232,10 @@ export function applyTraceLit(
       const primary = primaryHostInDefGroup(group, hoveredTokenKey, pinnedTokenKeys);
       for (const litHost of group) {
         const isSibling = primary !== null ? litHost !== primary : true;
-        const tier = strengthForKey(
-          state,
-          traceKeyFromHost(litHost),
-          isSibling,
-        );
         applyEndpointHost(
+          next,
           litHost,
-          tier,
+          depthForKey(state, traceKeyFromHost(litHost), isSibling),
           pinnedTokenKeys,
           hoveredTokenKey,
           state.endpointPortSide,
@@ -304,10 +249,10 @@ export function applyTraceLit(
     const traceKey = traceKeyFromHost(host);
     const isProvenanceSibling =
       traceKey != null && state.siblingEndpointTokenKeys.has(traceKey);
-    const tier = strengthForKey(state, traceKey, isProvenanceSibling);
     applyEndpointHost(
+      next,
       host,
-      tier,
+      depthForKey(state, traceKey, isProvenanceSibling),
       pinnedTokenKeys,
       hoveredTokenKey,
       state.endpointPortSide,
@@ -316,15 +261,15 @@ export function applyTraceLit(
 
   for (const memberId of state.litMemberIds) {
     const row = getByMemberId(memberId);
-    if (row) track(row, [MEMBER_LIT]);
+    if (row) mergeClasses(ensureHost(next, row), [MEMBER_LIT]);
   }
 
   for (const memberId of state.ownerLitMemberIds) {
     const row = getByMemberId(memberId);
-    if (row) track(row, [MEMBER_OWNER_LIT]);
+    if (row) mergeClasses(ensureHost(next, row), [MEMBER_OWNER_LIT]);
   }
 
-  for (const [lineKey, tier] of state.litLineStrength) {
+  for (const [lineKey, depth] of state.litLineDepth) {
     const sep = lineKey.indexOf("::");
     if (sep < 0) continue;
     const memberId = lineKey.slice(0, sep);
@@ -334,10 +279,19 @@ export function applyTraceLit(
     const line = row.querySelector<HTMLElement>(
       `.code-line[data-line-number="${CSS.escape(lineNumber)}"]`,
     );
-    if (line) track(line, lineLitClasses(tier));
+    if (!line) continue;
+    const lineState = ensureHost(next, line);
+    mergeClasses(lineState, [LINE_LIT]);
+    setDepth(lineState, depth);
   }
+
+  for (const state of next.values()) {
+    if (state.depth <= 0) state.depth = 1;
+  }
+
+  syncTraceLitDom(next);
 }
 
 export function clearTraceLit(): void {
-  clearPrevious();
+  clearTraceLitDom();
 }

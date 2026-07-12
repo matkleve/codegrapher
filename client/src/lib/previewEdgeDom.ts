@@ -14,6 +14,7 @@ import {
   previewWireMarkerStart,
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
+import { traceGlowOpacity, tracePathOpacity } from "@/lib/traceDepth";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -56,6 +57,25 @@ function setWireJunction(
   wire.junction.style.fill = stroke;
 }
 
+function applyWireDepthOpacity(
+  path: SVGPathElement,
+  glow: SVGPathElement,
+  spec: PreviewEdgeSpec,
+): void {
+  if (spec.hop != null && spec.hop >= 2) {
+    path.style.opacity = String(tracePathOpacity(spec.hop));
+    glow.style.opacity = String(traceGlowOpacity(spec.hop));
+    return;
+  }
+  if (spec.opacity != null && spec.opacity < 1) {
+    path.style.opacity = String(spec.opacity);
+    glow.style.opacity = String(spec.opacity * 0.12);
+    return;
+  }
+  path.style.removeProperty("opacity");
+  glow.style.removeProperty("opacity");
+}
+
 export function createWireGroup(
   spec: PreviewEdgeSpec,
   warm: boolean,
@@ -72,10 +92,7 @@ export function createWireGroup(
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("fill", "none");
   path.classList.add(...pathClasses);
-  if (spec.opacity != null && spec.opacity < 1 && spec.hop == null) {
-    path.style.opacity = String(spec.opacity);
-    glow.style.opacity = String(spec.opacity * 0.12);
-  }
+  applyWireDepthOpacity(path, glow, spec);
 
   const junction = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   junction.setAttribute("r", "4.5");
@@ -327,6 +344,7 @@ export function syncWireDom(
       applyWireMarkers(wire, spec);
       wire.glow.style.stroke = previewWireStroke(spec);
       wire.path.style.stroke = previewWireStroke(spec);
+      applyWireDepthOpacity(wire.path, wire.glow, spec);
     }
   }
 

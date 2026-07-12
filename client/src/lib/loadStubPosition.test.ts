@@ -59,9 +59,26 @@ describe("loadStubPanePosition", () => {
     vi.restoreAllMocks();
   });
 
-  it("places the stub left of the flow node in pane coordinates", () => {
-    const pos = loadStubPanePosition(target, 180, 36);
-    expect(pos).toEqual({ left: -80, top: 132 });
+  it("places the stub left of the flow node in viewport coordinates", () => {
+    const pos = loadStubPanePosition(target, 180, 28);
+    expect(pos).toEqual({ left: 200, top: 236 });
+  });
+
+  it("stays adjacent when the node is near the pane left edge", () => {
+    vi.spyOn(node, "getBoundingClientRect").mockReturnValue({
+      left: 300,
+      top: 200,
+      right: 600,
+      bottom: 600,
+      width: 300,
+      height: 400,
+      x: 300,
+      y: 200,
+      toJSON: () => ({}),
+    });
+
+    const pos = loadStubPanePosition(target, 180, 28);
+    expect(pos!.left).toBe(100);
   });
 
   it("clamps vertical position inside the graph pane", () => {
@@ -77,7 +94,7 @@ describe("loadStubPanePosition", () => {
       toJSON: () => ({}),
     });
 
-    const pos = loadStubPanePosition(target, 180, 36);
-    expect(pos!.top).toBe(8);
+    const pos = loadStubPanePosition(target, 180, 28);
+    expect(pos!.top).toBe(108);
   });
 });

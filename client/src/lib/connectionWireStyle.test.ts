@@ -120,19 +120,17 @@ describe("connectionWireStyle", () => {
   });
 
   it("previewWireClasses includes warm motion on typesetting edges", () => {
-    const edge = previewEdge({ id: "x", connectionKind: "typesetting", hop: 2 });
+    const edge = previewEdge({ id: "x", connectionKind: "typesetting" });
     expect(previewWireClasses(edge, true)).toEqual({
       path: [
         "preview-edge-path",
         "preview-edge-typesetting",
         "preview-edge-warm",
-        "preview-wire--hop2",
       ],
       glow: [
         "preview-edge-glow",
         "preview-edge-typesetting",
         "preview-edge-warm",
-        "preview-wire--hop2",
       ],
     });
   });

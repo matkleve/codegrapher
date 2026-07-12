@@ -1,6 +1,7 @@
 import { buildElementPreviewEdge, liveToFromUsageEl } from "@/lib/buildPreviewEdges";
 import { findLocalDefElement } from "@/lib/localDefElements";
 import { areMemberDefSiblingHosts } from "@/lib/memberDefAnchor";
+import { previewHopFromDepth } from "@/lib/traceDepth";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { graphPane } from "@/lib/graphPaneDom";
@@ -96,7 +97,7 @@ export function buildLocalPreviewEdges(
       if (sibling === host || areMemberDefSiblingHosts(from, sibling)) continue;
       edges.push({
         ...buildElementPreviewEdge(`${edgeIdPrefix}-${idx}`, from, sibling, kind),
-        hop: 2,
+        hop: previewHopFromDepth(2),
       });
       idx++;
     }

@@ -17,6 +17,7 @@ import {
   usageTargetFor,
 } from "@/lib/localSymbolLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { previewHopFromDepth } from "@/lib/traceDepth";
 import { resolveUsageSiteAnchor } from "@/lib/resolveLiveAnchor";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { makeUsageTokenKey } from "@/lib/traceKeys";
@@ -102,7 +103,7 @@ export function traceSigTypeEdges(ctx: SigTypeTraceContext): PreviewEdgeSpec[] {
       to: paramTo,
       kind: ctx.typeKind,
       connectionKind: "typesetting",
-      hop: 2,
+      hop: previewHopFromDepth(2),
       liveFrom:
         liveToFromUsageEl(ctx.symbolName, ctx.sigTypeEl) ?? {
           token: ctx.symbolName,
@@ -136,8 +137,7 @@ export function traceSigTypeEdges(ctx: SigTypeTraceContext): PreviewEdgeSpec[] {
       kind: "variable",
       edgeIdPrefix: `${ctx.edgeIdPrefix}-rel`,
       includeDirectUsages: true,
-      preferOriginEl: true,
-      hopOffset: 2,
+      depthOffset: 2,
       getNode: ctx.getNode,
     }),
   );
@@ -208,7 +208,7 @@ export function traceBindingInitCascadeEdges(
         initEl,
         "variable",
       ),
-      hop: 3,
+      hop: previewHopFromDepth(2),
     },
   ];
 
@@ -225,13 +225,11 @@ export function traceBindingInitCascadeEdges(
     getNode: ctx.getNode,
     hasSymbol: ctx.hasSymbol,
     edgeIdPrefix: `${ctx.edgeIdPrefix}-init-type-${paramName}`,
+    typeParamDepth: 3,
   });
 
   for (const edge of typeEdges) {
-    edges.push({
-      ...edge,
-      hop: edge.hop === 2 ? 3 : edge.hop,
-    });
+    edges.push(edge);
   }
 
   return edges;

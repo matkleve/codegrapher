@@ -386,10 +386,31 @@ function indexSourceFile(
   }
 }
 
-export function buildProjectIndex(folderPath: string): ProjectIndex {
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
+}
+
+export type IndexProgressEvent =
+  | { phase: "loading" }
+  | { phase: "preparing"; total: number }
+  | { phase: "files"; done: number; total: number; currentFile?: string }
+  | { phase: "references"; filesTotal: number };
+
+export async function buildProjectIndex(
+  folderPath: string,
+  onProgress?: (event: IndexProgressEvent) => void | Promise<void>,
+): Promise<ProjectIndex> {
+  const report = async (event: IndexProgressEvent) => {
+    if (!onProgress) return;
+    await onProgress(event);
+    await yieldToEventLoop();
+  };
+
   const folderRoot = path.normalize(path.resolve(folderPath));
   if (!fs.existsSync(folderRoot) || !fs.statSync(folderRoot).isDirectory()) {
-    throw new Error("Path must be an existing directory");
+    throw new Error(`Folder not found: ${folderRoot}`);
   }
 
   const tsconfigPath = path.join(folderRoot, "tsconfig.json");
@@ -405,18 +426,37 @@ export function buildProjectIndex(folderPath: string): ProjectIndex {
     }
   }
 
+  const symbols = new Map<string, SymbolEntry[]>();
+  const sourceFiles = project
+    .getSourceFiles()
+    .filter((sf) => !isInNodeModules(sf.getFilePath()));
+  const fileTotal = sourceFiles.length;
+
+  await report({ phase: "files", done: 0, total: fileTotal });
+
+  await report({ phase: "preparing", total: fileTotal });
   project.getTypeChecker();
 
-  const symbols = new Map<string, SymbolEntry[]>();
-
-  for (const sf of project.getSourceFiles()) {
-    if (isInNodeModules(sf.getFilePath())) continue;
+  for (let i = 0; i < sourceFiles.length; i++) {
+    const sf = sourceFiles[i];
+    const currentFile = path.basename(sf.getFilePath());
+    await report({
+      phase: "files",
+      done: i,
+      total: fileTotal,
+      currentFile,
+    });
     indexSourceFile(sf, symbols, project, folderRoot);
+  }
+
+  if (fileTotal > 0) {
+    await report({ phase: "files", done: fileTotal, total: fileTotal });
   }
 
   let symbolCount = 0;
   for (const list of symbols.values()) symbolCount += list.length;
 
+  await report({ phase: "references", filesTotal: fileTotal });
   const references = buildProjectReferences(project, symbols);
 
   return {

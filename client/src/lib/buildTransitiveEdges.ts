@@ -10,11 +10,6 @@ import type { Node } from "@xyflow/react";
 
 const WORD_RE = /\b([A-Za-z_][A-Za-z0-9_]*)\b/g;
 
-const HOP_OPACITY: Record<number, number> = {
-  2: 0.5,
-  3: 0.25,
-};
-
 function parseTraceToken(tokenKey: string): string | null {
   if (tokenKey.includes("::import::")) return null;
 
@@ -96,7 +91,6 @@ export function buildTransitiveEdges(
 
   for (let hop = 2; hop <= hopDepth; hop++) {
     const nextFrontier: string[] = [];
-    const opacity = HOP_OPACITY[hop] ?? 0.25;
 
     for (const token of frontier) {
       const sites = usageSiteIndex.get(token) ?? [];
@@ -124,7 +118,11 @@ export function buildTransitiveEdges(
           `transitive-${hop}-${siteKey}::${token}`,
         );
         const edge = buildUsagePreviewEdge(edgeId, resolved, chip, rootToken);
-        edges.push({ ...edge, hop, opacity });
+        edges.push({
+          ...edge,
+          connectionKind: "transitive",
+          hop,
+        });
       }
     }
 

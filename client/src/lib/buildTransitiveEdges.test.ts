@@ -260,6 +260,7 @@ describe("buildTransitiveEdges", () => {
     );
 
     expect(edges).toHaveLength(1);
+    expect(edges[0]?.connectionKind).toBe("transitive");
     expect(edges[0]?.hop).toBe(2);
 
     pane.remove();

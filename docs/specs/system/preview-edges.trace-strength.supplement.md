@@ -36,10 +36,11 @@ This supplement defines trace **strength** tiers and adds **Typesetting** as the
 | Tier | Name | Wire opacity (path) | Glow opacity | Endpoint chip | When |
 | ---- | ---- | ------------------- | ------------ | ------------- | ---- |
 | **1** | **Focus** | 100% (no hop class) | full | `token-chip-on` + semantic ink | Hovered/pinned token; direct 1-hop wire summoned by that token |
-| **2** | **Provenance** | ~42% (`preview-wire--hop2`) | ~6% | `token-chip-endpoint-sibling` + grey socket | One step backward in the provenance chain (see below) |
-| **3** | **Origin** | ~22% (`preview-wire--hop3`) | ~4% | `token-chip-endpoint-sibling` + grey socket | Two steps backward, or off-graph Load stub at the chain tail |
+| **2** | **Provenance** | `tracePathOpacity(2)` (~76% at maxDepth 5) | `traceGlowOpacity(2)` (~13%) | `trace-depth-faded` + semantic ink | One step from focus |
+| **3** | **Origin** | `tracePathOpacity(3)` (~54%) | `traceGlowOpacity(3)` (~9%) | `trace-depth-faded` + semantic ink | Two steps from focus |
+| **N** | **Distant** | `tracePathOpacity(N)` → floor at `--trace-depth-min-opacity` | scales with path | `trace-depth-faded` | Graph distance N from focus (up to `RELATIVE_MAX_DEPTH`) |
 
-**Normative scale:** tier 1 = full, tier 2 ≈ ½ perceived strength, tier 3 ≈ ¼ — reuse existing CSS classes; do **not** add per-edge hex opacity in JS.
+**Normative scale:** opacity decays with **graph distance** from the hovered token — not a fixed 3-tier enum. `client/src/lib/traceDepth.ts` computes path/glow opacity from depth and `maxDepth`; wires set inline `opacity`, chips/sockets/lines set `--trace-depth-opacity` via class `trace-depth-faded`.
 
 **Kind overrides strength hue, not tier:**
 
@@ -51,7 +52,7 @@ This supplement defines trace **strength** tiers and adds **Typesetting** as the
 | Control flow (`branch`) | `--edge-control-flow` | **No** — branch fan-out stays tier 1; kind color already separates it from usage |
 | Transitive (call-graph) | `--edge-usage` | Yes — existing `hop: 2|3` on `PreviewEdgeSpec` (unchanged) |
 
-**Lit vs wire:** Tier-2/3 endpoints receive `token-chip-lit` + hop class (`token-chip-hop2` / `token-chip-hop3`) with **full semantic ink** at reduced opacity — not grey `endpoint-sibling` wash. Sockets use the same semantic color at matching hop opacity.
+**Lit vs wire:** Distance-faded endpoints receive `token-chip-lit` + `trace-depth-faded` with **full semantic ink** at `--trace-depth-opacity` — not grey wash. Sockets use the same semantic color at matching opacity.
 
 ---
 
@@ -105,7 +106,8 @@ Tunable in `client/src/lib/lexicalGraph.ts` (consumed by `walkLexicalForward` / 
 | `TRACE_DEPTH_DOWN` / `RELATIVE_MAX_DEPTH` | 5 | Max hops **downstream** from a def (usages → bindings → member props) |
 | `TRACE_DEPTH_UP` / `BACKWARD_LEXICAL_MAX_DEPTH` | 5 | Max hops **upstream** from a usage |
 | `RELATIVE_FAN_OUT_CAP` | 24 | Max wires per relative walk |
-| `TRACE_VISUAL_HOP_MAX` | 3 | Opacity tiers (`hop: 2` ≈ half, `hop: 3` ≈ quarter) |
+
+**Unified depth → opacity:** `client/src/lib/traceDepth.ts` maps graph distance from the hover focus to `PreviewEdgeSpec.hop` (2…`RELATIVE_MAX_DEPTH`) and dynamic opacity via `tracePathOpacity` / `traceGlowOpacity`. Wires apply inline opacity; chips/sockets/lines use `--trace-depth-opacity`. Increasing `RELATIVE_MAX_DEPTH` (e.g. to 10) automatically extends both walk reach and the fade curve — no per-hop CSS classes.
 
 **Lexical graph edge kinds** (`buildLexicalGraph` from `MemberSymbolIndex`):
 
@@ -155,9 +157,9 @@ The sig-type chip is **not** a `localDefId` sibling of the param name — it is 
 
 ### `PreviewEdgeSpec` field
 
-Reuse `hop?: 2 | 3` on provenance segments (maps to `preview-wire--hop2` / `--hop3` via `previewWireClasses`). Tier 2 sig-type→param uses `connectionKind: "typesetting"`; tier 3 type-def→sig-type stays `connectionKind: "usage"`. Do **not** conflate with `connectionKind: "transitive"` — call-graph transitive keeps that kind label for legend bucketing.
+Reuse `hop?: number` on provenance segments (graph distance from focus; omitted at distance 1). Opacity is computed in `traceDepth.ts` — not via CSS hop classes. Tier 2 sig-type→param uses `connectionKind: "typesetting"`; tier 3 type-def→sig-type stays `connectionKind: "usage"`. Do **not** conflate with `connectionKind: "transitive"` — call-graph transitive keeps that kind label for legend bucketing.
 
-Optional explicit `traceStrength?: 1 | 2 | 3` MAY be added later for clarity; v1 maps `traceStrength 2 → hop 2`, `3 → hop 3`, omit field for tier 1.
+`TraceLitState.traceDepth` stores numeric distance per token key; `litLineDepth` for line context fade.
 
 ### Resolution — `AddressFieldKind` / module-level types
 
@@ -181,16 +183,17 @@ Indexed types in the same file as an on-canvas class (e.g. `export type AddressF
 | `wirePaths.ts` | `typesettingOrthogonalPath` — rounded-corner Manhattan for `connectionKind: "typesetting"` |
 | `codeLineTraceEdges.ts` | Merge cascade on inline signature param def/usage and body param usage |
 | `paramDefPreviewEdges.ts` | Merge cascade on param-def fan-out path |
-| `computeTraceLit.ts` | Apply tier-2/3 endpoint sets for sig-type + param def hosts |
-| `preview-wires.css` | `--typesetting` dash-dot + `preview-edge-typesetting`; reuse `hop` classes for strength |
+| `computeTraceLit.ts` | `traceDepth` / `litLineDepth` maps for endpoint fade |
+| `traceDepth.ts` | `tracePathOpacity`, `traceGlowOpacity` — depth → opacity curve |
+| `preview-wires.css` | `--typesetting` dash-dot + `preview-edge-typesetting`; wire opacity inline |
 
 ---
 
 ## Acceptance Criteria
 
 - [x] Given `field: AddressFieldKind` and a body usage of `field`, when the usage is hovered past dwell, then one tier-1 usage wire (param def → usage), one tier-2 **Typesetting** wire (sig-type → param def), and one tier-3 Usage wire (type def → sig-type or Load stub) are drawn.
-- [ ] Given the same trace, when rendered, then tier-2/3 wires are visibly weaker than tier-1 (reuse `preview-wire--hop2` / `--hop3`).
-- [ ] Given tier-2 sig-type endpoint, when lit, then chip uses `token-chip-endpoint-sibling` and socket uses `flow-anchor-endpoint-sibling`.
+- [ ] Given the same trace, when rendered, then distance-2+ wires/chips are visibly weaker than distance-1 (`tracePathOpacity` decay).
+- [ ] Given distance-2+ sig-type endpoint, when lit, then chip uses `trace-depth-faded` with semantic ink at `--trace-depth-opacity`.
 - [ ] Given hover on body usage only, when trace is active, then other usages of `field` do **not** receive usage wires (counts/menu unchanged).
 - [ ] Given hover on param def `field`, when trace is active, then every in-body usage has a tier-1 wire and the type chain appears at tier 2/3 behind the param.
 - [ ] Given direct hover on sig-type `GeocoderSearchResult` in the **header** or on the **inline signature line**, when trace fires, then tier-2 typesetting connects to the co-located `result` param on that same surface and tier-3 chained wires continue into the body (`result` → `result.address` → …).

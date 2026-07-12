@@ -112,21 +112,12 @@
 
 .connection-legend-demo {
   position: relative;
-  min-height: 6.75rem;
   height: auto;
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background-color: var(--background);
   background-size: 12px 12px;
-}
-
-.connection-legend-demo--split {
-  min-height: 7.25rem;
-}
-
-.connection-legend-demo--tall {
-  min-height: 9.25rem;
 }
 
 .connection-legend-demo--inactive {

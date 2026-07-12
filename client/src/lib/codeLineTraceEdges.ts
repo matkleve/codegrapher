@@ -13,11 +13,12 @@ import { bindingDefForInit, type MemberSymbolIndex } from "@/lib/localSymbolLink
 import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
 import { controlFlowAnchorFor } from "@/lib/controlFlowLinks";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { previewHopFromDepth } from "@/lib/traceDepth";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 import type { SymbolEntry, GraphData } from "@/types";
 import type { Node } from "@xyflow/react";
-import { buildBackwardLexicalRelatives } from "@/lib/defRelativePreviewEdges";
+import { buildBackwardLexicalRelatives, buildDefRelativePreviewEdges } from "@/lib/defRelativePreviewEdges";
 import {
   traceBindingInitCascadeEdges,
   traceSigTypeEdges,
@@ -80,6 +81,38 @@ function lexicalGraphFor(ctx: CodeLineTraceContext): LexicalGraph | null {
   if (ctx.lexicalGraph) return ctx.lexicalGraph;
   if (!ctx.methodCode || ctx.methodStartLine == null) return null;
   return buildLexicalGraph(ctx.symbolIndex, ctx.methodCode, ctx.methodStartLine);
+}
+
+function forwardLexicalRelativesForParamDef(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
+  const {
+    chipEl,
+    kind,
+    symbolIndex,
+    sourceFlowId,
+    memberId,
+    methodCode,
+    methodStartLine,
+    getNode,
+    edgeKey,
+  } = ctx;
+  const paramDefId = chipEl.dataset.localDefId;
+  if (!paramDefId?.includes("::param::") || !methodCode || methodStartLine == null) return [];
+  const classData = getClassNodeData(sourceFlowId, getNode);
+  if (!classData) return [];
+
+  return buildDefRelativePreviewEdges({
+    originDefId: paramDefId,
+    originEl: chipEl,
+    symbolIndex,
+    methodCode,
+    methodStartLine,
+    flowNodeId: sourceFlowId,
+    memberId,
+    classData,
+    kind,
+    edgeIdPrefix: edgeKey,
+    getNode,
+  });
 }
 
 function signatureTypeRelativeEdges(ctx: CodeLineTraceContext): PreviewEdgeSpec[] {
@@ -202,7 +235,10 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
   const localEdges = buildLocalPreviewEdges(chipEl, kind, edgeKey);
 
   if (bindingEdges.length > 0 && localEdges.length > 0) {
-    bindingEdges = bindingEdges.map((edge) => ({ ...edge, hop: 2 }));
+    const compoundHop = previewHopFromDepth(2);
+    bindingEdges = bindingEdges.map((edge) =>
+      compoundHop != null ? { ...edge, hop: compoundHop } : edge,
+    );
   }
 
   let bindingCascade: PreviewEdgeSpec[] = [];
@@ -295,16 +331,19 @@ export function assembleCodeLinePreviewEdges(ctx: CodeLineTraceContext): Preview
       : [];
 
   const backwardEdges = backwardLexicalEdges(ctx);
+  const forwardRelatives = isParamDefHost ? forwardLexicalRelativesForParamDef(ctx) : [];
 
   if (
     localEdges.length > 0 ||
     bindingEdges.length > 0 ||
     controlFlowEdges.length > 0 ||
     cascadeEdges.length > 0 ||
-    backwardEdges.length > 0
+    backwardEdges.length > 0 ||
+    forwardRelatives.length > 0
   ) {
     return [
       ...localEdges,
+      ...forwardRelatives,
       ...bindingEdges,
       ...bindingCascade,
       ...controlFlowEdges,

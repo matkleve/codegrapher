@@ -218,8 +218,7 @@ export function structuralMarkerId(arrowhead: StructuralArrowhead): WireMarkerId
 
 export function previewWireMarkerEnd(spec: PreviewEdgeSpec): WireMarkerId | null {
   if (spec.load) return null;
-  const kind =
-    spec.connectionKind ?? (spec.hop != null && spec.hop >= 2 ? "transitive" : "usage");
+  const kind = spec.connectionKind ?? "usage";
   switch (kind) {
     case "binding":
       return "wire-arrow-bar";
@@ -290,14 +289,6 @@ export function previewWireClasses(
   if (warm) {
     path.push("preview-edge-warm");
     glow.push("preview-edge-warm");
-  }
-  if (spec.hop === 2) {
-    path.push("preview-wire--hop2");
-    glow.push("preview-wire--hop2");
-  }
-  if (spec.hop === 3) {
-    path.push("preview-wire--hop3");
-    glow.push("preview-wire--hop3");
   }
 
   return { path, glow };
