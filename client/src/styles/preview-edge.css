@@ -67,7 +67,7 @@
   animation: proto-flow 700ms linear infinite;
 }
 
-.preview-edge-path.preview-edge-warm:not(.preview-edge-marching) {
+.preview-edge-path.preview-edge-warm:not(.preview-edge-marching):not(.connection-legend-swatch-line--animated) {
   animation: none;
 }
 

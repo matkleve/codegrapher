@@ -32,6 +32,8 @@ export type TokenConnectionMenuState = {
   kind: SemanticTokenKind;
   role: "usage" | "definition";
   anchor: { x: number; y: number; placement?: "above" | "below" };
+  /** Live source of `anchor` — re-measured each frame so the panel follows it. */
+  anchorEl: HTMLElement;
   variant: "hover" | "context";
   sections: ConnectionMenuSection[];
   contextFilePath?: string;
@@ -258,6 +260,7 @@ export function buildHoverLoadMenu(
     kind,
     role,
     anchor: hoverMenuAnchor(chipEl),
+    anchorEl: chipEl,
     variant: "hover",
     sections: hoverSectionsFromLoadTargets(token, kind, role, targets),
     contextFilePath,
@@ -281,6 +284,7 @@ export function buildContextMenu(
     kind,
     role,
     anchor: anchorBelowElement(chipEl),
+    anchorEl: chipEl,
     variant: "context",
     sections: nonEmpty,
     contextFilePath,

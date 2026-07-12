@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Code2, DownloadCloud } from "lucide-react";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
@@ -8,10 +8,12 @@ import { floatingPanelClass } from "@/components/ui/floatingPanel";
 import { ConnectionMenuRow } from "@/components/graph/ConnectionMenuRow";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useLoadTargetAction } from "@/hooks/useLoadTargetAction";
-import { useHoverMenuScrollDismiss } from "@/hooks/useHoverMenuPointer";
+import { useFollowedAnchor } from "@/hooks/useFollowedAnchor";
 import { useViewportAnchoredPosition } from "@/hooks/useViewportAnchoredPosition";
 import { openFileInEditor } from "@/api";
 import {
+  anchorAboveElement,
+  anchorBelowElement,
   type ConnectionMenuRow as ConnectionMenuRowData,
   type TokenConnectionMenuState,
 } from "@/lib/connectionMenu";
@@ -71,11 +73,18 @@ export function TokenConnectionMenuPanel({ menu, onClose }: TokenConnectionMenuP
   };
 
   const isHoverMenu = menu.variant === "hover";
-  useHoverMenuScrollDismiss(menu.variant, onClose);
+
+  const measureAnchor = useCallback(
+    (el: HTMLElement) =>
+      menu.anchor.placement === "above" ? anchorAboveElement(el) : anchorBelowElement(el),
+    [menu.anchor.placement],
+  );
+  const liveAnchor = useFollowedAnchor(menu.anchorEl, measureAnchor, onClose);
+  const anchor = liveAnchor ?? menu.anchor;
 
   const position = useViewportAnchoredPosition(
     panelRef,
-    menu.anchor,
+    anchor,
     {
       mode: "panel",
       gapBelow: isHoverMenu ? 12 : 6,
@@ -123,8 +132,8 @@ export function TokenConnectionMenuPanel({ menu, onClose }: TokenConnectionMenuP
       className={floatingPanelClass("fixed z-[62]", allRows.length === 1 ? "min-w-48" : undefined)}
       style={{
         width: MENU_WIDTH_PX,
-        left: position?.left ?? menu.anchor.x,
-        top: position?.top ?? menu.anchor.y + (isHoverMenu ? 12 : 6),
+        left: position?.left ?? anchor.x,
+        top: position?.top ?? anchor.y + (isHoverMenu ? 12 : 6),
         visibility: position ? "visible" : "hidden",
       }}
       onMouseEnter={cancelHoverLeaveGrace}
