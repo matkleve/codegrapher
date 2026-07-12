@@ -15,7 +15,7 @@ function loadEdge(hop?: number): PreviewEdgeSpec {
 }
 
 describe("primaryHoverLoadEdge", () => {
-  it("returns tier-1 load stub anchored on the hovered chip", () => {
+  it("returns hop-1 load stub anchored on the hovered chip", () => {
     const chip = document.createElement("span");
     const edge = loadEdge();
     edge.from = { type: "element", el: chip };

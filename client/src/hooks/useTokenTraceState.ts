@@ -100,18 +100,19 @@ export function useTokenTraceState(isCtrlActive: boolean) {
       return;
     }
 
-    const priorKey = lastTraceKeyRef.current;
-    const priorEdges = lastTraceEdgesRef.current;
-    if (
-      priorKey &&
-      priorKey !== tokenKey &&
-      priorEdges.length > 0 &&
-      !pinnedTracesRef.current.some((t) => t.tokenKey === priorKey)
-    ) {
-      setAnchorTrace((anchor) => anchor ?? { tokenKey: priorKey, edges: priorEdges });
-    } else if (!priorKey || priorKey === tokenKey) {
-      setAnchorTrace(null);
-    }
+    setAnchorTrace((anchor) => {
+      const priorKey = lastTraceKeyRef.current;
+      const priorEdges = lastTraceEdgesRef.current;
+      if (
+        priorKey &&
+        priorKey !== tokenKey &&
+        priorEdges.length > 0 &&
+        !pinnedTracesRef.current.some((t) => t.tokenKey === priorKey)
+      ) {
+        return { tokenKey: priorKey, edges: priorEdges };
+      }
+      return null;
+    });
 
     lastTraceKeyRef.current = tokenKey;
     lastTraceEdgesRef.current = edges;

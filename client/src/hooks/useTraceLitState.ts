@@ -16,7 +16,6 @@ type UseTraceLitStateArgs = {
   previewEdges: PreviewEdgeSpec[];
   hoverPreviewEdges: PreviewEdgeSpec[];
   pinnedTraces: PinnedTrace[];
-  anchorTrace: { tokenKey: string; edges: PreviewEdgeSpec[] } | null;
   pinnedTokenKeySet: ReadonlySet<string>;
   hoveredTokenKey: string | null;
   traceTokenKey: string | null;
@@ -37,7 +36,6 @@ export function useTraceLitState({
   previewEdges,
   hoverPreviewEdges,
   pinnedTraces,
-  anchorTrace,
   pinnedTokenKeySet,
   hoveredTokenKey,
   traceTokenKey,
@@ -75,19 +73,6 @@ export function useTraceLitState({
       activeHandleKinds.get(handle) ?? null,
     [activeHandleKinds],
   );
-
-  const anchorTraceLit = useMemo(() => {
-    if (!anchorTrace) return EMPTY_TRACE_LIT;
-    const cache = refineCacheRef.current;
-    cache.clear();
-    return computeTraceLit(
-      anchorTrace.tokenKey,
-      filterPreviewEdgesByVisibility(anchorTrace.edges, visibleEdgeKinds),
-      getNode,
-      cache,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute after DOM reveal, not read directly
-  }, [anchorTrace, getNode, revealRevision, registryRevision, visibleEdgeKinds]);
 
   const pinnedTraceLit = useMemo(() => {
     const cache = refineCacheRef.current;
@@ -133,8 +118,8 @@ export function useTraceLitState({
   ]);
 
   const traceLit = useMemo(
-    () => mergeTraceLit(mergeTraceLit(pinnedTraceLit, anchorTraceLit), hoverTraceLit),
-    [anchorTraceLit, hoverTraceLit, pinnedTraceLit],
+    () => mergeTraceLit(pinnedTraceLit, hoverTraceLit),
+    [hoverTraceLit, pinnedTraceLit],
   );
 
   useLayoutEffect(() => {

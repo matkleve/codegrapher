@@ -68,6 +68,25 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | Pin trigger Ctrl-click vs plain click | **Plain click** pins; Ctrl is reveal-only (dims keywords, instant hover). |
 | Per-edge wire tooltips | **Legend-only** — `ConnectionLegend` + jump tip on wire hit-zone; per-edge tooltip AC closed in `connection-taxonomy.md`. |
 | Keyboard focus trace | Focus on indexed token fires instant trace (no dwell); Enter pins. |
+| Trace strength stack undocumented (session/emphasis/backdrop) | **Spec sync 2026-07-12** — strength stack in trace-strength supplement + interaction-emphasis + playbook. |
+| `--trace-depth-opacity` in spec/tokens but inline opacity in code | **Documented** — inline `style.opacity` today; optional CSS var in refactor PR 7. |
+| "Tier 1/2/3" trace strength vs dynamic `tracePathOpacity` | **Resolved 2026-07-12** — docs/comments use **hop** / **graph distance**; tier was narrative shorthand only. |
+
+---
+
+## Open refactor (code, not product decision)
+
+Tracked in [trace-strength-refactor-plan.md](../project/trace-strength-refactor-plan.md):
+
+| PR | Topic | Status |
+| -- | ----- | ------ |
+| 2 | Glow single authority (`preview-edge.css` vs `traceWireOpacity`) | Open |
+| 3 | `TraceStrengthContext` replaces module globals | Open |
+| 4 | Split `traceTokenKey` vs `pointerTokenKey` | Open |
+| 5 | Merge boost functions in `traceLitController` | Open |
+| 6 | Wire subgraph emphasis (BFS) | Open |
+| 7 | Opacity emission unify (optional) | Open |
+| 8 | Visual regression AC verify | Open |
 
 ---
 

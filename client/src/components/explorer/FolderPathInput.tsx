@@ -24,7 +24,7 @@ export function FolderPathInput({
     <div
       className={cn(
         INTERACTIVE_SURFACE,
-        "relative min-w-0 flex-1 overflow-hidden rounded-lg bg-background",
+        "relative min-w-0 flex-1 overflow-hidden rounded-lg border border-border bg-background",
         "focus-within:border-brand-border focus-within:bg-brand-surface",
         disabled && "pointer-events-none opacity-50",
       )}

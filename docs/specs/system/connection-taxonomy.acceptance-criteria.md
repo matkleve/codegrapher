@@ -417,30 +417,30 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 
 | # | Trigger | System Response |
 | --- | ------- | --------------- |
-| 1 | Hover body usage of param `field: AddressFieldKind` | Tier 1 param→usage + tier 2 sig-type→param + tier 3 type def→sig-type (or Load stub) |
-| 2 | Hover param def `field` | Tier 1 fan-out to all usages + tier 2/3 type chain |
-| 3 | Hover sig-type only | Tier 1 only (no reverse cascade to usages) |
-| 4 | Same trace includes control-flow fan-out | Branch wires stay tier 1 `--edge-control-flow` |
+| 1 | Hover body usage of param `field: AddressFieldKind` | Hop 1 param→usage + hop 2 sig-type→param + hop 3 type def→sig-type (or Load stub) |
+| 2 | Hover param def `field` | Hop 1 fan-out to all usages + hop 2/3 type chain |
+| 3 | Hover sig-type only | Hop 1 only (no reverse cascade to usages) |
+| 4 | Same trace includes control-flow fan-out | Branch wires stay at distance 1 (`--edge-control-flow`, no hop decay) |
 
 ### Data
 
 | Field | Value |
 | ----- | ----- |
-| Tier 1 opacity | 100% (no hop class) |
-| Tier 2 opacity | ~42% (`preview-wire--hop2`) |
-| Tier 3 opacity | ~22% (`preview-wire--hop3`) |
-| Kind | Usage (`--edge-usage`) for tier 3 type def→sig-type; **Typesetting** (`--edge-typesetting`) for tier 2 sig-type→param |
-| Endpoint tier 2/3 | `token-chip-endpoint-sibling` + `flow-anchor-endpoint-sibling` |
+| Distance 1 opacity | 100% (`hop` omitted; `tracePathOpacity(1)`) |
+| Distance 2 opacity | `tracePathOpacity(2)` (~76% at maxDepth 5) |
+| Distance 3 opacity | `tracePathOpacity(3)` (~54% at maxDepth 5) |
+| Kind | Usage (`--edge-usage`) for hop 3 type def→sig-type; **Typesetting** (`--edge-typesetting`) for hop 2 sig-type→param |
+| Endpoint hop ≥ 2 | `token-chip-endpoint-sibling` + `flow-anchor-endpoint-sibling` |
 | Sibling usages on single-usage hover | Lit optional; **no** extra usage wires |
 
 ### Acceptance Criteria
 
-- [x] Body usage hover draws three-tier provenance chain when param has indexed type
-- [x] Tier 2/3 wires visibly weaker than tier 1
-- [x] Param def fan-out keeps all usage wires at tier 1; type chain at tier 2/3
+- [x] Body usage hover draws three-hop provenance chain when param has indexed type
+- [x] Hop ≥ 2 wires visibly weaker than hop 1
+- [x] Param def fan-out keeps all usage wires at hop 1; type chain at hop 2/3
 - [x] Cascaded Load stub does not open a second connection menu
 - [ ] Load of module-level type alias mounts graph node and upgrades stub on rebuild — verify manually after Load
-- [x] Provenance tier 2 uses `connectionKind: "typesetting"`; tier 3 stays Usage
+- [x] Provenance hop 2 uses `connectionKind: "typesetting"`; hop 3 stays Usage
 - [x] Control-flow wires in same trace are not decayed
 - [x] Call-graph transitive `hop` does not set `connectionKind: "transitive"` on typesetting edges
 
@@ -450,15 +450,15 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 
 **Status:** `implemented`
 
-**What it is:** On-demand dash-dot preview wire from a signature **type annotation chip** to the **param def slot** it types (e.g. `GeocoderSearchResult` → `result` in `result: GeocoderSearchResult`). Static typing — distinct from Binding (runtime initializer → slot) and Usage tier 3 (type def → sig-type chip).
+**What it is:** On-demand dash-dot preview wire from a signature **type annotation chip** to the **param def slot** it types (e.g. `GeocoderSearchResult` → `result` in `result: GeocoderSearchResult`). Static typing — distinct from Binding (runtime initializer → slot) and Usage hop 3 (type def → sig-type chip).
 
 ### Actions
 
 | # | Trigger | System Response |
 | --- | ------- | --------------- |
-| 1 | Hover/pin param def with indexed sig-type | Tier 2 typesetting wire sig-type → param def |
-| 2 | Hover/pin body usage of same param | Same tier 2 typesetting wire in provenance cascade |
-| 3 | Hover/pin sig-type chip only | No reverse typesetting wire to param (tier 1 usage to type def only) |
+| 1 | Hover/pin param def with indexed sig-type | Hop 2 typesetting wire sig-type → param def |
+| 2 | Hover/pin body usage of same param | Same hop 2 typesetting wire in provenance cascade |
+| 3 | Hover/pin sig-type chip only | No reverse typesetting wire to param (hop 1 usage to type def only) |
 
 ### Data
 
@@ -469,16 +469,16 @@ Hovering `switch` or `field` fans out to `case 'city'`, `case 'district'`, and `
 | Color | `--edge-typesetting` (alias of `--token-edge-type`) |
 | Line | Dash-dot (`5 3 1 3`) on **rounded orthogonal** path (`TYPESETTING_CORNER_RADIUS` = 6px) |
 | Arrowhead | Open |
-| Strength | Tier 2 (`hop: 2`) in provenance cascade |
-| Builder | `buildParamTypeCascadeEdges` tier 2 segment |
+| Strength | Hop 2 (`hop: 2`) in provenance cascade |
+| Builder | `buildParamTypeCascadeEdges` hop 2 segment |
 
 ### Acceptance Criteria
 
 - [x] Param def hover draws typesetting wire when param has indexed type on signature
-- [x] Body usage hover includes typesetting wire at tier 2 in provenance chain
+- [x] Body usage hover includes typesetting wire at hop 2 in provenance chain
 - [x] Typesetting uses dedicated hue and dash-dot on **rounded orthogonal** paths — visually distinct from Usage and Binding
 - [x] Legend **Typesetting** toggle hides only typesetting wires
-- [x] Tier 3 type def→sig-type remains Usage kind
+- [x] Hop 3 type def→sig-type remains Usage kind
 
 ---
 

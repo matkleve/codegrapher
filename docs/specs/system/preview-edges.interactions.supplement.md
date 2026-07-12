@@ -115,8 +115,8 @@ flowchart TB
 | Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
 | Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
 | Property in a `a.b.c` chain | `buildReceiverCascadeEdges` (merged with the property's own edges, if any) | Own edge (0 or 1) + 1 per resolvable receiver leftward in the chain |
-| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Tier 1 Usage: param def → usage; tier 2 **Typesetting**: sig-type → param def; tier 3 Usage: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
-| Param def in signature (fan-out) | `buildParamDefPreviewEdges` + type cascade | Tier 1: def → each usage; tier 2/3: type chain behind param |
+| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Hop 1 Usage: param def → usage; hop 2 **Typesetting**: sig-type → param def; hop 3 Usage: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
+| Param def in signature (fan-out) | `buildParamDefPreviewEdges` + type cascade | Hop 1: def → each usage; hop 2/3: type chain behind param |
 
 **Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
 
@@ -154,7 +154,7 @@ flowchart LR
 | Binding def → later reference | Usage | def → usage | `buildLocalPreviewEdges` |
 | Initializer expr → bound name | **Binding** | initializer → binding | `buildBindingPreviewEdges` |
 | Param def → reference in body | Usage | def → usage | `buildParamDefPreviewEdges` / local |
-| Sig-type chip → param def slot | **Typesetting** | type annotation → param | `buildParamTypeCascadeEdges` (tier 2) |
+| Sig-type chip → param def slot | **Typesetting** | type annotation → param | `buildParamTypeCascadeEdges` (hop 2) |
 
 **Normative — binding vs usage vs typesetting:** Usage answers "where is this name referenced later?" Binding answers "where does this binding get its value on the declaring line?" Typesetting answers "which type annotates this param slot?" — static typing, not runtime value flow. Each MUST have its own `ConnectionKind` and legend toggle.
 
@@ -221,7 +221,7 @@ Each `ConnectionLegend` row toggles exactly one `ConnectionKind` in `visibleEdge
 | ------------ | ------- | ------------------- |
 | Usage | Indexed + local def→usage preview, transitive decay wires | Binding, typesetting, control flow, structural |
 | Binding | Initializer→binding preview wires | Usage fan-out, typesetting, control flow, structural |
-| Typesetting | Sig-type→param def preview wires (provenance tier 2) | Usage, Binding, control flow, structural |
+| Typesetting | Sig-type→param def preview wires (provenance hop 2) | Usage, Binding, control flow, structural |
 | Control flow | `switch`/`if` branch fan-out wires | Usage, Binding, typesetting, structural |
 | Inheritance | Persistent `extends` structural wires | Preview wires of any kind |
 | Implementation | Persistent `implements` structural wires | Preview wires |

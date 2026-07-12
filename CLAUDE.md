@@ -15,6 +15,7 @@ onto the canvas to merge them in.
 - React layout: `docs/agent-playbook/frameworks/react.md`
 - Restructure backlog: `docs/project/restructure-plan.md`
 - Key system specs: `docs/specs/system/preview-edges.md`, `ego-graph-model.md`, `interaction-emphasis.md`
+- Trace strength stack (portable): `docs/agent-playbook/core/visual-strength-stacks.md`; refactor plan: `docs/project/trace-strength-refactor-plan.md`
 - Governance: `docs/specs/GOVERNANCE-MATRIX.md`
 
 When behavior changes, update the owning spec in the same change.

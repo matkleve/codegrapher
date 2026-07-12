@@ -33,7 +33,7 @@ type RefinePreviewEdgeCache = ReturnType<typeof createRefinePreviewEdgeCache>;
 export type TraceLitState = {
   litTokenKeys: ReadonlySet<string>;
   endpointTokenKeys: ReadonlySet<string>;
-  /** Provenance tier 2/3 endpoints — grey sibling chip + socket. */
+  /** Provenance hop ≥ 2 endpoints — grey sibling chip + socket. */
   siblingEndpointTokenKeys: ReadonlySet<string>;
   /** Strongest (closest) graph distance per token key — mirrors wire hop decay. */
   traceDepth: ReadonlyMap<string, number>;

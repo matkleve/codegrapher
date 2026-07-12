@@ -59,7 +59,7 @@ describe("paramNameFromDefId", () => {
 });
 
 describe("buildParamTypeCascadeEdges", () => {
-  it("emits tier-2 sig-type→param and tier-3 Load stub when type is off canvas", () => {
+  it("emits hop-2 sig-type→param and hop-3 Load stub when type is off canvas", () => {
     const pane = document.createElement("div");
     pane.className = "graph-pane";
     document.body.appendChild(pane);

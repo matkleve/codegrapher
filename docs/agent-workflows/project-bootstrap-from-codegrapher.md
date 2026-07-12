@@ -185,6 +185,7 @@ Feldpost adds `docs/specs/ui/`, JSON governance registries, and automated tracea
 | Lint + rule | `lint:tokens` + `.cursor/rules/tailwind-tokens-only.mdc` |
 
 Add `docs/specs/system/interaction-emphasis.md` when brand-hover vs action-primary matters.
+Copy the portable strength-stack pattern from `docs/agent-playbook/core/visual-strength-stacks.md` when adding trace, map highlight, or drill-down dim layers.
 
 ---
 

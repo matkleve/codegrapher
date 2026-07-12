@@ -74,6 +74,7 @@ Testable checkboxes. Prefer Given–When–Then or EARS for interaction specs.
 ```markdown
 ## Interaction emphasis
 - Canonical: docs/design/state-visuals.md
+- Multi-layer trace/highlight: docs/agent-playbook/core/visual-strength-stacks.md
 - [ ] This component uses brand hover (or documents exception below)
 ```
 

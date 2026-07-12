@@ -55,7 +55,7 @@ Split strategy: specs → [spec-format.md](../agent-playbook/core/spec-format.md
 
 - **Preview edges:** [system/preview-edges.md](system/preview-edges.md) · [interactions supplement](system/preview-edges.interactions.supplement.md) (mermaid)
 - **Ego-graph philosophy:** [system/ego-graph-model.md](system/ego-graph-model.md)
-- **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md)
+- **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md) · strength stack playbook: [visual-strength-stacks.md](../agent-playbook/core/visual-strength-stacks.md)
 - **Keyword interactions:** [system/token-interactions.md](system/token-interactions.md) · use cases: [design/token-interaction-use-cases.md](../design/token-interaction-use-cases.md)
 - **Graph chrome:** [component/graph-chrome.md](component/graph-chrome.md) — legend, connection menu, path highlight
 - **Symbol index:** [service/parser-index.md](service/parser-index.md)

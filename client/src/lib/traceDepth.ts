@@ -3,16 +3,16 @@ import { RELATIVE_MAX_DEPTH } from "@/lib/lexicalGraph";
 /** Floor opacity at `maxDepth` — keep in sync with `--trace-depth-min-opacity` in theme CSS. */
 export const TRACE_DEPTH_MIN_OPACITY = 0.2;
 
-/** Lit tier-1 chips/wires dimmed only while pointer emphasizes another trace member. */
+/** Lit distance-1 chips/wires dimmed only while pointer emphasizes another trace member. */
 export const TRACE_UNINVOLVED_IN_TRACE = 0.68;
 
 /** Non-emphasized wires recede while pointer is on a direct branch. */
-export const TRACE_WIRE_BACKDROP_PATH_OPACITY = 0.5;
-export const TRACE_WIRE_BACKDROP_GLOW_OPACITY = 0.08;
+export const TRACE_WIRE_BACKDROP_PATH_OPACITY = 0.36;
+export const TRACE_WIRE_BACKDROP_GLOW_OPACITY = 0.05;
 
 /** Wire path + glow when pointer is on the wire or its endpoint chip. */
 export const TRACE_WIRE_EMPHASIS_PATH_OPACITY = 1;
-export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.36;
+export const TRACE_WIRE_EMPHASIS_GLOW_OPACITY = 0.58;
 
 /** Power curve for provenance decay during a committed trace. */
 export const TRACE_DEPTH_CURVE = 1.25;
@@ -26,7 +26,7 @@ export const TRACE_EMPHASIS_MIN_OPACITY = 0.44;
 /** Glow opacity ≈ path opacity × ratio at provenance distances. */
 export const TRACE_GLOW_PATH_RATIO = 0.172;
 export const TRACE_GLOW_EMPHASIS_RATIO = 0.28;
-export const TRACE_GLOW_BASELINE_RATIO = 0.16;
+export const TRACE_GLOW_BASELINE_RATIO = 0.13;
 
 export type TraceStrengthMode = "baseline" | "emphasis";
 

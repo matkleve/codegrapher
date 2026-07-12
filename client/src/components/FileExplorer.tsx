@@ -89,7 +89,7 @@ export default function FileExplorer({
           >
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="icon"
               onClick={handleBrowse}
               disabled={folderBusy}

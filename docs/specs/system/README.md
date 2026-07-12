@@ -7,8 +7,8 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 - [ego-graph-model](ego-graph-model.md) — incremental graph philosophy and loading semantics
 - [preview-edges](preview-edges.md) — token hover, Ctrl reveal, pinning, timing
 - [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, anchors, pin lock, live retarget
-- [preview-edges.trace-strength.supplement](preview-edges.trace-strength.supplement.md) — provenance hop decay (usage → param → type), **Typesetting** kind, sibling endpoint emphasis
-- [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim modes
+- [preview-edges.trace-strength.supplement](preview-edges.trace-strength.supplement.md) — provenance hop decay + **strength stack** (session × pointer × distance)
+- [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim + pointer emphasis
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map
 - [connection-taxonomy](connection-taxonomy.md) — connection kinds (usage, binding, **typesetting**, control flow, structural, transitive, …) and visual language · [per-kind AC](connection-taxonomy.acceptance-criteria.md) · [accessibility matrix](../../design/accessibility.md)
 - [execution-simulator](execution-simulator.md) — **Option A static walk implemented** (step-into/out deferred) · variable panel, playback controls

@@ -222,7 +222,6 @@ export function GraphInteractionProvider({
     previewEdges: edges.previewEdges,
     hoverPreviewEdges: trace.hoverPreviewEdges,
     pinnedTraces: trace.pinnedTraces,
-    anchorTrace: trace.anchorTrace,
     pinnedTokenKeySet: trace.pinnedTokenKeySet,
     hoveredTokenKey: trace.hoveredTokenKey,
     traceTokenKey: trace.traceTokenKey,

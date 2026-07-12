@@ -93,7 +93,7 @@ stateDiagram-v2
 | `resolveLiveAnchor.ts` | Per-frame anchor upgrade |
 | `localDefLinks.ts` | Def fan-out + usage site pairs (`linksForElement`) |
 | `buildDefinitionPreviewEdges.ts` | Definition fan-out + off-canvas Load stubs |
-| `paramTypeCascadeEdges.ts` | Param usage/def → sig-type provenance (tier 2 Typesetting, tier 3 Usage) |
+| `paramTypeCascadeEdges.ts` | Param usage/def → sig-type provenance (hop 2 Typesetting, hop 3 Usage) |
 | `wirePaths.ts` | Path geometry: cubic vs orthogonal vs rounded typesetting |
 | `bindingPreviewEdges.ts` / `controlFlowPreviewEdges.ts` | Binding and branch wires |
 | `preview-wires.css` | Wires, sockets |

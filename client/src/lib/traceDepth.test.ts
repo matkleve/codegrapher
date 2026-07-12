@@ -22,12 +22,12 @@ describe("traceDepth", () => {
     expect(depthFromHop(4)).toBe(4);
   });
 
-  it("keeps committed trace at full tier-1 strength", () => {
+  it("keeps committed trace at full distance-1 strength", () => {
     expect(tracePathOpacity(1, 5, "baseline")).toBe(1);
-    expect(traceGlowOpacity(1, 5, "baseline")).toBeGreaterThan(0.15);
+    expect(traceGlowOpacity(1, 5, "baseline")).toBeGreaterThan(0.12);
   });
 
-  it("dims only uninvolved tier-1 members during pointer emphasis", () => {
+  it("dims only uninvolved distance-1 members during pointer emphasis", () => {
     expect(tracePathOpacity(1, 5, "emphasis")).toBe(TRACE_UNINVOLVED_IN_TRACE);
     expect(TRACE_UNINVOLVED_IN_TRACE).toBeLessThan(1);
   });
@@ -58,7 +58,8 @@ describe("traceDepth", () => {
     const backdrop = traceWireOpacity(1, 5, false, true);
     const baseline = traceWireOpacity(1, 5, false, false);
     expect(emphasized.path).toBe(1);
-    expect(emphasized.glow).toBeGreaterThan(backdrop.glow);
+    expect(emphasized.glow).toBeGreaterThanOrEqual(0.58);
+    expect(emphasized.glow).toBeGreaterThan(baseline.glow * 2);
     expect(backdrop.path).toBeLessThan(baseline.path);
   });
 });

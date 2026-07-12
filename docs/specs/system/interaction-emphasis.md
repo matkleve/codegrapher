@@ -32,6 +32,7 @@ flowchart TB
 
 - **Ctrl** (hold): `graph-ctrl-preview` — syntax to `--faint-ctrl`, shimmer on indexed chips. Does not start a trace.
 - **Hover** (dwell on chip, with or without Ctrl): `graph-trace-active` — wires, `token-chip-lit` / `token-chip-on` / `token-chip-hover-preview`. Ctrl only shortens dwell; releasing Ctrl does not clear an active hover trace.
+- **Pointer emphasis** (within an active trace): optional second layer when the cursor rests on a specific chip or wire — emphasized branch pops (full wire glow, `token-chip-hover-preview` on pointer endpoint); other trace wires recede (backdrop). **Does not** clear or weaken the committed trace when the pointer leaves a card. See [trace-strength supplement](preview-edges.trace-strength.supplement.md) § Strength stack.
 - **Focused** (click pin): `graph-trace-pinned` + `token-chip-source` — anchor trace; foreign hover still runs dwell preview on other tokens.
 
 ## Actions
@@ -52,13 +53,30 @@ flowchart TB
 | Token chip text | `--faint` | semantic `--token-edge-*` | semantic `--token-edge-*` on hover |
 | Token background | transparent | `token-chip-on` semantic fill, **no border** | same semantic fill on hover |
 | Local-def sibling endpoint | — | `token-chip-endpoint-sibling` grey chip-on + grey socket (same geometry as focus) | — |
-| Provenance tier 2/3 endpoint (sig-type, param def when usage is focus) | — | `token-chip-endpoint-sibling` + grey socket | — |
+| Provenance hop ≥ 2 endpoint (sig-type, param def when usage is focus) | — | `token-chip-endpoint-sibling` + grey socket | — |
 | Node card header | card white | card white | card white |
 | Member row (lit) | `--member-row-trace-lit-bg` + inset function-blue border | `trace-member-lit` | per trace lit set |
 | Member row (dim, trace on) | `bg-muted` at rest; trace dims non-lit rows | no lit class | non-lit rows while trace active |
 | FlowAnchor socket | hidden | semantic fill + crisp ring | hidden unless endpoint |
 
 Ctrl always wins back shimmer: holding Ctrl shimmers every indexed token regardless of trace/pin state; only a *plain* (no-Ctrl) hover or pin suppresses shimmer (`trace-modes.css`, scoped via `.graph-pane:not(.graph-ctrl-preview) .graph-trace-active`).
+
+## Pointer emphasis within trace (normative)
+
+When a trace session is active (`graph-trace-active` or pinned), pointer position can add a **second** strength layer on top of hop decay. Full wire/chip tables: [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md) § Strength stack. Portable pattern: [visual-strength-stacks.md](../../agent-playbook/core/visual-strength-stacks.md).
+
+| # | Condition | Chips | Wires |
+| --- | --------- | ----- | ----- |
+| 1 | Trace session, pointer not on chip/wire | Lit = semantic + hop opacity; non-lit = `--faint` | Hop decay via `traceWireOpacity` baseline |
+| 2 | Pointer on chip (emphasis) | Pointer chip = `token-chip-hover-preview`; **other lit chips = trace baseline** | Touching wires = emphasis glow; others = backdrop |
+| 3 | Pointer on wire hit-zone | Endpoint chips boosted | That wire = emphasis; siblings = backdrop |
+| 4 | Pointer leaves class card | **No change** to session strength | Same as row 1–3 by pointer state |
+
+**Chip hover fill:** `token-chip-hover-preview` uses a **stronger** semantic wash than `token-chip-on` (pointer pop during emphasis). `token-chip-on` remains the committed trace fill.
+
+**Dim rule unchanged:** non-lit tokens dim via `--faint` ink only — no container opacity wash on code lines.
+
+**Planned refactor:** split `traceTokenKey` (session) from `pointerTokenKey` (emphasis) — [trace-strength-refactor-plan.md](../../project/trace-strength-refactor-plan.md) PR 4.
 
 **`graph-trace-warm`:** set on `.graph-pane` while `isWarm` is true (pointer has committed at least one dwell trace this session). Tier B snaps ink/fill inside cards (`transition-duration: 0s`), but endpoint **socket dots** may use a short Tier-A transition while warm so sockets ease in when hopping token→token (`preview-wires.css` `.graph-trace-warm .flow-anchor-on`). Disabled under `prefers-reduced-motion`.
 
@@ -103,12 +121,17 @@ index.css (.hoverable)
 | `tokens-chips.css` | Resting ink, chip-on, pinned lock |
 | `trace-modes.css` | Dim, lit, Ctrl shimmer |
 | `preview-wires.css` | Sockets, preview wires |
+| `client/src/lib/traceLitApply.ts` | Chip/socket inline opacity during trace |
+| `client/src/lib/wireHoverBoost.ts` | Session + pointer strength (rAF) |
 
 ## Acceptance Criteria
 
 - [ ] New clickables use `.hoverable` or `controlTokens` — not `hover:bg-primary`
 - [ ] JS/SVG colors via CSS variables in `style`
 - [ ] Trace dim is color-only — no container opacity / bg wash on code
+- [ ] Pin or dwell trace: strength unchanged when pointer leaves class card
+- [ ] Pointer emphasis: lit endpoints stay at trace baseline; only pointer target gets hover-preview pop
+- [ ] Pointer on wire: emphasized wire visibly stronger than non-touching trace wires
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state
@@ -119,5 +142,7 @@ index.css (.hoverable)
 ## References
 
 - Preview trace: [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- Trace strength stack: [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
+- Refactor plan: [trace-strength-refactor-plan.md](../../project/trace-strength-refactor-plan.md)
 - Design: [docs/design/state-visuals.md](../../design/state-visuals.md)
 - Tokens: [docs/design/tokens.md](../../design/tokens.md)

@@ -8,6 +8,16 @@
   border: 1px solid transparent;
 }
 
+/* Rest border on chrome controls — .hoverable transparent shorthand beats Tailwind utilities */
+.hoverable.border-border {
+  border-color: var(--border);
+}
+
+.hoverable.border-border:focus-within {
+  background-color: var(--brand-surface);
+  border-color: var(--brand-border);
+}
+
 .hoverable svg,
 .hoverable [data-icon] {
   transition:
