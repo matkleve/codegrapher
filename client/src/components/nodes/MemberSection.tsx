@@ -24,10 +24,11 @@ export function MemberSection({
     <section className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <InteractiveListRow
+          variant="graphChrome"
           density="compact"
           title={label}
           contentTone="muted"
-          className="member-section-toggle member-section-label nodrag min-w-0 flex-1"
+          className="nodrag min-w-0 flex-1"
           leading={<ExpandChevron expanded={expanded} className="text-muted-foreground" />}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
@@ -36,11 +37,12 @@ export function MemberSection({
           }}
         />
         <InteractiveListRow
+          variant="graphChrome"
           density="compact"
           title={bulkActionLabel}
           contentTone="muted"
           fullWidth={false}
-          className="member-section-bulk nodrag shrink-0"
+          className="nodrag shrink-0"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();

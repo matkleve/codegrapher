@@ -24,13 +24,12 @@ function JumpChoiceRow({
     <InteractiveListRow
       density="plain"
       title={choice.label}
-      className="text-caption font-medium"
       leading={
         <>
           <span className="font-bold text-brand" aria-hidden>
             ↳
           </span>
-          <span>Jump to</span>
+          <span className="control-row-text-secondary">Jump to</span>
           <SemanticConnectionDot kind={choice.kind} />
         </>
       }

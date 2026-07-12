@@ -144,7 +144,6 @@ function TokenConnectionMenuPanel({
               <li key={action.id}>
                 <InteractiveListRow
                   title={action.label}
-                  className="w-full"
                   onClick={() => {
                     action.onSelect();
                     onClose();
@@ -167,7 +166,6 @@ function TokenConnectionMenuPanel({
             <InteractiveListRow
               title={`Load all · ${loadRows.length}`}
               leading={<DownloadCloud className="size-3.5 shrink-0" aria-hidden />}
-              className="w-full font-medium"
               onClick={handleLoadAll}
             />
           </div>

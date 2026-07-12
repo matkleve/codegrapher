@@ -1,8 +1,6 @@
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
-import {
-  InteractiveListRow,
-  SemanticConnectionDot,
-} from "@/components/ui/InteractiveListRow";
+import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import type { ConnectionMenuRow as ConnectionMenuRowData } from "@/lib/connectionMenu";
 
 const ACTION_LABEL: Record<ConnectionMenuRowData["action"], string> = {
@@ -22,12 +20,7 @@ export function ConnectionMenuRow({ row, onSelect }: ConnectionMenuRowProps) {
       title={row.primaryLabel}
       subtitle={row.secondaryLabel}
       actionLabel={ACTION_LABEL[row.action]}
-      leading={
-        <>
-          <SemanticConnectionDot kind={row.kind} />
-          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-        </>
-      }
+      leading={<ConnectionTargetLeading kind={row.kind} />}
       onClick={onSelect}
     />
   );

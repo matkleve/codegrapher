@@ -38,8 +38,7 @@
 
 /* ── Ctrl mode: dampen the rest, reveal every clickable, shimmer ── */
 .graph-pane.graph-ctrl-preview .member-body-wrap,
-.graph-pane.graph-ctrl-preview .member-section-label,
-.graph-pane.graph-ctrl-preview .member-section-bulk,
+.graph-pane.graph-ctrl-preview .list-row-graph-chrome,
 .graph-pane.graph-ctrl-preview .node-card-caret,
 .graph-pane.graph-ctrl-preview .member-row-caret,
 .graph-pane.graph-ctrl-preview .file-type-chip,
@@ -135,8 +134,7 @@
 }
 
 .graph-pane.graph-ctrl-preview .graph-trace-active .member-body-wrap,
-.graph-pane.graph-ctrl-preview .graph-trace-active .member-section-label,
-.graph-pane.graph-ctrl-preview .graph-trace-active .member-section-bulk,
+.graph-pane.graph-ctrl-preview .graph-trace-active .list-row-graph-chrome,
 .graph-pane.graph-ctrl-preview .graph-trace-active .node-card-caret,
 .graph-pane.graph-ctrl-preview .graph-trace-active .member-row-caret,
 .graph-pane.graph-ctrl-preview .graph-trace-active .file-type-chip {

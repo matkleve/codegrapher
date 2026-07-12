@@ -2,10 +2,8 @@ import { Separator } from "@/components/ui/separator";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { Codicon } from "@/lib/fileIcons";
 import { ExplorerTreeGuide, FileTreeItem } from "@/components/explorer/FileTree";
-import { EXPLORER_SECTION_ROW } from "@/components/explorer/explorerRowStyles";
 import { fileDisplayName } from "@/lib/recentFiles";
 import { isFileInGraph } from "@/lib/graphFiles";
-import { cn } from "@/lib/utils";
 
 type RecentFilesSectionProps = {
   files: string[];
@@ -28,11 +26,11 @@ export function RecentFilesSection({
   return (
     <section className="pointer-events-auto relative shrink-0">
       <InteractiveListRow
+        variant="explorerSection"
         density="compact"
         title="Recent"
         contentTone="muted"
         aria-expanded={open}
-        className={cn(EXPLORER_SECTION_ROW, "py-0 font-medium")}
         leading={
           <Codicon
             name={open ? "codicon-chevron-down" : "codicon-chevron-right"}

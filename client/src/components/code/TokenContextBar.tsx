@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Code2, Crosshair, X } from "lucide-react";
-import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { Button } from "@/components/ui/button";
+import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
 import {
   InteractiveListRow,
   SemanticConnectionDot,
@@ -276,14 +276,10 @@ export function TokenContextBar() {
               ? callSites.map((site, idx) => (
                   <li key={`c-${site.filePath}-${site.line}-${idx}`}>
                     <InteractiveListRow
+                      hoverStyle="neutral"
                       title={fileBaseName(site.filePath)}
                       subtitle={`line ${site.line}${site.inGraph ? " · on canvas" : ""}`}
-                      leading={
-                        <>
-                          <SemanticConnectionDot kind={kind} />
-                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                        </>
-                      }
+                      leading={<ConnectionTargetLeading kind={kind} />}
                       onClick={() => loadTarget(site.filePath)}
                     />
                   </li>
@@ -293,18 +289,14 @@ export function TokenContextBar() {
               ? graphRefs.map((ref, idx) => (
                   <li key={`g-${ref.filePath}-${ref.line}-${idx}`}>
                     <InteractiveListRow
+                      hoverStyle="neutral"
                       title={
                         ref.memberLabel
                           ? `${ref.classLabel} → ${ref.memberLabel}`
                           : ref.classLabel
                       }
                       subtitle={`line ${ref.line}`}
-                      leading={
-                        <>
-                          <SemanticConnectionDot kind={ref.kind} />
-                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                        </>
-                      }
+                      leading={<ConnectionTargetLeading kind={ref.kind} />}
                       onClick={() => {
                         clearTokenInfo();
                         focusFlowNode(ref.flowNodeId!);
@@ -317,14 +309,10 @@ export function TokenContextBar() {
               ? externalRefs.map((ref, idx) => (
                   <li key={`x-${ref.filePath}-${ref.line}-${idx}`}>
                     <InteractiveListRow
+                      hoverStyle="neutral"
                       title={ref.classLabel}
                       subtitle={`line ${ref.line}`}
-                      leading={
-                        <>
-                          <SemanticConnectionDot kind={ref.kind} />
-                          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-                        </>
-                      }
+                      leading={<ConnectionTargetLeading kind={ref.kind} />}
                       onClick={() => loadTarget(ref.filePath)}
                     />
                   </li>

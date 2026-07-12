@@ -242,14 +242,13 @@ export function ConnectionLegend({
               return (
                 <li key={kind}>
                   <InteractiveListRow
-                    interactive
                     density="compact"
                     hoverStyle="neutral"
-                    contentTone={visible ? "default" : "muted"}
+                    tone={visible ? "default" : "passive"}
+                    emphasis={firing ? "live" : "default"}
                     className={cn(
                       "connection-legend-row",
-                      firing && "connection-legend-row--live",
-                      focused && "connection-legend-row--focused",
+                      focused && "list-row-legend-focused",
                     )}
                     title={CONNECTION_KIND_LABEL[kind]}
                     aria-pressed={visible}

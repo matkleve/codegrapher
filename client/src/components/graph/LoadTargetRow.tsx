@@ -1,8 +1,5 @@
-import { VscodeFileIcon } from "@/components/VscodeFileIcon";
-import {
-  InteractiveListRow,
-  SemanticConnectionDot,
-} from "@/components/ui/InteractiveListRow";
+import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { fileBaseName, type LoadTargetItem } from "@/lib/loadTargets";
 import type { SemanticTokenKind } from "@/lib/tokenColors";
 
@@ -34,12 +31,7 @@ export function LoadTargetRow({
     <InteractiveListRow
       title={title}
       subtitle={subtitleParts.join(" · ")}
-      leading={
-        <>
-          <SemanticConnectionDot kind={kind} />
-          <VscodeFileIcon icon="file-type-typescript-official" size={14} />
-        </>
-      }
+      leading={<ConnectionTargetLeading kind={kind} />}
       onClick={onSelect}
     />
   );

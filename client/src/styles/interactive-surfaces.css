@@ -88,59 +88,38 @@
   color: var(--muted-foreground);
 }
 
-/* Context bar — neutral hover; brand on chips reads as warning */
-[data-token-context-bar] .hoverable:hover {
-  background-color: var(--muted);
-  border-color: var(--border);
-  color: var(--foreground);
-}
+/* Context bar rows use hoverStyle="neutral" on InteractiveListRow — no ancestor override. */
 
-[data-token-context-bar] .hoverable:hover svg,
-[data-token-context-bar] .hoverable:hover [data-icon] {
-  color: var(--foreground);
-  stroke: var(--foreground);
-}
-
-[data-token-context-bar] .hoverable:hover .control-row-text-primary,
-[data-token-context-bar] .hoverable:hover .control-row-text-title,
-[data-token-context-bar] .hoverable:hover .control-row-text-secondary,
-[data-token-context-bar] .hoverable:hover .control-row-text-subtitle {
-  color: var(--foreground);
-}
-
-/* Explorer rows: muted/foreground at rest; expanded ≠ hovered (brand via .hoverable:hover) */
-.bg-sidebar button.explorer-section-header,
-.bg-sidebar button.explorer-folder-row,
-.bg-sidebar [role="button"].explorer-file-row {
+/* Explorer variant rows: muted/foreground at rest; expanded ≠ hovered */
+.list-row-explorer {
   border-color: transparent;
   background-color: transparent;
 }
 
-.bg-sidebar button.explorer-section-header {
+.list-row-explorer--section {
   color: var(--muted-foreground);
 }
 
-.bg-sidebar button.explorer-folder-row,
-.bg-sidebar [role="button"].explorer-file-row {
+.list-row-explorer--folder,
+.list-row-explorer--file {
   color: var(--foreground);
 }
 
-.bg-sidebar button.explorer-section-header[aria-expanded="true"],
-.bg-sidebar button.explorer-folder-row[aria-expanded="true"] {
+.list-row-explorer--section[aria-expanded="true"],
+.list-row-explorer--folder[aria-expanded="true"] {
   background-color: transparent;
   border-color: transparent;
 }
 
-.bg-sidebar button.explorer-section-header[aria-expanded="true"] {
+.list-row-explorer--section[aria-expanded="true"] {
   color: var(--muted-foreground);
 }
 
-.bg-sidebar button.explorer-folder-row[aria-expanded="true"] {
+.list-row-explorer--folder[aria-expanded="true"] {
   color: var(--foreground);
 }
 
-/* In-graph file ink at rest; brand hover wins via .hoverable:hover rules above */
-.explorer-file-in-graph .control-row-text-primary {
+.list-row-explorer--in-graph .control-row-text-primary {
   color: var(--explorer-file-in-graph);
   font-weight: 500;
 }

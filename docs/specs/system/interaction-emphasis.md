@@ -30,7 +30,7 @@ flowchart TB
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
 | 1 | Hovers `.hoverable` control | Brand surface + border + ink (including `.control-row-text-*` children) | CSS `:hover` |
-| 2 | Hovers explorer row | `INTERACTIVE_ROW` | class on row |
+| 2 | Hovers explorer row | `variant="explorer*"` on `InteractiveListRow` | prop + `.list-row-explorer` |
 | 3 | Ctrl held on graph | Dim syntax/keywords; shimmer indexed chips | `graph-ctrl-preview` |
 | 4 | Active trace | Dim non-lit; lit = semantic color | `graph-trace-active` |
 | 5 | Pinned trace | Pin stays lit; other tokens preview on dwell; click replaces pin; Shift+click accumulates | `graph-trace-pinned` + `mergeTraceLit` |
@@ -103,7 +103,7 @@ index.css (.hoverable)
 - [ ] Pinned trace: non-lit tokens stay dim until dwell; hover preview does not change pin
 - [ ] Ctrl held during any trace/pin still shimmers every indexed token (Ctrl always wins over trace)
 - [ ] Brand hover on member header is `:hover` only, not expanded state
-- [ ] `.hoverable:hover` promotes `.control-row-text-*` labels to `--brand` (neutral / passive / context-bar opt out)
+- [ ] `.hoverable:hover` promotes `.control-row-text-*` labels to `--brand` (`hoverStyle="neutral"` / `tone="passive"` opt out)
 - [ ] Token chip hover and `token-chip-on` use the same semantic fill — no brand gold, no border/box-shadow on the chip shell
 - [ ] `controlTokens.ts` and `index.css` stay in sync
 

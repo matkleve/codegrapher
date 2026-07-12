@@ -38,11 +38,9 @@
   box-shadow: none;
 }
 
-.graph-trace-active .hoverable:hover .member-section-label,
-.graph-trace-active .hoverable:hover .member-section-bulk,
+.graph-trace-active .hoverable:hover .list-row-graph-chrome,
 .graph-trace-active .hoverable:hover .node-card-caret,
-.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-label,
-.graph-trace-active .hoverable[aria-expanded="true"]:hover .member-section-bulk,
+.graph-trace-active .hoverable[aria-expanded="true"]:hover .list-row-graph-chrome,
 .graph-trace-active .member-row-header:hover:not(:has(
   .member-row-label:hover,
   .member-sig-token-chip:hover,

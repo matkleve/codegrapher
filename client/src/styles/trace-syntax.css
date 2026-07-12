@@ -38,8 +38,7 @@
 .code-string,
 .code-number,
 .member-body-wrap,
-.member-section-label,
-.member-section-bulk,
+.list-row-graph-chrome,
 .member-sig-value,
 .member-sig-kind-icon,
 .node-card-caret,
@@ -83,8 +82,7 @@
 }
 
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .file-type-chip,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-section-label,
-.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-section-bulk,
+.graph-pane.graph-trace-active:not(.graph-ctrl-preview) .list-row-graph-chrome,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-value,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-kind-icon,
 .graph-pane.graph-trace-active:not(.graph-ctrl-preview) .member-sig-colon,

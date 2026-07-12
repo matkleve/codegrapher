@@ -43,7 +43,7 @@ Normative contract: [state-visuals.md](state-visuals.md) · [interaction-emphasi
 
 | Surface | Accent | Mechanism |
 | ------- | ------ | --------- |
-| Explorer file/folder/section rows | Brand | `INTERACTIVE_ROW` |
+| Explorer file/folder/section rows | Brand | `variant="explorer*"` on `InteractiveListRow` |
 | Button outline / secondary / ghost | Brand | `INTERACTIVE_SURFACE` on `Button` |
 | Button default (CTA) | Primary | `hover:bg-primary` mix |
 | Button destructive / link | Own palette | Tailwind `hover:` variants |
@@ -54,8 +54,8 @@ Normative contract: [state-visuals.md](state-visuals.md) · [interaction-emphasi
 | Class node resize handle (hover) | Brand | CSS in `index.css` |
 | Sidebar resize handle | Brand | CSS in `index.css` |
 | Token chips (trace/Ctrl) | Semantic | `--token-edge-*` — not brand |
-| TokenContextBar list rows | Brand | `INTERACTIVE_ROW_LEFT` |
-| TokenContextBar chrome buttons | Neutral | `[data-token-context-bar] .hoverable` override |
+| TokenContextBar list rows | Neutral | `hoverStyle="neutral"` on `InteractiveListRow` |
+| TokenContextBar chrome buttons | Neutral | `Button variant="ghost"` — not list rows |
 | Path highlight ring | Ring | `ring-ring` / `--ring` |
 | Focus-visible (keyboard) | Ring / primary | `ring-ring` or `ring-primary` on buttons |
 

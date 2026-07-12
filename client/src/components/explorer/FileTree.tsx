@@ -2,10 +2,6 @@ import { useCallback, useState, type ReactNode } from "react";
 import { fetchTree } from "@/api";
 import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { VscodeFileIcon } from "@/components/VscodeFileIcon";
-import {
-  EXPLORER_FILE_ROW,
-  EXPLORER_FOLDER_ROW,
-} from "@/components/explorer/explorerRowStyles";
 import { Codicon, getFileIcon, getFolderIcon } from "@/lib/fileIcons";
 import { DRAG_FILEPATH_KEY } from "@/lib/drag";
 import { isFileInGraph } from "@/lib/graphFiles";
@@ -42,12 +38,13 @@ export function FileTreeItem({
   return (
     <InteractiveListRow
       as="div"
+      variant="explorerFile"
       density="compact"
       mono
+      inGraph={inGraph}
       title={name}
       disabled={disabled}
       draggable={!disabled}
-      className={cn(EXPLORER_FILE_ROW, inGraph && "explorer-file-in-graph")}
       leading={
         fileIcon.vscodeIcon ? (
           <VscodeFileIcon icon={fileIcon.vscodeIcon} size={14} />
@@ -108,11 +105,11 @@ export function TreeNode({
     return (
       <div className="flex flex-col gap-0.5">
         <InteractiveListRow
+          variant="explorerFolder"
           density="compact"
           title={entry.name}
           disabled={disabled}
           aria-expanded={open}
-          className={cn(EXPLORER_FOLDER_ROW, "py-0 font-medium")}
           leading={
             <>
               <Codicon

@@ -172,8 +172,7 @@
 
 .node-card-caret,
 .member-row-caret,
-.member-section-label,
-.member-section-bulk {
+.list-row-graph-chrome {
   transition: color var(--motion-hover-color) var(--ease);
 }
 

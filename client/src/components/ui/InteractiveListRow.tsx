@@ -11,12 +11,17 @@ import {
   INTERACTIVE_ROW_DOUBLE,
   INTERACTIVE_ROW_LEFT,
   INTERACTIVE_ROW_NEUTRAL_LEFT,
-  INTERACTIVE_ROW_PASSIVE_LEFT,
   INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT,
-  INTERACTIVE_ROW_STATIC_LEFT,
 } from "@/lib/controlTokens";
 import { TOKEN_EDGE_STROKE, type SemanticTokenKind } from "@/lib/tokenColors";
 import { cn } from "@/lib/utils";
+
+export type ListRowVariant =
+  | "menu"
+  | "explorerSection"
+  | "explorerFolder"
+  | "explorerFile"
+  | "graphChrome";
 
 export type InteractiveListRowProps = {
   title: string;
@@ -32,14 +37,18 @@ export type InteractiveListRowProps = {
   className?: string;
   /** `comfortable` = two-line menu row; `compact` | `plain` = single-line row height */
   density?: "comfortable" | "compact" | "plain";
-  /** Muted hover, no button — legend rows, labels */
-  interactive?: boolean;
-  /** `passive` = grey resting surface (hidden/disabled items) — row chrome only */
+  /** Surface preset — explorer sidebar, class-node section chrome, etc. */
+  variant?: ListRowVariant;
+  /** Highlight when a connection kind is live on the canvas (legend) */
+  emphasis?: "default" | "live";
+  /** `passive` = grey resting surface (hidden/disabled items) */
   tone?: "default" | "passive";
   /** `muted` = grey label only; row keeps normal chrome + brand hover */
   contentTone?: "default" | "muted";
-  /** `neutral` = grey hover (legend toggles); default brand hover for menus */
+  /** `neutral` = grey hover (legend toggles, context bar); default brand hover for menus */
   hoverStyle?: "brand" | "neutral";
+  /** Explorer file rows: ink when file is already on the canvas */
+  inGraph?: boolean;
   /** Explorer file paths */
   mono?: boolean;
   disabled?: boolean;
@@ -135,6 +144,28 @@ function compactRowClass(
   return fullWidth ? base : base.replace("w-full", "w-auto");
 }
 
+function variantClass(
+  variant: ListRowVariant,
+  inGraph: boolean,
+): string | undefined {
+  switch (variant) {
+    case "explorerSection":
+      return cn("list-row-explorer", "list-row-explorer--section");
+    case "explorerFolder":
+      return cn("list-row-explorer", "list-row-explorer--folder");
+    case "explorerFile":
+      return cn(
+        "list-row-explorer",
+        "list-row-explorer--file",
+        inGraph && "list-row-explorer--in-graph",
+      );
+    case "graphChrome":
+      return "list-row-graph-chrome";
+    default:
+      return undefined;
+  }
+}
+
 export function InteractiveListRow({
   title,
   subtitle,
@@ -147,10 +178,12 @@ export function InteractiveListRow({
   onPointerDown,
   className,
   density = "comfortable",
-  interactive = true,
+  variant = "menu",
+  emphasis = "default",
   tone = "default",
   contentTone = "default",
   hoverStyle = "brand",
+  inGraph = false,
   mono = false,
   disabled = false,
   as = "button",
@@ -160,16 +193,10 @@ export function InteractiveListRow({
   "aria-pressed": ariaPressed,
   "aria-expanded": ariaExpanded,
 }: InteractiveListRowProps) {
-  const rowClass = interactive
-    ? tone === "passive"
+  const rowClass =
+    tone === "passive"
       ? INTERACTIVE_ROW_PASSIVE_TOGGLE_LEFT
-      : compactRowClass(density, hoverStyle, fullWidth)
-    : tone === "passive"
-      ? cn(INTERACTIVE_ROW_PASSIVE_LEFT, "cursor-default")
-      : cn(
-          INTERACTIVE_ROW_STATIC_LEFT,
-          density !== "comfortable" && "control-row-compact",
-        );
+      : compactRowClass(density, hoverStyle, fullWidth);
 
   const trailingNode =
     trailing ??
@@ -203,14 +230,12 @@ export function InteractiveListRow({
 
   const sharedClass = cn(
     rowClass,
+    variantClass(variant, inGraph),
+    emphasis === "live" && "list-row-emphasis-live",
     "text-foreground",
     disabled && "pointer-events-none cursor-not-allowed opacity-50",
     className,
   );
-
-  if (!interactive) {
-    return <div className={sharedClass}>{rowBody}</div>;
-  }
 
   if (as === "div") {
     const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (e) => {

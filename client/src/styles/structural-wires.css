@@ -74,7 +74,7 @@
   filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
 }
 
-.connection-legend-row--firing .control-row-text-primary {
+.list-row-emphasis-live .control-row-text-primary {
   font-weight: 600;
   color: var(--foreground);
 }
@@ -101,11 +101,11 @@
   color: var(--muted-foreground);
 }
 
-.connection-legend-row--focused {
+.list-row-legend-focused {
   background: color-mix(in oklch, var(--brand-surface) 65%, transparent);
 }
 
-.connection-legend-row--live .connection-legend-swatch-line {
+.list-row-emphasis-live .connection-legend-swatch-line {
   stroke-width: 1.65;
   filter: drop-shadow(0 0 3px color-mix(in oklch, var(--brand) 55%, transparent));
 }

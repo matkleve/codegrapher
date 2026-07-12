@@ -1,9 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { VscodeFileIcon } from "@/components/VscodeFileIcon";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
-import { SemanticConnectionDot } from "@/components/ui/InteractiveListRow";
-import { buttonVariants } from "@/components/ui/button";
+import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
+import { InteractiveListRow } from "@/components/ui/InteractiveListRow";
 import { floatingPanelClass } from "@/components/ui/floatingPanel";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
@@ -71,33 +70,23 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
       style={{ visibility: "hidden" }}
       onMouseEnter={cancelHoverLeaveGrace}
     >
-      <button
-        type="button"
-        className="hoverable relative flex h-full w-full min-w-0 cursor-pointer items-center gap-1 px-2 pr-3 text-left"
+      <InteractiveListRow
+        density="compact"
+        title={load.token}
+        actionLabel="Load"
+        className="h-full min-w-0 rounded-[inherit] border-0"
+        leading={<ConnectionTargetLeading kind={edge.kind} size={10} />}
+        trailing={
+          <FlowAnchor
+            side="right"
+            colorClass={TOKEN_ANCHOR[edge.kind]}
+            visible
+            highlighted
+            size="chip"
+          />
+        }
         onClick={onLoad}
-      >
-        <SemanticConnectionDot kind={edge.kind} />
-        <VscodeFileIcon icon="file-type-typescript-official" size={10} />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium">
-          {load.token}
-        </span>
-        <span
-          className={cn(
-            buttonVariants({ variant: "outline", size: "xs" }),
-            "pointer-events-none shrink-0 !h-auto min-h-0 border-border/80 py-px px-1 text-2xs leading-none shadow-none",
-            "hover:!border-border hover:!bg-background hover:!text-foreground",
-          )}
-        >
-          Load
-        </span>
-        <FlowAnchor
-          side="right"
-          colorClass={TOKEN_ANCHOR[edge.kind]}
-          visible
-          highlighted
-          size="chip"
-        />
-      </button>
+      />
     </div>
   );
 }
