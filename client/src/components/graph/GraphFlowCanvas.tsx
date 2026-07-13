@@ -8,6 +8,7 @@ import {
 } from "@xyflow/react";
 import { TokenContextBar } from "@/components/code/TokenContextBar";
 import { TokenConnectionMenu } from "@/components/code/TokenConnectionMenu";
+import { GraphMinimap } from "@/components/graph/GraphMinimap";
 import { GraphPinchZoomBoost } from "@/components/graph/GraphPinchZoomBoost";
 import { JumpTooltip } from "@/components/graph/JumpTooltip";
 import { PreviewEdgeOverlay } from "@/components/graph/PreviewEdgeOverlay";
@@ -97,6 +98,7 @@ export function GraphFlowCanvas({
         zoomOnPinch
         panOnDrag
       >
+        <GraphMinimap />
         <PreviewEdgeOverlay />
         <LoadStubAnchors />
         <FlowPointOverlay />

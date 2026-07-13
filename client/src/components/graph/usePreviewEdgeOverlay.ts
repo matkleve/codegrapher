@@ -31,6 +31,7 @@ import {
   updateStructuralWireGeometry,
   type StructuralWireElements,
 } from "@/lib/structuralEdgeDom";
+import { MOTION_TRACE_MS } from "@/lib/motionTokens";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 
@@ -43,6 +44,7 @@ export function usePreviewEdgeOverlay() {
     traceTokenKey,
     hoveredTokenKey,
     emphasisTokenKey,
+    sessionMood,
     cancelHoverLeaveGrace,
     scheduleHoverLeaveGrace,
   } = useGraphInteraction();
@@ -222,6 +224,23 @@ export function usePreviewEdgeOverlay() {
     }
     engineRef.current?.tickOnce();
   }, [previewEdges, isWarm]);
+
+  // Fade hover wires the instant mood → `leaving` (no pins in that mood, so the
+  // whole layer is hover wires). Only `active` restores full opacity — a fresh
+  // trace or a re-entry cancel. `idle`/`pending` are left untouched so the fade
+  // runs to completion even though the machine mood clears before the DOM fade
+  // (the pane keeps its `leaving`/`fading-out` classes via `domFading`).
+  useLayoutEffect(() => {
+    const layer = svgRef.current?.querySelector<SVGGElement>("[data-preview-wires]");
+    if (!layer) return;
+    if (sessionMood === "leaving") {
+      layer.style.transition = `opacity ${MOTION_TRACE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+      layer.style.opacity = "0";
+    } else if (sessionMood === "active") {
+      layer.style.transition = "";
+      layer.style.opacity = "";
+    }
+  }, [sessionMood]);
 
   useLayoutEffect(() => {
     structuralSpecsRef.current = allStructuralSpecs;

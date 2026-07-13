@@ -54,8 +54,12 @@ function elementAnchor(
   el: HTMLElement,
   side: "left" | "right",
   box: DOMRect,
-): ResolvedAnchor {
+): ResolvedAnchor | null {
   const chipRect = el.getBoundingClientRect();
+  // A connected-but-zero-size rect (collapsed member row, mid-unmount) would
+  // otherwise resolve to ≈ (-box.left, -box.top) and snap the wire to the
+  // overlay's top-left corner. Treat it as unresolvable so the wire hides.
+  if (chipRect.width === 0 && chipRect.height === 0) return null;
   const dot = el.querySelector<HTMLElement>(`[data-flow-anchor="${side}"]`);
   if (dot && flowAnchorVisible(dot)) {
     const rect = dot.getBoundingClientRect();
@@ -138,6 +142,7 @@ export function resolvePreviewAnchor(
   if (!anchor?.isConnected) return null;
 
   const rect = anchor.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return null;
   const anchorSide = anchor.getAttribute("data-flow-anchor") as "left" | "right";
   const x = rect.left + rect.width / 2 - svgBox.left;
   const y = rect.top + rect.height / 2 - svgBox.top;

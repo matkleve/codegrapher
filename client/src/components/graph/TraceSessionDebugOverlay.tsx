@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { subscribeTraceSessionMood } from "@/lib/traceSessionMood";
-import type { TraceEvent } from "@/lib/traceSessionReducer";
+import type { TraceEvent } from "@/lib/traceSession";
 
 function isTraceDebugEnabled(): boolean {
   if (typeof window === "undefined") return false;

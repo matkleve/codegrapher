@@ -47,7 +47,7 @@ One clock for surround + lit unwind + wire retire: **`--motion-trace` (120ms)**.
 | Ctrl explore | `trace-ctrl.css` |
 | Wire draw / retire / march | `preview-edge.css`, `wireReveal.ts`, `wireDomSync.ts` |
 | Pane mood classes | `GraphPane.tsx` |
-| Trace session FSM | `traceSessionReducer.ts`, `useTraceSession.ts`, `traceSessionMood.ts` |
+| Trace session FSM | `traceMachine.ts` (XState statechart), `traceSession.ts` (types + pure selectors), `useTraceSession.ts`, `traceSessionMood.ts` |
 
 **Never:** `.token-chip` color rules in `trace-syntax.css`.
 

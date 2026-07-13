@@ -1,4 +1,4 @@
-import type { PaneMood } from "@/lib/traceSessionReducer";
+import type { PaneMood } from "@/lib/traceSession";
 
 let sessionMood: PaneMood = "idle";
 let domFading = false;

@@ -15,21 +15,23 @@ import type { TokenInfoState } from "@/lib/tokenContextInfo";
 import {
   pointerEnterDelayMs,
   graceDelayMs,
-  INITIAL_TRACE_SESSION,
   isStalePointerLeave,
   isTraceSessionActive,
-  traceSessionReducer,
   traceTokenKey,
+  type PaneMood,
   type TraceEvent,
   type TraceSession,
-} from "@/lib/traceSessionReducer";
+} from "@/lib/traceSession";
+import { snapshotToSession, traceMachine } from "@/lib/traceMachine";
+import { useMachine } from "@xstate/react";
+import { transition } from "xstate";
 import {
   setHoverPreviewEdgeIds,
   setTraceSessionActive,
   setWireHoveredTokenKey,
 } from "@/lib/wireHoverBoost";
 import { setTraceSessionMood } from "@/lib/traceSessionMood";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PendingFire = { tokenKey: string; onFire: () => void } | null;
 type HoverClearTarget = { tokenKey: string; onClear: () => void } | null;
@@ -60,9 +62,15 @@ function isTraceDebugEnabled(): boolean {
 
 /** Single reducer-backed trace session — replaces scattered hover/pin/timer state. */
 export function useTraceSession(isCtrlActive: boolean) {
-  const [session, dispatch] = useReducer(traceSessionReducer, INITIAL_TRACE_SESSION);
+  const [snapshot, actorSend] = useMachine(traceMachine);
+  const session = useMemo<TraceSession>(
+    () => snapshotToSession(snapshot.value as PaneMood, snapshot.context),
+    [snapshot],
+  );
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
 
   const timersRef = useRef<SessionTimers>(emptyTimers());
   const pendingFireRef = useRef<PendingFire>(null);
@@ -81,9 +89,9 @@ export function useTraceSession(isCtrlActive: boolean) {
   const send = useCallback(
     (event: TraceEvent) => {
       logEvent(event);
-      dispatch(event);
+      actorSend(event);
     },
-    [logEvent],
+    [actorSend, logEvent],
   );
 
   hoveredTokenKeyRef.current = session.committedKey;
@@ -227,8 +235,12 @@ export function useTraceSession(isCtrlActive: boolean) {
       hoverClearRef.current = { tokenKey, onClear };
       send({ type: "POINTER_LEAVE", tokenKey });
 
+      const [nextSnap] = transition(traceMachine, snapshotRef.current, {
+        type: "POINTER_LEAVE",
+        tokenKey,
+      });
       const grace = graceDelayMs(
-        traceSessionReducer(prior, { type: "POINTER_LEAVE", tokenKey }),
+        snapshotToSession(nextSnap.value as PaneMood, nextSnap.context),
       );
       if (grace === 0) {
         commitGraceClear(tokenKey, onClear);

@@ -2,8 +2,13 @@
 export const FIRE_COLD_MS = 40;
 export const FIRE_WARM_MS = 40;
 export const LEAVE_GRACE_MS = 50;
-/** Warm trace — longer grace so pointer can cross chip gaps without tearing down mood. */
-export const LEAVE_GRACE_WARM_MS = 150;
+/**
+ * Warm trace — brief grace so a fast re-entry can cancel the leave, but short
+ * enough that the visual teardown reads as immediate. The hover-wire layer
+ * starts fading the instant mood → `leaving` (see `usePreviewEdgeOverlay`), so
+ * this only bounds the re-entry cancel window, not when the fade begins.
+ */
+export const LEAVE_GRACE_WARM_MS = 60;
 export const INFO_DELAY_MS = 300;
 /** Re-exported for docs: hover → first pixel ≈ FIRE_COLD_MS + layout; full draw adds WIRE_REVEAL_MS. */
 export { WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/wireReveal";

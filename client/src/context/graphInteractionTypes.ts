@@ -9,6 +9,7 @@ import type { TokenConnectionMenuState } from "@/lib/connectionMenu";
 import type { CallSiteReference } from "@/lib/projectReferences";
 import type { PinnedTrace } from "@/lib/pinnedTraces";
 import type { TokenReference } from "@/lib/semanticLookup";
+import type { TraceEvent } from "@/lib/traceSession";
 import type { GraphData, ReferenceEntry } from "@/types";
 
 export type { PreviewEdgeSpec, AnchorRef } from "@/lib/previewEdgeTypes";
@@ -85,7 +86,7 @@ export type GraphInteractionContextValue = {
   emphasisTokenKey: string | null;
   traceTokenKey: string | null;
   sessionMood?: string;
-  debugEvents?: import("@/lib/traceSessionReducer").TraceEvent[];
+  debugEvents?: TraceEvent[];
   lookupIndexedUsageSites: (
     token: string,
     sourceFlowId: string,
