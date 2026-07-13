@@ -61,12 +61,12 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(isTraceSessionActive(sess(s))).toBe(false);
   });
 
-  it("POINTER_ENTER cold goes pending with pointer set", () => {
+  it("POINTER_ENTER cold commits immediately (zero dwell)", () => {
     const next = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
-    expect(next.value).toBe("pending");
+    expect(next.value).toBe("active");
     expect(next.context.pointerKey).toBe(KEY_A);
-    expect(next.context.committedKey).toBeNull();
-    expect(isTracePendingMood(sess(next))).toBe(true);
+    expect(next.context.committedKey).toBe(KEY_A);
+    expect(isTracePendingMood(sess(next))).toBe(false);
   });
 
   it("POINTER_ENTER instant commits immediately", () => {
@@ -76,29 +76,21 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(next.context.warm).toBe(true);
   });
 
-  it("DWELL_FIRE commits pending token", () => {
-    const pending = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
-    const active = step(pending, { type: "DWELL_FIRE", tokenKey: KEY_A });
-    expect(active.value).toBe("active");
-    expect(active.context.committedKey).toBe(KEY_A);
-  });
-
-  it("POINTER_LEAVE before dwell clears instantly", () => {
-    const pending = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
-    const idle = step(pending, { type: "POINTER_LEAVE", tokenKey: KEY_A });
-    expect(idle.value).toBe("idle");
-    expect(idle.context.pointerKey).toBeNull();
-    expect(graceDelayMs(sess(idle))).toBe(0);
+  it("DWELL_FIRE is idempotent when already committed", () => {
+    const active = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
+    const again = step(active, { type: "DWELL_FIRE", tokenKey: KEY_A });
+    expect(again.value).toBe("active");
+    expect(again.context.committedKey).toBe(KEY_A);
   });
 
   it("POINTER_LEAVE after commit enters leaving mood", () => {
-    const active = committed(init(), KEY_A);
+    const active = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
     const leaving = step(active, { type: "POINTER_LEAVE", tokenKey: KEY_A });
     expect(leaving.value).toBe("leaving");
     expect(leaving.context.committedKey).toBe(KEY_A);
     expect(leaving.context.pointerKey).toBeNull();
     expect(isTraceLeavingMood(sess(leaving))).toBe(true);
-    expect(graceDelayMs(sess(leaving))).toBeGreaterThan(0);
+    expect(graceDelayMs(sess(leaving))).toBe(0);
   });
 
   it("POINTER_ENTER re-emphasizes committed token instantly", () => {
@@ -112,14 +104,14 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(pointerEnterDelayMs(sess(leaving), KEY_A)).toBe(0);
   });
 
-  it("warm handoff leave-then-enter same batch stays active", () => {
+  it("warm handoff leave-then-enter same batch commits instantly", () => {
     const active = committed(init(), KEY_A);
     const next = reduce(active, [
       { type: "POINTER_LEAVE", tokenKey: KEY_A },
       { type: "POINTER_ENTER", tokenKey: KEY_B },
     ]);
-    expect(next.value).toBe("pending");
-    expect(next.context.committedKey).toBeNull();
+    expect(next.value).toBe("active");
+    expect(next.context.committedKey).toBe(KEY_B);
     expect(next.context.pointerKey).toBe(KEY_B);
     expect(traceTokenKey(sess(next))).toBe(KEY_B);
     expect(isTraceSessionActive(sess(next))).toBe(true);
@@ -154,16 +146,16 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(still.context.committedKey).toBe(KEY_A);
   });
 
-  it("GRACE_EXPIRE skipped while pending dwell in flight", () => {
+  it("GRACE_EXPIRE ignored after instant warm handoff clears leave target", () => {
     const active = committed(init(), KEY_A);
     const handoff = reduce(active, [
       { type: "POINTER_LEAVE", tokenKey: KEY_A },
       { type: "POINTER_ENTER", tokenKey: KEY_B },
     ]);
     const still = step(handoff, { type: "GRACE_EXPIRE", tokenKey: KEY_A });
-    expect(still.context.committedKey).toBeNull();
+    expect(still.context.committedKey).toBe(KEY_B);
     expect(still.context.pointerKey).toBe(KEY_B);
-    expect(still.value).toBe("pending");
+    expect(still.value).toBe("active");
   });
 
   it("TRACE_COMMIT sets edges and anchor on token switch", () => {
@@ -190,7 +182,7 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(snap.context.hoverPreviewEdges).toEqual([]);
     expect(snap.context.anchorTrace).toBeNull();
     expect(snap.context.pointerKey).toBe(KEY_B);
-    expect(snap.context.committedKey).toBeNull();
+    expect(snap.context.committedKey).toBe(KEY_B);
     expect(traceTokenKey(sess(snap))).toBe(KEY_B);
   });
 
@@ -221,11 +213,10 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     expect(isTraceSessionActive(sess(snap))).toBe(true);
   });
 
-  it("warm grace is longer than cold grace", () => {
+  it("grace is always zero", () => {
     const warm = committed(init(), KEY_A);
     const warmLeaving = step(warm, { type: "POINTER_LEAVE", tokenKey: KEY_A });
-    // cold: committed but warm=false is not reachable via the machine; assert warm>cold constant.
-    expect(graceDelayMs(sess(warmLeaving))).toBeGreaterThan(50);
+    expect(graceDelayMs(sess(warmLeaving))).toBe(0);
   });
 
   it("dwell uses zero delay when ctrl held", () => {
@@ -262,7 +253,7 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
     const active = committed(init(), KEY_A);
     const onB = step(active, { type: "POINTER_ENTER", tokenKey: KEY_B });
     expect(onB.context.pointerKey).toBe(KEY_B);
-    expect(onB.context.committedKey).toBeNull();
+    expect(onB.context.committedKey).toBe(KEY_B);
     expect(traceTokenKey(sess(onB))).toBe(KEY_B);
 
     const staleLeave = step(onB, { type: "POINTER_LEAVE", tokenKey: KEY_A });

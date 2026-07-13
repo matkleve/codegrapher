@@ -54,7 +54,7 @@ export function MemberSignatureTypeLabel({
 }: MemberSignatureTypeLabelProps) {
   const { hasSymbol } = useIndex();
   const chipRef = useRef<TokenChipHandle>(null);
-  const hostRef = useRef<HTMLButtonElement>(null);
+  const hostRef = useRef<HTMLSpanElement>(null);
   useTraceHostRegistration(hostRef);
   const [expanded, setExpanded] = useState(false);
 
@@ -139,9 +139,10 @@ export function MemberSignatureTypeLabel({
   }
 
   return (
-    <button
+    <span
       ref={hostRef}
-      type="button"
+      role="button"
+      tabIndex={0}
       className={cn(
         "member-sig-type member-sig-type-expand-host",
         indexed ? "member-sig-type--indexed" : primitiveTypeClassName(variant),
@@ -159,6 +160,13 @@ export function MemberSignatureTypeLabel({
         e.stopPropagation();
         setExpanded((open) => !open);
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          setExpanded((open) => !open);
+        }
+      }}
       onMouseEnter={indexed ? onEnter : undefined}
       onMouseLeave={indexed ? onLeave : undefined}
       onFocus={indexed ? onFocus : undefined}
@@ -171,6 +179,6 @@ export function MemberSignatureTypeLabel({
       ) : (
         renderType(short)
       )}
-    </button>
+    </span>
   );
 }

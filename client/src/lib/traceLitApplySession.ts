@@ -1,7 +1,7 @@
 import type { Node } from "@xyflow/react";
 import type { TraceLitState } from "@/lib/traceLitState";
 import { traceLitFingerprint } from "@/lib/traceLitFingerprint";
-import { MOTION_TRACE_MS } from "@/lib/motionTokens";
+import { MOTION_TRACE_OUT_MS } from "@/lib/motionTokens";
 import { setTraceLitFading } from "@/lib/traceLitFading";
 import { applyTraceLit, clearTraceLit, unwindTraceLit } from "@/lib/traceLitController";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
@@ -65,7 +65,7 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
         setTraceLitFading(false);
         clearLitTimerRef.current = 0;
         onFadeComplete?.();
-      }, MOTION_TRACE_MS);
+      }, MOTION_TRACE_OUT_MS);
     }
     return;
   }

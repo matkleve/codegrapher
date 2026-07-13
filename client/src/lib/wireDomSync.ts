@@ -3,8 +3,8 @@ import {
   previewWireClasses,
   previewWireStroke,
 } from "@/lib/connectionWireStyle";
-import { MOTION_TRACE_MS } from "@/lib/motionTokens";
-import { buildRevealSchedule, orderSpecsForReveal, stripWireRevealStroke } from "@/lib/wireReveal";
+import { EASE_TRACE_OUT, MOTION_TRACE_OUT_MS } from "@/lib/motionTokens";
+import { buildRevealSchedule, isWireRevealing, orderSpecsForReveal, stripWireRevealStroke, cancelWireDraw } from "@/lib/wireReveal";
 import {
   applyWireDepthOpacity,
   applyWireMarkers,
@@ -37,17 +37,33 @@ export function retireWireGroup(
 ): void {
   const id = wire.spec.id;
   if (wire.group.dataset.retiring === "1") return;
+  if (isWireRevealing(wire.group)) {
+    const finish = (): void => {
+      if (wire.group.dataset.retiring === "1") return;
+      retireWireGroup(wire, wires);
+    };
+    const wait = (): void => {
+      if (isWireRevealing(wire.group)) {
+        requestAnimationFrame(wait);
+        return;
+      }
+      finish();
+    };
+    requestAnimationFrame(wait);
+    return;
+  }
+  cancelWireDraw(wire.group);
   stripWireRevealStroke(wire.path, wire.glow);
   wire.glow.style.opacity = "0";
   wire.group.dataset.retiring = "1";
   delete wire.group.dataset.revealStarted;
   delete wire.group.dataset.revealed;
-  wire.group.style.transition = `opacity ${MOTION_TRACE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+  wire.group.style.transition = `opacity ${MOTION_TRACE_OUT_MS}ms ${EASE_TRACE_OUT}`;
   wire.group.style.opacity = "0";
   window.setTimeout(() => {
     wire.group.remove();
     wires.delete(id);
-  }, MOTION_TRACE_MS);
+  }, MOTION_TRACE_OUT_MS);
 }
 
 export function syncWireDom(

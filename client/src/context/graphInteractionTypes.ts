@@ -48,6 +48,7 @@ export type GraphInteractionContextValue = {
   isHandleActive: (handle: string) => boolean;
   edgeKindAtHandle: (handle: string) => SemanticTokenKind | null;
   beginTrace: (tokenKey: string, edges: PreviewEdgeSpec[]) => void;
+  emitWireSignal: (tokenKey: string, edges: PreviewEdgeSpec[]) => void;
   endTrace: () => void;
   endHoverPreview: () => void;
   isWarm: boolean;
@@ -56,7 +57,7 @@ export type GraphInteractionContextValue = {
     onFire: () => void,
     onClear: () => void,
     onInfo?: () => void,
-    options?: { instant?: boolean; traceHost?: HTMLElement | null },
+    options?: { instant?: boolean; traceHost?: HTMLElement | null; onSignal?: () => void },
   ) => void;
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleHoverLeaveGrace: () => void;

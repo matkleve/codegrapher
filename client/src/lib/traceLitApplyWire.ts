@@ -24,7 +24,9 @@ export function applyHoveredWireEndpointBoost(
   for (const spec of previewEdges) {
     if (!isHoverPreviewEdge(spec.id)) continue;
     for (const key of traceKeysFromWire(spec, getNode)) {
-      boostChipForTraceKey(next, state, key, pinnedTokenKeys);
+      // Hover-preview brightness belongs to the token under the cursor only;
+      // the connected endpoint stays lit at focus strength, not hover.
+      boostChipForTraceKey(next, state, key, pinnedTokenKeys, key === hoveredTokenKey);
     }
   }
 }

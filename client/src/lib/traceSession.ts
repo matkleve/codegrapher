@@ -49,6 +49,7 @@ export type TraceEvent =
   | { type: "DWELL_FIRE"; tokenKey: string }
   | { type: "GRACE_EXPIRE"; tokenKey: string }
   | { type: "TRACE_COMMIT"; tokenKey: string; edges: PreviewEdgeSpec[] }
+  | { type: "WIRE_SIGNAL_START"; tokenKey: string; edges: PreviewEdgeSpec[] }
   | { type: "PIN"; tokenKey: string; mode: PinMode }
   | { type: "PIN_BACK" }
   | { type: "UNPIN_ALL" }

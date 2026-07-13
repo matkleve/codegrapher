@@ -43,7 +43,7 @@ export function useCodeLineSecondaryFires({
   defEdgeContext,
   lookup,
 }: SecondaryFiresArgs) {
-  const { beginTrace } = useGraphInteraction();
+  const { beginTrace, emitWireSignal } = useGraphInteraction();
   const { showUsageLoadMenu, showDefLoadMenu, clearConnectionMenu } =
     useCodeLinePreviewMenus(filePath);
 
@@ -130,6 +130,18 @@ export function useCodeLineSecondaryFires({
     [definedInLabel, filePath, sourceFlowId, sourceGraphNodeId],
   );
 
+  const signalDefPreview = useCallback(
+    (name: string, chipEl: HTMLElement) => {
+      const tokenKey = makeMemberDefKey(sourceFlowId, memberId);
+      const kind = semanticFromChipElement(chipEl, lookup(name));
+      emitWireSignal(
+        tokenKey,
+        buildDefinitionPreviewEdges(name, kind, chipEl, defEdgeContext),
+      );
+    },
+    [defEdgeContext, emitWireSignal, lookup, memberId, sourceFlowId],
+  );
+
   const fireDefPreview = useCallback(
     (name: string, chipEl: HTMLElement) => {
       const tokenKey = makeMemberDefKey(sourceFlowId, memberId);
@@ -149,5 +161,6 @@ export function useCodeLineSecondaryFires({
     fireCfFromRef,
     buildControlFlowPinInfo,
     fireDefPreview,
+    signalDefPreview,
   };
 }

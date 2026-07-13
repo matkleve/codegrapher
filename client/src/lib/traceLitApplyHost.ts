@@ -234,6 +234,7 @@ export function boostChipForTraceKey(
   state: TraceLitState,
   key: string,
   pinnedTokenKeys: ReadonlySet<string>,
+  forceHoverPreview = true,
 ): void {
   const memberSiblings = memberDefSiblingHosts(key);
   if (memberSiblings) {
@@ -243,7 +244,7 @@ export function boostChipForTraceKey(
         continue;
       }
       if (!primary || host === primary) {
-        boostChipHost(next, state, host, key, pinnedTokenKeys, true);
+        boostChipHost(next, state, host, key, pinnedTokenKeys, forceHoverPreview);
       }
     }
     return;
@@ -259,7 +260,7 @@ export function boostChipForTraceKey(
       host,
       traceKeyFromHost(host) ?? key,
       pinnedTokenKeys,
-      true,
+      forceHoverPreview,
     );
   }
 }

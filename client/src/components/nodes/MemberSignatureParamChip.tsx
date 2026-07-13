@@ -42,47 +42,54 @@ export function MemberSignatureParamChip({
   const chipRef = useRef<TokenChipHandle>(null);
   const { getNode } = useReactFlow();
   const { lookup, hasSymbol, symbols } = useIndex();
-  const { beginTrace, graphData } = useGraphInteraction();
+  const { beginTrace, emitWireSignal, graphData } = useGraphInteraction();
 
   const paramDef = paramDefForName(symbolIndex, memberId, paramName);
   const paramLine = paramDef?.lineNumber ?? 1;
   const tokenKey = makeSigParamDefKey(flowNodeId, memberId, paramName);
   const enabled = Boolean(paramDef);
 
-  const firePreview = useCallback(() => {
-    if (!paramDef) return;
+  const buildEdges = useCallback(() => {
+    if (!paramDef) return [];
     const chipEl = chipRef.current?.getChipElement();
-    if (!chipEl) return;
-    beginTrace(
-      tokenKey,
-      buildParamDefPreviewEdges(
-        paramName,
-        paramDef.defId,
-        chipEl,
-        symbolIndex,
-        flowNodeId,
-        memberId,
-        getNode,
-        symbols,
-        graphData,
-        hasSymbol,
-        lexicalGraph,
-      ),
+    if (!chipEl) return [];
+    return buildParamDefPreviewEdges(
+      paramName,
+      paramDef.defId,
+      chipEl,
+      symbolIndex,
+      flowNodeId,
+      memberId,
+      getNode,
+      symbols,
+      graphData,
+      hasSymbol,
+      lexicalGraph,
     );
   }, [
-    beginTrace,
     flowNodeId,
     getNode,
     graphData,
     hasSymbol,
-    memberId,
     lexicalGraph,
+    memberId,
     paramDef,
     paramName,
     symbolIndex,
     symbols,
-    tokenKey,
   ]);
+
+  const signalPreview = useCallback(() => {
+    const edges = buildEdges();
+    if (edges.length === 0) return;
+    emitWireSignal(tokenKey, edges);
+  }, [buildEdges, emitWireSignal, tokenKey]);
+
+  const firePreview = useCallback(() => {
+    const edges = buildEdges();
+    if (edges.length === 0) return;
+    beginTrace(tokenKey, edges);
+  }, [beginTrace, buildEdges, tokenKey]);
 
   const buildPinInfo = useCallback(
     () =>
@@ -116,7 +123,9 @@ export function MemberSignatureParamChip({
     tokenKey,
     enabled,
     onFire: firePreview,
+    onSignal: signalPreview,
     onClear: () => {},
+    traceHost: () => chipRef.current?.getChipElement() ?? null,
     buildTransientInfo: () => {
       const { pinned: _p, ...rest } = buildPinInfo();
       return rest;

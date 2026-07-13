@@ -6,6 +6,7 @@ type UseTokenHoverArgs = {
   tokenKey: string;
   enabled: boolean;
   onFire: () => void;
+  onSignal?: () => void;
   onClear: () => void;
   buildTransientInfo?: () => Omit<TokenInfoState & object, "pinned">;
   traceHost?: () => HTMLElement | null;
@@ -16,6 +17,7 @@ export function useTokenHover({
   tokenKey,
   enabled,
   onFire,
+  onSignal,
   onClear,
   buildTransientInfo,
   traceHost,
@@ -35,12 +37,14 @@ export function useTokenHover({
       : undefined;
     scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, {
       traceHost: traceHost?.() ?? undefined,
+      onSignal,
     });
   }, [
     buildTransientInfo,
     clearHover,
     enabled,
     onFire,
+    onSignal,
     scheduleHoverFire,
     showTokenInfo,
     tokenKey,
@@ -60,12 +64,14 @@ export function useTokenHover({
     scheduleHoverFire(tokenKey, onFire, clearHover, onInfo, {
       instant: true,
       traceHost: traceHost?.() ?? undefined,
+      onSignal,
     });
   }, [
     buildTransientInfo,
     clearHover,
     enabled,
     onFire,
+    onSignal,
     scheduleHoverFire,
     showTokenInfo,
     tokenKey,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import {
   buildRevealSchedule,
   orderSpecsForReveal,
@@ -9,6 +9,7 @@ import {
   WIRE_REVEAL_MS,
   WIRE_REVEAL_STAGGER_MS,
 } from "@/lib/wireReveal";
+import { startWireSignalEpoch, stopWireSignalEmitting } from "@/lib/traceWireSignal";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { WireElements } from "@/lib/previewEdgeDom";
 
@@ -75,6 +76,10 @@ describe("buildRevealSchedule", () => {
 });
 
 describe("playWireReveal", () => {
+  beforeEach(() => {
+    startWireSignalEpoch();
+  });
+
   it("arms path stroke draw and hides dashed glow until complete", () => {
     const wire = mockWire();
     playWireReveal(wire, 0);
@@ -97,6 +102,13 @@ describe("playWireReveal", () => {
 
   it("exports a visible draw duration", () => {
     expect(WIRE_REVEAL_MS).toBeGreaterThanOrEqual(80);
+  });
+
+  it("does not start when signal emitter is off", () => {
+    stopWireSignalEmitting();
+    const wire = mockWire();
+    playWireReveal(wire, 0);
+    expect(wire.group.dataset.revealStarted).toBeUndefined();
   });
 
   it("stripWireRevealStroke clears reveal overrides and marching", () => {

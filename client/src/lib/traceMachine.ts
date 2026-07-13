@@ -316,6 +316,18 @@ export const traceMachine = setup({
     },
     REPLACE_PINNED_TRACES: { actions: assign(({ event }) => ({ pinnedTraces: event.traces })) },
     REPLACE_HOVER_EDGES: { actions: assign(({ event }) => ({ hoverPreviewEdges: event.edges })) },
+    WIRE_SIGNAL_START: {
+      actions: assign(({ context, event }) => {
+        const { tokenKey, edges } = event as { tokenKey: string; edges: TraceContext["hoverPreviewEdges"] };
+        return {
+          ...switchClears(context, tokenKey),
+          pointerKey: tokenKey,
+          pendingTargetKey: tokenKey,
+          leaveTargetKey: null,
+          hoverPreviewEdges: edges,
+        };
+      }),
+    },
     CANCEL_LEAVE_GRACE: [
       { guard: ({ context }) => context.committedKey != null, target: ".active", actions: clearLeaveTarget },
       { actions: clearLeaveTarget },

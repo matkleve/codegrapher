@@ -30,8 +30,22 @@ import {
   setTraceSessionActive,
   setWireHoveredTokenKey,
 } from "@/lib/wireHoverBoost";
+import { WIRE_PROPAGATION_DRAIN_MS } from "@/lib/traceMotion";
+import {
+  isWireSignalEmitting,
+  resetWireSignal,
+  startWireSignalEpoch,
+  stopWireSignalEmitting,
+} from "@/lib/traceWireSignal";
+import { armSourceArrival, clearWireArrivals } from "@/lib/wireSignalArrival";
+import { notifyWireTransform } from "@/lib/wireEngine";
 import { setTraceSessionMood } from "@/lib/traceSessionMood";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { primeTraceSignal } from "@/lib/traceSignalPrime";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+function traceHadCommitted(session: TraceSession): boolean {
+  return session.committedKey != null || session.hoverPreviewEdges.length > 0;
+}
 
 type PendingFire = { tokenKey: string; onFire: () => void } | null;
 type HoverClearTarget = { tokenKey: string; onClear: () => void } | null;
@@ -105,7 +119,7 @@ export function useTraceSession(isCtrlActive: boolean) {
     );
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     syncWireMirror(session);
     setTraceSessionMood(session.mood);
   }, [session, syncWireMirror]);
@@ -160,12 +174,34 @@ export function useTraceSession(isCtrlActive: boolean) {
     clearJumpTooltip();
     unlockTraceAnchorPreference();
     clearTraceAnchorHost();
+    stopWireSignalEmitting();
+    resetWireSignal();
+    clearWireArrivals();
     send({ type: "RESET" });
   }, [send]);
 
   const beginTrace = useCallback(
     (tokenKey: string, edges: PreviewEdgeSpec[]) => {
+      if (!isWireSignalEmitting()) {
+        startWireSignalEpoch();
+        armSourceArrival(tokenKey);
+      }
       send({ type: "TRACE_COMMIT", tokenKey, edges });
+      notifyWireTransform();
+    },
+    [send],
+  );
+
+  const emitWireSignal = useCallback(
+    (tokenKey: string, edges: PreviewEdgeSpec[]) => {
+      startWireSignalEpoch();
+      armSourceArrival(tokenKey);
+      send({ type: "WIRE_SIGNAL_START", tokenKey, edges });
+      setWireHoveredTokenKey(tokenKey);
+      setTraceSessionActive(true);
+      setHoverPreviewEdgeIds(new Set(edges.map((edge) => edge.id)));
+      primeTraceSignal({ tokenKey, edges });
+      notifyWireTransform();
     },
     [send],
   );
@@ -176,7 +212,11 @@ export function useTraceSession(isCtrlActive: boolean) {
       onFire: () => void,
       onClear: () => void,
       onInfo?: () => void,
-      options?: { instant?: boolean; traceHost?: HTMLElement | null },
+      options?: {
+        instant?: boolean;
+        traceHost?: HTMLElement | null;
+        onSignal?: () => void;
+      },
     ) => {
       const timers = timersRef.current;
       clearTimers(timers);
@@ -189,8 +229,12 @@ export function useTraceSession(isCtrlActive: boolean) {
       const switchingToken =
         prior.committedKey != null && prior.committedKey !== tokenKey;
       send({ type: "POINTER_ENTER", tokenKey, instant: options?.instant });
+      setWireHoveredTokenKey(tokenKey);
+      setTraceSessionActive(true);
+      options?.onSignal?.();
 
       const delay = pointerEnterDelayMs(prior, tokenKey, options?.instant);
+      setTraceSessionMood(delay === 0 ? "active" : "pending");
       if (delay === 0) {
         runFire(tokenKey, onFire, options?.traceHost ?? undefined);
       } else {
@@ -233,16 +277,22 @@ export function useTraceSession(isCtrlActive: boolean) {
       clearPendingTraceHost();
 
       hoverClearRef.current = { tokenKey, onClear };
+      stopWireSignalEmitting();
       send({ type: "POINTER_LEAVE", tokenKey });
 
       const [nextSnap] = transition(traceMachine, snapshotRef.current, {
         type: "POINTER_LEAVE",
         tokenKey,
       });
-      const grace = graceDelayMs(
-        snapshotToSession(nextSnap.value as PaneMood, nextSnap.context),
-      );
-      if (grace === 0) {
+      const nextSession = snapshotToSession(nextSnap.value as PaneMood, nextSnap.context);
+      const grace = graceDelayMs(nextSession);
+      const drain =
+        traceHadCommitted(prior) && nextSession.mood === "leaving"
+          ? WIRE_PROPAGATION_DRAIN_MS
+          : 0;
+      const waitMs = Math.max(grace, drain);
+
+      if (waitMs === 0) {
         commitGraceClear(tokenKey, onClear);
         timers.clear = null;
         return;
@@ -251,7 +301,7 @@ export function useTraceSession(isCtrlActive: boolean) {
       timers.clear = setTimeout(() => {
         commitGraceClear(tokenKey, onClear);
         timers.clear = null;
-      }, grace);
+      }, waitMs);
     },
     [commitGraceClear, send],
   );
@@ -410,6 +460,7 @@ export function useTraceSession(isCtrlActive: boolean) {
     setHoverPreviewEdges,
     setPinnedTraces,
     beginTrace,
+    emitWireSignal,
     endTrace,
     endHoverPreview,
     pinTrace,

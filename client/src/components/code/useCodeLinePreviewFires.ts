@@ -42,6 +42,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
   const {
     graphData,
     beginTrace,
+    emitWireSignal,
     endHoverPreview,
     lookupIndexedUsageSites,
     lookupProjectReferences,
@@ -92,7 +93,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
     lookup,
   });
 
-  const firePreview = useCallback(
+  const buildUsagePreview = useCallback(
     (name: string, chipKey: string, chipEl: HTMLElement) => {
       const tokenIndex = tokenIndexFromChipKey(chipKey);
       const tokenKey = makeUsageTokenKey(
@@ -103,12 +104,9 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
         name,
       );
       const edgeKey = ctrlPreviewEdgeId(sourceFlowId, `${memberId}::${lineNumber}::${name}`);
-      edgeKeyRef.current = edgeKey;
-
       const entry = lookup(name);
       const kind = semanticFromChipElement(chipEl, entry);
       const cascadeEdges = buildReceiverCascadeEdges(tokenIndex, edgeKey);
-
       const edges = assembleCodeLinePreviewEdges({
         name,
         chipEl,
@@ -130,32 +128,16 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
         cascadeEdges,
         lexicalGraph,
       });
-
-      const loadEdge = primaryHoverLoadEdge(edges, chipEl);
-      if (loadEdge?.load) {
-        showUsageLoadMenu(
-          loadEdge.load.token,
-          kind,
-          chipEl,
-          loadEdge.load.candidates,
-        );
-      } else {
-        clearConnectionMenu();
-      }
-
-      beginTrace(tokenKey, edges);
+      return { tokenKey, edgeKey, edges, kind, chipEl };
     },
     [
-      beginTrace,
       buildReceiverCascadeEdges,
-      clearConnectionMenu,
       getNode,
       graphData,
       hasSymbol,
       lookup,
       memberId,
       lineNumber,
-      showUsageLoadMenu,
       sourceFlowId,
       symbolIndex,
       lexicalGraph,
@@ -166,11 +148,43 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
     ],
   );
 
+  const signalPreview = useCallback(
+    (name: string, chipKey: string, chipEl: HTMLElement) => {
+      const built = buildUsagePreview(name, chipKey, chipEl);
+      edgeKeyRef.current = built.edgeKey;
+      emitWireSignal(built.tokenKey, built.edges);
+    },
+    [buildUsagePreview, emitWireSignal],
+  );
+
+  const firePreview = useCallback(
+    (name: string, chipKey: string, chipEl: HTMLElement) => {
+      const built = buildUsagePreview(name, chipKey, chipEl);
+      edgeKeyRef.current = built.edgeKey;
+
+      const loadEdge = primaryHoverLoadEdge(built.edges, chipEl);
+      if (loadEdge?.load) {
+        showUsageLoadMenu(
+          loadEdge.load.token,
+          built.kind,
+          chipEl,
+          loadEdge.load.candidates,
+        );
+      } else {
+        clearConnectionMenu();
+      }
+
+      beginTrace(built.tokenKey, built.edges);
+    },
+    [beginTrace, buildUsagePreview, clearConnectionMenu, showUsageLoadMenu],
+  );
+
   return {
     chipRefs,
     clearHover,
     defEdgeContext,
     firePreview,
+    signalPreview,
     hasSymbol,
     lookup,
     ...secondary,

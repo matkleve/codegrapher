@@ -16,7 +16,6 @@
 }
 
 .graph-canvas-grid {
-  position: relative;
   background-color: var(--background);
 }
 
@@ -35,25 +34,6 @@
   background-size: var(--grid-fine-size, 24px) var(--grid-fine-size, 24px);
   background-position: var(--grid-fine-position, 0 0);
   background-repeat: repeat;
-}
-
-.graph-flow-container .graph-minimap.react-flow__minimap {
-  bottom: 0.75rem;
-  left: 0.75rem;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--card);
-  box-shadow: var(--node-shadow);
-}
-
-.graph-flow-container .graph-minimap .react-flow__minimap-mask {
-  fill: color-mix(in oklch, var(--background) 55%, transparent);
-}
-
-.graph-flow-container .graph-minimap .react-flow__minimap-node {
-  fill: var(--chart-2);
 }
 
 .graph-flow-container {

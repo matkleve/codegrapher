@@ -124,6 +124,8 @@
   --interactive-toggle-border: var(--surface-active-border);
   /* Motion — one trace/hover importance clock; affordance hover stays 120ms too. */
   --motion-trace: 120ms;
+  --motion-trace-pending: 80ms;
+  --motion-trace-out: 80ms;
   --motion-hover-surface: 120ms;
   --motion-hover-color: 120ms;
   --motion-dim: var(--motion-trace);
@@ -131,6 +133,7 @@
   --motion-chip-surface: var(--motion-trace);
   --motion-chip-color: var(--motion-trace);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-trace-out: cubic-bezier(0.4, 0, 1, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   /* Two dimming levels: --faint = hover/trace (prototype value); --faint-ctrl =
      Ctrl "search" mode, bleached harder toward the background so revealed

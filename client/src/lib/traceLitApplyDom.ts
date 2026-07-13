@@ -1,5 +1,6 @@
-import { traceStrength, type TraceSituation } from "@/lib/traceDepth";
+import { traceStrength } from "@/lib/traceDepth";
 import { isTraceSessionActive } from "@/lib/wireHoverBoost";
+import { resolveChipStrength, getArrivalMultiplier } from "@/lib/wireSignalArrival";
 import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
 
 export const CHIP_LIT = "token-chip-lit";
@@ -51,6 +52,12 @@ function removeAnchorColorClasses(anchor: HTMLElement): void {
   }
 }
 
+function traceKeyForEl(el: HTMLElement): string | null {
+  if (el.dataset.traceKey) return el.dataset.traceKey;
+  const host = el.closest<HTMLElement>("[data-trace-key]");
+  return host?.dataset.traceKey ?? null;
+}
+
 function applyDepth(el: HTMLElement, depth: number, pointerHover = false): void {
   if (!isTraceSessionActive()) {
     el.classList.remove(TRACE_DEPTH_FADED);
@@ -59,9 +66,15 @@ function applyDepth(el: HTMLElement, depth: number, pointerHover = false): void 
     return;
   }
 
-  const situation: TraceSituation = pointerHover ? "hover" : "focus";
-  const strength = traceStrength(situation, "chip", depth);
-  el.classList.toggle(TRACE_DEPTH_FADED, depth > 1);
+  const traceKey = traceKeyForEl(el);
+  const situation = pointerHover ? "hover" : "focus";
+  const base = traceStrength(situation, "chip", depth);
+  const strength = resolveChipStrength(traceKey, depth, pointerHover);
+  const arrival = getArrivalMultiplier(traceKey, depth);
+  el.classList.toggle(
+    TRACE_DEPTH_FADED,
+    depth > 1 && (arrival != null ? strength < base * 0.85 : true),
+  );
   el.style.removeProperty("opacity");
   el.style.setProperty(TRACE_STRENGTH_VAR, String(strength));
 }
@@ -200,6 +213,18 @@ export function unwindTraceLitDom(): void {
   for (const [socket] of appliedSockets) {
     socket.classList.remove(TRACE_DEPTH_FADED);
     socket.style.removeProperty("opacity");
+  }
+}
+
+/** Re-apply `--trace-strength` when wire arrival progress ticks (no class churn). */
+export function refreshArrivalStrengthDom(): void {
+  if (!isTraceSessionActive()) return;
+  for (const [el, state] of appliedHosts) {
+    const pointerHover = state.classes.includes(CHIP_HOVER_PREVIEW);
+    applyDepth(el, state.depth, pointerHover);
+  }
+  for (const [socket, state] of appliedSockets) {
+    applyDepth(socket, state.depth, Boolean(state.pointerHover));
   }
 }
 

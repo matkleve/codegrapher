@@ -17,7 +17,7 @@ export const TRACE_TUNING = {
     chipAtFocus: 1,
   },
   pending: {
-    chipAtPending: 0.35,
+    chipAtPending: 0.52,
   },
   glow: {
     baselineRatio: 0.08,

@@ -26,12 +26,12 @@ import {
   type WireElements,
 } from "@/lib/previewEdgeDom";
 import { setWireHoveredEdgeId, setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
+import { subscribeTraceSignalPrime } from "@/lib/traceSignalPrime";
 import {
   syncStructuralWireDom,
   updateStructuralWireGeometry,
   type StructuralWireElements,
 } from "@/lib/structuralEdgeDom";
-import { MOTION_TRACE_MS } from "@/lib/motionTokens";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 
@@ -152,7 +152,30 @@ export function usePreviewEdgeOverlay() {
     wire.hitTo.onclick = null;
   };
 
+  const bindHitHandlersRef = useRef(bindHitHandlers);
+  bindHitHandlersRef.current = bindHitHandlers;
+
   const allStructuralSpecs = [...structuralEdges, ...pulseEdges];
+
+  useLayoutEffect(() => {
+    return subscribeTraceSignalPrime(({ edges }) => {
+      specsRef.current = edges;
+      const svg = svgRef.current;
+      if (!svg || edges.length === 0) return;
+      let layer = svg.querySelector<SVGGElement>("[data-preview-wires]");
+      if (!layer) {
+        layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        layer.setAttribute("data-preview-wires", "");
+        svg.append(layer);
+      }
+      const warm = isWarm && prevEdgeCountRef.current > 0;
+      syncWireDom(layer, edges, wiresRef.current, warm, getNode);
+      for (const wire of wiresRef.current.values()) {
+        bindHitHandlersRef.current(wire);
+      }
+      engineRef.current?.tickOnce();
+    });
+  }, [getNode, isWarm]);
 
   useLayoutEffect(() => {
     const engine = createWireEngine({
@@ -225,18 +248,11 @@ export function usePreviewEdgeOverlay() {
     engineRef.current?.tickOnce();
   }, [previewEdges, isWarm]);
 
-  // Fade hover wires the instant mood → `leaving` (no pins in that mood, so the
-  // whole layer is hover wires). Only `active` restores full opacity — a fresh
-  // trace or a re-entry cancel. `idle`/`pending` are left untouched so the fade
-  // runs to completion even though the machine mood clears before the DOM fade
-  // (the pane keeps its `leaving`/`fading-out` classes via `domFading`).
+  // Leaving: lit/syntax fades via trace CSS; wires drain individually (no layer opacity kill).
   useLayoutEffect(() => {
     const layer = svgRef.current?.querySelector<SVGGElement>("[data-preview-wires]");
     if (!layer) return;
-    if (sessionMood === "leaving") {
-      layer.style.transition = `opacity ${MOTION_TRACE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-      layer.style.opacity = "0";
-    } else if (sessionMood === "active") {
+    if (sessionMood === "active") {
       layer.style.transition = "";
       layer.style.opacity = "";
     }

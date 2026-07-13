@@ -8,18 +8,18 @@
 
 ## Full lifecycle (normative summary)
 
-One clock for surround + lit unwind + wire retire: **`--motion-trace` (120ms)**. Wire stroke **draw** on commit: 240ms WAAPI (independent).
+One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + **140ms** stroke draw (WAAPI). Orchestration: `traceMotion.ts`.
 
 | When | Pane mood | Class card | Member rows | Syntax / chrome | Indexed chips | Wires |
 | ---- | --------- | ---------- | ----------- | --------------- | ------------- | ----- |
 | **Idle** | — | white; title normal | `bg-muted` | full color | resting ink | hidden |
-| **Enter / pending** (0–40ms) | `graph-trace-pending` | white; title → `--faint` | non-lit → `--trace-dim-surface` | `--faint-*` | ink **unchanged**; focal pending strength | hidden |
-| **Commit / active** (dwell) | `graph-trace-active` | white; title faint | lit path → blue wash; others dim | `--faint-*` on non-lit lines | path: lit + fill; off-path: resting ink | draw 240ms → march |
+| **Enter / pending** (instant signal) | `graph-trace-pending` | white; title → `--faint` | non-lit → `--trace-dim-surface` | `--faint-*` | ink **unchanged**; focal pending strength (0.52) | **signal starts** — hop-1 draws from core |
+| **Commit / active** (dwell) | `graph-trace-active` | white; title faint | lit path → blue wash; others dim | `--faint-*` on non-lit lines | path: lit + fill; off-path: resting ink | wave continues outward by hop |
 | **Ctrl held** (stacks) | `+ graph-ctrl-preview` | unchanged | dim surface | **`--faint-ctrl`** (wins) | shimmer + resting ink | instant commit if hover |
 | **Pointer on path** (active) | active | — | — | — | hover strength bump | touched wires emphasize |
 | **Pin** | `+ graph-trace-pinned` | — | per merged lit | per merged lit | `token-chip-source` | persist |
-| **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | **retire** 120ms fade (not instant remove) |
-| **Leave timing** | `onVisualLeave` immediate; 50ms grace for refs only | | | | | cancel WAAPI reveal on retire |
+| **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | emitter **off**; in-flight signals finish, then 80ms retire |
+| **Leave timing** | `onVisualLeave` immediate; no leave grace | | | | | cancel WAAPI reveal on retire |
 
 **Invariants:** chip emphasis only goes **up** (never `--faint` then relight). Dwell gates **commit** (wires, row blue, lit DOM) — not chip ink. Row blue on **commit only**, not pending.
 
@@ -30,7 +30,7 @@ One clock for surround + lit unwind + wire retire: **`--motion-trace` (120ms)**.
 | Layer | Spec | Code |
 | ----- | ---- | ---- |
 | Gestures | [token-interactions.md](token-interactions.md) | `useTokenTraceState` |
-| Clock / state machine | [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) | `hoverIntent.ts`, `beginTrace` |
+| Clock / state machine | [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) | `hoverIntent.ts`, `traceMotion.ts`, `traceWireSignal.ts`, `beginTrace` |
 | Pixels | [interaction-emphasis.md](interaction-emphasis.md) | [implementation supplement](interaction-emphasis.implementation.supplement.md) |
 | Brightness | [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md) | `traceDepth.ts`, `traceLitApply.ts` |
 | Wire kind + geometry | [connection-taxonomy.md](connection-taxonomy.md) · [wayfinding supplement](preview-edges.wayfinding.supplement.md) | edge builders, `wireDomSync.ts` |

@@ -27,7 +27,7 @@ type UseMemberSignatureTypeTraceArgs = {
   graphNodeId: string;
   filePath: string;
   chipRef: RefObject<TokenChipHandle | null>;
-  hostRef: RefObject<HTMLButtonElement | null>;
+  hostRef: RefObject<HTMLElement | null>;
   /** Set for param input types (`result: GeocoderSearchResult`). */
   paramName?: string;
   symbolIndex?: MemberSymbolIndex;
@@ -54,6 +54,7 @@ export function useMemberSignatureTypeTrace({
   const { getNode } = useReactFlow();
   const {
     beginTrace,
+    emitWireSignal,
     graphData,
     showConnectionMenu,
     clearConnectionMenu,
@@ -70,10 +71,10 @@ export function useMemberSignatureTypeTrace({
   const resolveHost = () =>
     chipRef.current?.getChipElement() ?? hostRef.current;
 
-  const firePreview = useCallback(() => {
-    if (!symbolName || !tokenKey) return;
+  const buildEdges = useCallback(() => {
+    if (!symbolName || !tokenKey) return [];
     const chipEl = resolveHost();
-    if (!chipEl) return;
+    if (!chipEl) return [];
     const edges = buildSignatureTypeUsageEdges(
       symbolName,
       semantic,
@@ -105,8 +106,37 @@ export function useMemberSignatureTypeTrace({
         }),
       );
     }
+    return edges;
+  }, [
+    flowNodeId,
+    getNode,
+    graphData,
+    hasSymbol,
+    lexicalGraph,
+    memberId,
+    methodCode,
+    methodStartLine,
+    paramName,
+    semantic,
+    symbolIndex,
+    symbolName,
+    symbols,
+    tokenKey,
+  ]);
+
+  const signalPreview = useCallback(() => {
+    const edges = buildEdges();
+    if (edges.length === 0) return;
+    emitWireSignal(tokenKey, edges);
+  }, [buildEdges, emitWireSignal, tokenKey]);
+
+  const firePreview = useCallback(() => {
+    const edges = buildEdges();
+    if (edges.length === 0) return;
     beginTrace(tokenKey, edges);
     if (edges.some((e) => e.load)) {
+      const chipEl = resolveHost();
+      if (!chipEl) return;
       const resolved = resolveVisibleTarget(
         symbolName,
         symbols,
@@ -131,20 +161,15 @@ export function useMemberSignatureTypeTrace({
     }
   }, [
     beginTrace,
+    buildEdges,
     clearConnectionMenu,
     filePath,
     flowNodeId,
     getNode,
     graphData,
     hasSymbol,
-    lexicalGraph,
-    memberId,
-    methodCode,
-    methodStartLine,
-    paramName,
     semantic,
     showConnectionMenu,
-    symbolIndex,
     symbolName,
     symbols,
     tokenKey,
@@ -174,7 +199,9 @@ export function useMemberSignatureTypeTrace({
     tokenKey,
     enabled: indexed,
     onFire: firePreview,
+    onSignal: signalPreview,
     onClear: () => {},
+    traceHost: resolveHost,
     buildTransientInfo: () => {
       const { pinned: _p, ...rest } = buildPinInfo();
       return rest;

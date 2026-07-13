@@ -1,17 +1,38 @@
 import type { WireElements } from "@/lib/previewEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { depthFromHop, traceStrength } from "@/lib/traceDepth";
+import { depthFromHop } from "@/lib/traceDepth";
 import { TRACE_STRENGTH_VAR } from "@/lib/traceLitApply";
+import {
+  WIRE_REVEAL_HOP_MS,
+  WIRE_REVEAL_MS,
+  WIRE_REVEAL_STAGGER_MS,
+} from "@/lib/traceMotion";
+import {
+  isWireSignalEmitting,
+  wireSignalElapsedDelay,
+} from "@/lib/traceWireSignal";
+import {
+  setWireEndpointArrival,
+  traceKeyFromWireEnd,
+  wireEndpointDepth,
+} from "@/lib/wireSignalArrival";
+import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
 
-export const WIRE_REVEAL_MS = 240;
-/** Delay between wires at the same hop (fan-out siblings). */
-export const WIRE_REVEAL_STAGGER_MS = 25;
-/** Extra delay per graph hop beyond the hovered token (focus = hop 1). */
-export const WIRE_REVEAL_HOP_MS = 100;
+export { WIRE_REVEAL_HOP_MS, WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/traceMotion";
 
 const DRAWING = "preview-edge-drawing";
 const GLOW_DRAWING = "preview-edge-glow-drawing";
 export const MARCHING = "preview-edge-marching";
+
+const activeDraws = new Map<SVGGElement, number>();
+
+export function cancelWireDraw(group: SVGGElement): void {
+  const raf = activeDraws.get(group);
+  if (raf != null) {
+    cancelAnimationFrame(raf);
+    activeDraws.delete(group);
+  }
+}
 
 export function wireRevealDelayMs(hop: number | undefined, tieIndex = 0): number {
   const depth = depthFromHop(hop);
@@ -54,12 +75,7 @@ export function isWireRevealing(group: SVGGElement): boolean {
 }
 
 function finishReveal(path: SVGPathElement, glow: SVGPathElement, group: SVGGElement): void {
-  for (const el of [path, glow]) {
-    for (const anim of el.getAnimations?.() ?? []) {
-      if (isCssAnimation(anim)) continue;
-      anim.cancel();
-    }
-  }
+  cancelWireDraw(group);
   path.classList.remove(DRAWING);
   glow.classList.remove(GLOW_DRAWING);
   path.style.removeProperty("stroke-dashoffset");
@@ -74,21 +90,13 @@ function finishReveal(path: SVGPathElement, glow: SVGPathElement, group: SVGGEle
   delete group.dataset.revealStarted;
 }
 
-function isCssAnimation(anim: Animation): boolean {
-  return typeof CSSAnimation !== "undefined" && anim instanceof CSSAnimation;
-}
-
 /** Drop reveal draw overrides — keeps CSS marching (`proto-flow`) running on path. */
 export function stripWireRevealStroke(
   path: SVGPathElement,
   glow: SVGPathElement,
 ): void {
-  for (const el of [path, glow]) {
-    for (const anim of el.getAnimations?.() ?? []) {
-      if (isCssAnimation(anim)) continue;
-      anim.cancel();
-    }
-  }
+  const group = path.parentElement as SVGGElement | null;
+  if (group) cancelWireDraw(group);
   path.classList.remove(DRAWING);
   glow.classList.remove(GLOW_DRAWING);
   path.classList.remove(MARCHING);
@@ -101,10 +109,52 @@ export function stripWireRevealStroke(
   path.style.removeProperty("opacity");
 }
 
-/** One solid dash the length of the path — WAAPI offset reveals source→target. */
+/** One solid dash the length of the path — RAF offset reveals source→target. */
 function armPathStrokeDraw(path: SVGPathElement, len: number): void {
   path.style.strokeDasharray = `${len}`;
   path.style.strokeDashoffset = `${len}`;
+}
+
+function runStrokeDraw(
+  wire: WireElements,
+  len: number,
+  delayMs: number,
+  toKey: string | null,
+  depth: number,
+): void {
+  const { path, glow, group } = wire;
+  cancelWireDraw(group);
+
+  const startAt = performance.now() + wireSignalElapsedDelay(delayMs);
+
+  const tick = (now: number): void => {
+    if (!isWireRevealing(group) && group.dataset.revealed !== "1") {
+      cancelWireDraw(group);
+      return;
+    }
+
+    if (now < startAt) {
+      activeDraws.set(group, requestAnimationFrame(tick));
+      return;
+    }
+
+    const progress = Math.min(1, (now - startAt) / WIRE_REVEAL_MS);
+    path.style.strokeDashoffset = `${len * (1 - progress)}`;
+    if (toKey) {
+      setWireEndpointArrival(toKey, depth, progress);
+      refreshArrivalStrengthDom();
+    }
+
+    if (progress < 1) {
+      activeDraws.set(group, requestAnimationFrame(tick));
+      return;
+    }
+
+    activeDraws.delete(group);
+    finishReveal(path, glow, group);
+  };
+
+  activeDraws.set(group, requestAnimationFrame(tick));
 }
 
 /**
@@ -113,7 +163,10 @@ function armPathStrokeDraw(path: SVGPathElement, len: number): void {
  */
 export function playWireReveal(wire: WireElements, delayMs = 0): void {
   const { path, glow, group, spec } = wire;
-  if (group.dataset.revealed === "1" || group.dataset.revealStarted === "1") {
+  if (group.dataset.revealStarted === "1" || group.dataset.revealed === "1") {
+    return;
+  }
+  if (!isWireSignalEmitting()) {
     return;
   }
 
@@ -123,43 +176,25 @@ export function playWireReveal(wire: WireElements, delayMs = 0): void {
   const len = path.getTotalLength();
   if (len <= 0) return;
 
-  if (typeof path.animate !== "function") {
-    path.classList.add(MARCHING);
-    glow.classList.add(MARCHING);
-    group.dataset.revealed = "1";
-    return;
-  }
-
-  const pathStrength = traceStrength("focus", "wire", depthFromHop(spec.hop));
-  const glowStrength = traceStrength("focus", "wireGlow", depthFromHop(spec.hop));
-
   group.dataset.revealStarted = "1";
   path.classList.add(DRAWING);
   glow.classList.add(GLOW_DRAWING);
-  path.classList.add("preview-edge-trace-strength");
-  glow.classList.add("preview-edge-trace-strength");
   path.style.removeProperty("opacity");
   glow.style.removeProperty("stroke-dasharray");
   glow.style.removeProperty("stroke-dashoffset");
-  path.style.setProperty(TRACE_STRENGTH_VAR, String(pathStrength));
-  glow.style.setProperty(TRACE_STRENGTH_VAR, String(glowStrength));
+  glow.style.removeProperty(TRACE_STRENGTH_VAR);
+  path.style.removeProperty(TRACE_STRENGTH_VAR);
+  path.classList.remove("preview-edge-trace-strength");
+  glow.classList.remove("preview-edge-trace-strength");
   armPathStrokeDraw(path, len);
   glow.style.opacity = "0";
+  path.style.opacity = "1";
 
-  const delay = delayMs;
-  const timing: KeyframeAnimationOptions = {
-    duration: WIRE_REVEAL_MS,
-    delay,
-    easing: "ease-out",
-    fill: "forwards",
-  };
+  const toKey = traceKeyFromWireEnd(spec, "to");
+  const depth = wireEndpointDepth(spec);
+  if (toKey) {
+    setWireEndpointArrival(toKey, depth, 0);
+  }
 
-  const pathAnim = path.animate(
-    [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-    timing,
-  );
-
-  void pathAnim.finished
-    .then(() => finishReveal(path, glow, group))
-    .catch(() => finishReveal(path, glow, group));
+  runStrokeDraw(wire, len, delayMs, toKey, depth);
 }

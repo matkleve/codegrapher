@@ -1,17 +1,22 @@
-/** Hover-intent timing — mirrors connectors-proto.html */
-export const FIRE_COLD_MS = 40;
-export const FIRE_WARM_MS = 40;
-export const LEAVE_GRACE_MS = 50;
-/**
- * Warm trace — brief grace so a fast re-entry can cancel the leave, but short
- * enough that the visual teardown reads as immediate. The hover-wire layer
- * starts fading the instant mood → `leaving` (see `usePreviewEdgeOverlay`), so
- * this only bounds the re-entry cancel window, not when the fade begins.
- */
-export const LEAVE_GRACE_WARM_MS = 60;
-export const INFO_DELAY_MS = 300;
-/** Re-exported for docs: hover → first pixel ≈ FIRE_COLD_MS + layout; full draw adds WIRE_REVEAL_MS. */
-export { WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/wireReveal";
+/** Hover-intent timing — driven by `traceMotion.ts` orchestration. */
+import {
+  FIRE_COLD_MS,
+  FIRE_WARM_MS,
+  INFO_DELAY_MS,
+  TRACE_MOTION,
+  WIRE_REVEAL_MS,
+  WIRE_REVEAL_STAGGER_MS,
+} from "@/lib/traceMotion";
+
+export {
+  FIRE_COLD_MS,
+  FIRE_WARM_MS,
+  INFO_DELAY_MS,
+  TRACE_MOTION,
+  WIRE_REVEAL_MS,
+  WIRE_REVEAL_STAGGER_MS,
+};
+
 /** Wire hit-zone dwell before jump tooltip arms (keeps token clicks reachable). */
 export const JUMP_TOOLTIP_DWELL_MS = 450;
 export const JUMP_TOOLTIP_DWELL_WARM_MS = 280;
@@ -40,14 +45,13 @@ export function fireDelayMs(
   isCtrlHeld: boolean,
   instant = false,
 ): number {
-  if (instant || isCtrlHeld) return 0;
-  return isWarm ? FIRE_WARM_MS : FIRE_COLD_MS;
+  if (instant || isCtrlHeld || isWarm) return 0;
+  return FIRE_COLD_MS;
 }
 
-/** Grace only after a trace actually fired; pending dwell clears instantly. */
-export function leaveGraceMs(traceHadFired: boolean, isWarm = false): number {
-  if (!traceHadFired) return 0;
-  return isWarm ? LEAVE_GRACE_WARM_MS : LEAVE_GRACE_MS;
+/** Leave clears immediately — visual fade is owned by `--motion-trace-out`. */
+export function leaveGraceMs(_traceHadFired: boolean, _isWarm = false): number {
+  return 0;
 }
 
 /** Leave-clear runs when this token is still the latest pointer-leave target. */

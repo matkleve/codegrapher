@@ -21,7 +21,9 @@ export function useCodeLinePreview(args: PreviewArgs) {
     defEdgeContext: fires.defEdgeContext,
     clearHover: fires.clearHover,
     firePreview: fires.firePreview,
+    signalPreview: fires.signalPreview,
     fireDefPreview: fires.fireDefPreview,
+    signalDefPreview: fires.signalDefPreview,
     hasSymbol: fires.hasSymbol,
     lookup: fires.lookup,
   });

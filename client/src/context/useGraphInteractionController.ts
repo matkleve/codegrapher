@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 import type { Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import type { GraphInteractionContextValue } from "@/context/graphInteractionTypes";
@@ -16,6 +16,12 @@ import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
 import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
 import { useIncrementalUsageSiteIndex } from "@/hooks/useIncrementalUsageSiteIndex";
 import { rankAndCapUsageSites } from "@/lib/usageSiteRanking";
+import { computeTraceLit } from "@/lib/computeTraceLit";
+import { applyTraceLit } from "@/lib/traceLitController";
+import { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
+import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
+import { clearPendingTraceHost } from "@/lib/pendingTraceChip";
+import { subscribeTraceSignalPrime } from "@/lib/traceSignalPrime";
 import type { GraphData } from "@/types";
 
 type UseGraphInteractionControllerOptions = {
@@ -105,6 +111,7 @@ export function useGraphInteractionController({
 
   const { isHandleActive, edgeKindAtHandle } = useTraceLitState({
     previewEdges: edges.previewEdges,
+    hoverEmphasisEdges: edges.hoverEmphasisEdges,
     hoverPreviewEdges: trace.hoverPreviewEdges,
     pinnedTraces: trace.pinnedTraces,
     pinnedTokenKeySet: trace.pinnedTokenKeySet,
@@ -117,6 +124,23 @@ export function useGraphInteractionController({
     registryRevision,
     onFadeComplete: trace.completeFade,
   });
+
+  useLayoutEffect(() => {
+    const cache = createRefinePreviewEdgeCache();
+    return subscribeTraceSignalPrime(({ tokenKey, edges }) => {
+      clearPendingTraceHost();
+      cache.clear();
+      const lit = computeTraceLit(tokenKey, edges, getNode, cache);
+      applyTraceLit(lit, {
+        pinnedTokenKeys: trace.pinnedTokenKeySet,
+        hoveredTokenKey: tokenKey,
+        emphasisTokenKey: tokenKey,
+        previewEdges: edges,
+        getNode,
+      });
+      refreshArrivalStrengthDom();
+    });
+  }, [getNode, trace.pinnedTokenKeySet]);
 
   const focusFlowNode = useCallback(
     (flowNodeId: string) => {
@@ -159,6 +183,7 @@ export function useGraphInteractionController({
       isHandleActive,
       edgeKindAtHandle,
       beginTrace: trace.beginTrace,
+      emitWireSignal: trace.emitWireSignal,
       endTrace: trace.endTrace,
       endHoverPreview: trace.endHoverPreview,
       isWarm: trace.isWarm,

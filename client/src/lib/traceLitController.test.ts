@@ -4,11 +4,16 @@ import { registerTraceHost } from "@/lib/elementRegistry";
 import { setTraceAnchorHost } from "@/lib/memberDefAnchor";
 import { applyTraceLit, clearTraceLit } from "@/lib/traceLitController";
 import { setTraceSessionActive } from "@/lib/wireHoverBoost";
+import { resetWireSignal, stopWireSignalEmitting } from "@/lib/traceWireSignal";
+import { clearWireArrivals } from "@/lib/wireSignalArrival";
 
 describe("applyTraceLit", () => {
   afterEach(() => {
     clearTraceLit();
     setTraceSessionActive(false);
+    stopWireSignalEmitting();
+    resetWireSignal();
+    clearWireArrivals();
   });
 
   it("applies endpoint socket colors without throwing for multi-class TOKEN_ANCHOR", () => {

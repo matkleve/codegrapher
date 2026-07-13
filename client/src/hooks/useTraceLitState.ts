@@ -13,9 +13,11 @@ import {
   syncHoverPreviewEdgeIds,
 } from "@/lib/traceLitApply";
 import { subscribeTraceStrength } from "@/lib/wireHoverBoost";
+import { subscribeWireArrival } from "@/lib/wireSignalArrival";
 
 type UseTraceLitStateArgs = {
   previewEdges: PreviewEdgeSpec[];
+  hoverEmphasisEdges: PreviewEdgeSpec[];
   hoverPreviewEdges: PreviewEdgeSpec[];
   pinnedTraces: PinnedTrace[];
   pinnedTokenKeySet: ReadonlySet<string>;
@@ -36,6 +38,7 @@ type UseTraceLitStateArgs = {
  */
 export function useTraceLitState({
   previewEdges,
+  hoverEmphasisEdges,
   hoverPreviewEdges,
   pinnedTraces,
   pinnedTokenKeySet,
@@ -54,14 +57,21 @@ export function useTraceLitState({
   const fadingLitRef = useRef(false);
   const [strengthRevision, setStrengthRevision] = useState(0);
 
-  useLayoutEffect(() => subscribeTraceStrength(() => setStrengthRevision((n) => n + 1)), []);
+  useLayoutEffect(() => {
+    const unsubStrength = subscribeTraceStrength(() => setStrengthRevision((n) => n + 1));
+    const unsubArrival = subscribeWireArrival(() => setStrengthRevision((n) => n + 1));
+    return () => {
+      unsubStrength();
+      unsubArrival();
+    };
+  }, []);
 
   useLayoutEffect(() => {
     syncHoverPreviewEdgeIds(
       emphasisTokenKey ?? hoveredTokenKey,
-      previewEdges,
+      hoverEmphasisEdges,
     );
-  }, [emphasisTokenKey, hoveredTokenKey, previewEdges]);
+  }, [emphasisTokenKey, hoveredTokenKey, hoverEmphasisEdges]);
 
   const activeHandleKinds = useMemo(() => {
     const map = new Map<string, SemanticTokenKind>();

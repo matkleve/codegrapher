@@ -56,22 +56,32 @@ export function useDefinitionTrace({
 }: UseDefinitionTraceOptions) {
   const {
     beginTrace,
+    emitWireSignal,
     lookupOffCanvasCallSiteFiles,
     showConnectionMenu,
     clearConnectionMenu,
   } = useGraphInteraction();
 
+  const buildDefEdges = useCallback(() => {
+    if (!enabled || !anchorRef.current || !defKind) return [];
+    return buildDefinitionPreviewEdges(
+      traceName,
+      defKind,
+      anchorRef.current,
+      defEdgeContext,
+    );
+  }, [anchorRef, defEdgeContext, defKind, enabled, traceName]);
+
+  const signalDefPreview = useCallback(() => {
+    const edges = buildDefEdges();
+    if (!enabled || !defKind || edges.length === 0) return;
+    emitWireSignal(tokenKey, edges);
+  }, [buildDefEdges, defKind, emitWireSignal, enabled, tokenKey]);
+
   const fireDefPreview = useCallback(() => {
     if (!enabled || !anchorRef.current || !defKind) return;
-    beginTrace(
-      tokenKey,
-      buildDefinitionPreviewEdges(
-        traceName,
-        defKind,
-        anchorRef.current,
-        defEdgeContext,
-      ),
-    );
+    const edges = buildDefEdges();
+    beginTrace(tokenKey, edges);
     const sites = lookupOffCanvasCallSiteFiles(traceName);
     const menuState = buildHoverLoadMenu(
       traceName,
@@ -86,8 +96,8 @@ export function useDefinitionTrace({
   }, [
     anchorRef,
     beginTrace,
+    buildDefEdges,
     clearConnectionMenu,
-    defEdgeContext,
     defKind,
     enabled,
     filePath,
@@ -132,6 +142,7 @@ export function useDefinitionTrace({
     tokenKey,
     enabled,
     onFire: fireDefPreview,
+    onSignal: signalDefPreview,
     onClear: () => {},
     traceHost,
     buildTransientInfo: () => {

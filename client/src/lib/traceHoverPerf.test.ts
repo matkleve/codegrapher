@@ -221,7 +221,7 @@ describe("trace hover perf", () => {
     );
     // eslint-disable-next-line no-console -- perf report
     console.log(
-      `[perf] hover → trace: ${40}ms dwell; full wire draw: +240ms draw`,
+      `[perf] hover → trace: ${20}ms dwell; full wire draw: +140ms draw`,
     );
 
     expect(edgeBuildMs).toBeLessThan(50);

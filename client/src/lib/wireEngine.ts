@@ -3,6 +3,9 @@ import type { StructuralWireElements } from "@/lib/structuralEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { Node } from "@xyflow/react";
+import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
+import { hasWireArrivals } from "@/lib/wireSignalArrival";
+import { isWireSignalEmitting } from "@/lib/traceWireSignal";
 
 const SETTLE_MS = 100;
 
@@ -46,6 +49,9 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
       }
     }
     for (const listener of tickListeners) listener();
+    if (isWireSignalEmitting() || hasWireArrivals()) {
+      refreshArrivalStrengthDom();
+    }
   };
 
   const stopLoop = (): void => {

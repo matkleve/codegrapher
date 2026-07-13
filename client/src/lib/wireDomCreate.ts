@@ -20,6 +20,7 @@ import {
 } from "@/lib/wireHoverBoost";
 import { LOAD_STUB_READY_ATTR } from "@/lib/loadStubPosition";
 import { isWireRevealing, playWireReveal, wireRevealDelayMs } from "@/lib/wireReveal";
+import { isWireSignalEmitting } from "@/lib/traceWireSignal";
 import type { Node } from "@xyflow/react";
 
 export type WireElements = {
@@ -112,8 +113,12 @@ export function applyWireDepthOpacity(
     group.dataset.revealed !== "1" &&
     group.dataset.revealStarted !== "1";
 
-  if (!isTraceSessionActive()) {
+  if (!isTraceSessionActive() && !isWireSignalEmitting()) {
     clearWireTraceStrength(path, glow);
+    return;
+  }
+
+  if (pendingReveal && isWireSignalEmitting()) {
     return;
   }
 
@@ -151,7 +156,16 @@ export function hideWireUntilReveal(wire: WireElements): void {
   if (wire.group.dataset.revealed === "1" || wire.group.dataset.revealStarted === "1") {
     return;
   }
-  setWireTraceStrength(wire.path, wire.glow, 0, 0);
+  if (!isWireSignalEmitting()) {
+    setWireTraceStrength(wire.path, wire.glow, 0, 0);
+    return;
+  }
+  wire.path.classList.remove(WIRE_TRACE_STRENGTH);
+  wire.glow.classList.remove(WIRE_TRACE_STRENGTH);
+  wire.path.style.removeProperty(TRACE_STRENGTH_VAR);
+  wire.glow.style.removeProperty(TRACE_STRENGTH_VAR);
+  wire.path.style.opacity = "0";
+  wire.glow.style.opacity = "0";
 }
 
 export function revealWireIfReady(wire: WireElements, loadEl?: HTMLElement | null): void {
@@ -159,6 +173,11 @@ export function revealWireIfReady(wire: WireElements, loadEl?: HTMLElement | nul
     hideWireUntilReveal(wire);
     return;
   }
+  const warmRetarget =
+    wire.path.classList.contains("preview-edge-warm") &&
+    wire.group.dataset.revealed === "1";
+  if (warmRetarget) return;
+
   const delayMs =
     wire.group.dataset.revealDelayMs != null
       ? Number.parseInt(wire.group.dataset.revealDelayMs, 10)
@@ -166,12 +185,13 @@ export function revealWireIfReady(wire: WireElements, loadEl?: HTMLElement | nul
           wire.spec.hop,
           Number.parseInt(wire.group.dataset.drawIndex ?? "0", 10),
         );
-  const warmRetarget =
-    wire.path.classList.contains("preview-edge-warm") &&
-    wire.group.dataset.revealed === "1";
-  if (!warmRetarget) {
-    playWireReveal(wire, delayMs);
+
+  if (!isWireSignalEmitting() && wire.group.dataset.revealStarted !== "1") {
+    hideWireUntilReveal(wire);
+    return;
   }
+
+  playWireReveal(wire, delayMs);
 }
 
 export function createWireGroup(

@@ -37,6 +37,12 @@
     stroke-width var(--motion-trace) var(--ease);
 }
 
+.graph-pane.graph-trace-fading-out .preview-edge-path,
+.graph-pane.graph-trace-fading-out .preview-edge-glow {
+  transition-duration: var(--motion-trace-out);
+  transition-timing-function: var(--ease-trace-out);
+}
+
 .preview-edge-path.preview-edge-marching {
   animation: proto-flow 700ms linear infinite;
 }
@@ -94,11 +100,17 @@
 .preview-edge-path.preview-edge-drawing {
   animation: none !important;
   transition: none !important;
+  opacity: 1 !important;
 }
 
 .preview-edge-glow.preview-edge-glow-drawing {
   transition: none !important;
   animation: none !important;
+}
+
+.graph-pane:is(.graph-trace-pending, .graph-trace-active) .preview-edge-path:not(.preview-edge-marching),
+.graph-pane:is(.graph-trace-pending, .graph-trace-active) .preview-edge-glow:not(.preview-edge-marching) {
+  transition-property: stroke, stroke-width;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -26,7 +26,9 @@ type IdentifierHandlersArgs = Pick<
   defEdgeContext: DefinitionEdgeContext;
   clearHover: () => void;
   firePreview: (name: string, chipKey: string, chipEl: HTMLElement) => void;
+  signalPreview: (name: string, chipKey: string, chipEl: HTMLElement) => void;
   fireDefPreview: (name: string, chipEl: HTMLElement) => void;
+  signalDefPreview: (name: string, chipEl: HTMLElement) => void;
   hasSymbol: (name: string) => boolean;
   lookup: IndexContextValue["lookup"];
 };
@@ -46,6 +48,8 @@ export function useCodeLineIdentifierHandlers(args: IdentifierHandlersArgs) {
     clearHover,
     firePreview,
     fireDefPreview,
+    signalPreview,
+    signalDefPreview,
     hasSymbol,
     lookup,
   } = args;
@@ -110,7 +114,14 @@ export function useCodeLineIdentifierHandlers(args: IdentifierHandlersArgs) {
             ...buildUsagePinInfo(name, chipEl, isDefinition),
             pinned: false,
           }),
-        instant ? { instant: true, traceHost: chipEl } : { traceHost: chipEl },
+        {
+          ...(instant ? { instant: true } : {}),
+          traceHost: chipEl,
+          onSignal: () =>
+            memberFanOut
+              ? signalDefPreview(name, chipEl)
+              : signalPreview(name, chipKey, chipEl),
+        },
       );
     },
     [
@@ -124,6 +135,8 @@ export function useCodeLineIdentifierHandlers(args: IdentifierHandlersArgs) {
       memberId,
       scheduleHoverFire,
       showTokenInfo,
+      signalDefPreview,
+      signalPreview,
       sourceFlowId,
     ],
   );

@@ -40,6 +40,27 @@
     color var(--motion-trace) var(--ease);
 }
 
+/* Pending enter — faster surround dim than commit lit (80ms vs 120ms). */
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .member-row,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-line,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .member-row-header,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .react-flow__node.class-node-root,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-kw,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .control-flow-chip-text,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-pn,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-comment,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-string,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-number,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .code-type,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .member-body-wrap,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .node-card-title,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .node-card-caret,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .member-row-caret,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .token-chip,
+.graph-pane.graph-trace-pending:not(.graph-trace-active) .token-def-label {
+  transition-duration: var(--motion-trace-pending);
+}
+
 .code-type {
   color: var(--token-edge-type);
 }
@@ -188,4 +209,33 @@
 
 .graph-pane:is(.graph-trace-active, .graph-trace-leaving) .react-flow__node.class-node-root {
   border-color: var(--border);
+}
+
+/* Trace fade-out — faster ease-in exit (enter keeps --motion-trace + --ease). */
+.graph-pane.graph-trace-fading-out .member-row,
+.graph-pane.graph-trace-fading-out .code-line,
+.graph-pane.graph-trace-fading-out .member-row-header,
+.graph-pane.graph-trace-fading-out .react-flow__node.class-node-root,
+.graph-pane.graph-trace-fading-out .code-kw,
+.graph-pane.graph-trace-fading-out .control-flow-chip-text,
+.graph-pane.graph-trace-fading-out .code-pn,
+.graph-pane.graph-trace-fading-out .code-comment,
+.graph-pane.graph-trace-fading-out .code-string,
+.graph-pane.graph-trace-fading-out .code-number,
+.graph-pane.graph-trace-fading-out .code-type,
+.graph-pane.graph-trace-fading-out .member-body-wrap,
+.graph-pane.graph-trace-fading-out .list-row-graph-chrome,
+.graph-pane.graph-trace-fading-out .member-sig-value,
+.graph-pane.graph-trace-fading-out .member-sig-kind-icon,
+.graph-pane.graph-trace-fading-out .node-card-caret,
+.graph-pane.graph-trace-fading-out .member-row-caret,
+.graph-pane.graph-trace-fading-out .node-card-title,
+.graph-pane.graph-trace-fading-out .file-type-chip,
+.graph-pane.graph-trace-fading-out .token-chip,
+.graph-pane.graph-trace-fading-out .token-def-label,
+.graph-pane.graph-trace-fading-out .control-flow-chip,
+.graph-pane.graph-trace-fading-out .flow-anchor-on,
+.graph-pane.graph-trace-fading-out .connector-chip--load-stub {
+  transition-duration: var(--motion-trace-out);
+  transition-timing-function: var(--ease-trace-out);
 }
