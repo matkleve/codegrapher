@@ -5,49 +5,26 @@ import {
   WIRE_REVEAL_STAGGER_MS,
 } from "@/lib/traceMotion";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
-import { getWireSignalEpoch, isWireSignalEmitting } from "@/lib/traceWireSignal";
+import {
+  getWireArrival,
+  getWireSignalEpoch,
+  hasWireArrivals,
+  isWireSignalEmitting,
+} from "@/lib/trace/traceEngine";
 import { traceKeyFromElement } from "@/lib/traceLitDepth";
+
+// Arrival *state* (the map + arm/set/clear/subscribe) now lives in traceEngine.
+export {
+  subscribeWireArrival,
+  clearWireArrivals,
+  armSourceArrival,
+  setWireEndpointArrival,
+  hasWireArrivals,
+} from "@/lib/trace/traceEngine";
 
 function wireRevealDelayMs(hop: number | undefined, tieIndex = 0): number {
   const depth = depthFromHop(hop);
   return (depth - 1) * WIRE_REVEAL_HOP_MS + tieIndex * WIRE_REVEAL_STAGGER_MS;
-}
-
-type ArrivalSlot = { progress: number; depth: number };
-
-const arrivals = new Map<string, ArrivalSlot>();
-const listeners = new Set<() => void>();
-
-function notify(): void {
-  for (const listener of listeners) listener();
-}
-
-export function subscribeWireArrival(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-export function clearWireArrivals(): void {
-  if (arrivals.size === 0) return;
-  arrivals.clear();
-  notify();
-}
-
-/** Source token is live the instant the emitter arms. */
-export function armSourceArrival(traceKey: string): void {
-  arrivals.set(traceKey, { progress: 1, depth: 1 });
-  notify();
-}
-
-export function setWireEndpointArrival(
-  traceKey: string,
-  depth: number,
-  progress: number,
-): void {
-  const clamped = Math.min(1, Math.max(0, progress));
-  const prev = arrivals.get(traceKey);
-  if (prev && prev.progress >= clamped && clamped < 1) return;
-  arrivals.set(traceKey, { progress: clamped, depth });
 }
 
 export function traceKeyFromWireEnd(
@@ -81,16 +58,16 @@ export function getArrivalMultiplier(
   traceKey: string | null,
   depth: number,
 ): number | null {
-  const slot = traceKey ? arrivals.get(traceKey) : undefined;
+  const slot = traceKey ? getWireArrival(traceKey) : undefined;
   if (slot) return slot.progress;
 
-  if (!isWireSignalEmitting() && arrivals.size === 0) return null;
+  if (!isWireSignalEmitting() && !hasWireArrivals()) return null;
 
   if (isWireSignalEmitting()) {
     return scheduledProgressForDepth(depth);
   }
 
-  return arrivals.size > 0 ? 1 : null;
+  return hasWireArrivals() ? 1 : null;
 }
 
 export function resolveChipStrength(
@@ -104,10 +81,6 @@ export function resolveChipStrength(
   const arrival = getArrivalMultiplier(traceKey, depth);
   if (arrival == null) return base;
   return base * arrival;
-}
-
-export function hasWireArrivals(): boolean {
-  return arrivals.size > 0;
 }
 
 export function wireEndpointDepth(spec: PreviewEdgeSpec): number {

@@ -6,10 +6,20 @@ source of truth. Companion to the visual contract in
 and [`preview-edges.trace-strength.supplement.md`](../specs/system/preview-edges.trace-strength.supplement.md);
 this doc owns the **runtime/lifecycle** side those specs under-specify.
 
-**Status:** Proposed (2026-07-14). Not started. Motivated by a run of desync bugs
-(hover re-render storm, member rows re-rendering through `SimulationContext`, the
-signal "just fading in" on short hover) — each was a *synchronization* failure
-between the systems below, not a logic bug in any one of them.
+**Status:** In progress (2026-07-14). **Steps 1–2 landed:** `lib/trace/traceEngine.ts`
+is now the single owner of the signal clock, pointer/emphasis, arrivals, and mood;
+`traceWireSignal`, `traceSessionMood`, `traceSignalPrime`, `wireSignalArrival`, and
+`wireHoverBoost` are thin adapters over it (state lives once, no hand-synced mirrors).
+Guarded by `traceEngine.test.ts` (signal lifecycle, arrival monotonicity, channels).
+Verified behavior-identical: hover render-count 0, cascade 0/120/240ms, short-hover
+completes, strength falloff unchanged. **Remaining:** repoint imports + delete the
+adapter shims (finish step 2), React `useSyncExternalStore` selectors for the leaf
+anchors (step 3), collapse mood into a machine selector (step 4), runtime-lifecycle
+spec + Playwright integration suite (step 5).
+
+Motivated by a run of desync bugs (hover re-render storm, member rows re-rendering
+through `SimulationContext`, the signal "just fading in" on short hover) — each was a
+*synchronization* failure between the systems below, not a logic bug in any one.
 
 ---
 
