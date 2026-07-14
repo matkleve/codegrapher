@@ -30,9 +30,11 @@ import {
   setTraceSessionActive,
   setWireHoveredTokenKey,
 } from "@/lib/wireHoverBoost";
-import { WIRE_PROPAGATION_DRAIN_MS } from "@/lib/traceMotion";
+import { WIRE_PROPAGATION_DRAIN_MS, wireCascadeDurationMs } from "@/lib/traceMotion";
+import { depthFromHop } from "@/lib/traceDepth";
 import {
   isWireSignalEmitting,
+  keepWireSignalAlive,
   resetWireSignal,
   startWireSignalEpoch,
   stopWireSignalEmitting,
@@ -277,6 +279,15 @@ export function useTraceSession(isCtrlActive: boolean) {
       clearPendingTraceHost();
 
       hoverClearRef.current = { tokenKey, onClear };
+      // Let the hop cascade finish even on a short hover: keep the signal alive
+      // (so late-laid-out hops still draw) and size the drain to the cascade.
+      const cascadeMs = wireCascadeDurationMs(
+        prior.hoverPreviewEdges.reduce(
+          (max, edge) => Math.max(max, depthFromHop(edge.hop)),
+          1,
+        ),
+      );
+      if (traceHadCommitted(prior)) keepWireSignalAlive(cascadeMs);
       stopWireSignalEmitting();
       send({ type: "POINTER_LEAVE", tokenKey });
 
@@ -288,7 +299,7 @@ export function useTraceSession(isCtrlActive: boolean) {
       const grace = graceDelayMs(nextSession);
       const drain =
         traceHadCommitted(prior) && nextSession.mood === "leaving"
-          ? WIRE_PROPAGATION_DRAIN_MS
+          ? Math.max(WIRE_PROPAGATION_DRAIN_MS, cascadeMs)
           : 0;
       const waitMs = Math.max(grace, drain);
 

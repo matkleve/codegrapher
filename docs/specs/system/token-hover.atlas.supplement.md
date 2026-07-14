@@ -8,7 +8,9 @@
 
 ## Full lifecycle (normative summary)
 
-One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + **140ms** stroke draw (WAAPI). Orchestration: `traceMotion.ts`.
+One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + stroke draw (WAAPI) that **grows outward from the hovered core token** (`wireReveal.ts` reverses the dash when the core is the wire's `to` end). Orchestration: `traceMotion.ts`.
+
+**Hop-sequential cascade (normative):** the reveal steps outward one hop at a time — a hop's wire only starts once the previous hop's wire has finished and its endpoint chip has lit (`wireHopStaggerMs` = `wireRevealMs`; fan legs within a hop stagger by `wireFanStaggerMs`). The signal is **fire-and-forget**: a short hover still completes the full cascade to the outermost hop — on pointer leave the signal is kept alive and the edge-retire drain is sized to `wireCascadeDurationMs` (the remaining hop schedule), so leaving early never truncates the wave.
 
 | When | Pane mood | Class card | Member rows | Syntax / chrome | Indexed chips | Wires |
 | ---- | --------- | ---------- | ----------- | --------------- | ------------- | ----- |
