@@ -16,6 +16,7 @@ import {
   traceKeyFromWireEnd,
   wireEndpointDepth,
 } from "@/lib/wireSignalArrival";
+import { getWireHoveredTokenKey } from "@/lib/wireHoverBoost";
 import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
 
 export { WIRE_REVEAL_HOP_MS, WIRE_REVEAL_MS, WIRE_REVEAL_STAGGER_MS } from "@/lib/traceMotion";
@@ -109,18 +110,22 @@ export function stripWireRevealStroke(
   path.style.removeProperty("opacity");
 }
 
-/** One solid dash the length of the path — RAF offset reveals source→target. */
-function armPathStrokeDraw(path: SVGPathElement, len: number): void {
+/**
+ * One solid dash the length of the path. RAF offset reveals from the core end:
+ * offset `len`→0 grows from the path start; `-len`→0 grows from the path end.
+ */
+function armPathStrokeDraw(path: SVGPathElement, len: number, reverse: boolean): void {
   path.style.strokeDasharray = `${len}`;
-  path.style.strokeDashoffset = `${len}`;
+  path.style.strokeDashoffset = `${reverse ? -len : len}`;
 }
 
 function runStrokeDraw(
   wire: WireElements,
   len: number,
   delayMs: number,
-  toKey: string | null,
+  farKey: string | null,
   depth: number,
+  reverse: boolean,
 ): void {
   const { path, glow, group } = wire;
   cancelWireDraw(group);
@@ -139,9 +144,10 @@ function runStrokeDraw(
     }
 
     const progress = Math.min(1, (now - startAt) / WIRE_REVEAL_MS);
-    path.style.strokeDashoffset = `${len * (1 - progress)}`;
-    if (toKey) {
-      setWireEndpointArrival(toKey, depth, progress);
+    const remaining = len * (1 - progress);
+    path.style.strokeDashoffset = `${reverse ? -remaining : remaining}`;
+    if (farKey) {
+      setWireEndpointArrival(farKey, depth, progress);
       refreshArrivalStrengthDom();
     }
 
@@ -155,6 +161,23 @@ function runStrokeDraw(
   };
 
   activeDraws.set(group, requestAnimationFrame(tick));
+}
+
+/**
+ * A wire always draws outward from the hovered "core" token. When the core is
+ * the wire's `to` endpoint (e.g. hovering a usage whose edge was built
+ * definition→usage), the reveal reverses so the stroke still emanates from the
+ * core and the signal lights the far end on arrival.
+ */
+function resolveRevealDirection(spec: WireElements["spec"]): {
+  reverse: boolean;
+  farKey: string | null;
+} {
+  const coreKey = getWireHoveredTokenKey();
+  const fromKey = traceKeyFromWireEnd(spec, "from");
+  const toKey = traceKeyFromWireEnd(spec, "to");
+  const reverse = coreKey != null && toKey === coreKey && fromKey !== coreKey;
+  return { reverse, farKey: reverse ? fromKey : toKey };
 }
 
 /**
@@ -186,15 +209,16 @@ export function playWireReveal(wire: WireElements, delayMs = 0): void {
   path.style.removeProperty(TRACE_STRENGTH_VAR);
   path.classList.remove("preview-edge-trace-strength");
   glow.classList.remove("preview-edge-trace-strength");
-  armPathStrokeDraw(path, len);
+
+  const { reverse, farKey } = resolveRevealDirection(spec);
+  const depth = wireEndpointDepth(spec);
+  armPathStrokeDraw(path, len, reverse);
   glow.style.opacity = "0";
   path.style.opacity = "1";
 
-  const toKey = traceKeyFromWireEnd(spec, "to");
-  const depth = wireEndpointDepth(spec);
-  if (toKey) {
-    setWireEndpointArrival(toKey, depth, 0);
+  if (farKey) {
+    setWireEndpointArrival(farKey, depth, 0);
   }
 
-  runStrokeDraw(wire, len, delayMs, toKey, depth);
+  runStrokeDraw(wire, len, delayMs, farKey, depth, reverse);
 }
