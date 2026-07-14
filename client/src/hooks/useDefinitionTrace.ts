@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
@@ -60,7 +60,7 @@ export function useDefinitionTrace({
     lookupOffCanvasCallSiteFiles,
     showConnectionMenu,
     clearConnectionMenu,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   const buildDefEdges = useCallback(() => {
     if (!enabled || !anchorRef.current || !defKind) return [];

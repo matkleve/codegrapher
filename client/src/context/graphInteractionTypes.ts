@@ -36,22 +36,20 @@ export function toAnchorRect(rect: DOMRect): AnchorRect {
   };
 }
 
-export type GraphInteractionContextValue = {
-  previewEdges: PreviewEdgeSpec[];
-  structuralEdges: StructuralEdgeSpec[];
-  pulseEdges: StructuralEdgeSpec[];
-  visibleEdgeKinds: ReadonlySet<ConnectionKind>;
-  isEdgeKindVisible: (kind: ConnectionKind) => boolean;
+/**
+ * Identity-stable slice: callbacks, lookups, and load-invariant data. None of
+ * these change on hover, so consumers that only read actions never re-render
+ * during a trace. Lives in its own context (`useGraphActions`) — see
+ * `token-hover.atlas.supplement.md` § "why the context is split".
+ */
+export type GraphActionsValue = {
   toggleEdgeKind: (kind: ConnectionKind) => void;
   setPulseEdges: React.Dispatch<React.SetStateAction<StructuralEdgeSpec[]>>;
   transitiveHopDepth: number;
-  isHandleActive: (handle: string) => boolean;
-  edgeKindAtHandle: (handle: string) => SemanticTokenKind | null;
   beginTrace: (tokenKey: string, edges: PreviewEdgeSpec[]) => void;
   emitWireSignal: (tokenKey: string, edges: PreviewEdgeSpec[]) => void;
   endTrace: () => void;
   endHoverPreview: () => void;
-  isWarm: boolean;
   scheduleHoverFire: (
     tokenKey: string,
     onFire: () => void,
@@ -62,10 +60,8 @@ export type GraphInteractionContextValue = {
   scheduleHoverClear: (tokenKey: string, onClear: () => void) => void;
   scheduleHoverLeaveGrace: () => void;
   cancelHoverLeaveGrace: () => void;
-  tokenInfo: TokenInfoState;
   showTokenInfo: (info: Omit<TokenInfoState & object, "pinned"> & { pinned: boolean }) => void;
   clearTokenInfo: () => void;
-  isTraceActive: boolean;
   findReferences: (token: string) => TokenReference[];
   findCallSites: (token: string) => CallSiteReference[];
   lookupProjectReferences: (token: string) => ReferenceEntry[];
@@ -77,26 +73,48 @@ export type GraphInteractionContextValue = {
   refreshLoadTraces: () => void;
   graphData: GraphData | null;
   pinTrace: (tokenKey: string, shiftKey?: boolean, traceHost?: HTMLElement | null) => void;
-  pinnedTokenKey: string | null;
-  pinnedTraces: PinnedTrace[];
-  activePinKey: string | null;
   setActivePinKey: (tokenKey: string) => void;
   isPinnedTokenKey: (tokenKey: string) => boolean;
-  hoveredTokenKey: string | null;
-  /** Pointer under cursor — may lead committed trace; updates before dwell. */
-  emphasisTokenKey: string | null;
-  traceTokenKey: string | null;
-  sessionMood?: string;
-  debugEvents?: TraceEvent[];
+  goBackPin: () => void;
   lookupIndexedUsageSites: (
     token: string,
     sourceFlowId: string,
     sourceMemberId?: string,
     anchorLineNumber?: number,
   ) => UsageSiteRecord[];
-  goBackPin: () => void;
-  canGoBackPin: boolean;
-  connectionMenu: TokenConnectionMenuState | null;
   showConnectionMenu: (state: TokenConnectionMenuState) => void;
   clearConnectionMenu: () => void;
 };
+
+/**
+ * Volatile slice: everything that changes as the pointer moves / a trace commits.
+ * Reading any of these subscribes a component to per-hover re-renders, so keep
+ * hot/multiplied components (code lines, member rows) OFF this context — read it
+ * only in small leaf components (the target-anchor dots).
+ */
+export type GraphTraceStateValue = {
+  previewEdges: PreviewEdgeSpec[];
+  structuralEdges: StructuralEdgeSpec[];
+  pulseEdges: StructuralEdgeSpec[];
+  visibleEdgeKinds: ReadonlySet<ConnectionKind>;
+  isEdgeKindVisible: (kind: ConnectionKind) => boolean;
+  isHandleActive: (handle: string) => boolean;
+  edgeKindAtHandle: (handle: string) => SemanticTokenKind | null;
+  isWarm: boolean;
+  tokenInfo: TokenInfoState;
+  isTraceActive: boolean;
+  pinnedTokenKey: string | null;
+  pinnedTraces: PinnedTrace[];
+  activePinKey: string | null;
+  hoveredTokenKey: string | null;
+  /** Pointer under cursor — may lead committed trace; updates before dwell. */
+  emphasisTokenKey: string | null;
+  traceTokenKey: string | null;
+  sessionMood?: string;
+  debugEvents?: TraceEvent[];
+  canGoBackPin: boolean;
+  connectionMenu: TokenConnectionMenuState | null;
+};
+
+/** Combined view — back-compat for consumers that read both slices at once. */
+export type GraphInteractionContextValue = GraphActionsValue & GraphTraceStateValue;

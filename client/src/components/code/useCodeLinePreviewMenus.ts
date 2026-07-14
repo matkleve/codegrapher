@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import {
   buildHoverLoadMenu,
   loadTargetsFromExternalCards,
@@ -12,7 +12,7 @@ export function useCodeLinePreviewMenus(filePath: string) {
     showConnectionMenu,
     clearConnectionMenu,
     lookupOffCanvasCallSiteFiles,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   const showUsageLoadMenu = useCallback(
     (

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { TokenChip, type TokenChipHandle } from "@/components/code/TokenChip";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import {
@@ -42,7 +42,7 @@ export function MemberSignatureParamChip({
   const chipRef = useRef<TokenChipHandle>(null);
   const { getNode } = useReactFlow();
   const { lookup, hasSymbol, symbols } = useIndex();
-  const { beginTrace, emitWireSignal, graphData } = useGraphInteraction();
+  const { beginTrace, emitWireSignal, graphData } = useGraphActions();
 
   const paramDef = paramDefForName(symbolIndex, memberId, paramName);
   const paramLine = paramDef?.lineNumber ?? 1;

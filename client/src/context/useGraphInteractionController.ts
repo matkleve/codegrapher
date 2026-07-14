@@ -1,7 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from "react";
 import type { Node } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
-import type { GraphInteractionContextValue } from "@/context/graphInteractionTypes";
+import type {
+  GraphActionsValue,
+  GraphTraceStateValue,
+} from "@/context/graphInteractionTypes";
 import { useCtrlKey } from "@/context/CtrlKeyContext";
 import { useIndex } from "@/context/IndexContext";
 import { useConnectionLookups } from "@/hooks/useConnectionLookups";
@@ -40,7 +43,10 @@ export function useGraphInteractionController({
   onLoadFile,
   onSelectReadingFocus,
   onFocusReadingMember,
-}: UseGraphInteractionControllerOptions): GraphInteractionContextValue {
+}: UseGraphInteractionControllerOptions): {
+  actions: GraphActionsValue;
+  traceState: GraphTraceStateValue;
+} {
   const { isCtrlActive } = useCtrlKey();
   const { symbols, references } = useIndex();
   const { setCenter, getNode } = useReactFlow();
@@ -170,31 +176,24 @@ export function useGraphInteractionController({
     [getNode, nodes, setCenter, setNodes],
   );
 
-  return useMemo(
+  // Identity-stable slice. Every field here has a stable identity across a
+  // hover/trace gesture, so this object keeps the same identity too — consumers
+  // that read only actions never re-render while tracing.
+  const actions = useMemo<GraphActionsValue>(
     () => ({
-      previewEdges: edges.previewEdges,
-      structuralEdges: edges.structuralEdges,
-      pulseEdges: edges.pulseEdges,
-      visibleEdgeKinds: edges.visibleEdgeKinds,
-      isEdgeKindVisible: edges.isEdgeKindVisible,
       toggleEdgeKind: edges.toggleEdgeKind,
       transitiveHopDepth: edges.transitiveHopDepth,
       setPulseEdges: edges.setPulseEdges,
-      isHandleActive,
-      edgeKindAtHandle,
       beginTrace: trace.beginTrace,
       emitWireSignal: trace.emitWireSignal,
       endTrace: trace.endTrace,
       endHoverPreview: trace.endHoverPreview,
-      isWarm: trace.isWarm,
       scheduleHoverFire: trace.scheduleHoverFire,
       scheduleHoverClear: trace.scheduleHoverClear,
       scheduleHoverLeaveGrace: trace.scheduleHoverLeaveGrace,
       cancelHoverLeaveGrace: trace.cancelHoverLeaveGrace,
-      tokenInfo: trace.tokenInfo,
       showTokenInfo: trace.showTokenInfo,
       clearTokenInfo: trace.clearTokenInfo,
-      isTraceActive: trace.isTraceActive,
       findReferences: lookups.findReferences,
       findCallSites: lookups.findCallSites,
       lookupProjectReferences: lookups.lookupProjectReferences,
@@ -206,28 +205,33 @@ export function useGraphInteractionController({
       refreshLoadTraces,
       graphData,
       pinTrace: trace.pinTrace,
-      pinnedTokenKey: trace.activePinKey,
-      pinnedTraces: trace.pinnedTraces,
-      activePinKey: trace.activePinKey,
       setActivePinKey: trace.setActivePinKey,
       isPinnedTokenKey: trace.isPinnedTokenKey,
-      hoveredTokenKey: trace.hoveredTokenKey,
-      emphasisTokenKey: trace.emphasisTokenKey,
-      traceTokenKey: trace.traceTokenKey,
-      sessionMood: trace.sessionMood,
-      debugEvents: trace.debugEvents,
-      lookupIndexedUsageSites,
       goBackPin: trace.goBackPin,
-      canGoBackPin: trace.canGoBackPin,
-      connectionMenu: trace.connectionMenu,
+      lookupIndexedUsageSites,
       showConnectionMenu: trace.showConnectionMenu,
       clearConnectionMenu: trace.clearConnectionMenu,
     }),
     [
-      edges,
-      isHandleActive,
-      edgeKindAtHandle,
-      trace,
+      edges.toggleEdgeKind,
+      edges.transitiveHopDepth,
+      edges.setPulseEdges,
+      trace.beginTrace,
+      trace.emitWireSignal,
+      trace.endTrace,
+      trace.endHoverPreview,
+      trace.scheduleHoverFire,
+      trace.scheduleHoverClear,
+      trace.scheduleHoverLeaveGrace,
+      trace.cancelHoverLeaveGrace,
+      trace.showTokenInfo,
+      trace.clearTokenInfo,
+      trace.pinTrace,
+      trace.setActivePinKey,
+      trace.isPinnedTokenKey,
+      trace.goBackPin,
+      trace.showConnectionMenu,
+      trace.clearConnectionMenu,
       lookups,
       focusFlowNode,
       onFocusReadingMember,
@@ -238,4 +242,53 @@ export function useGraphInteractionController({
       lookupIndexedUsageSites,
     ],
   );
+
+  // Volatile slice. Changes as the pointer moves / a trace commits.
+  const traceState = useMemo<GraphTraceStateValue>(
+    () => ({
+      previewEdges: edges.previewEdges,
+      structuralEdges: edges.structuralEdges,
+      pulseEdges: edges.pulseEdges,
+      visibleEdgeKinds: edges.visibleEdgeKinds,
+      isEdgeKindVisible: edges.isEdgeKindVisible,
+      isHandleActive,
+      edgeKindAtHandle,
+      isWarm: trace.isWarm,
+      tokenInfo: trace.tokenInfo,
+      isTraceActive: trace.isTraceActive,
+      pinnedTokenKey: trace.activePinKey,
+      pinnedTraces: trace.pinnedTraces,
+      activePinKey: trace.activePinKey,
+      hoveredTokenKey: trace.hoveredTokenKey,
+      emphasisTokenKey: trace.emphasisTokenKey,
+      traceTokenKey: trace.traceTokenKey,
+      sessionMood: trace.sessionMood,
+      debugEvents: trace.debugEvents,
+      canGoBackPin: trace.canGoBackPin,
+      connectionMenu: trace.connectionMenu,
+    }),
+    [
+      edges.previewEdges,
+      edges.structuralEdges,
+      edges.pulseEdges,
+      edges.visibleEdgeKinds,
+      edges.isEdgeKindVisible,
+      isHandleActive,
+      edgeKindAtHandle,
+      trace.isWarm,
+      trace.tokenInfo,
+      trace.isTraceActive,
+      trace.pinnedTraces,
+      trace.activePinKey,
+      trace.hoveredTokenKey,
+      trace.emphasisTokenKey,
+      trace.traceTokenKey,
+      trace.sessionMood,
+      trace.debugEvents,
+      trace.canGoBackPin,
+      trace.connectionMenu,
+    ],
+  );
+
+  return useMemo(() => ({ actions, traceState }), [actions, traceState]);
 }

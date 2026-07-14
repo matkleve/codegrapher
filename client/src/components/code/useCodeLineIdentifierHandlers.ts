@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { commitTokenPin } from "@/hooks/useTokenTrace";
 import { useTokenContextMenu } from "@/hooks/useTokenContextMenu";
 import { makeMemberDefKey, makeUsageTokenKey, tokenIndexFromChipKey } from "@/lib/traceKeys";
@@ -59,7 +59,7 @@ export function useCodeLineIdentifierHandlers(args: IdentifierHandlersArgs) {
     scheduleHoverClear,
     pinTrace,
     showTokenInfo,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   const defTokenKey = useMemo(
     () => makeMemberDefKey(sourceFlowId, memberId),

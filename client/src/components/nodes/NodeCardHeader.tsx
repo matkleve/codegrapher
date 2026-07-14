@@ -4,7 +4,7 @@ import { GripVertical } from "lucide-react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { NODE_DRAG_HANDLE } from "@/components/nodes/graphNodeUi";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useDefinitionTrace } from "@/hooks/useDefinitionTrace";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
@@ -43,7 +43,7 @@ export function NodeCardHeader({
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
     cancelHoverLeaveGrace,
-  } = useGraphInteraction();
+  } = useGraphActions();
   const { getNode } = useReactFlow();
 
   const indexed = Boolean(symbolName && hasSymbol(symbolName));

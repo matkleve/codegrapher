@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { previewLineHandle, previewTargetTop } from "@/lib/ctrlPreviewHandles";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import type { SimSession } from "@/lib/staticWalk/types";
 
 /** Wires call/return transport pulse edges for the active simulation step. */
 export function useSimulationPulse(simActive: boolean, session: SimSession | null) {
-  const { setPulseEdges, graphData } = useGraphInteraction();
+  const { setPulseEdges, graphData } = useGraphActions();
   const { symbols } = useIndex();
   const { getNode } = useReactFlow();
 

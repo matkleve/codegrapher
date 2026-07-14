@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import type { IndexContextValue } from "@/context/IndexContext";
 import { buildLoadPreviewEdge } from "@/lib/buildPreviewEdges";
 import { buildDefinitionPreviewEdges } from "@/lib/buildDefinitionPreviewEdges";
@@ -43,7 +43,7 @@ export function useCodeLineSecondaryFires({
   defEdgeContext,
   lookup,
 }: SecondaryFiresArgs) {
-  const { beginTrace, emitWireSignal } = useGraphInteraction();
+  const { beginTrace, emitWireSignal } = useGraphActions();
   const { showUsageLoadMenu, showDefLoadMenu, clearConnectionMenu } =
     useCodeLinePreviewMenus(filePath);
 

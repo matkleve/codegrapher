@@ -1,4 +1,4 @@
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useCodeLineIdentifierHandlers } from "@/components/code/useCodeLineIdentifierHandlers";
 import { useCodeLinePreviewFires } from "@/components/code/useCodeLinePreviewFires";
 import type { CodeLineProps } from "@/components/code/codeLineTypes";
@@ -33,7 +33,7 @@ export function useCodeLinePreview(args: PreviewArgs) {
     scheduleHoverClear,
     pinTrace,
     showTokenInfo,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   return {
     ...fires,

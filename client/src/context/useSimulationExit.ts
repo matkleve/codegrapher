@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import type { LineAnchor, SimAnchor } from "@/context/simulationTypes";
 import type { SimSession } from "@/lib/staticWalk/types";
 
@@ -24,7 +24,7 @@ export function useSimulationExit({
   setEndAnchor,
   setPauseAnchors,
 }: ExitSetters) {
-  const { setPulseEdges } = useGraphInteraction();
+  const { setPulseEdges } = useGraphActions();
 
   const exitSimulation = useCallback(() => {
     setPlaying(false);

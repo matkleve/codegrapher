@@ -6,7 +6,7 @@ import { memberAccessReceiverIndices } from "@/lib/memberAccessChain";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
 import { semanticFromChipElement } from "@/lib/tokenColors";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import type { TokenChipHandle } from "@/components/code/TokenChip";
 import type { CodeToken } from "@/lib/tokenizeLine";
@@ -27,7 +27,7 @@ export function useCodeLineReceiverCascade({
   sourceFlowId,
 }: CascadeArgs) {
   const { symbols, lookup, hasSymbol } = useIndex();
-  const { graphData } = useGraphInteraction();
+  const { graphData } = useGraphActions();
   const { getNode } = useReactFlow();
 
   return useCallback(

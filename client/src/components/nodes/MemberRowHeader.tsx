@@ -1,14 +1,14 @@
 import type { RefObject } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
+import { MemberTargetAnchor } from "@/components/nodes/MemberTargetAnchor";
 import { ExpandChevron } from "@/components/nodes/ExpandChevron";
 import { MemberSignatureTags } from "@/components/nodes/MemberSignatureTags";
-import type { ControlFlowIndex } from "@/lib/controlFlowLinks";
 import type { LexicalGraph } from "@/lib/lexicalGraph";
 import type { MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import type { MethodSignature } from "@/lib/parseMethodSignature";
 import type { OverrideInfo } from "@/lib/overrideInfo";
-import { TOKEN_ANCHOR, type SemanticTokenKind } from "@/lib/tokenColors";
+import type { SemanticTokenKind } from "@/lib/tokenColors";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +22,6 @@ type MemberRowHeaderProps = {
   expanded: boolean;
   labelRef: RefObject<HTMLSpanElement | null>;
   memberHandleId: string;
-  targetActive: boolean;
-  memberKind: SemanticTokenKind | null;
   methodSignature: MethodSignature | null;
   overrideInfo: OverrideInfo | null;
   flowNodeId: string;
@@ -55,8 +53,6 @@ export function MemberRowHeader({
   expanded,
   labelRef,
   memberHandleId,
-  targetActive,
-  memberKind,
   methodSignature,
   overrideInfo,
   flowNodeId,
@@ -85,14 +81,7 @@ export function MemberRowHeader({
         id={memberHandleId}
         className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
       />
-      <FlowAnchor
-        side="left"
-        targetId={memberHandleId}
-        size="node"
-        visible={targetActive}
-        highlighted={targetActive}
-        colorClass={targetActive && memberKind ? TOKEN_ANCHOR[memberKind] : "bg-border"}
-      />
+      <MemberTargetAnchor targetId={memberHandleId} />
       <button
         type="button"
         className={cn(

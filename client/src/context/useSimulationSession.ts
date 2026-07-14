@@ -3,7 +3,7 @@ import { useReactFlow } from "@xyflow/react";
 import { enrichSimSteps } from "@/lib/enrichSimSteps";
 import { effectiveEndFileLine } from "@/lib/simTraceBounds";
 import { buildSession } from "@/context/buildSimSession";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import type { LineAnchor, SimAnchor } from "@/context/simulationTypes";
 import type { SimPanelTab, SimSession } from "@/lib/staticWalk/types";
@@ -35,7 +35,7 @@ export function useSimulationSession({
   setPreflightOpen,
   setLedgerExpanded,
 }: SessionArgs) {
-  const { graphData } = useGraphInteraction();
+  const { graphData } = useGraphActions();
   const { symbols } = useIndex();
   const { getNode } = useReactFlow();
 

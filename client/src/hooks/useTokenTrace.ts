@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import type { TokenInfoState } from "@/lib/tokenContextInfo";
 
 type UseTokenHoverArgs = {
@@ -23,7 +23,7 @@ export function useTokenHover({
   traceHost,
 }: UseTokenHoverArgs) {
   const { scheduleHoverFire, scheduleHoverClear, endHoverPreview, showTokenInfo } =
-    useGraphInteraction();
+    useGraphActions();
 
   const clearHover = useCallback(() => {
     endHoverPreview();
@@ -132,7 +132,7 @@ export function useTokenPin({
   buildPinInfo,
   animateEl,
 }: UseTokenPinArgs) {
-  const { pinTrace, showTokenInfo } = useGraphInteraction();
+  const { pinTrace, showTokenInfo } = useGraphActions();
 
   const onPinClick = useCallback(
     (e: React.MouseEvent) => {

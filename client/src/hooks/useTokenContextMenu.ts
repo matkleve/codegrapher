@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useSimulationOptional } from "@/context/SimulationContext";
 import {
   buildContextMenu,
@@ -42,7 +42,7 @@ export function useTokenContextMenu({
     findCallSites,
     lookupIndexedUsageSites,
     showConnectionMenu,
-  } = useGraphInteraction();
+  } = useGraphActions();
   const sim = useSimulationOptional();
 
   return useCallback(

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { assembleCodeLinePreviewEdges } from "@/lib/codeLineTraceEdges";
 import { primaryHoverLoadEdge } from "@/lib/primaryHoverLoadEdge";
@@ -47,7 +47,7 @@ export function useCodeLinePreviewFires(args: PreviewFiresArgs) {
     lookupIndexedUsageSites,
     lookupProjectReferences,
     lookupOffCanvasCallSiteFiles,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   const { showUsageLoadMenu, clearConnectionMenu } = useCodeLinePreviewMenus(filePath);
 

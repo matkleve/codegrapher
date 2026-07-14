@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { MemberRowBody } from "@/components/nodes/MemberRowBody";
 import { MemberRowHeader } from "@/components/nodes/MemberRowHeader";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useDefinitionTrace } from "@/hooks/useDefinitionTrace";
 import { useTraceHostRegistration } from "@/hooks/useElementRegistry";
 import { useIndex } from "@/context/IndexContext";
@@ -35,7 +35,7 @@ type CollapsibleMemberRowProps = {
   isReadingFocus?: boolean;
 };
 
-export function CollapsibleMemberRow({
+function CollapsibleMemberRowComponent({
   memberId,
   label,
   symbolName,
@@ -58,8 +58,6 @@ export function CollapsibleMemberRow({
   useTraceHostRegistration(memberRowRef);
   const { lookup, hasSymbol, symbols } = useIndex();
   const {
-    isHandleActive,
-    edgeKindAtHandle,
     beginTrace,
     graphData,
     lookupIndexedUsageSites,
@@ -67,7 +65,7 @@ export function CollapsibleMemberRow({
     lookupOffCanvasCallSiteFiles,
     cancelHoverLeaveGrace,
     selectReadingFocus,
-  } = useGraphInteraction();
+  } = useGraphActions();
   const { getNode } = useReactFlow();
 
   const traceName = symbolName ?? label;
@@ -209,8 +207,6 @@ export function CollapsibleMemberRow({
         expanded={expanded}
         labelRef={labelRef}
         memberHandleId={memberHandleId}
-        targetActive={isHandleActive(memberHandleId)}
-        memberKind={edgeKindAtHandle(memberHandleId)}
         methodSignature={methodSignature}
         overrideInfo={overrideInfo}
         flowNodeId={flowNodeId}
@@ -252,3 +248,5 @@ export function CollapsibleMemberRow({
     </div>
   );
 }
+
+export const CollapsibleMemberRow = memo(CollapsibleMemberRowComponent);

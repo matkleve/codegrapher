@@ -1,7 +1,7 @@
 import { useCallback, type RefObject } from "react";
 import { useReactFlow } from "@xyflow/react";
 import type { TokenChipHandle } from "@/components/code/TokenChip";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useIndex } from "@/context/IndexContext";
 import { useTokenHover, useTokenPin } from "@/hooks/useTokenTrace";
 import { buildSignatureTypeUsageEdges } from "@/lib/signatureTypeEdges";
@@ -58,7 +58,7 @@ export function useMemberSignatureTypeTrace({
     graphData,
     showConnectionMenu,
     clearConnectionMenu,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   const symbolName = primaryIndexedSymbolInType(type, hasSymbol);
   const indexed = Boolean(symbolName);

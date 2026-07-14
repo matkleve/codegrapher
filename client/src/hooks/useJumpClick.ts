@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { useJumpTooltip } from "@/context/JumpTooltipContext";
 import { commitTokenPin } from "@/hooks/useTokenTrace";
 import { expandJumpTarget } from "@/lib/expandJumpTarget";
@@ -19,7 +19,7 @@ import type { LiveAnchorHint, PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
  * `applyLoadTraceRebuild`).
  */
 export function useJumpClick() {
-  const { pinTrace, beginTrace, showTokenInfo, focusFlowNode } = useGraphInteraction();
+  const { pinTrace, beginTrace, showTokenInfo, focusFlowNode } = useGraphActions();
   const { setJumpTooltip } = useJumpTooltip();
   const { getNode, setNodes } = useReactFlow();
 

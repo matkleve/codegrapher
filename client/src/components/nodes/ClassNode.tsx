@@ -5,10 +5,8 @@ import {
   Position,
   type NodeProps,
 } from "@xyflow/react";
-import { FlowAnchor } from "@/components/code/FlowAnchor";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
 import { previewTargetTop } from "@/lib/ctrlPreviewHandles";
-import { TOKEN_ANCHOR } from "@/lib/tokenColors";
+import { ClassTargetAnchors } from "@/components/nodes/ClassTargetAnchors";
 import { CollapsibleMemberRow } from "@/components/nodes/CollapsibleMemberRow";
 import { FileTypeChip } from "@/components/nodes/FileTypeChip";
 import { MemberSection } from "@/components/nodes/MemberSection";
@@ -43,13 +41,6 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
     onResizeEnd,
   } = useClassNodeController({ id, nodeData, nodeWidth, nodeHeight, bodyExpanded });
 
-  const { isHandleActive, edgeKindAtHandle } = useGraphInteraction();
-  const classTargetId = previewTargetTop(id);
-  const classTargetActive = isHandleActive(classTargetId);
-  const classKind = edgeKindAtHandle(classTargetId);
-  const classAnchorColor =
-    classTargetActive && classKind ? TOKEN_ANCHOR[classKind] : "bg-border";
-
   const title = camelToWords(nodeData.label);
   const hasProperties = nodeData.properties.length > 0;
   const hasMethods = nodeData.methods.length > 0;
@@ -75,22 +66,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
         id={previewTargetTop(id)}
         className="!h-0 !w-0 !border-0 !bg-transparent !opacity-0"
       />
-      <FlowAnchor
-        side="left"
-        targetId={previewTargetTop(id)}
-        size="node"
-        visible
-        highlighted={classTargetActive}
-        colorClass={classAnchorColor}
-      />
-      <FlowAnchor
-        side="right"
-        targetId={previewTargetTop(id)}
-        size="node"
-        visible
-        highlighted={classTargetActive}
-        colorClass={classAnchorColor}
-      />
+      <ClassTargetAnchors flowNodeId={id} />
       <NodeCardHeader
         title={title}
         symbolName={nodeData.label}

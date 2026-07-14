@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useGraphInteraction } from "@/context/GraphInteractionContext";
+import { useGraphActions } from "@/context/GraphInteractionContext";
 import { collectGraphFilePaths, isFileInGraph } from "@/lib/graphFiles";
 
 /** Load a definition file into the graph, or refresh wires when already present. */
@@ -9,7 +9,7 @@ export function useLoadTargetAction() {
     onLoadFile,
     refreshLoadTraces,
     cancelHoverLeaveGrace,
-  } = useGraphInteraction();
+  } = useGraphActions();
 
   return useCallback(
     (filePath: string) => {

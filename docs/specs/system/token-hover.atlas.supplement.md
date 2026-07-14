@@ -37,6 +37,30 @@ One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--e
 
 ---
 
+## Render isolation (why the interaction context is split) — normative
+
+The trace visuals are applied to the **DOM directly** (`traceLitApply.ts`, `wireDomSync.ts`), so a
+hover must cause **zero React re-renders** of the graph body. To keep that true, the interaction
+context is **two contexts, one provider** (`GraphInteractionContext.tsx`):
+
+- **`useGraphActions()`** — identity-stable callbacks/lookups (`beginTrace`, `scheduleHoverFire`,
+  `graphData`, the `lookup*` fns, …). Never changes on hover. **Hot, multiplied components
+  (code lines, member rows, class nodes, and every `useCodeLine*`/`useToken*`/`useDefinitionTrace`
+  hook) MUST read only this.**
+- **`useGraphTraceState()`** — volatile per-hover state (`isHandleActive`, `hoveredTokenKey`,
+  `previewEdges`, `tokenInfo`, …). Reading it subscribes to per-pointer-move re-renders, so read it
+  **only in the small leaf anchor dots** (`ClassTargetAnchors`, `LineTargetAnchor`,
+  `MemberTargetAnchor`) — never in a component that renders code/members.
+- `useGraphInteraction()` is the merged back-compat view; it re-renders on hover, so it is for
+  **cool, single-instance** consumers only (overlays, legend, toolbar).
+
+**Agent pitfall:** a hook consumed per-row/per-line that reaches the volatile slice — directly, or
+transitively (e.g. `useSimulationOptional` when `SimulationProvider` itself reads volatile state) —
+silently re-renders the whole graph on every pointer move. Verify with a render counter on
+`CodeLine`/`CollapsibleMemberRow`: a full hover in→dwell→out cycle must stay at **0**.
+
+---
+
 ## CSS ownership
 
 | Owns | Files |
