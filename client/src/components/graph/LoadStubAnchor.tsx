@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { FlowAnchor } from "@/components/code/FlowAnchor";
 import { ConnectionTargetLeading } from "@/components/ui/ConnectionTargetLeading";
@@ -28,6 +28,7 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
   const { getNode } = useReactFlow();
   const loadTarget = useLoadTargetAction();
   const { cancelHoverLeaveGrace } = useGraphInteraction();
+  const [socket, setSocket] = useState<"left" | "right">("right");
   const traceStrengthValue = isTraceSessionActive()
     ? traceStrength("focus", "chip", depthFromHop(edge.hop))
     : undefined;
@@ -50,6 +51,9 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
     host.style.left = `${pos.left}px`;
     host.style.top = `${pos.top}px`;
     host.style.visibility = "visible";
+    // Wire reads this on the same tick; set imperatively so it never lags the flip.
+    host.dataset.loadSocket = pos.socket;
+    setSocket((prev) => (prev === pos.socket ? prev : pos.socket));
     host.setAttribute(LOAD_STUB_READY_ATTR, "1");
   }, [edge, getNode]);
 
@@ -73,7 +77,6 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
       role="button"
       tabIndex={0}
       data-load-edge-id={edge.id}
-      data-load-socket="right"
       data-trace-key={`load-stub::${edge.id}`}
       data-symbol-name={load.token}
       data-token-kind={edge.kind}
@@ -105,7 +108,7 @@ export function LoadStubAnchor({ edge }: LoadStubAnchorProps) {
         Load
       </span>
       <FlowAnchor
-        side="right"
+        side={socket}
         colorClass={TOKEN_ANCHOR[edge.kind]}
         visible
         highlighted
