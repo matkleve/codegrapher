@@ -56,6 +56,8 @@ export function useTraceLitState({
   const clearLitTimerRef = useRef(0);
   const fadingLitRef = useRef(false);
   const [strengthRevision, setStrengthRevision] = useState(0);
+  const litActive = traceTokenKey != null || pinnedTraces.length > 0;
+  const registryBump = litActive ? registryRevision : 0;
 
   useLayoutEffect(() => {
     const unsubStrength = subscribeTraceStrength(() => setStrengthRevision((n) => n + 1));
@@ -113,8 +115,8 @@ export function useTraceLitState({
       );
     }
     return lit;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
-  }, [getNode, pinnedTraces, revealRevision, registryRevision, visibleEdgeKinds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryBump force recompute
+  }, [getNode, pinnedTraces, revealRevision, registryBump, visibleEdgeKinds]);
 
   const hoverLitKey = useMemo(() => {
     const candidate = emphasisTokenKey ?? hoveredTokenKey;
@@ -133,13 +135,13 @@ export function useTraceLitState({
       getNode,
       cache,
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryRevision force recompute
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revealRevision/registryBump force recompute
   }, [
     getNode,
     hoverLitKey,
     hoverPreviewEdges,
     revealRevision,
-    registryRevision,
+    registryBump,
     visibleEdgeKinds,
   ]);
 
@@ -171,7 +173,7 @@ export function useTraceLitState({
     previewEdges,
     traceLit,
     traceTokenKey,
-    registryRevision,
+    registryBump,
     revealRevision,
     strengthRevision,
     onFadeComplete,

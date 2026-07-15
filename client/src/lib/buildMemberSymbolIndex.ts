@@ -10,6 +10,13 @@ import type { BindingSite, MemberSymbolIndex } from "@/lib/localSymbolLinks";
 import { tokenizeLine } from "@/lib/tokenizeLine";
 import { templateInterpolationSites } from "@/lib/templateInterpolations";
 
+export const EMPTY_MEMBER_SYMBOL_INDEX: MemberSymbolIndex = {
+  usageTargets: new Map(),
+  defSites: new Map(),
+  bindingInitOf: new Map(),
+  bindingInitSites: new Map(),
+};
+
 /**
  * Build def/usage map for one member body — mirrors connectors-proto.html
  * `data-def` / `data-target` wiring for params, locals, and property refs.
@@ -24,6 +31,7 @@ export function buildMemberSymbolIndex(
   code: string,
   startLine = 1,
 ): MemberSymbolIndex {
+  if (!code.trim()) return EMPTY_MEMBER_SYMBOL_INDEX;
   const usageTargets = new Map<string, string>();
   const defSites = new Map<string, string>();
   const bindingInitOf = new Map<string, BindingSite>();

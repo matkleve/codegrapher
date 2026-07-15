@@ -3,6 +3,7 @@ import type { StructuralWireElements } from "@/lib/structuralEdgeDom";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import type { StructuralEdgeSpec } from "@/lib/structuralEdgeTypes";
 import type { Node } from "@xyflow/react";
+import { hasActiveWireDraws } from "@/lib/wireReveal";
 import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
 import { hasWireArrivals } from "@/lib/wireSignalArrival";
 import { isWireSignalEmitting } from "@/lib/traceWireSignal";
@@ -18,10 +19,15 @@ export type WireEngine = {
 type WireLayer = {
   getSpecs: () => PreviewEdgeSpec[] | StructuralEdgeSpec[];
   getWires: () => Map<string, WireElements | StructuralWireElements>;
+  prepareLayout?: (
+    box: DOMRect,
+    getNode: (id: string) => Node | undefined,
+  ) => unknown;
   update: (
     wire: WireElements | StructuralWireElements,
     box: DOMRect,
     getNode: (id: string) => Node | undefined,
+    layoutCtx?: unknown,
   ) => boolean;
 };
 
@@ -43,13 +49,19 @@ export function createWireEngine(options: WireEngineOptions): WireEngine {
     if (!hasSpecs) return;
 
     for (const layer of options.layers) {
-      for (const spec of layer.getSpecs()) {
+      const specs = layer.getSpecs();
+      if (specs.length === 0) continue;
+      const layoutCtx = layer.prepareLayout?.(box, options.getNode);
+      for (const spec of specs) {
         const wire = layer.getWires().get(spec.id);
-        if (wire) layer.update(wire, box, options.getNode);
+        if (wire) layer.update(wire, box, options.getNode, layoutCtx);
       }
     }
     for (const listener of tickListeners) listener();
-    if (isWireSignalEmitting() || hasWireArrivals()) {
+    if (
+      (isWireSignalEmitting() || hasWireArrivals()) &&
+      !hasActiveWireDraws()
+    ) {
       refreshArrivalStrengthDom();
     }
   };

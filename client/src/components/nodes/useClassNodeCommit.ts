@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import {
   layoutPreferenceFromData,
@@ -24,6 +24,15 @@ export function useClassNodeCommit(
 ): CommitNode {
   const { setNodes } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
+  const internalsRafRef = useRef(0);
+
+  const scheduleNodeInternals = useCallback(() => {
+    if (internalsRafRef.current) return;
+    internalsRafRef.current = requestAnimationFrame(() => {
+      internalsRafRef.current = 0;
+      updateNodeInternals(id);
+    });
+  }, [id, updateNodeInternals]);
 
   const withPreference = useCallback(
     (patch: Partial<ClassNodeData>): Partial<ClassNodeData> => {
@@ -53,8 +62,8 @@ export function useClassNodeCommit(
           };
         }),
       );
-      requestAnimationFrame(() => updateNodeInternals(id));
+      scheduleNodeInternals();
     },
-    [id, nodeWidth, setNodes, updateNodeInternals, withPreference],
+    [id, nodeWidth, scheduleNodeInternals, setNodes, withPreference],
   );
 }

@@ -22,9 +22,9 @@ Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessib
 
 | # | User Action | System Response | Triggers |
 | --- | ----------- | --------------- | -------- |
-| 1 | Hovers indexed token (cold) | Preview after 40ms | `FIRE_COLD_MS` |
-| 2 | Switches token while warm | Re-fire after 40ms | `FIRE_WARM_MS` |
-| 3 | Leaves token (unpinned) | Clear after 50ms grace when trace fired; instant if dwell never committed | `LEAVE_GRACE_MS` / `leaveGraceMs` |
+| 1 | Hovers indexed token (cold) | Signal on enter; commit after `dwellColdMs` | `TRACE_MOTION.dwellColdMs` |
+| 2 | Switches token while warm | Re-fire; warm uses `dwellWarmMs` (0) | `TRACE_MOTION.dwellWarmMs` |
+| 3 | Leaves token (unpinned) | Propagation drain then clear | `wirePropagationDrainMs` |
 | 4 | Holds Ctrl | Instant fire + `graph-ctrl-preview` (dims keywords, shimmers indexed tokens) | `fireDelayMs(..., ctrl)=0` |
 | 5 | Clicks token | Pin trace (replaces pin set) + `TokenContextBar` | `pinTrace`, `graph-trace-pinned` |
 | 5b | Shift+clicks token | Add pin to accumulated set (keep prior pins lit); toggle off if already pinned | `pinnedTraces` + `mergePinnedEdges` |
@@ -67,7 +67,7 @@ GraphFlowInner
 | `pinnedTraces` | `[]` | Locked traces; plain click replaces set; Shift+click accumulates |
 | `traceTokenKey` | derived | active pin or hovered key → lit computation |
 | `previewEdges` | `[]` | Overlay path specs |
-| `isWarm` | false | 40ms dwell (cold and warm); enables `graph-trace-warm` after first commit |
+| `isWarm` | false | Enables `graph-trace-warm` after first commit; warm handoff skips cold dwell |
 | `graph-trace-pending` | derived | Dwell phase: surround dim before `beginTrace` (`pendingTraceChip.ts` + `GraphPane`) |
 | `tokenInfo` | null | Pinned `TokenContextBar` payload |
 
@@ -105,9 +105,9 @@ stateDiagram-v2
 
 Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonomy.acceptance-criteria.md) §1 Usage.
 
-- [x] Cold hover fires only after 40ms; pass-over does not flash edges
-- [x] Ctrl fires immediately; release returns to plain-hover rules
-- [x] Leave grace 50ms prevents flicker between adjacent tokens; pending dwell clears instantly
+- [ ] Cold hover: signal on enter; commit after `dwellColdMs`; pass-over before dwell clears without commit
+- [ ] Ctrl fires immediately; release returns to plain-hover rules
+- [ ] Leave: propagation drain then clear; in-flight wire draws finish
 - [x] Edge direction definition → usage for usage hover and def fan-out
 - [x] Collapsed target → class/member handle; expanded method → line chip
 - [x] Expand/collapse retargets wires without re-hover
@@ -121,6 +121,7 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 ## Child specs
 
 - **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- **Interactions AC:** [preview-edges.interactions.acceptance-criteria.md](preview-edges.interactions.acceptance-criteria.md)
 - **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
 - **Fan/bus wayfinding:** [preview-edges.wayfinding.supplement.md](preview-edges.wayfinding.supplement.md)
 - **Connection kinds (incl. Typesetting):** [connection-taxonomy.md](connection-taxonomy.md)

@@ -108,9 +108,8 @@
   animation: none !important;
 }
 
-.graph-pane:is(.graph-trace-pending, .graph-trace-active) .preview-edge-path:not(.preview-edge-marching),
-.graph-pane:is(.graph-trace-pending, .graph-trace-active) .preview-edge-glow:not(.preview-edge-marching) {
-  transition-property: stroke, stroke-width;
+[data-reveal-started="1"] .preview-edge-trace-strength {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

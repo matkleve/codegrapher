@@ -129,3 +129,12 @@ export function parseMethodSignature(code: string): MethodSignature | null {
   if (params.length === 0 && !returnType) return null;
   return { params, returnType };
 }
+
+/** Signature slice for collapsed-row indexing — skips method body tokenization. */
+export function methodIndexCode(code: string): string {
+  const trimmed = code.trim();
+  if (!trimmed) return "";
+  const bodyStart = findBodyStart(trimmed);
+  if (bodyStart <= 0) return trimmed.split("\n")[0] ?? trimmed;
+  return trimmed.slice(0, bodyStart).trimEnd();
+}

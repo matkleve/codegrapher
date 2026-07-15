@@ -16,7 +16,7 @@ export const TRACE_MOTION = {
   /** Lit unwind + wire retire (`--motion-trace-out`). */
   exitMs: MOTION_TRACE_OUT_MS,
   exitEase: EASE_TRACE_OUT,
-  /** Wire stroke draw after commit (WAAPI; ghost visible from frame 0). */
+  /** Wire stroke draw during signal (RAF; ghost visible from frame 0). */
   wireRevealMs: 120,
   /**
    * Graph-hop propagation from core (wave outward). Set to the reveal duration

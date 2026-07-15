@@ -25,6 +25,7 @@ import {
   refreshOneWireDepthOpacity,
   type WireElements,
 } from "@/lib/previewEdgeDom";
+import { buildWireLayoutContext } from "@/lib/wireFanLayout";
 import { setWireHoveredEdgeId, setWireHoveredTokenKey } from "@/lib/wireHoverBoost";
 import { subscribeTraceSignalPrime } from "@/lib/traceSignalPrime";
 import {
@@ -185,8 +186,16 @@ export function usePreviewEdgeOverlay() {
         {
           getSpecs: () => specsRef.current,
           getWires: () => wiresRef.current,
-          update: (wire, box, node) => {
-            const ok = updateWireGeometry(wire as WireElements, box, node, specsRef.current);
+          prepareLayout: (box, node) =>
+            buildWireLayoutContext(specsRef.current, box, node),
+          update: (wire, box, node, layoutCtx) => {
+            const ok = updateWireGeometry(
+              wire as WireElements,
+              box,
+              node,
+              specsRef.current,
+              layoutCtx as ReturnType<typeof buildWireLayoutContext>,
+            );
             refreshOneWireDepthOpacity(wire as WireElements, node);
             return ok;
           },

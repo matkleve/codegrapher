@@ -2,13 +2,13 @@
 
 **Agents:** one lifecycle table below; detail in linked specs. Do not restate in chat ([working-with-agents.md](../../agent-playbook/core/working-with-agents.md)).
 
-**Implement:** [trace-emphasis-implementation-plan.md](../../project/trace-emphasis-implementation-plan.md) · **Verify:** [interaction-emphasis.acceptance-criteria.md](interaction-emphasis.acceptance-criteria.md)
+**Implement:** [trace-hover-rollout.md](trace-hover-rollout.md) · **Verify:** [interaction-emphasis.acceptance-criteria.md](interaction-emphasis.acceptance-criteria.md) · [preview-edges.interactions.acceptance-criteria.md](preview-edges.interactions.acceptance-criteria.md)
 
 ---
 
 ## Full lifecycle (normative summary)
 
-One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + stroke draw (WAAPI) that **grows outward from the hovered core token** (`wireReveal.ts` reverses the dash when the core is the wire's `to` end). Orchestration: `traceMotion.ts`.
+One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + stroke draw (RAF) that **grows outward from the hovered core token** (`wireReveal.ts` reverses the dash when the core is the wire's `to` end). Orchestration: `traceMotion.ts` (timing SSOT).
 
 **Hop-sequential cascade (normative):** the reveal steps outward one hop at a time — a hop's wire only starts once the previous hop's wire has finished and its endpoint chip has lit (`wireHopStaggerMs` = `wireRevealMs`; fan legs within a hop stagger by `wireFanStaggerMs`). The signal is **fire-and-forget**: a short hover still completes the full cascade to the outermost hop — on pointer leave the signal is kept alive and the edge-retire drain is sized to `wireCascadeDurationMs` (the remaining hop schedule), so leaving early never truncates the wave.
 
@@ -21,9 +21,20 @@ One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--e
 | **Pointer on path** (active) | active | — | — | — | hover strength bump | touched wires emphasize |
 | **Pin** | `+ graph-trace-pinned` | — | per merged lit | per merged lit | `token-chip-source` | persist |
 | **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | emitter **off**; in-flight signals finish, then 80ms retire |
-| **Leave timing** | `onVisualLeave` immediate; no leave grace | | | | | cancel WAAPI reveal on retire |
+| **Leave timing** | `onVisualLeave` immediate; no leave grace | | | | | cancel in-flight draw on retire |
 
-**Invariants:** chip emphasis only goes **up** (never `--faint` then relight). Dwell gates **commit** (wires, row blue, lit DOM) — not chip ink. Row blue on **commit only**, not pending.
+**Invariants:** chip emphasis only goes **up** (never `--faint` then relight). **Signal** (`emitWireSignal`) starts hop-1 wire draw on pointer enter. Dwell gates **commit** (row blue, lit DOM) — not chip ink or wire start. Row blue on **commit only**, not pending.
+
+## Canonical mapping (spec → code)
+
+| Lifecycle row | Spec | Code |
+| ------------- | ---- | ---- |
+| Pending mood | § Full lifecycle | `traceSessionMood.ts`, `GraphPane.tsx` |
+| Signal epoch | § Enter/pending wires | `traceWireSignal.ts`, `emitWireSignal` in `useTraceSession.ts` |
+| Stroke draw | [interactions supplement](preview-edges.interactions.supplement.md) | `wireReveal.ts`, `playWireReveal` |
+| Lit commit | § Commit / active | `traceLitController.ts`, `TRACE_COMMIT` |
+| Timing constants | `traceMotion.ts` | `hoverIntent.ts` re-exports |
+| Rollout status | [trace-hover-rollout.md](trace-hover-rollout.md) | per-family owner files |
 
 ---
 

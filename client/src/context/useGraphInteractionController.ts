@@ -19,11 +19,7 @@ import { useElementRegistryRevision } from "@/hooks/useElementRegistry";
 import { isDefinitionSignatureLine } from "@/lib/resolveDefinitionUsageSites";
 import { useIncrementalUsageSiteIndex } from "@/hooks/useIncrementalUsageSiteIndex";
 import { rankAndCapUsageSites } from "@/lib/usageSiteRanking";
-import { computeTraceLit } from "@/lib/computeTraceLit";
-import { applyTraceLit } from "@/lib/traceLitController";
-import { createRefinePreviewEdgeCache } from "@/lib/refinePreviewEdgeCache";
 import { refreshArrivalStrengthDom } from "@/lib/traceLitApplyDom";
-import { clearPendingTraceHost } from "@/lib/pendingTraceChip";
 import { subscribeTraceSignalPrime } from "@/lib/traceSignalPrime";
 import type { GraphData } from "@/types";
 
@@ -132,21 +128,10 @@ export function useGraphInteractionController({
   });
 
   useLayoutEffect(() => {
-    const cache = createRefinePreviewEdgeCache();
-    return subscribeTraceSignalPrime(({ tokenKey, edges }) => {
-      clearPendingTraceHost();
-      cache.clear();
-      const lit = computeTraceLit(tokenKey, edges, getNode, cache);
-      applyTraceLit(lit, {
-        pinnedTokenKeys: trace.pinnedTokenKeySet,
-        hoveredTokenKey: tokenKey,
-        emphasisTokenKey: tokenKey,
-        previewEdges: edges,
-        getNode,
-      });
+    return subscribeTraceSignalPrime(() => {
       refreshArrivalStrengthDom();
     });
-  }, [getNode, trace.pinnedTokenKeySet]);
+  }, []);
 
   const focusFlowNode = useCallback(
     (flowNodeId: string) => {

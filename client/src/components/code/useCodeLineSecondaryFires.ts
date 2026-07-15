@@ -47,7 +47,7 @@ export function useCodeLineSecondaryFires({
   const { showUsageLoadMenu, showDefLoadMenu, clearConnectionMenu } =
     useCodeLinePreviewMenus(filePath);
 
-  const fireImportPreview = useCallback(
+  const buildImportPreview = useCallback(
     (specifier: string, chipEl: HTMLElement) => {
       const tokenKey = makeImportSpecKey(
         sourceFlowId,
@@ -72,15 +72,35 @@ export function useCodeLineSecondaryFires({
           occurrenceCount: 1,
         },
       ];
-      beginTrace(tokenKey, [
-        buildLoadPreviewEdge(edgeKey, cards, chipEl, importName, "type"),
-      ]);
-      showUsageLoadMenu(importName, "type", chipEl, cards);
+      return {
+        tokenKey,
+        edges: [
+          buildLoadPreviewEdge(edgeKey, cards, chipEl, importName, "type"),
+        ],
+      };
     },
-    [beginTrace, filePath, lineNumber, memberId, showUsageLoadMenu, sourceFlowId],
+    [filePath, lineNumber, memberId, sourceFlowId],
   );
 
-  const fireControlFlowPreview = useCallback(
+  const fireImportPreview = useCallback(
+    (specifier: string, chipEl: HTMLElement) => {
+      const { tokenKey, edges } = buildImportPreview(specifier, chipEl);
+      beginTrace(tokenKey, edges);
+      const importName = specifier.replace(/^['"]|['"]$/g, "");
+      showUsageLoadMenu(importName, "type", chipEl, edges[0].load!.candidates);
+    },
+    [beginTrace, buildImportPreview, showUsageLoadMenu],
+  );
+
+  const signalImportPreview = useCallback(
+    (specifier: string, chipEl: HTMLElement) => {
+      const { tokenKey, edges } = buildImportPreview(specifier, chipEl);
+      emitWireSignal(tokenKey, edges);
+    },
+    [buildImportPreview, emitWireSignal],
+  );
+
+  const buildControlFlowPreview = useCallback(
     (cfLine: number, cfTokenIndex: number, hostEl: HTMLElement) => {
       const edgeKey = ctrlPreviewEdgeId(
         sourceFlowId,
@@ -95,13 +115,29 @@ export function useCodeLineSecondaryFires({
         cfTokenIndex,
         edgeKey,
       );
-      clearConnectionMenu();
-      beginTrace(
-        makeControlFlowKey(sourceFlowId, memberId, cfLine, cfTokenIndex),
+      return {
+        tokenKey: makeControlFlowKey(sourceFlowId, memberId, cfLine, cfTokenIndex),
         edges,
-      );
+      };
     },
-    [beginTrace, clearConnectionMenu, controlFlowIndex, memberId, sourceFlowId],
+    [controlFlowIndex, memberId, sourceFlowId],
+  );
+
+  const fireControlFlowPreview = useCallback(
+    (cfLine: number, cfTokenIndex: number, hostEl: HTMLElement) => {
+      const { tokenKey, edges } = buildControlFlowPreview(cfLine, cfTokenIndex, hostEl);
+      clearConnectionMenu();
+      beginTrace(tokenKey, edges);
+    },
+    [beginTrace, buildControlFlowPreview, clearConnectionMenu],
+  );
+
+  const signalControlFlowPreview = useCallback(
+    (cfLine: number, cfTokenIndex: number, hostEl: HTMLElement) => {
+      const { tokenKey, edges } = buildControlFlowPreview(cfLine, cfTokenIndex, hostEl);
+      emitWireSignal(tokenKey, edges);
+    },
+    [buildControlFlowPreview, emitWireSignal],
   );
 
   const fireCfFromRef = useCallback(
@@ -110,6 +146,14 @@ export function useCodeLineSecondaryFires({
       if (chipEl) fireControlFlowPreview(cfLine, cfTokenIndex, chipEl);
     },
     [fireControlFlowPreview, chipRefs],
+  );
+
+  const signalCfFromRef = useCallback(
+    (cfLine: number, cfTokenIndex: number, cfRefKey: string) => {
+      const chipEl = chipRefs.current.get(cfRefKey)?.getChipElement();
+      if (chipEl) signalControlFlowPreview(cfLine, cfTokenIndex, chipEl);
+    },
+    [signalControlFlowPreview, chipRefs],
   );
 
   const buildControlFlowPinInfo = useCallback(
@@ -157,8 +201,11 @@ export function useCodeLineSecondaryFires({
 
   return {
     fireImportPreview,
+    signalImportPreview,
     fireControlFlowPreview,
+    signalControlFlowPreview,
     fireCfFromRef,
+    signalCfFromRef,
     buildControlFlowPinInfo,
     fireDefPreview,
     signalDefPreview,

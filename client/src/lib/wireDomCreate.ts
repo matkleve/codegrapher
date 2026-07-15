@@ -108,17 +108,12 @@ export function applyWireDepthOpacity(
     return;
   }
 
-  const pendingReveal =
-    group != null &&
-    group.dataset.revealed !== "1" &&
-    group.dataset.revealStarted !== "1";
-
-  if (!isTraceSessionActive() && !isWireSignalEmitting()) {
-    clearWireTraceStrength(path, glow);
+  if (group?.dataset.revealed !== "1") {
     return;
   }
 
-  if (pendingReveal && isWireSignalEmitting()) {
+  if (!isTraceSessionActive() && !isWireSignalEmitting()) {
+    clearWireTraceStrength(path, glow);
     return;
   }
 
@@ -138,10 +133,6 @@ export function applyWireDepthOpacity(
 
   const pathStrength = traceStrength(situation, "wire", depth);
   const glowStrength = traceStrength(situation, "wireGlow", depth);
-  if (pendingReveal) {
-    setWireTraceStrength(path, glow, 0, 0);
-    return;
-  }
   setWireTraceStrength(path, glow, pathStrength, glowStrength);
   glow.style.strokeWidth = String(traceGlowStrokeWidth(depth));
   path.classList.toggle("preview-edge-line-hover", emphasized);

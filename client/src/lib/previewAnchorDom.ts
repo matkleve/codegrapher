@@ -1,6 +1,15 @@
 import type { AnchorRef } from "@/lib/previewEdgeTypes";
 import { getByHandle } from "@/lib/elementRegistry";
 
+function isFinitePoint(x: number, y: number): boolean {
+  return Number.isFinite(x) && Number.isFinite(y);
+}
+
+function guardAnchor(anchor: ResolvedAnchor | null): ResolvedAnchor | null {
+  if (!anchor || !isFinitePoint(anchor.x, anchor.y)) return null;
+  return anchor;
+}
+
 export type ResolvedAnchor = {
   x: number;
   y: number;
@@ -64,19 +73,19 @@ function elementAnchor(
   if (dot && flowAnchorVisible(dot)) {
     const rect = dot.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      return {
+      return guardAnchor({
         x: rect.left + rect.width / 2 - box.left,
         y: rect.top + rect.height / 2 - box.top,
         side,
         el,
         token: el.dataset.symbolName,
-      };
+      });
     }
   }
 
   if (dot?.isConnected) {
     const pt = syntheticChipAnchor(chipRect, side, box);
-    return { x: pt.x, y: pt.y, side, el, token: el.dataset.symbolName };
+    return guardAnchor({ x: pt.x, y: pt.y, side, el, token: el.dataset.symbolName });
   }
 
   const x =
@@ -84,7 +93,7 @@ function elementAnchor(
     box.left +
     (side === "right" ? ANCHOR_OUTSET : -ANCHOR_OUTSET);
   const y = chipRect.top + chipRect.height / 2 - box.top;
-  return { x, y, side, el, token: el.dataset.symbolName };
+  return guardAnchor({ x, y, side, el, token: el.dataset.symbolName });
 }
 
 /** Port sides for sig-type → param typesetting — type exits right, param enters left. */
@@ -146,7 +155,7 @@ export function resolvePreviewAnchor(
   const anchorSide = anchor.getAttribute("data-flow-anchor") as "left" | "right";
   const x = rect.left + rect.width / 2 - svgBox.left;
   const y = rect.top + rect.height / 2 - svgBox.top;
-  return { x, y, side: anchorSide ?? side, el: anchor };
+  return guardAnchor({ x, y, side: anchorSide ?? side, el: anchor });
 }
 
 /** Bend distance for shallow wires — scales with chip height between endpoints. */

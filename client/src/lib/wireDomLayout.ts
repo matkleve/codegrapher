@@ -7,6 +7,7 @@ import {
 } from "@/lib/resolvePreviewAnchor";
 import type { PreviewEdgeJunction } from "@/lib/previewEdgeJunction";
 import { branchJunctionPoint, previewWirePath } from "@/lib/wirePaths";
+import type { WireFanMemberLayout, WireLayoutContext } from "@/lib/wireFanLayout";
 import { getWireLayoutContext } from "@/lib/wireFanLayout";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
 import { previewWireStroke } from "@/lib/connectionWireStyle";
@@ -20,6 +21,10 @@ import {
 } from "@/lib/wireDomCreate";
 import type { Node } from "@xyflow/react";
 
+function isValidPathD(pathD: string): boolean {
+  return pathD.length > 0 && !/(?:NaN|Infinity)/.test(pathD);
+}
+
 export type FanWireLayout = {
   pathD: string;
   fromX: number;
@@ -32,6 +37,10 @@ export type FanWireLayout = {
 };
 
 export function applyFanWireLayout(wire: WireElements, layout: FanWireLayout, stroke: string): void {
+  if (!isValidPathD(layout.pathD)) {
+    wire.group.style.display = "none";
+    return;
+  }
   wire.path.setAttribute("d", layout.pathD);
   wire.glow.setAttribute("d", layout.pathD);
   wire.path.classList.toggle("preview-edge-fan-trunk", layout.drawTrunkClass);
@@ -58,6 +67,7 @@ export function updateWireGeometry(
   svgBox: DOMRect,
   getNode: (id: string) => Node | undefined,
   allSpecs: PreviewEdgeSpec[] = [],
+  layoutCtx?: WireLayoutContext,
 ): boolean {
   if (isWireRevealing(wire.group)) {
     return wire.group.style.display !== "none";
@@ -65,8 +75,8 @@ export function updateWireGeometry(
 
   const spec = wire.spec;
   const stroke = previewWireStroke(spec);
-  const layoutCtx = getWireLayoutContext(allSpecs, svgBox, getNode);
-  const fanLayout = layoutCtx.fanMembers.get(spec.id);
+  const ctx = layoutCtx ?? getWireLayoutContext(allSpecs, svgBox, getNode);
+  const fanLayout = ctx.fanMembers.get(spec.id);
 
   if (spec.load) {
     const loadEl = document.querySelector<HTMLElement>(
@@ -96,7 +106,7 @@ export function updateWireGeometry(
     }
 
     wire.group.style.display = "";
-    const lane = layoutCtx.lanes.get(spec.id) ?? 0;
+    const lane = ctx.lanes.get(spec.id) ?? 0;
     const pathD = previewWirePath({
       connectionKind: spec.connectionKind,
       x1: fromPt.x,
@@ -110,6 +120,10 @@ export function updateWireGeometry(
       svgBox,
       lane,
     });
+    if (!isValidPathD(pathD)) {
+      wire.group.style.display = "none";
+      return false;
+    }
     wire.path.setAttribute("d", pathD);
     wire.glow.setAttribute("d", pathD);
     const fullHit = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
@@ -159,7 +173,7 @@ export function updateWireGeometry(
 
   wire.group.style.display = "";
 
-  const lane = layoutCtx.lanes.get(spec.id) ?? 0;
+  const lane = ctx.lanes.get(spec.id) ?? 0;
   const pathD = previewWirePath({
     connectionKind: spec.connectionKind,
     x1: fromPt.x,
@@ -173,6 +187,10 @@ export function updateWireGeometry(
     svgBox,
     lane,
   });
+  if (!isValidPathD(pathD)) {
+    wire.group.style.display = "none";
+    return false;
+  }
   wire.path.setAttribute("d", pathD);
   wire.glow.setAttribute("d", pathD);
   wire.path.classList.remove("preview-edge-fan-trunk");

@@ -11,6 +11,7 @@ import {
   setWireHoveredTokenKey,
 } from "@/lib/wireHoverBoost";
 import { notifyWireTransform } from "@/lib/wireEngine";
+import { markLitApplyPhase } from "@/lib/traceTimeline";
 
 type LastApply = { fingerprint: string; hovered: string; strength: number };
 
@@ -74,6 +75,10 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
     return;
   }
 
+  if (mood === "pending") {
+    return;
+  }
+
   fadingLitRef.current = false;
   setTraceLitFading(false);
   window.clearTimeout(clearLitTimerRef.current);
@@ -86,10 +91,10 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
     hovered === lastApplyRef.current.hovered &&
     strengthRevision === lastApplyRef.current.strength
   ) {
-    notifyWireTransform();
     return;
   }
   lastApplyRef.current = { fingerprint, hovered, strength: strengthRevision };
+  const syncStart = performance.now();
   applyTraceLit(traceLit, {
     pinnedTokenKeys: pinnedTokenKeySet,
     hoveredTokenKey,
@@ -97,6 +102,7 @@ export function applyActiveTraceLit(args: TraceLitApplyArgs): void {
     previewEdges,
     getNode,
   });
+  markLitApplyPhase(traceLit.litTokenKeys.size, performance.now() - syncStart);
   notifyWireTransform();
 }
 

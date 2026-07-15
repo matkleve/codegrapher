@@ -37,3 +37,5 @@ Last updated: 2026-07-12
 ## Traceability
 
 Implementation MUST match specs. If code diverges, either fix code or update spec in the same change — never leave silent drift. Unresolved mismatches are listed in [SPEC-DRIFT.md](SPEC-DRIFT.md).
+
+**Trace / hover changes:** run `npm run lint:specs` and `npm run design:check` before merge. Rollout status: [trace-hover-rollout.md](system/trace-hover-rollout.md).

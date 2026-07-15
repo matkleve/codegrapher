@@ -48,10 +48,7 @@ function sess(snap: TraceSnapshot) {
 }
 
 function committed(snap: TraceSnapshot, key: string): TraceSnapshot {
-  return step(step(snap, { type: "POINTER_ENTER", tokenKey: key }), {
-    type: "DWELL_FIRE",
-    tokenKey: key,
-  });
+  return step(snap, { type: "POINTER_ENTER", tokenKey: key });
 }
 
 describe("traceMachine (parity with traceSessionReducer)", () => {
@@ -84,7 +81,7 @@ describe("traceMachine (parity with traceSessionReducer)", () => {
   });
 
   it("POINTER_LEAVE after commit enters leaving mood", () => {
-    const active = step(init(), { type: "POINTER_ENTER", tokenKey: KEY_A });
+    const active = committed(init(), KEY_A);
     const leaving = step(active, { type: "POINTER_LEAVE", tokenKey: KEY_A });
     expect(leaving.value).toBe("leaving");
     expect(leaving.context.committedKey).toBe(KEY_A);

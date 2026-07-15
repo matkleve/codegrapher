@@ -1,6 +1,7 @@
 /* eslint-disable max-lines -- single owner of trace runtime state; see docs/project/trace-engine-consolidation-plan.md */
 import type { PaneMood } from "@/lib/traceSession";
 import type { PreviewEdgeSpec } from "@/lib/previewEdgeTypes";
+import { markTracePhase } from "@/lib/traceTimeline";
 
 /**
  * TraceEngine — the single source of truth for the hover/trace **runtime**
@@ -203,5 +204,6 @@ export function subscribeTraceSignalPrime(
   return () => primeListeners.delete(listener);
 }
 export function primeTraceSignal(args: TraceSignalPrimeArgs): void {
+  markTracePhase("wirePrime", `${args.edges.length} edges`);
   for (const listener of primeListeners) listener(args);
 }

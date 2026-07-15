@@ -40,7 +40,7 @@ stateDiagram-v2
   end note
 ```
 
-**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and wires appear together (no staggered shadow). **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub. **Wire glow is not independent:** halo opacity is owned by `playWireReveal` — path draws source→target; dashed glow appears after draw; neither may appear before draw arms.
+**Atomic commit:** `beginTrace(tokenKey, edges)` sets `hoveredTokenKey` + `previewEdges` in one call so lit paint and committed wires align (no staggered shadow). **Signal** (`emitWireSignal` via `onSignal` on pointer enter) starts hop-1 wire draw before dwell commit. **Dim/lit is keyed on `hoveredTokenKey`, not on `edges.length`** — signature type hovers MUST call `beginTrace` even when the only resolvable target is an index Load stub. **Wire glow is not independent:** halo opacity is owned by `playWireReveal` — path draws source→target; dashed glow appears after draw; neither may appear before draw arms.
 
 **Signature type trace keys:** `{flowNodeId}::{memberId}::sig-type::{symbolName}` — parsed by `liveToFromUsageEl` without a line number; anchor resolves via `getByTraceKey` on the `MemberSignatureTypeLabel` chip.
 
@@ -50,57 +50,56 @@ stateDiagram-v2
 
 ## Hover intent timing
 
-Constants: `client/src/lib/hoverIntent.ts`
+**Timing SSOT:** `client/src/lib/traceMotion.ts` (re-exported by `hoverIntent.ts`). Do not hardcode ms values in this doc — cite `TRACE_MOTION` keys.
 
 ```mermaid
 sequenceDiagram
   participant U as User pointer
   participant H as scheduleHoverFire
+  participant S as emitWireSignal
   participant T as Timer
   participant B as beginTrace
 
   U->>H: enter token A (cold)
-  H->>T: fire in 40ms
-  U->>H: leave A before 40ms
+  H->>S: onSignal → hop-1 draw
+  H->>T: commit in dwellColdMs
+  U->>H: leave A before dwell
   H->>T: cancel fire
-  Note over B: no trace
+  Note over B: no commit; signal stops
 
   U->>H: enter token A (cold)
-  H->>T: fire in 40ms
-  T->>B: onFire → edges + lit
+  H->>S: onSignal
+  T->>B: onFire → TRACE_COMMIT
   U->>H: enter token B (warm)
-  H->>T: fire in 40ms
-  T->>B: replace trace with B
+  H->>S: onSignal
+  T->>B: replace trace
 
   U->>H: leave token
-  H->>T: clear in 50ms grace (0ms if dwell never fired)
-  T->>B: endTrace (if unpinned)
+  H->>S: stopWireSignalEmitting
+  Note over B: drain then endTrace
 ```
 
-| Constant | Value | Effect |
-| -------- | ----- | ------ |
-| `FIRE_COLD_MS` | 40 | First hover dwell |
-| `FIRE_WARM_MS` | 40 | Adjacent token while warm |
-| `LEAVE_GRACE_MS` | 50 | Anti-flicker between neighbors (skipped when dwell never committed) |
-| Ctrl held | 0 | Instant fire via `fireDelayMs` |
-| Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
-| Dwell never committed | 0 leave grace | `leaveGraceMs(false)` — instant clear on pointer leave |
-| Wire reveal (cold) | 40ms dwell + ~240ms draw + hop stagger | WAAPI stroke draw on **path** definition→usage; hop-1 first, +100ms per hop, +25ms fan-out tie; marching after draw |
-| Load stub wire | after `data-load-stub-ready` | Stub must finish fixed layout before wire geometry/reveal — no corner anchor |
-| Surround motion | `--motion-trace` (120ms) | Member rows, syntax, chips, sockets, wire opacity — one importance clock ([tokens.md](../../design/tokens.md)) |
+| Constant | Source | Effect |
+| -------- | ------ | ------ |
+| `dwellColdMs` | `TRACE_MOTION` | First-hover commit delay (lit DOM, row blue) |
+| `dwellWarmMs` | `TRACE_MOTION` | Warm handoff commit delay |
+| `leaveGraceMs` | `hoverIntent.ts` | Always 0 — visual fade via `--motion-trace-out` |
+| Ctrl held | `fireDelayMs` | Instant commit |
+| Keyboard focus | `scheduleHoverFire({ instant: true })` | Instant commit |
+| Wire draw | `wireRevealMs` + hop stagger | RAF `stroke-dashoffset` in `wireReveal.ts`; hop-1 at signal, hop N at `(N-1) * wireHopStaggerMs` |
+| Propagation drain | `wirePropagationDrainMs` | Keep edges until in-flight draws finish after leave |
+| Load stub wire | after `data-load-stub-ready` | Stub must finish fixed layout before wire geometry/reveal |
+| Surround motion | `--motion-trace` (120ms) | Member rows, syntax, chips, sockets — one importance clock |
 
-**Leave-clear commit rule:** after `LEAVE_GRACE_MS`, clear runs when the leaving
-token is still the latest entry in `hoverClearRef` — **not** when it matches
-`hoveredTokenKey`. This prevents a stuck trace when the user leaves token B before
-B's dwell fires while token A's trace is still active (A's clear was cancelled on
-entering B). Hover `TokenConnectionMenu` cancels the grace timer on `mouseenter`;
-leaving the menu re-schedules clear via `scheduleHoverLeaveGrace`.
+**Leave-clear commit rule:** after propagation drain, clear runs when the leaving token is still the latest entry in `hoverClearRef` — **not** when it matches `hoveredTokenKey`. Hover `TokenConnectionMenu` cancels the grace timer on `mouseenter`; leaving the menu re-schedules clear via `scheduleHoverLeaveGrace`.
+
+**Acceptance:** [preview-edges.interactions.acceptance-criteria.md](preview-edges.interactions.acceptance-criteria.md)
 
 ---
 
 ## Visual commit timeline (normative)
 
-Single reference for **what changes when** during a cold hover (no Ctrl, unpinned). Motion uses `--motion-trace` (120ms) unless noted. Parent visual contract: [interaction-emphasis.md](interaction-emphasis.md). Tokens: [state-visuals.md](../../design/state-visuals.md).
+Single reference for **what changes when** during a cold hover (no Ctrl, unpinned). Motion uses `--motion-trace` (120ms) unless noted. Timing from `traceMotion.ts`. Parent visual contract: [interaction-emphasis.md](interaction-emphasis.md).
 
 ```mermaid
 sequenceDiagram
@@ -108,32 +107,35 @@ sequenceDiagram
   participant Pane as graph-pane classes
   participant Chip as Hovered chip
   participant Surround as Rows / syntax / body
-  participant Lit as computeTraceLit DOM
+  participant Signal as emitWireSignal
   participant Wire as playWireReveal
+  participant Lit as computeTraceLit DOM
 
   P->>Chip: enter (0ms)
   Chip->>Chip: token-chip-pending-trace (strength only; ink unchanged)
   Pane->>Pane: graph-trace-pending
   Surround->>Surround: faint-* + trace-dim-surface (ease 120ms)
+  Signal->>Wire: hop-1 stroke draw (wireRevealMs)
 
-  Note over Pane: dwell 40ms — gates commit, not chip ink
+  Note over Pane: dwellColdMs — gates commit only
 
-  P->>Pane: beginTrace
+  P->>Pane: beginTrace TRACE_COMMIT
   Pane->>Pane: graph-trace-active (+ warm after first commit)
   Chip->>Chip: pending strength → focus curve + token-chip-lit / token-chip-on
   Lit->>Surround: trace-member-lit, trace-lit-line, sockets
-  Wire->>Wire: hop-ordered path draw 240ms (+100ms/hop, +25ms fan tie)
+  Wire->>Wire: hop 2+ continues from signal epoch
 
-  P->>Pane: leave (trace had fired)
-  Note over Pane: grace 50ms → clear
+  P->>Pane: leave
+  Signal->>Signal: stopWireSignalEmitting
+  Note over Wire: in-flight draws finish, then retire 80ms
 ```
 
 | Phase | Pane class | Focal chip | Other indexed chips | Member rows | Body / syntax | Wires / glow |
 | ----- | ---------- | ---------- | ------------------- | ----------- | ------------- | ------------ |
 | **Idle** | — | resting ink | resting ink | `bg-muted` | full color | hidden |
-| **Pending dwell** (0–40ms) | `graph-trace-pending` | pending `--trace-strength` + semantic ink | resting ink | dim surface | `--faint-*` eases in | hidden |
-| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | lit: focus curve + fill | resting ink (not faint) | lit row + dim others | lit lines + faint syntax | WAAPI stroke reveal 240ms |
-| **Ctrl held** | `graph-ctrl-preview` (+ trace if active) | shimmer on indexed | shimmer | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
+| **Pending dwell** | `graph-trace-pending` | pending `--trace-strength` + semantic ink | resting ink | dim surface | `--faint-*` eases in | **hop-1 signal draw** (stroke RAF) |
+| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | lit: focus curve + fill | resting ink (not faint) | lit row + dim others | lit lines + faint syntax | wave continues by hop |
+| **Ctrl held** | `graph-ctrl-preview` (+ trace if active) | shimmer on indexed | shimmer | dim surface | `--faint-ctrl` (wins over trace faint) | instant commit + signal |
 | **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | resting ink | per merged lit | per merged lit | pinned edges persist |
 | **Foreign hover while pinned** | trace + pin | ephemeral preview on other token | resting ink | ephemeral lit rows | ephemeral lit | preview wires |
 
@@ -144,20 +146,21 @@ sequenceDiagram
 - **Surround dim** starts at pending (`graph-trace-pending`), not only at `beginTrace`.
 - **Chip ink** never drops to `--faint` during pending or active trace — pending is `--trace-strength` on the focal chip only; commit promotes strength and lit classes.
 - **Row promotion** (`trace-member-lit`) applies on trace commit only — not during pending dwell.
-- **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); `LEAVE_GRACE_MS` only defers host `onClear` / ref cleanup for neighbor anti-flicker.
+- **Wire visibility** during reveal is stroke-draw only (`preview-edge-drawing`); `--trace-strength` opacity on wires applies **after** `dataset.revealed=1`.
+- **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); propagation drain defers `endTrace`.
+
 ## Leave (unpinned)
 
 | Surface | Behavior | Code |
 | ------- | -------- | ---- |
 | Surround | Eases back on `--motion-trace` | `graph-trace-leaving` → idle |
-| Lit DOM | `unwindTraceLit` then `clearTraceLit` @ 120ms | `traceLitApplySession.ts` |
-| Wires | `retireWireGroup` opacity fade @ 120ms; cancel WAAPI reveal | `usePreviewEdgeOverlay.ts`, `wireDomSync.ts` |
-| Refs / state | `LEAVE_GRACE_MS` 50ms then `endTrace` | `hoverIntent.ts` |
+| Lit DOM | `unwindTraceLit` then `clearTraceLit` @ 80ms | `traceLitApplySession.ts` |
+| Wires | `retireWireGroup` opacity fade @ 80ms; cancel in-flight draw | `usePreviewEdgeOverlay.ts`, `wireDomSync.ts` |
+| Refs / state | `wirePropagationDrainMs` then `endTrace` | `useTraceSession.ts` |
 
-All three share the **120ms** importance clock — no instant wire `remove()`.
 - **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
-- **Wire path** stroke-draws via WAAPI `stroke-dashoffset` in `playWireReveal`; **glow** (dashed) appears after draw; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
-- **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
+- **Wire path** stroke-draws via RAF `stroke-dashoffset` in `playWireReveal`; **glow** (dashed) appears after draw; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
+- **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: `wireRevealMs`, independent.
 
 ---
 

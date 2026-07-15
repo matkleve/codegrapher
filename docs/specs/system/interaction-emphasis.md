@@ -67,7 +67,7 @@ Strength math: [preview-edges.trace-strength.supplement.md](preview-edges.trace-
 
 ## Motion
 
-Importance changes: **`--motion-trace` (120ms)**. Wire stroke draw: ~240ms WAAPI. Ctrl shimmer / node breathe: `animation`.
+Importance changes: **`--motion-trace` (120ms)**. Wire stroke draw: `wireRevealMs` RAF in `wireReveal.ts` (see `traceMotion.ts`). Ctrl shimmer / node breathe: `animation`.
 
 ## Component Hierarchy
 

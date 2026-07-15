@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import {
   Handle,
   NodeResizeControl,
@@ -44,6 +44,14 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
   const title = camelToWords(nodeData.label);
   const hasProperties = nodeData.properties.length > 0;
   const hasMethods = nodeData.methods.length > 0;
+  const expandedPropertyIds = useMemo(
+    () => new Set(nodeData.expandedPropertyIds),
+    [nodeData.expandedPropertyIds],
+  );
+  const expandedMethodIds = useMemo(
+    () => new Set(nodeData.expandedMethodIds),
+    [nodeData.expandedMethodIds],
+  );
 
   return (
     <div
@@ -95,7 +103,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   symbolName={p.symbolName}
                   code={p.code}
                   startLine={p.startLine ?? 1}
-                  expanded={nodeData.expandedPropertyIds.includes(p.id)}
+                  expanded={expandedPropertyIds.has(p.id)}
                   onToggle={onToggleProperty}
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}
@@ -126,7 +134,7 @@ function ClassNodeComponent({ id, data, selected, width }: NodeProps) {
                   code={m.code}
                   startLine={m.startLine ?? 1}
                   showSignatureTags
-                  expanded={nodeData.expandedMethodIds.includes(m.id)}
+                  expanded={expandedMethodIds.has(m.id)}
                   onToggle={onToggleMethod}
                   flowNodeId={id}
                   graphNodeId={nodeData.graphNodeId}

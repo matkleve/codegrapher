@@ -2,8 +2,10 @@
 
 Parent: [interaction-emphasis.md](interaction-emphasis.md). Verify manually on graph fixtures (`fixtures/demo/`) unless noted.
 
-- [ ] Pending dwell: surround dims at pointer enter; focal chip keeps semantic ink + pending strength — no faint→relight on chip text
-- [ ] Dwell gates commit only: lit set, wires, row promotion after 40ms — not chip ink permission
+- [ ] Dwell gates commit only: lit set, row promotion after `dwellColdMs` — not chip ink; signal starts on enter
+- [ ] Signal on enter: hop-1 wire stroke visible before commit (`preview-edge-drawing`, animating `strokeDashoffset`)
+- [ ] Pending `dwellColdMs`: `graph-trace-pending` on pane; no `trace-member-lit` until commit
+- [ ] Leave: emitter off; in-flight draws finish; no instant opacity pop on wires
 - [ ] Trace importance eases on `--motion-trace` (120ms) — no snap on row/body/syntax at commit
 - [ ] **No** `color` rules on `.token-chip` / `.cursor-pointer` `.token-def-label` in `trace-syntax.css`
 - [ ] New clickables use `.hoverable` or `controlTokens` — not `hover:bg-primary`

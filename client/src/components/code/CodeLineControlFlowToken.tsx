@@ -22,6 +22,7 @@ export function CodeLineControlFlowToken({
     chipRefs,
     clearHover,
     fireCfFromRef,
+    signalCfFromRef,
     fireControlFlowPreview,
     buildControlFlowPinInfo,
     scheduleHoverFire,
@@ -45,7 +46,13 @@ export function CodeLineControlFlowToken({
       cfRole={cfRole}
       shimmerDelay={`-${((lineNumber * 7 + tokenIndex) * 0.37).toFixed(2)}s`}
       onMouseEnter={() =>
-        scheduleHoverFire(cfKey, () => fireCfFromRef(lineNumber, tokenIndex, cfRefKey), clearHover)
+        scheduleHoverFire(
+          cfKey,
+          () => fireCfFromRef(lineNumber, tokenIndex, cfRefKey),
+          clearHover,
+          undefined,
+          { onSignal: () => signalCfFromRef(lineNumber, tokenIndex, cfRefKey) },
+        )
       }
       onMouseLeave={() => scheduleHoverClear(cfKey, clearHover)}
       onFocus={() =>
@@ -54,7 +61,10 @@ export function CodeLineControlFlowToken({
           () => fireCfFromRef(lineNumber, tokenIndex, cfRefKey),
           clearHover,
           undefined,
-          { instant: true },
+          {
+            instant: true,
+            onSignal: () => signalCfFromRef(lineNumber, tokenIndex, cfRefKey),
+          },
         )
       }
       onBlur={() => scheduleHoverClear(cfKey, clearHover)}

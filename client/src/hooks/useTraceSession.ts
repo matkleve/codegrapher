@@ -43,6 +43,13 @@ import { armSourceArrival, clearWireArrivals } from "@/lib/wireSignalArrival";
 import { notifyWireTransform } from "@/lib/wireEngine";
 import { setTraceSessionMood } from "@/lib/traceSessionMood";
 import { primeTraceSignal } from "@/lib/traceSignalPrime";
+import {
+  beginTraceTimeline,
+  isTraceTimelineEnabled,
+  markTracePhase,
+  markSignalStopOnce,
+  recordTokenPin,
+} from "@/lib/traceTimeline";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 function traceHadCommitted(session: TraceSession): boolean {
@@ -140,6 +147,7 @@ export function useTraceSession(isCtrlActive: boolean) {
       clearPendingTraceHost();
       setTraceAnchorHost(traceHost ?? null);
       send({ type: "DWELL_FIRE", tokenKey });
+      markTracePhase("dwellFire", tokenKey);
       onFire();
       pendingFireRef.current = null;
       timersRef.current.fire = null;
@@ -154,6 +162,8 @@ export function useTraceSession(isCtrlActive: boolean) {
       pendingFireRef.current = null;
       hoverClearRef.current = null;
       clearPendingTraceHost();
+      clearWireArrivals();
+      markTracePhase("hoverClear", tokenKey);
       send({ type: "GRACE_EXPIRE", tokenKey });
       clearJumpTooltip();
       onClear();
@@ -189,6 +199,7 @@ export function useTraceSession(isCtrlActive: boolean) {
         armSourceArrival(tokenKey);
       }
       send({ type: "TRACE_COMMIT", tokenKey, edges });
+      markTracePhase("traceCommit", `${edges.length} edges`);
       notifyWireTransform();
     },
     [send],
@@ -198,6 +209,7 @@ export function useTraceSession(isCtrlActive: boolean) {
     (tokenKey: string, edges: PreviewEdgeSpec[]) => {
       startWireSignalEpoch();
       armSourceArrival(tokenKey);
+      markTracePhase("signalEmit", tokenKey);
       send({ type: "WIRE_SIGNAL_START", tokenKey, edges });
       setWireHoveredTokenKey(tokenKey);
       setTraceSessionActive(true);
@@ -226,6 +238,8 @@ export function useTraceSession(isCtrlActive: boolean) {
 
       pendingFireRef.current = { tokenKey, onFire };
       hoverClearRef.current = { tokenKey, onClear };
+
+      beginTraceTimeline(tokenKey);
 
       const prior = sessionRef.current;
       const switchingToken =
@@ -279,6 +293,7 @@ export function useTraceSession(isCtrlActive: boolean) {
       clearPendingTraceHost();
 
       hoverClearRef.current = { tokenKey, onClear };
+      markTracePhase("pointerLeave", tokenKey);
       // Let the hop cascade finish even on a short hover: keep the signal alive
       // (so late-laid-out hops still draw) and size the drain to the cascade.
       const cascadeMs = wireCascadeDurationMs(
@@ -289,6 +304,7 @@ export function useTraceSession(isCtrlActive: boolean) {
       );
       if (traceHadCommitted(prior)) keepWireSignalAlive(cascadeMs);
       stopWireSignalEmitting();
+      markSignalStopOnce();
       send({ type: "POINTER_LEAVE", tokenKey });
 
       const [nextSnap] = transition(traceMachine, snapshotRef.current, {
@@ -343,6 +359,7 @@ export function useTraceSession(isCtrlActive: boolean) {
   const pinTrace = useCallback(
     (tokenKey: string, shiftKey = false, traceHost?: HTMLElement | null) => {
       resetHoverIntent();
+      if (isTraceTimelineEnabled()) recordTokenPin(tokenKey);
       if (traceHost) setTraceAnchorHost(traceHost);
       const mode: PinMode =
         shiftKey && pinnedTracesRef.current.some((t) => t.tokenKey === tokenKey)

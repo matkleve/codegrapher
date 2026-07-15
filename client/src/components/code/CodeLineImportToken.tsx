@@ -25,6 +25,7 @@ export function CodeLineImportToken({
     chipRefs,
     clearHover,
     fireImportPreview,
+    signalImportPreview,
     scheduleHoverFire,
     scheduleHoverClear,
     pinTrace,
@@ -53,7 +54,16 @@ export function CodeLineImportToken({
         const chip = chipRefs.current.get(chipKey);
         const chipEl = chip?.getChipElement();
         if (!chipEl) return;
-        scheduleHoverFire(tokenKey, () => fireImportPreview(token.text, chipEl), clearHover);
+        scheduleHoverFire(
+          tokenKey,
+          () => fireImportPreview(token.text, chipEl),
+          clearHover,
+          undefined,
+          {
+            traceHost: chipEl,
+            onSignal: () => signalImportPreview(token.text, chipEl),
+          },
+        );
       }}
       onMouseLeave={() => scheduleHoverClear(tokenKey, clearHover)}
       onFocus={() => {
@@ -65,7 +75,7 @@ export function CodeLineImportToken({
           () => fireImportPreview(token.text, chipEl),
           clearHover,
           undefined,
-          { instant: true },
+          { instant: true, onSignal: () => signalImportPreview(token.text, chipEl) },
         );
       }}
       onBlur={() => scheduleHoverClear(tokenKey, clearHover)}

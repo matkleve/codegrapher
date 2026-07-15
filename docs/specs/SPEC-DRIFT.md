@@ -72,6 +72,7 @@ Per [GOVERNANCE-MATRIX.md](GOVERNANCE-MATRIX.md), implementation and specs must 
 | Chip strength emission | **Resolved 2026-07-12** — `--trace-strength` + `color-mix` in `traceLitApply.ts`; not element opacity. |
 | Fixed trace-strength steps vs dynamic curves | **Resolved 2026-07-12** — docs use **hop** / **graph distance** + `tracePathOpacity` / `traceEmphasisPathOpacity`. |
 | Pending dwell / motion clock / wire glow ownership | **Resolved 2026-07-12** — `graph-trace-pending`, `--motion-trace` (120ms), visual commit timeline in interactions supplement; glow+path dash in `wireReveal.ts`; load stub `data-load-stub-ready`. |
+| Atlas vs interactions wire model (hidden vs signal on pending) | **Resolved 2026-07-13** — atlas signal model wins; interactions supplement + AC reconciled; `traceMotion.ts` timing SSOT; RAF draw in `wireReveal.ts`. |
 
 ---
 

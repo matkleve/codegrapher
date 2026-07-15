@@ -9,11 +9,12 @@ import { useIndex } from "@/context/IndexContext";
 import { previewMemberHandle } from "@/lib/ctrlPreviewHandles";
 import type { DefinitionEdgeContext } from "@/lib/resolveDefinitionUsageSites";
 import { buildMemberSymbolIndex, memberDefId } from "@/lib/localSymbolLinks";
+import { EMPTY_MEMBER_SYMBOL_INDEX } from "@/lib/buildMemberSymbolIndex";
 import { buildLexicalGraph } from "@/lib/lexicalGraph";
 import { buildControlFlowIndex } from "@/lib/controlFlowLinks";
 import { symbolKindToSemantic } from "@/lib/tokenColors";
 import { makeMemberDefKey } from "@/lib/traceKeys";
-import { parseMethodSignature } from "@/lib/parseMethodSignature";
+import { methodIndexCode, parseMethodSignature } from "@/lib/parseMethodSignature";
 import { findMethodOverride } from "@/lib/overrideInfo";
 import { buildUsagePreviewEdge } from "@/lib/buildPreviewEdges";
 import { resolveVisibleTarget } from "@/lib/resolveVisibleTarget";
@@ -50,7 +51,6 @@ function CollapsibleMemberRowComponent({
   classLabel,
   isReadingFocus = false,
 }: CollapsibleMemberRowProps) {
-  const lines = code.split("\n");
   const memberHandleId = previewMemberHandle(memberId);
   const labelRef = useRef<HTMLSpanElement>(null);
   const memberRowRef = useRef<HTMLDivElement>(null);
@@ -77,18 +77,34 @@ function CollapsibleMemberRowComponent({
   const signatureLine =
     code.split("\n").find((l) => l.trim().length > 0) ?? label;
 
+  const indexCode = useMemo(() => {
+    if (expanded) return code;
+    if (!showSignatureTags) return "";
+    return methodIndexCode(code);
+  }, [code, expanded, showSignatureTags]);
+
   const symbolIndex = useMemo(
-    () => buildMemberSymbolIndex(memberId, code, startLine),
-    [memberId, code, startLine],
+    () =>
+      indexCode
+        ? buildMemberSymbolIndex(memberId, indexCode, startLine)
+        : EMPTY_MEMBER_SYMBOL_INDEX,
+    [indexCode, memberId, startLine],
   );
   const lexicalGraph = useMemo(
-    () => buildLexicalGraph(symbolIndex, code, startLine),
-    [symbolIndex, code, startLine],
+    () =>
+      indexCode
+        ? buildLexicalGraph(symbolIndex, indexCode, startLine)
+        : buildLexicalGraph(EMPTY_MEMBER_SYMBOL_INDEX, "", startLine),
+    [indexCode, symbolIndex, startLine],
   );
   const controlFlowIndex = useMemo(
-    () => buildControlFlowIndex(memberId, code, startLine),
-    [memberId, code, startLine],
+    () =>
+      expanded && code.trim()
+        ? buildControlFlowIndex(memberId, code, startLine)
+        : null,
+    [code, expanded, memberId, startLine],
   );
+  const lines = useMemo(() => (expanded ? code.split("\n") : []), [code, expanded]);
   const methodSignature = useMemo(
     () => (showSignatureTags ? parseMethodSignature(code) : null),
     [code, showSignatureTags],
@@ -227,7 +243,7 @@ function CollapsibleMemberRowComponent({
         onContextMenu={defTrace.onContextMenu}
         onPinClick={defTrace.onPinClick}
       />
-      {expanded && code.trim() ? (
+      {expanded && code.trim() && controlFlowIndex ? (
         <MemberRowBody
           memberId={memberId}
           lines={lines}

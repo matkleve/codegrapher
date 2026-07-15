@@ -6,7 +6,6 @@ import {
   stripWireRevealStroke,
   wireRevealDelayMs,
   WIRE_REVEAL_HOP_MS,
-  WIRE_REVEAL_MS,
   WIRE_REVEAL_STAGGER_MS,
 } from "@/lib/wireReveal";
 import { startWireSignalEpoch, stopWireSignalEmitting } from "@/lib/traceWireSignal";
@@ -100,8 +99,11 @@ describe("playWireReveal", () => {
     expect(wire.path.style.strokeDashoffset).toBe("50");
   });
 
-  it("exports a visible draw duration", () => {
-    expect(WIRE_REVEAL_MS).toBeGreaterThanOrEqual(80);
+  it("does not add trace-strength class during draw", () => {
+    const wire = mockWire();
+    wire.path.classList.add("preview-edge-trace-strength");
+    playWireReveal(wire, 0);
+    expect(wire.path.classList.contains("preview-edge-trace-strength")).toBe(false);
   });
 
   it("does not start when signal emitter is off", () => {

@@ -228,6 +228,17 @@ export function refreshArrivalStrengthDom(): void {
   }
 }
 
+let arrivalStrengthRaf = 0;
+
+/** Coalesce arrival strength updates to one DOM pass per frame. */
+export function scheduleArrivalStrengthRefresh(): void {
+  if (arrivalStrengthRaf) return;
+  arrivalStrengthRaf = requestAnimationFrame(() => {
+    arrivalStrengthRaf = 0;
+    refreshArrivalStrengthDom();
+  });
+}
+
 export function createHostState(classes: string[], depth: number): HostState {
   return { classes, depth, sockets: new Map() };
 }
