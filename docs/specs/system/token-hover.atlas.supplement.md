@@ -8,7 +8,7 @@
 
 ## Full lifecycle (normative summary)
 
-One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out:** **`--motion-trace-out` (80ms)** + **`--ease-trace-out`**. Wire: ghost at commit + stroke draw (WAAPI) that **grows outward from the hovered core token** (`wireReveal.ts` reverses the dash when the core is the wire's `to` end). Orchestration: `traceMotion.ts`.
+One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--ease`**; pending dim **`--motion-trace-pending` (80ms)**. **Fade-out** (`--motion-trace-out` / `--ease-trace-out`) applies to surround/lit DOM only — **wires do not fade**. Wire: signal window that **grows outward from the hovered core token** (`wireReveal.ts` reverses direction when the core is the wire's `to` end) and, on leave, **consumes forward at the same rate instead of fading** — full model: [signal-window supplement](preview-edges.signal-window.supplement.md). Orchestration: `traceMotion.ts`.
 
 **Hop-sequential cascade (normative):** the reveal steps outward one hop at a time — a hop's wire only starts once the previous hop's wire has finished and its endpoint chip has lit (`wireHopStaggerMs` = `wireRevealMs`; fan legs within a hop stagger by `wireFanStaggerMs`). The signal is **fire-and-forget**: a short hover still completes the full cascade to the outermost hop — on pointer leave the signal is kept alive and the edge-retire drain is sized to `wireCascadeDurationMs` (the remaining hop schedule), so leaving early never truncates the wave.
 
@@ -20,8 +20,8 @@ One clock for surround + lit on **enter**: **`--motion-trace` (120ms)** + **`--e
 | **Ctrl held** (stacks) | `+ graph-ctrl-preview` | unchanged | dim surface | **`--faint-ctrl`** (wins) | shimmer + resting ink | instant commit if hover |
 | **Pointer on path** (active) | active | — | — | — | hover strength bump | touched wires emphasize |
 | **Pin** | `+ graph-trace-pinned` | — | per merged lit | per merged lit | `token-chip-source` | persist |
-| **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | emitter **off**; in-flight signals finish, then 80ms retire |
-| **Leave timing** | `onVisualLeave` immediate; no leave grace | | | | | cancel WAAPI reveal on retire |
+| **Leave** (unhover) | `graph-trace-leaving` → idle | title eases back | dim eases back | eases back | lit unwinds | emitter **off**; in-flight signals finish arriving, then consume forward to the target (420ms transit, not a fade) |
+| **Leave timing** | `onVisualLeave` immediate; no leave grace | | | | | growing wires finish growing before consuming starts |
 
 **Invariants:** chip emphasis only goes **up** (never `--faint` then relight). Dwell gates **commit** (wires, row blue, lit DOM) — not chip ink. Row blue on **commit only**, not pending.
 

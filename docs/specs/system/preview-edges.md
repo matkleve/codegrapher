@@ -29,8 +29,8 @@ Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessib
 | 5 | Clicks token | Pin trace (replaces pin set) + `TokenContextBar` | `pinTrace`, `graph-trace-pinned` |
 | 5b | Shift+clicks token | Add pin to accumulated set (keep prior pins lit); toggle off if already pinned | `pinnedTraces` + `mergePinnedEdges` |
 | 6 | Empty canvas / Esc | Clear pin + trace | `clearTokenInfo` |
-| 7 | Hovers wire hit-zone | Jump tooltip at cursor | `JumpTooltip` |
-| 8 | Clicks wire hit-zone | Pin target + scroll + flash | overlay handler |
+| 7 | Right-clicks either endpoint token | "All connections" menu, incl. jump to the other end | `TokenConnectionMenuPanel` |
+| 8 | Clicks wire hit-zone | Opens the data inspector for that wire | `usePreviewEdgeOverlay.ts` |
 | 9 | Expands/collapses member | Wires retarget live | `liveFrom` / `liveTo` |
 | 10 | Hovers other token while pinned | Ephemeral preview; pin unchanged until click | `hoverPreviewEdges` + `mergeTraceLit` |
 
@@ -120,6 +120,7 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 
 ## Child specs
 
+- **Signal window (grow/consume, timing):** [preview-edges.signal-window.supplement.md](preview-edges.signal-window.supplement.md)
 - **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
 - **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
 - **Fan/bus wayfinding:** [preview-edges.wayfinding.supplement.md](preview-edges.wayfinding.supplement.md)

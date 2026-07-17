@@ -85,7 +85,7 @@ sequenceDiagram
 | Ctrl held | 0 | Instant fire via `fireDelayMs` |
 | Keyboard focus | 0 | Instant fire via `scheduleHoverFire({ instant: true })` |
 | Dwell never committed | 0 leave grace | `leaveGraceMs(false)` — instant clear on pointer leave |
-| Wire reveal (cold) | 40ms dwell + ~240ms draw + hop stagger | WAAPI stroke draw on **path** definition→usage; hop-1 first, +100ms per hop, +25ms fan-out tie; marching after draw |
+| Wire reveal (cold) | 40ms dwell + 420ms transit + hop stagger | Head/tail signal window on **path** definition→usage; hop-1 first, +420ms per hop, +14ms fan-out tie; marching once arrived — full model: [signal-window supplement](preview-edges.signal-window.supplement.md) |
 | Load stub wire | after `data-load-stub-ready` | Stub must finish fixed layout before wire geometry/reveal — no corner anchor |
 | Surround motion | `--motion-trace` (120ms) | Member rows, syntax, chips, sockets, wire opacity — one importance clock ([tokens.md](../../design/tokens.md)) |
 
@@ -122,7 +122,7 @@ sequenceDiagram
   Pane->>Pane: graph-trace-active (+ warm after first commit)
   Chip->>Chip: pending strength → focus curve + token-chip-lit / token-chip-on
   Lit->>Surround: trace-member-lit, trace-lit-line, sockets
-  Wire->>Wire: hop-ordered path draw 240ms (+100ms/hop, +25ms fan tie)
+  Wire->>Wire: hop-ordered signal window 420ms (+420ms/hop, +14ms fan tie)
 
   P->>Pane: leave (trace had fired)
   Note over Pane: grace 50ms → clear
@@ -132,7 +132,7 @@ sequenceDiagram
 | ----- | ---------- | ---------- | ------------------- | ----------- | ------------- | ------------ |
 | **Idle** | — | resting ink | resting ink | `bg-muted` | full color | hidden |
 | **Pending dwell** (0–40ms) | `graph-trace-pending` | pending `--trace-strength` + semantic ink | resting ink | dim surface | `--faint-*` eases in | hidden |
-| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | lit: focus curve + fill | resting ink (not faint) | lit row + dim others | lit lines + faint syntax | WAAPI stroke reveal 240ms |
+| **Tracing** (after dwell) | `graph-trace-active` `graph-trace-warm`* | lit: focus curve + fill | resting ink (not faint) | lit row + dim others | lit lines + faint syntax | Signal window grows, 420ms transit ([detail](preview-edges.signal-window.supplement.md)) |
 | **Ctrl held** | `graph-ctrl-preview` (+ trace if active) | shimmer on indexed | shimmer | dim surface | `--faint-ctrl` (wins over trace faint) | dwell 0ms |
 | **Pinned** | `graph-trace-pinned` | `token-chip-source` on pin | resting ink | per merged lit | per merged lit | pinned edges persist |
 | **Foreign hover while pinned** | trace + pin | ephemeral preview on other token | resting ink | ephemeral lit rows | ephemeral lit | preview wires |
@@ -151,13 +151,17 @@ sequenceDiagram
 | ------- | -------- | ---- |
 | Surround | Eases back on `--motion-trace` | `graph-trace-leaving` → idle |
 | Lit DOM | `unwindTraceLit` then `clearTraceLit` @ 120ms | `traceLitApplySession.ts` |
-| Wires | `retireWireGroup` opacity fade @ 120ms; cancel WAAPI reveal | `usePreviewEdgeOverlay.ts`, `wireDomSync.ts` |
+| Wires | `retireWireGroup` starts the **consume sweep** — `tail` advances 0→1 at the same rate `head` used to grow; wire removed only once `tail` reaches `head` at the target. **Not** an opacity fade. Full model: [signal-window supplement](preview-edges.signal-window.supplement.md) | `usePreviewEdgeOverlay.ts`, `wireDomSync.ts`, `wireReveal.ts` |
 | Refs / state | `LEAVE_GRACE_MS` 50ms then `endTrace` | `hoverIntent.ts` |
 
-All three share the **120ms** importance clock — no instant wire `remove()`.
+Surround and lit DOM share the **120ms** importance clock; **wires do not** —
+the consume sweep's duration is `wireRevealMs` (420ms), the same transit time
+`head` used to grow, not the surround's motion clock. A wire never
+`remove()`s instantly and never fades — it disappears exactly when its
+trailing edge reaches the target, matching how it appeared.
 - **Lit sets** (`trace-member-lit`, `trace-lit-line`, sockets) apply on trace commit via `applyTraceLit` (`useLayoutEffect`).
-- **Wire path** stroke-draws via WAAPI `stroke-dashoffset` in `playWireReveal`; **glow** (dashed) appears after draw; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
-- **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire stroke draw: WAAPI (~240ms), independent.
+- **Wire path** grows via the signal-window model in `playWireReveal`/`wireEngine.ts`; **glow** (dashed) appears once arrived; opacity/geometry locked until stub ready (`data-load-stub-ready`) for load edges.
+- **Importance easing** — color, background, border, box-shadow on trace surfaces: `--motion-trace`. Wire signal window: `wireRevealMs` (420ms), independent — see [signal-window supplement](preview-edges.signal-window.supplement.md).
 
 ---
 
@@ -395,7 +399,10 @@ Implementation: `client/src/lib/computeTraceLit.ts` (lit sets), `client/src/lib/
 `wireEngine.ts` is **not** a per-frame loop. It idles until a signal starts it, runs an
 rAF measure loop while activity continues, then **auto-stops `SETTLE_MS` (100ms) after
 the last signal** with one final tick. Wires therefore track motion smoothly but cost
-nothing at rest. Every source of geometry change MUST reach it, or wires go stale:
+nothing at rest. This same loop also advances any wire's head/tail signal window while
+it's actually in transit (growing or consuming) — a settled, fully-arrived wire is CSS-driven
+and does not need a tick; see [signal-window supplement](preview-edges.signal-window.supplement.md).
+Every source of geometry change MUST reach it, or wires go stale:
 
 | Trigger | Path | Covers |
 | ------- | ---- | ------ |
@@ -511,7 +518,7 @@ flowchart LR
   CTX --> OVL[PreviewEdgeOverlay]
 ```
 
-**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins (Shift+click an already-pinned token toggles it off). Wire click pins trace + scroll + flash. Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
+**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins (Shift+click an already-pinned token toggles it off). **Wire click opens the data inspector** for that wire (not a pin/jump action — jump-to-endpoint lives exclusively in `TokenConnectionMenuPanel` now, reached by right-clicking either endpoint token). Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
 
 ---
 
