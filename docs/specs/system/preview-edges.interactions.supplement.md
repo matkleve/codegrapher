@@ -1,6 +1,27 @@
 # Preview edges — interactions supplement
 
-Normative detail for token trace, anchor resolution, pin lock, and live wire retargeting. Parent: [preview-edges.md](preview-edges.md).
+Normative detail for the **core trace lifecycle**: the state machine, hover
+dwell timing, the visual commit timeline, and leave/retire behavior. Parent:
+[preview-edges.md](preview-edges.md).
+
+**Split 2026-07-17:** this file used to also own edge-building rules, anchor
+tracking, and input-mode/visual-state detail — it grew past the point where
+"interactions" meant one cohesive thing. Those moved to dedicated siblings:
+
+- **Which edges get built, in what direction** (definition/usage direction,
+  local lexical trace, control-flow fan-out, member-access cascade):
+  [fan-out supplement](preview-edges.fanout.supplement.md)
+- **Where a wire attaches and how it stays correct** (anchor resolution
+  waterfall, live retargeting, wire engine re-measure triggers):
+  [anchoring supplement](preview-edges.anchoring.supplement.md)
+- **Input modifiers and visual states** (legend filters, modifier stack, pin
+  lock, CSS root classes, trace hosts, off-graph handling):
+  [modes supplement](preview-edges.modes.supplement.md)
+- **A single wire's grow/consume transit animation:**
+  [signal-window supplement](preview-edges.signal-window.supplement.md)
+
+This file keeps only what's genuinely about the *lifecycle* — state
+transitions and timing — the throughline the other four build on.
 
 ---
 
@@ -145,6 +166,7 @@ sequenceDiagram
 - **Chip ink** never drops to `--faint` during pending or active trace — pending is `--trace-strength` on the focal chip only; commit promotes strength and lit classes.
 - **Row promotion** (`trace-member-lit`) applies on trace commit only — not during pending dwell.
 - **Leave** — `onVisualLeave` runs **immediately** on pointer out (CSS eases back via `--motion-trace`); `LEAVE_GRACE_MS` only defers host `onClear` / ref cleanup for neighbor anti-flicker.
+
 ## Leave (unpinned)
 
 | Surface | Behavior | Code |
@@ -165,377 +187,6 @@ trailing edge reaches the target, matching how it appeared.
 
 ---
 
-## Edge direction and fan-out
-
-Direction is **always definition → usage**, regardless of which end the user hovers.
-
-```mermaid
-flowchart TB
-  subgraph usage_hover [Hover usage chip]
-    U1[Call site chip] -->|single edge| D1[Definition anchor]
-  end
-
-  subgraph def_hover [Hover definition label]
-    D2[Member / class def label] -->|fan-out| U2[Usage 1]
-    D2 --> U3[Usage 2]
-    D2 --> U4[Usage N]
-  end
-```
-
-| Hover target | Edge builder | Count |
-| ------------ | ------------ | ----- |
-| Usage in `CodeLine` | `buildUsagePreviewEdge` | 1 |
-| Member row / class title def | `buildDefinitionPreviewEdges` | All usages in ego-graph |
-| Local param / local var | `buildLocalPreviewEdges` | In-body usages only |
-| Local/param binding + initializer | `buildBindingPreviewEdges` | 1 binding wire (init → binding) when decl has identifier RHS |
-| `switch`/`if` keyword or condition identifier | `buildControlFlowPreviewEdges` | Fan-out: 1 wire per branch (`case`/`default`/`else`/`else if`) |
-| Single `case`/`default`/`else`/`else if` branch | `buildControlFlowPreviewEdges` | 1 wire back to the `switch`/`if` keyword |
-| Indexed type in signature tag | `buildSignatureTypeUsageEdges` | 1 (graph def → `sig-type` chip, or Load stub via index) |
-| Param name in signature tag | `buildParamDefPreviewEdges` | In-body usages of that param |
-| Property in a `a.b.c` chain | `buildReceiverCascadeEdges` (merged with the property's own edges, if any) | Own edge (0 or 1) + 1 per resolvable receiver leftward in the chain |
-| Body usage of param with indexed type (e.g. `field` typed `AddressFieldKind`) | `buildLocalPreviewEdges` + `buildParamTypeCascadeEdges` | Hop 1 Usage: param def → usage; hop 2 **Typesetting**: sig-type → param def; hop 3 Usage: type def → sig-type (or Load stub) — see [trace-strength supplement](preview-edges.trace-strength.supplement.md) |
-| Param def in signature (fan-out) | `buildParamDefPreviewEdges` + type cascade | Hop 1: def → each usage; hop 2/3: type chain behind param |
-
-**Graph-aware fan-out:** `resolveDefinitionUsageSites` scans `graphData` + live `ClassNodeData` for `\btoken\b` matches, not only visible DOM chips. Signature line of the source member is skipped.
-
-**Sig-type usages in the fan-out:** the body-line scan misses type/class usages that render as `…::sig-type::<token>` chips (return/param annotations). `resolveDefinitionUsageSites` MUST also enumerate those from the DOM and set `liveTo.traceKey` to the sig-type key so `computeTraceLit` lights the chip (`token-chip-lit`/`-on`), honouring the reveal waterfall (collapsed → container, expanded → chip).
-
-**Fan-out line-base:** scans of `method.code` in `resolveDefinitionUsageSites` and `usageSiteIndex` are snippet-relative, but chip keys and preview handles are **file-absolute** — convert via `fileLineFromSnippetIndex(method.startLine, i)` or usage chips never match and stay unlit when expanded.
-
-**DOM fan-out:** Member signature tokens (`isDefinitionSignatureLine`) carry `data-symbol-role="definition"` in `CodeLine` so they are not counted as usage anchors when tracing from the member-row label.
-
-**Same-class usage → def:** `resolveVisibleTarget` MUST NOT skip `flowNodeId === sourceFlowId`. The live wire anchor for a member definition is resolved by `memberDefAnchor.ts`: prefer the **signature-line body chip** when the row is expanded and the user hovered/pinned that chip; fall back to **`.member-row-label`** when the body is collapsed; on re-expand, return to the body chip when `preferBody` is set (locked while pinned).
-
-**Member row label display:** `.member-row-label` shows the raw symbol name (`traceName`), matching the signature-line chip — not camelCase-split display text.
-
-**Member def siblings:** The row title and signature-line name chip share one definition. They **light together** (`trace-lit`) but never receive a preview wire between them — only real usages (call sites, etc.) get edges.
-
-**No self-loop wires:** Preview edges never draw from a chip back to itself. Off-canvas call sites appear in the **connection menu** (load list) only — not as a circular wire on the definition chip.
-
----
-
-## Local lexical trace (usage + binding)
-
-Params and locals use a client-side lexical index (`localSymbolLinks.ts`) built into a **`LexicalGraph`** adjacency structure (`lexicalGraph.ts`) per expanded member row. Relative walks (forward from a def, backward from a usage) use a single `walkLexical*` BFS; `lexicalWalkPreviewEdges.ts` maps hops to `PreviewEdgeSpec`. Two preview kinds apply:
-
-```mermaid
-flowchart LR
-  subgraph decl ["const addr = result.address;"]
-    Init["address<br/>(initializer)"] -->|Binding| Bind["addr<br/>(binding)"]
-    Bind -->|Usage| Use["if (addr)"]
-    Param["result param"] -->|Usage| InitRef["result<br/>in initializer"]
-  end
-```
-
-| Relationship | Kind | Direction | Builder |
-| ------------ | ---- | --------- | ------- |
-| Binding def → later reference | Usage | def → usage | `buildLocalPreviewEdges` |
-| Initializer expr → bound name | **Binding** | initializer → binding | `buildBindingPreviewEdges` |
-| Param def → reference in body | Usage | def → usage | `buildParamDefPreviewEdges` / local |
-| Sig-type chip → param def slot | **Typesetting** | type annotation → param | `buildParamTypeCascadeEdges` (hop 2) |
-
-**Normative — binding vs usage vs typesetting:** Usage answers "where is this name referenced later?" Binding answers "where does this binding get its value on the declaring line?" Typesetting answers "which type annotates this param slot?" — static typing, not runtime value flow. Each MUST have its own `ConnectionKind` and legend toggle.
-
-**Initializer resolution:** For `const|let <name> = <expr>;` on a single line, the binding source anchor is the **rightmost identifier token** in `<expr>`. Property reads (`result.address`) anchor on the property identifier (`address`); the receiver (`result`) keeps its own usage wire to the param def when hovered independently.
-
-**Compound trace on binding hover:** Hovering the binding site MUST emit both usage fan-out (if any) and the binding wire (when RHS has an identifier anchor).
-
----
-
-## Control-flow fan-out (switch/case, if/else)
-
-A separate client-side index (`controlFlowLinks.ts`) tracks `switch`/`case`/`default` and `if`/`else if`/`else` structure per method body via line/brace-depth scanning (no full AST — same pragmatic style as `localSymbolLinks.ts`).
-
-```mermaid
-flowchart TD
-  Head["switch (field)"] -->|Control flow| C1["case 'city'"]
-  Head -->|Control flow| C2["case 'district'"]
-  Head -->|Control flow| C3["default"]
-  Field["field<br/>(condition identifier)"] -.->|same fan-out| Head
-```
-
-**Compound trace on condition hover:** Hovering the discriminant/condition identifier (e.g. `field`) MUST emit both its normal usage wire(s) (`buildLocalPreviewEdges`) and the control-flow fan-out (`buildControlFlowPreviewEdges`) — merged in `CodeLine.firePreview`, same pattern as the binding merge above.
-
-**Normative — control flow vs usage/binding:** Control flow answers "which branch does this decision lead to?" It is a distinct kind (`branch`) from Usage (def → later reference) and Binding (value → name); it MUST NOT share a legend toggle with either.
-
-**Direction:** always condition/keyword → branch, never branch → condition, even when the wire was summoned by hovering a single branch (only the *set* of drawn wires is filtered, not the direction).
-
-**Known v1 limitations:** ternary (`cond ? a : b`) is not indexed; a `switch`/`if` header whose discriminant/condition is on a different line than the keyword is not indexed (single-line headers only).
-
----
-
-## Member-access cascade (property chains)
-
-A property reached through a chain (`country` in `context.country`) is meaningful only together with the path used to reach it. Hovering the tail property therefore cascades **leftward** to its receiver(s); hovering a receiver on its own never cascades forward.
-
-```mermaid
-flowchart LR
-  subgraph hover_country ["Hover country"]
-    Ctx1["context<br/>(receiver)"] -.->|cascaded usage wire| Ctx1
-    Country["country<br/>(property, hovered)"] -->|own wire, if resolvable| Def["Address.country<br/>(if indexed)"]
-    Ctx1 -->|own wire| ParamDef["context param def"]
-  end
-
-  subgraph hover_context ["Hover context alone"]
-    Ctx2["context"] -->|only its own wire| ParamDef2["context param def"]
-  end
-```
-
-**Tokenization:** `country` is interactive (rendered as a `TokenChip`, not plain text) whenever it is itself indexed/local **or** at least one receiver in its `a.b.c` chain resolves (`memberAccessReceiverIndices` + `isLinkableIdentifier` in `CodeLine.tsx`). This lets a property whose own type isn't in the symbol index still be hovered meaningfully — hovering it draws the receiver's wire even when the property itself has no definition to link to.
-
-**Cascade direction is one-way:** `memberAccessReceiverIndices(tokens, i)` walks left from the hovered token through consecutive `identifier "." identifier` pairs; it never looks right. Hovering `context` in `context.country` MUST NOT light up or wire `country` — only hovering `country` cascades back to `context`.
-
-**Compound trace on property hover:** `buildReceiverCascadeEdges` resolves each receiver exactly as if it had been hovered on its own — local/param fan-out first (`buildLocalPreviewEdges`), then indexed usage (`resolveVisibleTarget`, graph-mode only; no Load-stub menu is triggered for a cascaded receiver, to avoid a second `TokenConnectionMenu` fighting the primary hover's). These are merged into the property's own edge list before the single `beginTrace` call, same pattern as the binding and control-flow merges above. For a longer chain (`a.b.c`), every receiver leftward (`b`, then `a`) is included, not just the immediate one.
-
-**Normative — not a new kind:** the cascaded wires are whatever kind the receiver would draw on its own (almost always Usage); this is an interaction pattern, not a new `ConnectionKind`. It reuses the Usage legend toggle.
-
----
-
-## Legend kind filters (normative)
-
-Each `ConnectionLegend` row toggles exactly one `ConnectionKind` in `visibleEdgeKinds`.
-
-| Legend label | Affects | Does **not** affect |
-| ------------ | ------- | ------------------- |
-| Usage | Indexed + local def→usage preview, transitive decay wires | Binding, typesetting, control flow, structural |
-| Binding | Initializer→binding preview wires | Usage fan-out, typesetting, control flow, structural |
-| Typesetting | Sig-type→param def preview wires (provenance hop 2) | Usage, Binding, control flow, structural |
-| Control flow | `switch`/`if` branch fan-out wires | Usage, Binding, typesetting, structural |
-| Inheritance | Persistent `extends` structural wires | Preview wires of any kind |
-| Implementation | Persistent `implements` structural wires | Preview wires |
-| Composition | Persistent `composition` structural wires | Preview wires |
-| Module import | Persistent `imports` structural wires (toggle-gated) | Preview wires |
-
-**Common confusion:** Usage preview wires are **function blue** (`--edge-usage`). Typesetting wires (sig-type → param def) use **type teal** (`--edge-typesetting`) — they are not Usage, Binding, or Inheritance. Toggling Inheritance off MUST leave usage/typesetting wires visible unless those kinds are also off. Implementation: `structuralTypesForVisibleKinds` for structural only; preview gating checks `usage`, `binding`, `typesetting`, and `branch` separately.
-
-Default on: usage, binding, typesetting, control flow, inheritance, implementation, composition. Default off: module import.
-
----
-
-## Anchor resolution waterfall
-
-Finest revealed level wins. Re-evaluated every frame while trace is active (`liveFrom` / `liveTo` on `PreviewEdgeSpec`).
-
-```mermaid
-flowchart TD
-  Start([Resolve usage site]) --> Chip{Usage chip in DOM?}
-  Chip -->|yes| E1[element: TokenChip]
-  Chip -->|no| Body{Class body expanded?}
-  Body -->|no| H1[handle: previewTargetTop]
-  Body -->|yes| Member{Method row expanded?}
-  Member -->|no| H2[handle: previewMemberHandle]
-  Member -->|yes| Line{Line visible?}
-  Line -->|chip later| E1
-  Line -->|no chip yet| H3[handle: previewLineHandle]
-
-  Start2([Resolve definition site]) --> Label{Def label in DOM?}
-  Label -->|yes| E2[element: member-row-label / node-card-title]
-  Label -->|no| Fallback[Same waterfall as usage handles]
-```
-
-Handle ids are **per-node** (`previewLineHandle(memberId, line)`, `previewTargetTop(flowNodeId)`). Never use a shared handle id across nodes.
-
----
-
-## Live wire retargeting on expand/collapse
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant N as ClassNode state
-  participant E as PreviewEdgeSpec
-  participant O as PreviewEdgeOverlay rAF
-  participant L as computeTraceLit
-
-  U->>E: pin trace on normalizeForDedup (def)
-  Note over E: liveTo hints per usage site
-  U->>N: expand deduplicateSuggestions
-  loop each animation frame
-    O->>E: refinePreviewEdge(liveTo)
-    O->>O: measure DOM anchors
-    Note over O: wire moves member handle → line chip
-  end
-  N->>L: revealRevision bumps (expandedMethodIds)
-  L->>E: refinePreviewEdge + absorb usage chip
-  Note over L: token-chip-lit + token-chip-on on call site
-```
-
-**Normative:** When a pinned/hovering **definition fan-out** wire retargets to a usage chip (member body was collapsed at pin time, expanded after), the call-site `TokenChip` MUST receive `token-chip-lit` and `token-chip-on` — not only a line-handle socket.
-
-`computeTraceLit` MUST use the same `refinePreviewEdge` path as the overlay and MUST
-re-run on **both** triggers:
-
-1. `revealRevision` — React expand/collapse state (`expandedMethodIds`).
-2. `registryRevision` — the element registry's rAF-coalesced change signal
-   (`subscribeRegistry` / `useElementRegistryRevision`).
-
-Both are required. `revealRevision` bumps **during render**, before the newly revealed
-token chips mount and register, so on its own `computeTraceLit` resolves against the
-*pre-commit* DOM and lights nothing — the wire self-heals only because the overlay
-re-resolves every rAF, but lit has no such loop. `registryRevision` fires **after** the
-chips mount and register, driving the recompute that actually finds them. Removing the
-registry dependency reintroduces the "wire retargets but keywords don't light" bug.
-
-### Def title → open callee (acceptance path)
-
-```mermaid
-flowchart TD
-  A[Click function title<br/>buildSubtitle def] --> B[Fan-out edges + liveTo hints]
-  B --> C{Caller method expanded?}
-  C -->|no| D[Wire ends at member handle]
-  C -->|yes| E[Wire ends at usage TokenChip]
-  D --> F[User expands caller row]
-  F --> G[revealRevision + refinePreviewEdge]
-  G --> E
-  E --> H[Chip lit + socket on + wire on chip anchor]
-```
-
-Implementation: `client/src/lib/computeTraceLit.ts` (lit sets), `client/src/lib/traceLitController.ts` (imperative DOM classes), `client/src/lib/elementRegistry.ts` (`subscribeRegistry` post-mount signal), `GraphInteractionContext` `revealRevision` + `registryRevision` deps.
-
----
-
-## Wire engine — re-measure triggers (normative)
-
-`wireEngine.ts` is **not** a per-frame loop. It idles until a signal starts it, runs an
-rAF measure loop while activity continues, then **auto-stops `SETTLE_MS` (100ms) after
-the last signal** with one final tick. Wires therefore track motion smoothly but cost
-nothing at rest. This same loop also advances any wire's head/tail signal window while
-it's actually in transit (growing or consuming) — a settled, fully-arrived wire is CSS-driven
-and does not need a tick; see [signal-window supplement](preview-edges.signal-window.supplement.md).
-Every source of geometry change MUST reach it, or wires go stale:
-
-| Trigger | Path | Covers |
-| ------- | ---- | ------ |
-| Preview/structural specs change | overlay effect → `engine.tickOnce()` | new/removed wires (`beginTrace`) |
-| Viewport pan/zoom | `onMove` / `onMoveEnd` → `notifyWireTransform` | canvas transform |
-| Node drag / resize | `onNodesChange` (`position`/`dimensions`) → `notifyWireTransform` | moving or resizing a card |
-| Reveal (expand/collapse) | `revealRevision` → lit recompute → lit effect → `notifyWireTransform`; also emits a `dimensions` change | anchor host moves as the card grows |
-| Trace-host mount/unmount | `registryRevision` → lit recompute → lit effect → `notifyWireTransform` | chip appears/disappears |
-
-**Regression guard:** a node is `nodesDraggable`, so `onNodesChange` MUST notify the wire
-engine on `position`/`dimensions` changes — otherwise wires freeze mid-drag and stay stale
-after drop (only viewport moves would recover them).
-
----
-
-## Modifier stack (normative)
-
-| Input | Effect |
-| ----- | ------ |
-| Hover | Dwell → preview edges (cold/warm timing) |
-| Ctrl | Instant preview; dim syntax/keywords; shimmer indexed tokens |
-| Click token / wire | Pin one trace (**replaces** existing pins) |
-| Shift+click token | **Accumulate** pin — add trace; merged lit + wires; toggle off if already pinned |
-| Esc / empty canvas | Clear all pins |
-| Expand class/member header during pin | Pin + wires **stay**; anchors retarget via `revealRevision` |
-
----
-
-## Pin lock
-
-While `pinnedTraces.length > 0`, the **pinned trace(s) stay lit** (context bar, pinned endpoints, pinned wires after hover ends). **Foreign token hover** still runs the normal dwell → `beginTrace` preview (chip-on, wires, lit chain) but does **not** change the pin until the user **clicks** the new token.
-
-```mermaid
-flowchart LR
-  Pin[pinnedTraces non-empty] --> G1[scheduleHoverFire: any indexed key]
-  Pin --> G2[beginTrace: updates ephemeral previewEdges]
-  Pin --> G3[graph-trace-pinned on canvas]
-  Pin --> G4[hover leave clears hoverPreviewEdges only]
-  Pin --> G5[previewEdges = pinned + hover in parallel]
-  Pin --> OK[Click: replace pin set]
-  Pin --> Acc[Shift+click: accumulate pin]
-```
-
-| Action | Unpinned trace | Pinned trace |
-| ------ | -------------- | ------------ |
-| Hover other token | Switch after dwell | **Ephemeral preview** (pin unchanged) |
-| Leave hovered token | endTrace | Clear hover edges only; pinned wires stay |
-| Pass-over CSS on dim tokens | Stays `--faint` | Stays `--faint` until dwell fires |
-| Expand member | Live retarget wires | Live retarget wires |
-| Click other token | Pin | **Replace** pin set (single trace) |
-| Shift+click other token | Pin | **Accumulate** — add trace; prior pins stay lit; toggle off if duplicate |
-| Empty canvas / Esc | endTrace | clearTokenInfo (all pins) |
-
-**Effective trace lit:** `mergeTraceLit(computeTraceLit(pinned…), computeTraceLit(hover…))` when hover key differs from pin. **`previewEdges`** exposed to the overlay is `pinnedPreviewEdges + hoverPreviewEdges` in parallel while both are active.
-
----
-
-## Visual modes (CSS root classes)
-
-Applied on graph pane wrapper (`GraphFlowCanvas`):
-
-```mermaid
-flowchart TB
-  subgraph classes [Canvas classes]
-    C[graph-ctrl-preview] -->|Ctrl held| Shimmer[indexed token glint]
-    T[graph-trace-active] -->|traceTokenKey set| Dim[surround dims — syntax + chrome color-only]
-    P[graph-trace-pinned] -->|pinnedTraces non-empty| Pin[pinned trace + ephemeral hover preview]
-  end
-```
-
-| Mode | Lit path | Surround (syntax, chrome) | Indexed chips off path | Node header |
-| ---- | -------- | --------------------------- | ---------------------- | ----------- |
-| Idle | — | normal | resting semantic ink | card background |
-| Trace active | focus curve + `token-chip-on` | `--faint-*` / dim rows, **no bg wash** | **resting semantic ink** | no tint |
-| Ctrl + trace | shimmer on every indexed chip | `--faint-ctrl` (wins syntax) | shimmer + resting ink | no tint |
-| Pinned | merged lit + `token-chip-source` | per merged lit | resting ink; foreign preview on dwell | no tint |
-
-**Active chips (`token-chip-on`):** semantic tint fill (`--token-surface-*` — `color-mix(in srgb, …)` of `--token-edge-*` into white / `--background`), **no inset ring**; idle `:hover` and `:focus-visible` on `.cursor-pointer` chips use the same fill (object identity across the gesture). Pinned source (`token-chip-source`) keeps semantic ink on hover/focus while a foreign hover preview runs; ephemeral preview endpoints use the same semantic fill, not brand.
-
-**Local-def siblings** (signature param chip + in-body param def sharing one `localDefId`): every sibling in the trace gets `token-chip-on` + a socket; only the hovered/pinned host keeps full semantic ink/fill. Others get `token-chip-endpoint-sibling` — same chip-on shell and dot ring, desaturated via `--muted-foreground` / `--muted` mixes.
-
-**Sockets (`FlowAnchor`):** pop on endpoints only (`token-chip-on`); crisp semantic ring via `currentColor` — no brightness bloom or blur. Sibling endpoints use `flow-anchor-endpoint-sibling` (grey dot, same ring geometry).
-
-**Load stub chips (`LoadStubAnchor`):** off-canvas dashed-wire endpoints use the `connector-chip--load` shell — **not** `InteractiveListRow` / `floatingPanelClass` (its `overflow-hidden` clips the socket). Normative contract:
-
-| Requirement | Detail |
-| ----------- | ------ |
-| Host attrs | `data-load-edge-id="{edgeId}"`, `data-load-socket="right"`, `data-symbol-name`, `data-token-kind` |
-| Socket | `FlowAnchor` on the socket side (`right` when `data-load-socket="right"`); MUST stay visible (`flow-anchor-on`) |
-| Position | `loadStubPanePosition` + `subscribeWireTicks` — **`position: fixed`** viewport coords, recomputed each wire rAF. Horizontal: flush left of `.react-flow__node` (no pane-margin clamp). Vertical: clamped to graph pane screen bounds. Portal: `document.body`. |
-| Wire resolve | `previewEdgeDom.updateWireGeometry` queries host by `data-load-edge-id`, measures socket via `resolvePreviewAnchor` |
-| Height | `--connector-chip-load-stub-height` (`connector-chip--load-stub`, default `var(--control-height-md)`) — room for swatch + Load badge + socket; neutral `--card` fill (not `--token-surface-*`) |
-
-Anchor rules for ordinary wires: handle ids are **per-node**; path coords are overlay-local. See [preview-edges.md](preview-edges.md) + `resolvePreviewAnchor.ts`.
-
----
-
-## Trace hosts (where hover starts)
-
-```mermaid
-flowchart LR
-  subgraph hosts [Indexed trace hosts]
-    CL[CodeLine TokenChip usage]
-    MR[CollapsibleMemberRow label def]
-    NH[NodeCardHeader title def]
-  end
-
-  hosts --> SCH[scheduleHoverFire]
-  SCH --> FIR[onFire → build edges]
-  FIR --> BT[beginTrace]
-  BT --> CTX[GraphInteractionContext]
-  CTX --> LIT[computeTraceLit]
-  CTX --> OVL[PreviewEdgeOverlay]
-```
-
-**Click pin** opens docked `TokenContextBar` (not a floating popover). Plain click replaces the pin set with one trace; **Shift+click** adds a trace to the accumulated set without clearing earlier pins (Shift+click an already-pinned token toggles it off). **Wire click opens the data inspector** for that wire (not a pin/jump action — jump-to-endpoint lives exclusively in `TokenConnectionMenuPanel` now, reached by right-clicking either endpoint token). Ctrl does not pin — it only accelerates hover reveal and dims syntax (`graph-ctrl-preview`).
-
----
-
-## Out of graph
-
-```mermaid
-flowchart LR
-  Hover[Hover indexed usage] --> R{resolveVisibleTarget}
-  R -->|in graph| Edge[solid preview edge]
-  R -->|external| Stub[dashed Load stub + TokenConnectionMenu]
-  R -->|def fan-out off-canvas| Stub2[callsite Load stub beside def]
-```
-
-Off-graph targets draw a **dashed Load stub** (locality signal) and open **TokenConnectionMenu** for the load/jump action. The floating Load pill was removed; the menu is the sole load **action** surface.
-
----
-
 ## File map (interaction layer)
 
 | File | Role |
@@ -553,3 +204,6 @@ Off-graph targets draw a **dashed Load stub** (locality signal) and open **Token
 | `computeTraceLit.ts` | Lit / endpoint sets |
 | `preview-wires.css` | Wires, sockets |
 | `trace-modes.css` | Trace dim |
+
+File maps for fan-out builders, anchor tracking, and mode/legend files: see the
+respective split-out supplements linked at the top of this file.

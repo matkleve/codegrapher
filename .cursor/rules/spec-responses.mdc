@@ -18,7 +18,11 @@ alwaysApply: true
 | Layer | Spec |
 | ----- | ---- |
 | Gestures | `token-interactions.md` |
-| Timing | `preview-edges.interactions.supplement.md` |
+| Timing / lifecycle | `preview-edges.interactions.supplement.md` |
+| Wire grow/consume transit | `preview-edges.signal-window.supplement.md` |
+| Which edges, which direction | `preview-edges.fanout.supplement.md` |
+| Where wires attach, retargeting | `preview-edges.anchoring.supplement.md` |
+| Legend, modifiers, pin lock | `preview-edges.modes.supplement.md` |
 | Looks | `interaction-emphasis.md` · [implementation supplement](system/interaction-emphasis.implementation.supplement.md) |
 | Brightness | `preview-edges.trace-strength.supplement.md` |
 | Wire kind | `connection-taxonomy.md` |

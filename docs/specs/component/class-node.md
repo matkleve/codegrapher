@@ -30,7 +30,7 @@ Rounded card with file-type chip, camelCase-split title, expand chevron. Method 
 | 7b | Hovers `switch`/`if` keyword or its condition/discriminant | **Control flow** fan-out to every `case`/`default`/`else`/`else if` branch — see [connection-taxonomy](../../system/connection-taxonomy.md) § Control flow | `buildControlFlowPreviewEdges` |
 | 7c | Hovers a single `case`/`default`/`else`/`else if` branch | One **Control flow** wire back to the `switch`/`if` keyword | `buildControlFlowPreviewEdges` |
 | 7d | Hovers indexed param or type in signature tags | Trace dims row + signature; edge when target resolves | `MemberSignatureTags` |
-| 7e | Hovers a property in a `a.b.c` member-access chain | Own **Usage** wire (if resolvable) **plus** its receiver's own wire, cascaded leftward — see [preview-edges.interactions.supplement.md](../../system/preview-edges.interactions.supplement.md) § Member-access cascade | `buildReceiverCascadeEdges` |
+| 7e | Hovers a property in a `a.b.c` member-access chain | Own **Usage** wire (if resolvable) **plus** its receiver's own wire, cascaded leftward — see [preview-edges.fanout.supplement.md](../../system/preview-edges.fanout.supplement.md) § Member-access cascade | `buildReceiverCascadeEdges` |
 | 8 | Hovers member def label | Def fan-out to usages | `buildDefinitionPreviewEdges` |
 | 9 | Right-click → path mode | _(graph-level)_ path highlight when second node picked | graph chrome |
 

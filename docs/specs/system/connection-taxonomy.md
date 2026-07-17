@@ -115,7 +115,7 @@ Summary (see child doc for full AC per kind):
 - [ ] Typesetting wires show sig-type → param def for indexed signature types (e.g. `GeocoderSearchResult` → `result`) using rounded orthogonal paths
 - [ ] Control-flow wires fan out from a `switch`/`if` keyword or its condition to every `case`/`else` branch, and wire back to the head only when hovering a single branch; `switch (field)` fans to every `case`/`default` at that switch's own nesting depth, not to nested switches/ifs inside a branch
 - [ ] Ternary (`cond ? a : b`) control flow is not yet indexed — tracked as a follow-up, not a v1 gap in this AC list
-- [ ] Hovering a property in a `a.b.c` chain (Usage kind) cascades leftward to wire its receiver(s) too; hovering a receiver alone never cascades forward to what it's accessed through — see [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md) § Member-access cascade
+- [ ] Hovering a property in a `a.b.c` chain (Usage kind) cascades leftward to wire its receiver(s) too; hovering a receiver alone never cascades forward to what it's accessed through — see [preview-edges.fanout.supplement.md](preview-edges.fanout.supplement.md) § Member-access cascade
 - [x] Legend toggles are 1:1 with kinds — toggling **Inheritance** hides only `extends` structural wires, not local variable usage/binding preview wires
 - [x] Per-edge hover tooltip — **not built**; **ConnectionLegend** + wire hit-zone jump tip are sufficient (see [SPEC-DRIFT.md](../SPEC-DRIFT.md) resolution)
 

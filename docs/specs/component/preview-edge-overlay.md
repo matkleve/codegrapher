@@ -100,5 +100,6 @@ Path coordinates are local to the overlay SVG — not flow-space only.
 
 - System: [preview-edges.md](../system/preview-edges.md)
 - Interactions: [preview-edges.interactions.supplement.md](../system/preview-edges.interactions.supplement.md)
+- Anchoring (handle/socket resolution, live retarget): [preview-edges.anchoring.supplement.md](../system/preview-edges.anchoring.supplement.md)
 - Accessibility: [../../design/accessibility.md](../../design/accessibility.md)
 - Handles: [ctrlPreviewHandles.ts](../../../client/src/lib/ctrlPreviewHandles.ts)

@@ -4,7 +4,7 @@
 
 On-demand dashed SVG connections between indexed symbols. Summoned by hovering token chips, member rows, or class headers; Ctrl accelerates reveal and dims syntax; click pins trace + context bar.
 
-**Full interaction detail (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+**Full interaction detail (mermaid):** lifecycle in [interactions supplement](preview-edges.interactions.supplement.md); edge-building rules in [fan-out supplement](preview-edges.fanout.supplement.md); anchors/retargeting in [anchoring supplement](preview-edges.anchoring.supplement.md); modifiers/legend/pin in [modes supplement](preview-edges.modes.supplement.md)
 
 ## What It Looks Like
 
@@ -34,7 +34,7 @@ Non-color differentiation (WCAG 1.4.1): [accessibility.md](../../design/accessib
 | 9 | Expands/collapses member | Wires retarget live | `liveFrom` / `liveTo` |
 | 10 | Hovers other token while pinned | Ephemeral preview; pin unchanged until click | `hoverPreviewEdges` + `mergeTraceLit` |
 
-Normative edge rules (direction, fan-out, anchors, pin lock, live refine): [interactions supplement](preview-edges.interactions.supplement.md).
+Normative edge rules: direction/fan-out in [fan-out supplement](preview-edges.fanout.supplement.md); anchors/live refine in [anchoring supplement](preview-edges.anchoring.supplement.md); pin lock in [modes supplement](preview-edges.modes.supplement.md).
 
 ## Component Hierarchy
 
@@ -121,7 +121,10 @@ Per-kind detail: [connection-taxonomy.acceptance-criteria.md](connection-taxonom
 ## Child specs
 
 - **Signal window (grow/consume, timing):** [preview-edges.signal-window.supplement.md](preview-edges.signal-window.supplement.md)
-- **Interactions (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- **Interactions — core lifecycle (mermaid):** [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- **Fan-out — which edges, which direction:** [preview-edges.fanout.supplement.md](preview-edges.fanout.supplement.md)
+- **Anchoring — where wires attach, retargeting:** [preview-edges.anchoring.supplement.md](preview-edges.anchoring.supplement.md)
+- **Modes — legend, modifiers, pin lock:** [preview-edges.modes.supplement.md](preview-edges.modes.supplement.md)
 - **Trace strength / provenance cascade:** [preview-edges.trace-strength.supplement.md](preview-edges.trace-strength.supplement.md)
 - **Fan/bus wayfinding:** [preview-edges.wayfinding.supplement.md](preview-edges.wayfinding.supplement.md)
 - **Connection kinds (incl. Typesetting):** [connection-taxonomy.md](connection-taxonomy.md)

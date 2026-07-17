@@ -8,7 +8,7 @@ Cross-cutting orchestration and multi-surface behavior. System specs reference c
 
 - [ego-graph-model](ego-graph-model.md) — incremental graph philosophy and loading semantics
 - [preview-edges](preview-edges.md) — token hover, Ctrl reveal, pinning, timing
-- [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, **visual commit timeline**, anchors, pin lock, live retarget
+- [preview-edges.interactions.supplement](preview-edges.interactions.supplement.md) — **mermaid:** state machine, **visual commit timeline**, leave/retire · siblings: [signal-window](preview-edges.signal-window.supplement.md) (grow/consume), [fan-out](preview-edges.fanout.supplement.md) (which edges, which direction), [anchoring](preview-edges.anchoring.supplement.md) (where wires attach, live retarget), [modes](preview-edges.modes.supplement.md) (legend, modifiers, pin lock)
 - [preview-edges.trace-strength.supplement](preview-edges.trace-strength.supplement.md) — provenance hop decay + **dual curve** (focus vs hover) + `--trace-strength` emission
 - [interaction-emphasis](interaction-emphasis.md) — brand gold hover + trace dim + pointer emphasis
 - [token-interactions](token-interactions.md) — keyword gesture vocabulary (hover, Ctrl reveal, pin, jump, load) + use-case map

@@ -2,8 +2,9 @@
 
 Normative detail for the wire signal's transit model: how a wire grows, how it
 behaves on release, and when it's removed. Parent: [preview-edges.md](preview-edges.md).
-Companion: [interactions supplement](preview-edges.interactions.supplement.md)
-(cascade timing, anchors, retargeting — unaffected by this change).
+Companions, all unaffected by this change: [interactions supplement](preview-edges.interactions.supplement.md)
+(cascade timing), [anchoring supplement](preview-edges.anchoring.supplement.md)
+(anchors, retargeting, wire engine triggers).
 
 **Status:** Replaces the previous grow-then-fade model. Design finalized
 2026-07-17, grounded in a working prototype (Signal Lab artifact) and verified

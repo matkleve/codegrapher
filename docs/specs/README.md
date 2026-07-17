@@ -54,7 +54,7 @@ Split strategy: specs → [spec-format.md](../agent-playbook/core/spec-format.md
 ## Cross-cutting contracts
 
 - **Token hover (start here):** [system/token-hover.atlas.supplement.md](system/token-hover.atlas.supplement.md) — one-page map; detail in token-interactions + interaction-emphasis + preview-edges supplements
-- **Preview edges:** [system/preview-edges.md](system/preview-edges.md) · [interactions supplement](system/preview-edges.interactions.supplement.md) (mermaid)
+- **Preview edges:** [system/preview-edges.md](system/preview-edges.md) · [interactions](system/preview-edges.interactions.supplement.md) (mermaid, core lifecycle) · [signal-window](system/preview-edges.signal-window.supplement.md) (grow/consume) · [fan-out](system/preview-edges.fanout.supplement.md) · [anchoring](system/preview-edges.anchoring.supplement.md) · [modes](system/preview-edges.modes.supplement.md)
 - **Ego-graph philosophy:** [system/ego-graph-model.md](system/ego-graph-model.md)
 - **Brand hover + trace dim:** [system/interaction-emphasis.md](system/interaction-emphasis.md) · strength stack playbook: [visual-strength-stacks.md](../agent-playbook/core/visual-strength-stacks.md)
 - **Keyword interactions:** [system/token-interactions.md](system/token-interactions.md) · use cases: [design/token-interaction-use-cases.md](../design/token-interaction-use-cases.md)

@@ -369,7 +369,7 @@ Provenance only — each decision below is now normative in the table/section na
 ## References
 
 - Panel value display: [transport-panel](execution-simulator.transport-panel.supplement.md) · [workspace](execution-simulator.workspace.supplement.md)
-- Reveal waterfall: [interaction-emphasis.md](interaction-emphasis.md) · [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md)
+- Reveal waterfall: [interaction-emphasis.md](interaction-emphasis.md) · [preview-edges.anchoring.supplement.md](preview-edges.anchoring.supplement.md)
 - Overlay pattern for flow points: [../component/preview-edge-overlay.md](../component/preview-edge-overlay.md)
 - Value model / step detail: `client/src/lib/staticWalk/types.ts` (`SimValue`, `SimStepDetail`)
 - Binding graph (lighting / slice): `client/src/lib/localSymbolLinks.ts`

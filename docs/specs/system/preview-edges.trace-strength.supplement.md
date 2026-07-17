@@ -2,7 +2,7 @@
 
 Normative supplement to [preview-edges.md](preview-edges.md) and [connection-taxonomy.md](connection-taxonomy.md). Defines **how strongly** each wire and endpoint reads when a single hover/pin summons multiple related connections at once.
 
-Parent interaction rules (direction, dwell, pin lock): [preview-edges.interactions.supplement.md](preview-edges.interactions.supplement.md).
+Parent interaction rules: dwell timing in [interactions supplement](preview-edges.interactions.supplement.md); direction/fan-out in [fan-out supplement](preview-edges.fanout.supplement.md); pin lock in [modes supplement](preview-edges.modes.supplement.md).
 
 **Terminology:** **hop** / **graph distance** = steps from the focus token (`PreviewEdgeSpec.hop` omitted at distance 1, else `2…RELATIVE_MAX_DEPTH`). **Brightness** comes from `traceStrength(situation, surface, depth)` in `traceDepth.ts` — **two situations** (focus vs hover), unified emission as `--trace-strength` on wires, chips, and sockets.
 
